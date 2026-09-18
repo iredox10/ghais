@@ -35,9 +35,11 @@ fun AyahRow(
     isFavorite: Boolean,
     onPlayClick: () -> Unit,
     onFavoriteClick: () -> Unit,
-    onShareClick: () -> Unit
+    onShareClick: () -> Unit,
+    /** True when this ayah is the current track (highlight stays even while paused). Defaults to [isPlaying] for backward compat. */
+    isActive: Boolean = isPlaying
 ) {
-    val backgroundColor = if (isPlaying) QuranifyColors.Primary.copy(alpha = 0.15f) else Color.Transparent
+    val backgroundColor = if (isActive) QuranifyColors.Primary.copy(alpha = 0.15f) else Color.Transparent
 
     Row(
         modifier = Modifier

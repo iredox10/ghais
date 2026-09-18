@@ -4,7 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -50,9 +50,44 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
             }
         }
 
-        val playbackState by AudioEngine.playbackState.collectAsState()
-        val currentlyPlayingAyahNo = playbackState.currentTrackInfo.track?.let {
-            if (it.surahId == surah.id && it.reciterSlug == selectedReciter.slug) it.ayahNo else null
+        // currentTrack drives MiniPlayer visibility (MainScreen AnimatedVisibility) and highlight.
+        val currentTrack by AudioEngine.currentTrack.collectAsState()
+        val isEnginePlaying by AudioEngine.isPlaying.collectAsState()
+
+        // Track builder: per-ayah URL for the currently selected reciter.
+        fun buildTracks(): List<TrackItem> = ayahs.map { ayah ->
+            TrackItem(
+                reciterSlug = selectedReciter.slug,
+                reciterName = selectedReciter.nameEn,
+                surahId = surah.id,
+                surahNameEn = surah.nameEn,
+                surahNameAr = surah.nameAr,
+                ayahNo = ayah.ayahNo,
+                audioUrl = selectedReciter.getAyahAudioUrl(surah.id, ayah.ayahNo),
+                textUthmani = ayah.textUthmani
+            )
+        }
+
+        /** Same ayah currently loaded (regardless of play/pause) -> highlight. */
+        fun isAyahActive(ayahNo: Int): Boolean {
+            val t = currentTrack ?: return false
+            return t.surahId == surah.id && t.ayahNo == ayahNo && t.reciterSlug == selectedReciter.slug
+        }
+
+        /** Same ayah loaded AND engine reports playing -> show pause icon. */
+        fun isAyahPlaying(ayahNo: Int): Boolean = isAyahActive(ayahNo) && isEnginePlaying
+
+        /** Per-ayah toggle: pause if this ayah is playing; resume if paused; else play queue from clicked index. */
+        fun onAyahToggle(ayah: Ayah, index: Int) {
+            if (isAyahPlaying(ayah.ayahNo)) {
+                AudioEngine.pause()
+                return
+            }
+            if (isAyahActive(ayah.ayahNo)) {
+                AudioEngine.resume()
+                return
+            }
+            AudioEngine.playQueue(buildTracks(), index)
         }
 
         val favoriteAyahs = remember { mutableStateListOf<Int>() }
@@ -131,19 +166,10 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                         }
                         Button(
                             onClick = {
-                                val tracks = ayahs.map { ayah ->
-                                    TrackItem(
-                                        reciterSlug = selectedReciter.slug,
-                                        reciterName = selectedReciter.nameEn,
-                                        surahId = surah.id,
-                                        surahNameEn = surah.nameEn,
-                                        surahNameAr = surah.nameAr,
-                                        ayahNo = ayah.ayahNo,
-                                        audioUrl = selectedReciter.getAyahAudioUrl(surah.id, ayah.ayahNo),
-                                        textUthmani = ayah.textUthmani
-                                    )
-                                }
-                                AudioEngine.playQueue(tracks, 0)
+                                // playAll builds TrackItems with selectedReciter.getAyahAudioUrl
+                                // per ayah, then plays queue from 0. Setting currentTrack
+                                // triggers MainScreen AnimatedVisibility -> MiniPlayer shows.
+                                AudioEngine.playQueue(buildTracks(), 0)
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = QuranifyColors.Primary),
                             shape = RoundedCornerShape(8.dp)
@@ -171,24 +197,15 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                         }
                     }
 
-                    items(ayahs) { ayah ->
+                    itemsIndexed(ayahs) { index, ayah ->
                         AyahRow(
                             ayah = ayah,
-                            isPlaying = currentlyPlayingAyahNo == ayah.ayahNo,
+                            // Highlight syncs via currentTrack.surahId/ayahNo/reciterSlug;
+                            // icon reflects live play state.
+                            isActive = isAyahActive(ayah.ayahNo),
+                            isPlaying = isAyahPlaying(ayah.ayahNo),
                             isFavorite = favoriteAyahs.contains(ayah.ayahNo),
-                            onPlayClick = {
-                                val track = TrackItem(
-                                    reciterSlug = selectedReciter.slug,
-                                    reciterName = selectedReciter.nameEn,
-                                    surahId = surah.id,
-                                    surahNameEn = surah.nameEn,
-                                    surahNameAr = surah.nameAr,
-                                    ayahNo = ayah.ayahNo,
-                                    audioUrl = selectedReciter.getAyahAudioUrl(surah.id, ayah.ayahNo),
-                                    textUthmani = ayah.textUthmani
-                                )
-                                AudioEngine.playTrack(track)
-                            },
+                            onPlayClick = { onAyahToggle(ayah, index) },
                             onFavoriteClick = {
                                 if (favoriteAyahs.contains(ayah.ayahNo)) favoriteAyahs.remove(ayah.ayahNo)
                                 else favoriteAyahs.add(ayah.ayahNo)
