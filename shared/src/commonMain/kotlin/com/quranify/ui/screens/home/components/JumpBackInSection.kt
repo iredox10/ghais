@@ -2,6 +2,7 @@ package com.quranify.ui.screens.home.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -14,28 +15,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import com.quranify.data.seed.StitchAssets
 import com.quranify.ui.theme.QuranifyColors
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.items
 
 @Composable
 fun JumpBackInSection(
     onCardClick: (String) -> Unit = {}
 ) {
+    val items = StitchAssets.JumpBackInItems
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 16.dp)
+            .padding(vertical = 12.dp)
     ) {
         // Header Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -47,7 +50,7 @@ fun JumpBackInSection(
                     text = "Jump Back In",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = QuranifyColors.TextPrimary
+                    color = Color.White
                 )
                 
                 // Pulsing dot
@@ -80,7 +83,6 @@ fun JumpBackInSection(
         Spacer(modifier = Modifier.height(8.dp))
         
         // 2x2 Grid of Cards
-        // We'll use a Column of Rows to achieve a 2x2 grid without fixed height constraints that LazyVerticalGrid might impose.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -91,22 +93,26 @@ fun JumpBackInSection(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                val item0 = items.getOrNull(0)
                 JumpBackInCard(
                     modifier = Modifier.weight(1f),
-                    title = "Surah Al-Mulk",
-                    subtitle = "Ayah 14 • 4:12 left",
+                    title = item0?.title ?: "Al-Mulk",
+                    subtitle = item0?.subtitle ?: "Ayah 14 • 4:12 left",
                     subtitleColor = QuranifyColors.TextSecondary,
-                    progress = 0.67f,
+                    progress = item0?.progress ?: 0.67f,
                     progressColor = QuranifyColors.Primary,
+                    coverUrl = item0?.coverUrl ?: "",
                     onClick = { onCardClick("Al-Mulk") }
                 )
+                val item1 = items.getOrNull(1)
                 JumpBackInCard(
                     modifier = Modifier.weight(1f),
-                    title = "Al-Kahf",
-                    subtitle = "Friday Sunnah",
+                    title = item1?.title ?: "Al-Kahf",
+                    subtitle = item1?.subtitle ?: "Friday Sunnah",
                     subtitleColor = QuranifyColors.Secondary,
-                    progress = 0.25f,
+                    progress = item1?.progress ?: 0.25f,
                     progressColor = QuranifyColors.Secondary,
+                    coverUrl = item1?.coverUrl ?: "",
                     onClick = { onCardClick("Al-Kahf") }
                 )
             }
@@ -114,22 +120,26 @@ fun JumpBackInSection(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                val item2 = items.getOrNull(2)
                 JumpBackInCard(
                     modifier = Modifier.weight(1f),
-                    title = "Surah Yaseen",
-                    subtitle = "Mishary Alafasy",
+                    title = item2?.title ?: "Surah Yaseen",
+                    subtitle = item2?.subtitle ?: "Mishary Alafasy",
                     subtitleColor = QuranifyColors.TextSecondary,
-                    progress = 0.80f,
+                    progress = item2?.progress ?: 0.80f,
                     progressColor = QuranifyColors.Primary,
+                    coverUrl = item2?.coverUrl ?: "",
                     onClick = { onCardClick("Yaseen") }
                 )
+                val item3 = items.getOrNull(3)
                 JumpBackInCard(
                     modifier = Modifier.weight(1f),
-                    title = "Tahajjud Peace",
-                    subtitle = "Heart Softeners",
+                    title = item3?.title ?: "Tahajjud Peace",
+                    subtitle = item3?.subtitle ?: "Heart Softeners",
                     subtitleColor = QuranifyColors.TextSecondary,
-                    progress = 0.50f,
+                    progress = item3?.progress ?: 0.50f,
                     progressColor = QuranifyColors.Primary,
+                    coverUrl = item3?.coverUrl ?: "",
                     onClick = { onCardClick("Tahajjud") }
                 )
             }
@@ -145,30 +155,50 @@ fun JumpBackInCard(
     subtitleColor: Color,
     progress: Float,
     progressColor: Color,
+    coverUrl: String,
     onClick: () -> Unit
 ) {
     Row(
         modifier = modifier
-            .background(QuranifyColors.Card, RoundedCornerShape(14.dp))
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .background(QuranifyColors.SurfaceContainer)
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(16.dp)
+            )
             .clickable { onClick() }
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Left: 48.dp square cover image
+        // Left: 48.dp square cover image with subtle border
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .background(QuranifyColors.Surface, RoundedCornerShape(10.dp)),
+                .clip(RoundedCornerShape(10.dp))
+                .background(QuranifyColors.SurfaceHigh)
+                .border(
+                    width = 1.dp,
+                    color = Color.White.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(10.dp)
+                ),
             contentAlignment = Alignment.Center
         ) {
-            // Fallback icon/text
-            Text(
-                text = title.firstOrNull()?.toString() ?: "",
-                color = QuranifyColors.Primary,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
+            if (coverUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = coverUrl,
+                    contentDescription = title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Text(
+                    text = title.firstOrNull()?.toString() ?: "",
+                    color = QuranifyColors.Primary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
         
         Spacer(modifier = Modifier.width(10.dp))
@@ -180,9 +210,9 @@ fun JumpBackInCard(
         ) {
             Text(
                 text = title,
-                color = QuranifyColors.TextPrimary,
+                color = Color.White,
                 fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 maxLines = 1
             )
             
@@ -191,7 +221,7 @@ fun JumpBackInCard(
             Text(
                 text = subtitle,
                 color = subtitleColor,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 maxLines = 1
             )
             
@@ -202,7 +232,7 @@ fun JumpBackInCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(3.dp)
-                    .background(QuranifyColors.Surface, RoundedCornerShape(2.dp))
+                    .background(Color.White.copy(alpha = 0.10f), RoundedCornerShape(2.dp))
             ) {
                 Box(
                     modifier = Modifier

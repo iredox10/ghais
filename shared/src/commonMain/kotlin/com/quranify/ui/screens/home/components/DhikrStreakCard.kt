@@ -2,6 +2,7 @@ package com.quranify.ui.screens.home.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -21,6 +21,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
@@ -35,21 +37,38 @@ fun DhikrStreakCard(modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(QuranifyColors.SurfaceContainer)
-            .padding(12.dp),
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Left side: Circular amber flame badge
+        // Left side: Amber flame badge with gradient & border from Stitch Apple Glassmorphism
         Box(
             modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(QuranifyColors.Secondary.copy(alpha = 0.15f)),
+                .size(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    brush = Brush.linearGradient(
+                        listOf(
+                            Color(0xFFFBBF24).copy(alpha = 0.20f),
+                            QuranifyColors.Primary.copy(alpha = 0.15f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    color = Color(0xFFFBBF24).copy(alpha = 0.35f),
+                    shape = RoundedCornerShape(12.dp)
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Filled.LocalFireDepartment,
                 contentDescription = "Flame Icon",
-                tint = QuranifyColors.Secondary,
+                tint = Color(0xFFFBBF24),
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -64,24 +83,30 @@ fun DhikrStreakCard(modifier: Modifier = Modifier) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "7 Day Dhikr Streak",
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
-                    color = QuranifyColors.TextPrimary
+                    color = Color.White
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                // "Active" pill badge
+                // "ACTIVE" pill badge matching Stitch
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(50))
                         .background(QuranifyColors.Primary.copy(alpha = 0.15f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                        .border(
+                            width = 1.dp,
+                            color = QuranifyColors.Primary.copy(alpha = 0.30f),
+                            shape = RoundedCornerShape(50)
+                        )
+                        .padding(horizontal = 7.dp, vertical = 2.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Active",
+                        text = "ACTIVE",
                         color = QuranifyColors.Primary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
                     )
                 }
             }
@@ -103,11 +128,11 @@ fun DhikrStreakCard(modifier: Modifier = Modifier) {
             Canvas(modifier = Modifier.size(32.dp)) {
                 // Inactive track
                 drawCircle(
-                    color = QuranifyColors.SurfaceHighest,
+                    color = Color.White.copy(alpha = 0.10f),
                     style = Stroke(width = 3.dp.toPx())
                 )
                 
-                // Active sweep
+                // Active sweep (78%)
                 drawArc(
                     color = QuranifyColors.Primary,
                     startAngle = -90f,
@@ -119,8 +144,8 @@ fun DhikrStreakCard(modifier: Modifier = Modifier) {
             Text(
                 text = "78%",
                 fontWeight = FontWeight.Bold,
-                fontSize = 9.sp,
-                color = QuranifyColors.TextPrimary
+                fontSize = 10.sp,
+                color = Color.White
             )
         }
     }

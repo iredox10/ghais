@@ -1,5 +1,6 @@
 package com.quranify.ui.screens.player.components
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -27,8 +28,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
@@ -36,8 +37,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +58,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.quranify.data.seed.StitchAssets
 import com.quranify.player.AudioEngine
 import com.quranify.ui.theme.QuranifyColors
 import kotlin.math.PI
@@ -94,8 +98,8 @@ fun NowPlayingTopBar(
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
                 contentDescription = "Minimize player",
-                tint = QuranifyColors.TextSecondary,
-                modifier = Modifier.size(24.dp)
+                tint = Color.White.copy(alpha = 0.85f),
+                modifier = Modifier.size(26.dp)
             )
         }
 
@@ -109,7 +113,7 @@ fun NowPlayingTopBar(
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.5.sp,
-                color = QuranifyColors.TextSecondary
+                color = QuranifyColors.Primary.copy(alpha = 0.85f)
             )
             Spacer(modifier = Modifier.height(2.dp))
             Row(
@@ -129,7 +133,7 @@ fun NowPlayingTopBar(
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
                     contentDescription = "Playlist dropdown",
-                    tint = QuranifyColors.TextPrimary,
+                    tint = QuranifyColors.Primary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -143,7 +147,7 @@ fun NowPlayingTopBar(
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = "More options",
-                tint = QuranifyColors.TextSecondary,
+                tint = Color.White.copy(alpha = 0.85f),
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -161,7 +165,7 @@ fun GlowingPingDot(
     val infiniteTransition = rememberInfiniteTransition(label = "PingTransition")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 2.4f,
+        targetValue = 2.5f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 1400, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Restart
@@ -169,7 +173,7 @@ fun GlowingPingDot(
         label = "PulseScale"
     )
     val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.75f,
+        initialValue = 0.8f,
         targetValue = 0f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 1400, easing = FastOutSlowInEasing),
@@ -179,7 +183,7 @@ fun GlowingPingDot(
     )
 
     Box(
-        modifier = modifier.size(12.dp),
+        modifier = modifier.size(14.dp),
         contentAlignment = Alignment.Center
     ) {
         // Pulsing ping halo
@@ -215,9 +219,9 @@ fun FloatingTajweedRibbon(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(50),
-        color = QuranifyColors.SurfaceHigh,
-        border = BorderStroke(1.dp, QuranifyColors.Primary.copy(alpha = 0.25f)),
-        shadowElevation = 6.dp
+        color = Color(0xDD181D1A),
+        border = BorderStroke(1.dp, Color(0x334EDEA3)),
+        shadowElevation = 8.dp
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
@@ -229,6 +233,7 @@ fun FloatingTajweedRibbon(
                 text = text,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp,
                 color = QuranifyColors.Primary
             )
         }
@@ -236,7 +241,9 @@ fun FloatingTajweedRibbon(
 }
 
 /**
- * Sacred Islamic Art Mandala rendered geometrically on Canvas.
+ * Sublime Sacred Islamic Geometric Mandala rendered on Canvas with authentic
+ * multi-layered 16-point star geometry, Rub el Hizb interlacing, golden filigree rosettes,
+ * and radiating emerald & gold arabesque accents.
  */
 @Composable
 fun SacredGeometryMandala(
@@ -248,13 +255,14 @@ fun SacredGeometryMandala(
         val center = this.center
         val radius = size.minDimension / 2f
 
-        // Dark emerald radiant background
+        // 1. Deep Midnight Obsidian & Dark Emerald radiant background
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    Color(0xFF132D22),
-                    Color(0xFF0D1C15),
-                    Color(0xFF08120E)
+                    Color(0xFF133626),
+                    Color(0xFF0C2419),
+                    Color(0xFF071710),
+                    Color(0xFF030A07)
                 ),
                 center = center,
                 radius = radius
@@ -263,88 +271,161 @@ fun SacredGeometryMandala(
             center = center
         )
 
-        // Outer decorative ring
+        // 2. Outer rim concentric decorative rings
         drawCircle(
-            color = primaryColor.copy(alpha = 0.35f),
-            radius = radius * 0.94f,
+            color = primaryColor.copy(alpha = 0.45f),
+            radius = radius * 0.95f,
             center = center,
-            style = Stroke(width = 1.2f)
+            style = Stroke(width = 1.4f)
         )
-
         drawCircle(
-            color = accentColor.copy(alpha = 0.25f),
-            radius = radius * 0.88f,
+            color = accentColor.copy(alpha = 0.35f),
+            radius = radius * 0.90f,
             center = center,
             style = Stroke(width = 0.8f)
         )
 
-        // 16-point Islamic geometric star
-        val points16 = 16
-        val starOuterRadius = radius * 0.82f
-        val starInnerRadius = radius * 0.58f
-        val path16 = Path()
-        for (i in 0 until points16 * 2) {
-            val angle = (i * PI / points16).toFloat()
-            val r = if (i % 2 == 0) starOuterRadius else starInnerRadius
-            val x = center.x + r * cos(angle)
-            val y = center.y + r * sin(angle)
-            if (i == 0) path16.moveTo(x, y) else path16.lineTo(x, y)
-        }
-        path16.close()
-        drawPath(
-            path = path16,
-            color = primaryColor.copy(alpha = 0.38f),
-            style = Stroke(width = 1.4f)
-        )
-
-        // 8-point interlaced squares (Rub el Hizb style)
-        for (squareIndex in 0..1) {
-            val rotationAngle = squareIndex * (PI / 4.0).toFloat()
-            val squarePath = Path()
-            val sqRadius = radius * 0.70f
-            for (corner in 0..3) {
-                val cornerAngle = rotationAngle + (corner * (PI / 2.0).toFloat())
-                val x = center.x + sqRadius * cos(cornerAngle)
-                val y = center.y + sqRadius * sin(cornerAngle)
-                if (corner == 0) squarePath.moveTo(x, y) else squarePath.lineTo(x, y)
-            }
-            squarePath.close()
-            drawPath(
-                path = squarePath,
-                color = accentColor.copy(alpha = 0.45f),
-                style = Stroke(width = 1.2f)
+        // 3. Perimeter bead accents (32 golden pearls around circle)
+        val beadRadius = radius * 0.925f
+        for (i in 0 until 32) {
+            val angle = (i * 2.0 * PI / 32).toFloat()
+            val bx = center.x + beadRadius * cos(angle)
+            val by = center.y + beadRadius * sin(angle)
+            drawCircle(
+                color = if (i % 2 == 0) accentColor.copy(alpha = 0.6f) else primaryColor.copy(alpha = 0.45f),
+                radius = 1.3f,
+                center = Offset(bx, by)
             )
         }
 
-        // Concentric geometric ring
+        // 4. 16-point Islamic geometric star
+        val points16 = 16
+        val starOuter = radius * 0.85f
+        val starInner = radius * 0.62f
+        val star16Path = Path()
+        for (i in 0 until points16 * 2) {
+            val angle = (i * PI / points16).toFloat()
+            val r = if (i % 2 == 0) starOuter else starInner
+            val x = center.x + r * cos(angle)
+            val y = center.y + r * sin(angle)
+            if (i == 0) star16Path.moveTo(x, y) else star16Path.lineTo(x, y)
+        }
+        star16Path.close()
+        drawPath(
+            path = star16Path,
+            color = primaryColor.copy(alpha = 0.42f),
+            style = Stroke(width = 1.4f)
+        )
+
+        // 5. 8-point interlaced Rub el Hizb squares (two rotated 45° squares)
+        for (sq in 0..1) {
+            val baseAngle = sq * (PI / 4.0).toFloat()
+            val sqPath = Path()
+            val sqR = radius * 0.73f
+            for (c in 0..3) {
+                val a = baseAngle + (c * (PI / 2.0).toFloat())
+                val x = center.x + sqR * cos(a)
+                val y = center.y + sqR * sin(a)
+                if (c == 0) sqPath.moveTo(x, y) else sqPath.lineTo(x, y)
+            }
+            sqPath.close()
+            drawPath(
+                path = sqPath,
+                color = accentColor.copy(alpha = 0.55f),
+                style = Stroke(width = 1.3f)
+            )
+        }
+
+        // 6. Interlaced arabesque curved petal loops
+        for (i in 0 until 8) {
+            val angle = (i * PI / 4.0).toFloat()
+            val p1x = center.x + (radius * 0.36f) * cos(angle - 0.28f)
+            val p1y = center.y + (radius * 0.36f) * sin(angle - 0.28f)
+            val tipX = center.x + (radius * 0.64f) * cos(angle)
+            val tipY = center.y + (radius * 0.64f) * sin(angle)
+            val p2x = center.x + (radius * 0.36f) * cos(angle + 0.28f)
+            val p2y = center.y + (radius * 0.36f) * sin(angle + 0.28f)
+
+            val petalPath = Path().apply {
+                moveTo(p1x, p1y)
+                quadraticTo(
+                    center.x + (radius * 0.52f) * cos(angle - 0.16f),
+                    center.y + (radius * 0.52f) * sin(angle - 0.16f),
+                    tipX, tipY
+                )
+                quadraticTo(
+                    center.x + (radius * 0.52f) * cos(angle + 0.16f),
+                    center.y + (radius * 0.52f) * sin(angle + 0.16f),
+                    p2x, p2y
+                )
+            }
+            drawPath(
+                path = petalPath,
+                color = primaryColor.copy(alpha = 0.38f),
+                style = Stroke(width = 1.1f)
+            )
+        }
+
+        // 7. Concentric geometric rings
         drawCircle(
-            color = primaryColor.copy(alpha = 0.3f),
+            color = primaryColor.copy(alpha = 0.35f),
             radius = radius * 0.48f,
             center = center,
             style = Stroke(width = 1f)
         )
+        drawCircle(
+            color = accentColor.copy(alpha = 0.40f),
+            radius = radius * 0.34f,
+            center = center,
+            style = Stroke(width = 1.1f)
+        )
 
-        // Radiating geometric spokes
-        for (i in 0 until 8) {
-            val angle = (i * (PI / 4.0)).toFloat()
-            val startX = center.x + (radius * 0.32f) * cos(angle)
-            val startY = center.y + (radius * 0.32f) * sin(angle)
-            val endX = center.x + (radius * 0.72f) * cos(angle)
-            val endY = center.y + (radius * 0.72f) * sin(angle)
+        // 8. Radiating geometric rays
+        for (i in 0 until 16) {
+            val angle = (i * (PI / 8.0)).toFloat()
+            val startR = if (i % 2 == 0) radius * 0.34f else radius * 0.48f
+            val endR = if (i % 2 == 0) radius * 0.75f else radius * 0.62f
+            val startX = center.x + startR * cos(angle)
+            val startY = center.y + startR * sin(angle)
+            val endX = center.x + endR * cos(angle)
+            val endY = center.y + endR * sin(angle)
             drawLine(
-                color = primaryColor.copy(alpha = 0.28f),
+                color = if (i % 2 == 0) accentColor.copy(alpha = 0.32f) else primaryColor.copy(alpha = 0.25f),
                 start = Offset(startX, startY),
                 end = Offset(endX, endY),
                 strokeWidth = 1f
             )
         }
 
-        // Inner rosette circle
+        // 9. Inner 8-pointed star rosette
+        val rosettePath = Path()
+        for (i in 0 until 16) {
+            val angle = (i * PI / 8.0).toFloat()
+            val r = if (i % 2 == 0) radius * 0.30f else radius * 0.18f
+            val x = center.x + r * cos(angle)
+            val y = center.y + r * sin(angle)
+            if (i == 0) rosettePath.moveTo(x, y) else rosettePath.lineTo(x, y)
+        }
+        rosettePath.close()
+        drawPath(
+            path = rosettePath,
+            color = accentColor.copy(alpha = 0.65f),
+            style = Stroke(width = 1.2f)
+        )
+
+        // 10. Center glowing golden jewel medallion
         drawCircle(
-            color = accentColor.copy(alpha = 0.4f),
-            radius = radius * 0.32f,
-            center = center,
-            style = Stroke(width = 1f)
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    accentColor.copy(alpha = 0.7f),
+                    accentColor.copy(alpha = 0.2f),
+                    Color.Transparent
+                ),
+                center = center,
+                radius = radius * 0.18f
+            ),
+            radius = radius * 0.18f,
+            center = center
         )
     }
 }
@@ -366,7 +447,8 @@ fun SacredMandalaArtwork(
 }
 
 /**
- * Vinyl record grooved texture with subtle concentric rings and specular sheen.
+ * Vinyl record grooved texture with subtle concentric rings, radial gradient,
+ * and realistic opposing specular sheen wedges.
  */
 @Composable
 fun VinylRecordGrooves(
@@ -375,15 +457,15 @@ fun VinylRecordGrooves(
     Canvas(modifier = modifier) {
         val center = this.center
         val maxRadius = size.minDimension / 2f
-        val innerHoleRadius = maxRadius * 0.54f
+        val innerHoleRadius = maxRadius * 0.52f
 
-        // Base vinyl disc gradient
+        // Base vinyl disc dark gradient
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    Color(0xFF1E2224),
-                    Color(0xFF141718),
-                    Color(0xFF0E1011)
+                    Color(0xFF1E2421),
+                    Color(0xFF121614),
+                    Color(0xFF070B09)
                 ),
                 center = center,
                 radius = maxRadius
@@ -393,13 +475,13 @@ fun VinylRecordGrooves(
         )
 
         // Opposing specular sheen wedges (realistic vinyl reflections)
-        val sheenColor = Color.White.copy(alpha = 0.035f)
+        val sheenColor = Color.White.copy(alpha = 0.04f)
         val sheenPath = Path().apply {
             moveTo(center.x, center.y)
             arcTo(
                 rect = Rect(center.x - maxRadius, center.y - maxRadius, center.x + maxRadius, center.y + maxRadius),
                 startAngleDegrees = 35f,
-                sweepAngleDegrees = 30f,
+                sweepAngleDegrees = 32f,
                 forceMoveTo = false
             )
             close()
@@ -407,7 +489,7 @@ fun VinylRecordGrooves(
             arcTo(
                 rect = Rect(center.x - maxRadius, center.y - maxRadius, center.x + maxRadius, center.y + maxRadius),
                 startAngleDegrees = 215f,
-                sweepAngleDegrees = 30f,
+                sweepAngleDegrees = 32f,
                 forceMoveTo = false
             )
             close()
@@ -415,25 +497,25 @@ fun VinylRecordGrooves(
         drawPath(path = sheenPath, color = sheenColor)
 
         // Concentric circular micro-grooves
-        val numGrooves = 14
+        val numGrooves = 16
         val grooveStep = (maxRadius - innerHoleRadius) / (numGrooves + 1)
         for (i in 1..numGrooves) {
             val r = innerHoleRadius + (i * grooveStep)
-            val alpha = if (i % 3 == 0) 0.12f else 0.05f
+            val alpha = if (i % 4 == 0) 0.12f else 0.045f
             drawCircle(
                 color = Color.White.copy(alpha = alpha),
                 radius = r,
                 center = center,
-                style = Stroke(width = 0.8f)
+                style = Stroke(width = 0.75f)
             )
         }
 
-        // Section groove border
+        // Section groove highlight ring
         drawCircle(
-            color = Color(0xFF2C3235).copy(alpha = 0.5f),
+            color = Color.White.copy(alpha = 0.08f),
             radius = innerHoleRadius + (maxRadius - innerHoleRadius) * 0.5f,
             center = center,
-            style = Stroke(width = 1.2f)
+            style = Stroke(width = 1.0f)
         )
 
         // Outer rim border
@@ -447,34 +529,48 @@ fun VinylRecordGrooves(
 }
 
 /**
- * Center soundwave badge: small circular badge (size 48.dp, background QuranifyColors.SurfaceContainer) with secondary amber symbol.
+ * Center soundwave badge: Frosted glass circular cap with spinning infinity/soundwave symbol.
  */
 @Composable
 fun CenterSoundwaveBadge(
     modifier: Modifier = Modifier,
-    badgeSize: Dp = 48.dp,
-    iconTint: Color = QuranifyColors.Secondary
+    badgeSize: Dp = 52.dp,
+    iconTint: Color = QuranifyColors.Primary,
+    isPlaying: Boolean = false
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "BadgeSpin")
+    val spinAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 18000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "SpinAngle"
+    )
+
     Box(
         modifier = modifier
             .size(badgeSize)
             .clip(CircleShape)
-            .background(QuranifyColors.SurfaceContainer)
-            .border(1.dp, QuranifyColors.OutlineVariant, CircleShape),
+            .background(Color(0xE6070B09))
+            .border(1.dp, Color(0x40FFFFFF), CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = Icons.Default.GraphicEq,
-            contentDescription = "Center Soundwave Badge",
+            imageVector = Icons.Default.AllInclusive,
+            contentDescription = "Center Symbol",
             tint = iconTint,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier
+                .size(24.dp)
+                .rotate(if (isPlaying) spinAngle else 0f)
         )
     }
 }
 
 /**
- * Vinyl disc record: grooved disc with central artwork (AsyncImage or SacredGeometryMandala)
- * and central soundwave badge.
+ * Vinyl disc record: grooved disc with central artwork (AsyncImage or SacredGeometryMandala),
+ * specular gloss sheen, smooth rotation, and central soundwave badge.
  */
 @Composable
 fun VinylDiscRecord(
@@ -482,45 +578,48 @@ fun VinylDiscRecord(
     isPlaying: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    // Circular vinyl disc container (size 220.dp)
+    // Continuous rotation without jumping to 0 on pause
+    val rotationAngle = remember { Animatable(0f) }
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            while (true) {
+                rotationAngle.animateTo(
+                    targetValue = rotationAngle.value + 360f,
+                    animationSpec = tween(durationMillis = 20000, easing = LinearEasing)
+                )
+            }
+        }
+    }
+
+    // Circular vinyl disc container
     Box(
         modifier = modifier
-            .size(220.dp)
+            .size(236.dp)
             .clip(CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        // Vinyl disc rotation animation when playing
-        val infiniteTransition = rememberInfiniteTransition(label = "VinylSpin")
-        val rotation by infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 20000, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart
-            ),
-            label = "VinylAngle"
-        )
-
+        // Rotating disc body
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .rotate(if (isPlaying) rotation else 0f),
+                .rotate(rotationAngle.value),
             contentAlignment = Alignment.Center
         ) {
-            // Outer disc: dark circular vinyl record texture with subtle ring borders
+            // Outer disc: dark circular vinyl record texture with micro-grooves
             VinylRecordGrooves(modifier = Modifier.fillMaxSize())
 
-            // Center image: AsyncImage or Box with sacred Islamic art mandala
+            // Center artwork container (124.dp)
             Box(
                 modifier = Modifier
-                    .size(118.dp)
+                    .size(124.dp)
                     .clip(CircleShape)
-                    .border(1.dp, QuranifyColors.Secondary.copy(alpha = 0.4f), CircleShape),
+                    .border(1.5.dp, QuranifyColors.Secondary.copy(alpha = 0.5f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                if (imageUrl.isNotBlank()) {
+                val resolvedUrl = imageUrl.ifBlank { StitchAssets.NowPlayingVinylArtUrl }
+                if (resolvedUrl.isNotBlank()) {
                     AsyncImage(
-                        model = imageUrl,
+                        model = resolvedUrl,
                         contentDescription = "Surah Center Artwork",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
@@ -531,16 +630,37 @@ fun VinylDiscRecord(
             }
         }
 
-        // Center soundwave badge
-        CenterSoundwaveBadge()
+        // Specular glass gloss sweep overlay
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.09f),
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.04f)
+                        ),
+                        start = Offset(0f, 0f),
+                        end = Offset(400f, 400f)
+                    ),
+                    shape = CircleShape
+                )
+        )
+
+        // Center glass soundwave cap
+        CenterSoundwaveBadge(
+            isPlaying = isPlaying,
+            iconTint = QuranifyColors.Primary
+        )
     }
 }
 
 /**
  * Vinyl Disc Artwork component for Now Playing screen:
- * - Atmospheric glowing radiant background: circular blur gradient (Brush.radialGradient)
- * - Circular vinyl disc record container
- * - Floating Tajweed Ribbon at bottom edge
+ * - Multi-layered Apple-style atmospheric radiant glowing background halo
+ * - Circular vinyl disc record container with microgrooves & specular light
+ * - Floating liquid glass Tajweed Ribbon at bottom edge
  */
 @Composable
 fun VinylDiscArtwork(
@@ -555,15 +675,16 @@ fun VinylDiscArtwork(
             .padding(vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Atmospheric glowing radiant background: circular blur gradient (Brush.radialGradient)
+        // Multi-layered atmospheric radiant background: glowing emerald & warm halo
         Box(
             modifier = Modifier
-                .size(280.dp)
+                .size(290.dp)
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            QuranifyColors.Primary.copy(alpha = 0.22f),
-                            QuranifyColors.Primary.copy(alpha = 0.08f),
+                            QuranifyColors.Primary.copy(alpha = 0.28f),
+                            QuranifyColors.PrimaryContainer.copy(alpha = 0.12f),
+                            QuranifyColors.Secondary.copy(alpha = 0.08f),
                             Color.Transparent
                         )
                     ),

@@ -14,6 +14,7 @@ object QuranifyShapes {
     val button = RoundedCornerShape(24.dp)
     val bottomSheet = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     val playerBar = RoundedCornerShape(20.dp)
+    val navDock = RoundedCornerShape(28.dp)
 
     val materialShapes = Shapes(
         small = small,
