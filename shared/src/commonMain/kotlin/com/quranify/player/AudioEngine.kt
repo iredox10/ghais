@@ -93,6 +93,8 @@ object AudioEngine {
         }
     }
 
+    fun setPlaybackSpeed(speed: Float) = setSpeed(speed)
+
     fun next() {
         val nextTrack = queueManager.playNext()
         if (nextTrack != null) {
@@ -104,6 +106,8 @@ object AudioEngine {
 
     fun nextAyah() = next()
 
+    fun skipNext() = next()
+
     fun previous() {
         val prevTrack = queueManager.playPrevious()
         if (prevTrack != null) {
@@ -114,6 +118,8 @@ object AudioEngine {
     }
 
     fun previousAyah() = previous()
+
+    fun skipPrevious() = previous()
 
     fun clear() {
         stopPlayback()

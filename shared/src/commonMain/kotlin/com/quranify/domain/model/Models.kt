@@ -68,6 +68,9 @@ data class TrackItem(
     val durationMs: Long = 0L
 )
 
+val TrackItem.imageUrl: String?
+    get() = null
+
 enum class RepeatMode {
     OFF,
     AYAH,

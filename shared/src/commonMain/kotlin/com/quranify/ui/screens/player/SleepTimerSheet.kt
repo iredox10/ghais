@@ -16,10 +16,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,30 +47,27 @@ private val TextPrimary = Color(0xFFF0EDE6)
 private val TextSecondary = Color(0xFF8A8A96)
 private val ErrorColor = Color(0xFFCF6679)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SleepTimerSheet() {
+fun SleepTimerSheet(
+    onDismiss: () -> Unit = {}
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val state by SleepTimer.state.collectAsState()
 
-    Surface(
-        color = SurfaceColor,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-        modifier = Modifier.fillMaxWidth()
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = SurfaceColor,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp, 4.dp)
-                    .clip(CircleShape)
-                    .background(TextSecondary.copy(alpha = 0.5f))
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
             Text(
                 text = "Sleep Timer",
                 color = TextPrimary,
