@@ -42,20 +42,19 @@ import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import com.quranify.ui.theme.QuranifyColors
 import com.quranify.ui.theme.QuranifyShapes
 
-// Stitch Mockup Design Tokens
-private val ObsidianGlassBg = Color(0xFF111415).copy(alpha = 0.85f)
-private val GlassBorderColor = Color(0xFF4EDEA3).copy(alpha = 0.15f)
-private val TopHighlightColor = Color(0xFF4EDEA3).copy(alpha = 0.25f)
-private val ActiveEmerald = Color(0xFF4EDEA3)
-private val ActivePillBackground = Color(0xFF4EDEA3).copy(alpha = 0.12f)
+// Modern Floating Dock Tokens: Black & White + Trending Purple
+private val ObsidianGlassBg = Color(0xF00B0C0E)
+private val ActiveElectricPurple = Color(0xFFA855F7)
+private val ActivePillBackground = Color(0xFFA855F7).copy(alpha = 0.14f)
+private val ActivePillBorder = Color(0xFFA855F7).copy(alpha = 0.28f)
 private val InactiveGrey = Color(0xFF8E989C)
 
 /**
- * Floating frosted glassmorphic bottom navigation dock matching Stitch mockups:
- * - Obsidian backdrop (#111415 at 85% opacity) with rounded pill silhouette
- * - Subtle emerald top border/specular highlight (#4EDEA3 at 15-25% opacity)
- * - Active tab with glowing emerald (#4EDEA3) icon, label, pill capsule & glowing underglow dot
- * - Inactive tabs in muted grey (#8E989C)
+ * Floating frosted glassmorphic bottom navigation dock in Black & White + Trending Purple:
+ * - Pitch black obsidian glass backdrop (Color(0xF00B0C0E)) with rounded pill silhouette
+ * - Subtle purple to white specular gradient border highlight
+ * - Selected tab: Trending Electric Purple (Color(0xFFA855F7)) with glowing purple pill capsule and purple underglow dot indicator
+ * - Inactive tabs: Crisp muted grey / white (Color(0xFF8E989C))
  */
 @Composable
 fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
@@ -77,9 +76,9 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
             border = BorderStroke(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
-                    colors = listOf(
-                        TopHighlightColor, // Specular subtle top highlight
-                        GlassBorderColor   // Soft translucent emerald border
+                    listOf(
+                        Color(0x40A855F7),
+                        Color(0x15FFFFFF)
                     )
                 )
             ),
@@ -98,7 +97,7 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
                     val isSelected = currentTab == appTab.tab
 
                     val contentColor by animateColorAsState(
-                        targetValue = if (isSelected) ActiveEmerald else InactiveGrey,
+                        targetValue = if (isSelected) ActiveElectricPurple else InactiveGrey,
                         animationSpec = tween(durationMillis = 200),
                         label = "tabContentColor"
                     )
@@ -124,7 +123,7 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
                                 if (isSelected) {
                                     Modifier.border(
                                         width = 0.5.dp,
-                                        color = GlassBorderColor.copy(alpha = 0.35f * pillAlpha),
+                                        color = ActivePillBorder.copy(alpha = pillAlpha),
                                         shape = RoundedCornerShape(20.dp)
                                     )
                                 } else Modifier
@@ -162,7 +161,7 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
 
                             Spacer(modifier = Modifier.height(2.dp))
 
-                            // Glowing emerald underglow dot indicator
+                            // Glowing purple underglow dot indicator
                             Box(
                                 modifier = Modifier
                                     .size(6.dp)
@@ -174,7 +173,7 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
                                     modifier = Modifier
                                         .size(6.dp)
                                         .background(
-                                            color = ActiveEmerald.copy(alpha = 0.35f),
+                                            color = ActiveElectricPurple.copy(alpha = 0.35f),
                                             shape = CircleShape
                                         )
                                 )
@@ -183,7 +182,7 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
                                     modifier = Modifier
                                         .size(3.5.dp)
                                         .background(
-                                            color = ActiveEmerald,
+                                            color = ActiveElectricPurple,
                                             shape = CircleShape
                                         )
                                 )

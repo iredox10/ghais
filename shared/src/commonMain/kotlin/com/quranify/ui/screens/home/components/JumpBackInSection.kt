@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -68,7 +69,7 @@ fun JumpBackInSection(
                     modifier = Modifier
                         .size(6.dp)
                         .alpha(alpha)
-                        .background(QuranifyColors.Primary, CircleShape)
+                        .background(QuranifyColors.TrendingPurple, CircleShape)
                 )
             }
             
@@ -100,7 +101,6 @@ fun JumpBackInSection(
                     subtitle = item0?.subtitle ?: "Ayah 14 • 4:12 left",
                     subtitleColor = QuranifyColors.TextSecondary,
                     progress = item0?.progress ?: 0.67f,
-                    progressColor = QuranifyColors.Primary,
                     coverUrl = item0?.coverUrl ?: "",
                     onClick = { onCardClick("Al-Mulk") }
                 )
@@ -109,9 +109,8 @@ fun JumpBackInSection(
                     modifier = Modifier.weight(1f),
                     title = item1?.title ?: "Al-Kahf",
                     subtitle = item1?.subtitle ?: "Friday Sunnah",
-                    subtitleColor = QuranifyColors.Secondary,
+                    subtitleColor = QuranifyColors.NeonLilac,
                     progress = item1?.progress ?: 0.25f,
-                    progressColor = QuranifyColors.Secondary,
                     coverUrl = item1?.coverUrl ?: "",
                     onClick = { onCardClick("Al-Kahf") }
                 )
@@ -127,7 +126,6 @@ fun JumpBackInSection(
                     subtitle = item2?.subtitle ?: "Mishary Alafasy",
                     subtitleColor = QuranifyColors.TextSecondary,
                     progress = item2?.progress ?: 0.80f,
-                    progressColor = QuranifyColors.Primary,
                     coverUrl = item2?.coverUrl ?: "",
                     onClick = { onCardClick("Yaseen") }
                 )
@@ -138,7 +136,6 @@ fun JumpBackInSection(
                     subtitle = item3?.subtitle ?: "Heart Softeners",
                     subtitleColor = QuranifyColors.TextSecondary,
                     progress = item3?.progress ?: 0.50f,
-                    progressColor = QuranifyColors.Primary,
                     coverUrl = item3?.coverUrl ?: "",
                     onClick = { onCardClick("Tahajjud") }
                 )
@@ -152,16 +149,18 @@ fun JumpBackInCard(
     modifier: Modifier = Modifier,
     title: String,
     subtitle: String,
-    subtitleColor: Color,
+    subtitleColor: Color = QuranifyColors.TextSecondary,
     progress: Float,
-    progressColor: Color,
+    progressBrush: Brush = Brush.horizontalGradient(
+        listOf(QuranifyColors.ElectricViolet, QuranifyColors.TrendingPurple)
+    ),
     coverUrl: String,
     onClick: () -> Unit
 ) {
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(QuranifyColors.SurfaceContainer)
+            .background(QuranifyColors.ObsidianCard)
             .border(
                 width = 1.dp,
                 color = Color.White.copy(alpha = 0.08f),
@@ -194,7 +193,7 @@ fun JumpBackInCard(
             } else {
                 Text(
                     text = title.firstOrNull()?.toString() ?: "",
-                    color = QuranifyColors.Primary,
+                    color = QuranifyColors.TrendingPurple,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -238,7 +237,7 @@ fun JumpBackInCard(
                     modifier = Modifier
                         .fillMaxWidth(progress)
                         .fillMaxHeight()
-                        .background(progressColor, RoundedCornerShape(2.dp))
+                        .background(progressBrush, RoundedCornerShape(2.dp))
                 )
             }
         }

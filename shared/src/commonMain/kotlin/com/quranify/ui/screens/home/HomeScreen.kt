@@ -27,13 +27,19 @@ import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
 import com.quranify.data.seed.StitchAssets
-import com.quranify.ui.screens.home.components.AyahOfTheDayCard
+import com.quranify.domain.model.TrackItem
+import com.quranify.player.AudioEngine
 import com.quranify.ui.screens.home.components.CuratedForPeaceSection
 import com.quranify.ui.screens.home.components.DhikrStreakCard
 import com.quranify.ui.screens.home.components.JumpBackInSection
 import com.quranify.ui.screens.home.components.RecitationByMoodSection
 import com.quranify.ui.screens.home.components.VerifiedRecitersSection
 import com.quranify.ui.theme.QuranifyColors
+
+// Trending Purple & Pitch Black Palette Tokens
+private val PitchBlackBg = Color(0xFF0B0C0E)
+private val ElectricViolet = Color(0xFFA855F7)
+private val TrendingPurple = Color(0xFF8B5CF6)
 
 object HomeScreen : Tab {
     override val options: TabOptions
@@ -51,21 +57,22 @@ object HomeScreen : Tab {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(QuranifyColors.Background)
+                .background(PitchBlackBg)
         ) {
-            // Top Ambient Spiritual Aura Glow
+            // Ambient Top Aura: Electric Violet / Trending Purple fading smoothly into deep pitch black
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(240.dp)
+                    .height(280.dp)
                     .background(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                QuranifyColors.Primary.copy(alpha = 0.12f),
-                                Color.Transparent
+                                ElectricViolet.copy(alpha = 0.22f),
+                                TrendingPurple.copy(alpha = 0.10f),
+                                PitchBlackBg.copy(alpha = 0.0f)
                             ),
                             center = Offset(300f, -50f),
-                            radius = 450f
+                            radius = 500f
                         )
                     )
             )
@@ -78,21 +85,48 @@ object HomeScreen : Tab {
                     HomeTopBar()
                 }
                 item {
-                    DhikrStreakCard(modifier = Modifier.padding(horizontal = 16.dp))
+                    DhikrStreakCard(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    )
                 }
                 item {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    AyahOfTheDayCard(modifier = Modifier.padding(horizontal = 16.dp))
-                }
-                item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    JumpBackInSection()
+                    JumpBackInSection(
+                        onCardClick = { title ->
+                            AudioEngine.playTrack(
+                                TrackItem(
+                                    reciterSlug = "mishary_alafasy",
+                                    reciterName = "Mishary Alafasy",
+                                    surahId = 67,
+                                    surahNameEn = title,
+                                    surahNameAr = "الملك",
+                                    ayahNo = 1,
+                                    audioUrl = "https://cdn.islamic.network/quran/audio/128/ar.alafasy/5241.mp3",
+                                    durationMs = 240000L
+                                )
+                            )
+                        }
+                    )
                 }
                 item {
                     VerifiedRecitersSection()
                 }
                 item {
-                    CuratedForPeaceSection()
+                    CuratedForPeaceSection(
+                        onPlayClick = { playlistId ->
+                            AudioEngine.playTrack(
+                                TrackItem(
+                                    reciterSlug = "mishary_alafasy",
+                                    reciterName = "Mishary Alafasy",
+                                    surahId = 1,
+                                    surahNameEn = "Surah Al-Fatiha",
+                                    surahNameAr = "الفاتحة",
+                                    ayahNo = 1,
+                                    audioUrl = "https://cdn.islamic.network/quran/audio/128/ar.alafasy/1.mp3",
+                                    durationMs = 45000L
+                                )
+                            )
+                        }
+                    )
                 }
                 item {
                     RecitationByMoodSection()
@@ -116,15 +150,15 @@ private fun HomeTopBar() {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f, fill = false)
         ) {
-            // Frosted glass logo container
+            // Frosted black glass logo container
             Box(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White.copy(alpha = 0.06f))
+                    .background(Color.Black.copy(alpha = 0.60f))
                     .border(
                         width = 1.dp,
-                        color = Color.White.copy(alpha = 0.12f),
+                        color = Color(0x33A855F7),
                         shape = RoundedCornerShape(12.dp)
                     )
                     .padding(4.dp),
@@ -144,11 +178,11 @@ private fun HomeTopBar() {
 
             Column {
                 Text(
-                    text = "Assalamu Alaikum",
-                    color = QuranifyColors.Primary,
+                    text = "ASSALAMU ALAIKUM",
+                    color = ElectricViolet,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 1.sp
+                    letterSpacing = 1.2.sp
                 )
                 Text(
                     text = "Home",
@@ -169,10 +203,10 @@ private fun HomeTopBar() {
                 modifier = Modifier
                     .size(38.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.06f))
+                    .background(Color.White.copy(alpha = 0.08f))
                     .border(
                         width = 1.dp,
-                        color = Color.White.copy(alpha = 0.10f),
+                        color = Color.White.copy(alpha = 0.14f),
                         shape = CircleShape
                     )
                     .clickable { /* TODO: Search */ },
@@ -181,12 +215,12 @@ private fun HomeTopBar() {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
-                    tint = QuranifyColors.TextSecondary,
+                    tint = Color.White,
                     modifier = Modifier.size(19.dp)
                 )
             }
 
-            // Profile avatar with subtle emerald accent ring
+            // Profile avatar with subtle purple glowing ring
             AsyncImage(
                 model = StitchAssets.ProfileAvatarUrl,
                 contentDescription = "Profile",
@@ -194,7 +228,7 @@ private fun HomeTopBar() {
                 modifier = Modifier
                     .size(38.dp)
                     .clip(CircleShape)
-                    .border(1.5.dp, QuranifyColors.Primary.copy(alpha = 0.40f), CircleShape)
+                    .border(1.5.dp, ElectricViolet.copy(alpha = 0.40f), CircleShape)
                     .background(QuranifyColors.SurfaceHigh)
             )
         }

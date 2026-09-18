@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.quranify.ui.theme.QuranifyColors
 
 @Composable
 fun DhikrStreakCard(modifier: Modifier = Modifier) {
@@ -36,16 +35,16 @@ fun DhikrStreakCard(modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(QuranifyColors.SurfaceContainer)
+            .background(Color(0xFF121316))
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.08f),
+                color = Color(0x33A855F7),
                 shape = RoundedCornerShape(16.dp)
             )
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Left side: Amber flame badge with gradient & border from Stitch Apple Glassmorphism
+        // Left side: Purple gradient container with glowing border and crisp white flame icon
         Box(
             modifier = Modifier
                 .size(38.dp)
@@ -53,14 +52,14 @@ fun DhikrStreakCard(modifier: Modifier = Modifier) {
                 .background(
                     brush = Brush.linearGradient(
                         listOf(
-                            Color(0xFFFBBF24).copy(alpha = 0.20f),
-                            QuranifyColors.Primary.copy(alpha = 0.15f)
+                            Color(0xFF8B5CF6),
+                            Color(0xFFA855F7)
                         )
                     )
                 )
                 .border(
                     width = 1.dp,
-                    color = Color(0xFFFBBF24).copy(alpha = 0.35f),
+                    color = Color(0xFFC084FC).copy(alpha = 0.6f),
                     shape = RoundedCornerShape(12.dp)
                 ),
             contentAlignment = Alignment.Center
@@ -68,7 +67,7 @@ fun DhikrStreakCard(modifier: Modifier = Modifier) {
             Icon(
                 imageVector = Icons.Filled.LocalFireDepartment,
                 contentDescription = "Flame Icon",
-                tint = Color(0xFFFBBF24),
+                tint = Color.White,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -88,14 +87,14 @@ fun DhikrStreakCard(modifier: Modifier = Modifier) {
                     color = Color.White
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                // "ACTIVE" pill badge matching Stitch
+                // "ACTIVE" frosted glass pill badge with purple border and text
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(50))
-                        .background(QuranifyColors.Primary.copy(alpha = 0.15f))
+                        .background(Color(0xFFA855F7).copy(alpha = 0.15f))
                         .border(
                             width = 1.dp,
-                            color = QuranifyColors.Primary.copy(alpha = 0.30f),
+                            color = Color(0xFFA855F7).copy(alpha = 0.35f),
                             shape = RoundedCornerShape(50)
                         )
                         .padding(horizontal = 7.dp, vertical = 2.dp),
@@ -103,7 +102,7 @@ fun DhikrStreakCard(modifier: Modifier = Modifier) {
                 ) {
                     Text(
                         text = "ACTIVE",
-                        color = QuranifyColors.Primary,
+                        color = Color(0xFFC084FC),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp
@@ -113,14 +112,14 @@ fun DhikrStreakCard(modifier: Modifier = Modifier) {
             Text(
                 text = "35 mins recited today • Goal: 45m",
                 fontSize = 12.sp,
-                color = QuranifyColors.TextSecondary,
+                color = Color(0xFF9CA3AF),
                 modifier = Modifier.padding(top = 2.dp)
             )
         }
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Right side: Custom Circular Progress Ring
+        // Right side: Custom Circular Progress Ring with Electric Purple to Neon Lilac sweep
         Box(
             modifier = Modifier.size(32.dp),
             contentAlignment = Alignment.Center
@@ -131,10 +130,16 @@ fun DhikrStreakCard(modifier: Modifier = Modifier) {
                     color = Color.White.copy(alpha = 0.10f),
                     style = Stroke(width = 3.dp.toPx())
                 )
-                
+
                 // Active sweep (78%)
                 drawArc(
-                    color = QuranifyColors.Primary,
+                    brush = Brush.sweepGradient(
+                        listOf(
+                            Color(0xFF8B5CF6),
+                            Color(0xFFA855F7),
+                            Color(0xFFC084FC)
+                        )
+                    ),
                     startAngle = -90f,
                     sweepAngle = 280f,
                     useCenter = false,

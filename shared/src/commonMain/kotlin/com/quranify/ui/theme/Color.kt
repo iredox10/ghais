@@ -18,6 +18,21 @@ import androidx.compose.ui.graphics.Color
  */
 object QuranifyColors {
     // -------------------------------------------------------------------------
+    // Trending Purple & Obsidian Monochrome Design Tokens
+    // -------------------------------------------------------------------------
+    val PitchBlack = Color(0xFF0B0C0E)            // Absolute deep obsidian black
+    val PureBlack = Color(0xFF000000)             // Pure AMOLED black
+    val ObsidianCard = Color(0xFF121418)          // Obsidian card background
+
+    val TrendingPurple = Color(0xFFA855F7)        // Trending Purple accent
+    val ElectricViolet = Color(0xFF8B5CF6)        // Electric Violet gradient start
+    val NeonLilac = Color(0xFFC084FC)             // Neon Lilac gradient highlight
+    val RoyalViolet = Color(0xFF6D28D9)           // Deep rich violet
+    val PurpleGlow = Color(0x33A855F7)            // 20% alpha purple aura
+    val PurpleGlass = Color(0x26A855F7)           // 15% alpha purple frosted glass
+    val PurpleBorder = Color(0x4DA855F7)          // 30% alpha purple border highlight
+
+    // -------------------------------------------------------------------------
     // Canvas & Core Surfaces (Stitch Specification)
     // -------------------------------------------------------------------------
     val Obsidian = Color(0xFF111415)              // Base canvas / obsidian slate background

@@ -34,6 +34,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.quranify.ui.theme.QuranifyColors
 
+// Trending Purple & Monochrome Palette Tokens
+private val ObsidianCardBg = Color(0xFF121418)
+private val ElectricPurple = Color(0xFFA855F7)
+private val RoyalViolet = Color(0xFF8B5CF6)
+private val DeepPurple = Color(0xFF6D28D9)
+private val Amethyst = Color(0xFFC084FC)
+
 @Composable
 fun RecitationByMoodSection(
     onMoodClick: (String) -> Unit = {},
@@ -55,15 +62,15 @@ fun RecitationByMoodSection(
             Box(
                 modifier = Modifier
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.07f))
-                    .border(1.dp, Color.White.copy(alpha = 0.10f), CircleShape)
+                    .background(Color.White.copy(alpha = 0.06f))
+                    .border(1.dp, ElectricPurple.copy(alpha = 0.30f), CircleShape)
                     .padding(horizontal = 10.dp, vertical = 3.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "4 Modes",
                     fontSize = 11.sp,
-                    color = QuranifyColors.TextSecondary,
+                    color = Color(0xFFD8B4FE),
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -85,7 +92,7 @@ fun RecitationByMoodSection(
                     title = "Gratitude (Shukr)",
                     subtitle = "Surah Ibrahim • Luqman",
                     icon = Icons.Rounded.Face,
-                    iconTint = QuranifyColors.Primary,
+                    containerColor = ElectricPurple,
                     onClick = { onMoodClick("gratitude") }
                 )
                 MoodTile(
@@ -93,7 +100,7 @@ fun RecitationByMoodSection(
                     title = "Anxiety & Relief",
                     subtitle = "Ash-Sharh • Ad-Duha",
                     icon = Icons.Rounded.Favorite,
-                    iconTint = Color(0xFFFBBF24),
+                    containerColor = RoyalViolet,
                     onClick = { onMoodClick("anxiety") }
                 )
             }
@@ -106,7 +113,7 @@ fun RecitationByMoodSection(
                     title = "Hifz Memorization",
                     subtitle = "Repeat loop mode 3x",
                     icon = Icons.Rounded.Lightbulb,
-                    iconTint = Color(0xFF2DD4BF),
+                    containerColor = DeepPurple,
                     onClick = { onMoodClick("hifz") }
                 )
                 MoodTile(
@@ -114,7 +121,7 @@ fun RecitationByMoodSection(
                     title = "Qiyam al-Layl",
                     subtitle = "Long slow recitations",
                     icon = Icons.Rounded.DarkMode,
-                    iconTint = Color(0xFFA78BFA),
+                    containerColor = Amethyst,
                     onClick = { onMoodClick("qiyam") }
                 )
             }
@@ -127,14 +134,14 @@ private fun MoodTile(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    iconTint: Color,
+    containerColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(QuranifyColors.SurfaceContainer)
+            .background(ObsidianCardBg)
             .border(
                 width = 1.dp,
                 color = Color.White.copy(alpha = 0.08f),
@@ -148,10 +155,10 @@ private fun MoodTile(
             modifier = Modifier
                 .size(38.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(iconTint.copy(alpha = 0.15f))
+                .background(containerColor.copy(alpha = 0.16f))
                 .border(
                     width = 1.dp,
-                    color = iconTint.copy(alpha = 0.30f),
+                    color = containerColor.copy(alpha = 0.32f),
                     shape = RoundedCornerShape(12.dp)
                 ),
             contentAlignment = Alignment.Center
@@ -159,7 +166,7 @@ private fun MoodTile(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = iconTint,
+                tint = Color.White,
                 modifier = Modifier.size(20.dp)
             )
         }

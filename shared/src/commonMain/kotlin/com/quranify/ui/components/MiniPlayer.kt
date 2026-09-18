@@ -57,13 +57,13 @@ import com.quranify.ui.theme.QuranifyColors
 import com.quranify.ui.theme.QuranifyShapes
 
 /**
- * Stitch Obsidian-Emerald Glassmorphic Mini Player
+ * Modern Black & White + Trending Purple Glassmorphic Mini Player
  * Hovers directly above the bottom navigation dock with:
- * - Frosted translucent obsidian backdrop with specular emerald top border
- * - Top-edge animated emerald progress track with soft ambient glow
- * - Dynamic pulsing emerald equalizer indicator
- * - Live Surah name, Arabic typography, reciter and Ayah info
- * - Emerald circular play/pause button and skip next button
+ * - Frosted translucent obsidian backdrop with specular purple top border
+ * - Top-edge animated Trending Purple to Neon Lilac progress track
+ * - Dynamic pulsing Trending Purple equalizer indicator
+ * - Live Surah name in pure white, reciter and Ayah info in muted light grey
+ * - Electric Purple gradient circular play/pause button and crisp white skip next button
  * - Swipe-down to dismiss gesture and tap to expand to NowPlayingScreen
  */
 @Composable
@@ -89,18 +89,18 @@ fun MiniPlayer(
     // Glassmorphic Obsidian Background Gradient
     val glassGradient = Brush.verticalGradient(
         colors = listOf(
-            Color(0xEE1A1E1D), // Frosted obsidian top
-            Color(0xF6111413)  // Deep obsidian base
+            Color(0xEE16161A), // Frosted obsidian top
+            Color(0xF60F0F12)  // Deep obsidian base
         )
     )
 
-    // Glowing specular emerald top rim with subtle glass border
+    // Glowing specular purple top rim with subtle glass border
     val glassBorder = BorderStroke(
         width = 1.dp,
         brush = Brush.verticalGradient(
             colors = listOf(
-                QuranifyColors.Primary.copy(alpha = 0.38f),
-                QuranifyColors.GlassBorder.copy(alpha = 0.25f)
+                Color(0xFF8B5CF6).copy(alpha = 0.35f),
+                Color(0xFFFFFFFF).copy(alpha = 0.10f)
             )
         )
     )
@@ -142,7 +142,7 @@ fun MiniPlayer(
                         }
                     }
             ) {
-                // Subtle radiant emerald underglow at top border
+                // Subtle radiant purple underglow at top border
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -150,7 +150,7 @@ fun MiniPlayer(
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    QuranifyColors.Primary.copy(alpha = 0.12f),
+                                    Color(0xFF8B5CF6).copy(alpha = 0.12f),
                                     Color.Transparent
                                 )
                             )
@@ -158,12 +158,12 @@ fun MiniPlayer(
                 )
 
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    // Playback progress track: emerald line running across top border
+                    // Playback progress track: Trending Purple to Neon Lilac gradient running across top border
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(2.5.dp)
-                            .background(QuranifyColors.SurfaceHighest.copy(alpha = 0.35f))
+                            .background(Color(0x33FFFFFF))
                     ) {
                         Box(
                             modifier = Modifier
@@ -172,8 +172,8 @@ fun MiniPlayer(
                                 .background(
                                     Brush.horizontalGradient(
                                         colors = listOf(
-                                            QuranifyColors.PrimaryContainer,
-                                            QuranifyColors.Primary
+                                            Color(0xFF8B5CF6),
+                                            Color(0xFFA855F7)
                                         )
                                     )
                                 )
@@ -187,7 +187,7 @@ fun MiniPlayer(
                             .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Left: Obsidian tile with animated emerald equalizer visualizer
+                        // Left: Obsidian tile with animated trending purple equalizer visualizer
                         Box(
                             modifier = Modifier
                                 .size(44.dp)
@@ -195,8 +195,8 @@ fun MiniPlayer(
                                 .background(
                                     Brush.linearGradient(
                                         colors = listOf(
-                                            Color(0xFF222826),
-                                            Color(0xFF141716)
+                                            Color(0xFF202024),
+                                            Color(0xFF121214)
                                         )
                                     )
                                 )
@@ -204,8 +204,8 @@ fun MiniPlayer(
                                     width = 1.dp,
                                     brush = Brush.verticalGradient(
                                         colors = listOf(
-                                            QuranifyColors.Primary.copy(alpha = 0.35f),
-                                            QuranifyColors.OutlineVariant.copy(alpha = 0.25f)
+                                            Color(0xFF8B5CF6).copy(alpha = 0.35f),
+                                            Color(0xFFFFFFFF).copy(alpha = 0.08f)
                                         )
                                     ),
                                     shape = RoundedCornerShape(12.dp)
@@ -226,7 +226,7 @@ fun MiniPlayer(
                             ) {
                                 Text(
                                     text = "${track.surahId}. ${track.surahNameEn}",
-                                    color = QuranifyColors.TextPrimary,
+                                    color = Color.White,
                                     fontSize = 13.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
@@ -237,7 +237,7 @@ fun MiniPlayer(
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = track.surahNameAr,
-                                        color = QuranifyColors.TextTertiary,
+                                        color = Color(0xFF9CA3AF),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Normal,
                                         maxLines = 1
@@ -252,7 +252,7 @@ fun MiniPlayer(
                             ) {
                                 Text(
                                     text = track.reciterName,
-                                    color = QuranifyColors.TextSecondary,
+                                    color = Color(0xFF9CA3AF),
                                     fontSize = 11.5.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
@@ -261,7 +261,7 @@ fun MiniPlayer(
                                 if (track.ayahNo > 0) {
                                     Text(
                                         text = " • Ayah ${track.ayahNo}",
-                                        color = QuranifyColors.TextTertiary,
+                                        color = Color(0xFF9CA3AF),
                                         fontSize = 11.sp,
                                         maxLines = 1
                                     )
@@ -271,29 +271,36 @@ fun MiniPlayer(
 
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        // Right: Controls (Play/Pause Emerald Circular Button & Skip Next Button)
+                        // Right: Controls (Play/Pause Electric Purple Gradient Circular Button & Crisp White Skip Button)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            // Emerald Circular Play/Pause Button
+                            // Electric Purple Circular Play/Pause Button
                             Box(
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(CircleShape)
-                                    .background(QuranifyColors.Primary)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(
+                                                Color(0xFF8B5CF6),
+                                                Color(0xFFA855F7)
+                                            )
+                                        )
+                                    )
                                     .clickable { AudioEngine.togglePlayPause() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = if (isPlaying) "Pause" else "Play",
-                                    tint = QuranifyColors.OnPrimary,
+                                    tint = Color.White,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
 
-                            // Skip Button
+                            // Skip Button (Crisp White)
                             IconButton(
                                 onClick = { AudioEngine.skipNext() },
                                 modifier = Modifier.size(38.dp)
@@ -301,7 +308,7 @@ fun MiniPlayer(
                                 Icon(
                                     imageVector = Icons.Default.SkipNext,
                                     contentDescription = "Skip Next",
-                                    tint = QuranifyColors.TextPrimary,
+                                    tint = Color.White,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -315,7 +322,7 @@ fun MiniPlayer(
 
 /**
  * Animated live equalizer bars for the mini player thumbnail.
- * Dynamically pulses 4 emerald vertical bars when audio is active,
+ * Dynamically pulses 4 Trending Purple vertical bars when audio is active,
  * or gracefully rests when playback is paused.
  */
 @Composable
@@ -327,7 +334,7 @@ private fun MiniPlayerEqualizer(
         Icon(
             imageVector = Icons.Default.GraphicEq,
             contentDescription = "Equalizer",
-            tint = QuranifyColors.Primary.copy(alpha = 0.75f),
+            tint = Color(0xFFA855F7).copy(alpha = 0.75f),
             modifier = modifier.size(20.dp)
         )
         return
@@ -381,25 +388,25 @@ private fun MiniPlayerEqualizer(
             modifier = Modifier
                 .width(2.5.dp)
                 .height(h1.dp)
-                .background(QuranifyColors.Primary, RoundedCornerShape(1.dp))
+                .background(Color(0xFFA855F7), RoundedCornerShape(1.dp))
         )
         Box(
             modifier = Modifier
                 .width(2.5.dp)
                 .height(h2.dp)
-                .background(QuranifyColors.Primary, RoundedCornerShape(1.dp))
+                .background(Color(0xFFA855F7), RoundedCornerShape(1.dp))
         )
         Box(
             modifier = Modifier
                 .width(2.5.dp)
                 .height(h3.dp)
-                .background(QuranifyColors.Primary, RoundedCornerShape(1.dp))
+                .background(Color(0xFFA855F7), RoundedCornerShape(1.dp))
         )
         Box(
             modifier = Modifier
                 .width(2.5.dp)
                 .height(h4.dp)
-                .background(QuranifyColors.Primary, RoundedCornerShape(1.dp))
+                .background(Color(0xFFA855F7), RoundedCornerShape(1.dp))
         )
     }
 }

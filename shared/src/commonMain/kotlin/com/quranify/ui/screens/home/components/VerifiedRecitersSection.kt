@@ -56,13 +56,13 @@ fun VerifiedRecitersSection(
                 Text(
                     text = "Masters of Tartil and Tajweed",
                     fontSize = 12.sp,
-                    color = QuranifyColors.TextSecondary
+                    color = Color(0xFF9CA3AF)
                 )
             }
             Text(
                 text = "See All",
                 fontSize = 13.sp,
-                color = QuranifyColors.Primary,
+                color = Color(0xFFA855F7),
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.clickable { onSeeAllClick() }
             )
@@ -108,9 +108,10 @@ fun ReciterAvatarItem(
                     width = 2.dp,
                     brush = Brush.linearGradient(
                         listOf(
-                            QuranifyColors.Primary,
-                            Color(0xFF2DD4BF),
-                            Color.White.copy(alpha = 0.25f)
+                            Color(0xFF8B5CF6),
+                            Color(0xFFA855F7),
+                            Color(0xFFC084FC),
+                            Color.White.copy(0.3f)
                         )
                     ),
                     shape = CircleShape
@@ -134,20 +135,20 @@ fun ReciterAvatarItem(
                     .background(QuranifyColors.Surface, CircleShape)
             )
 
-            // Emerald verified checkmark badge matching Stitch
+            // Trending Purple verified checkmark badge
             Box(
                 modifier = Modifier
                     .size(19.dp)
                     .align(Alignment.BottomEnd)
                     .clip(CircleShape)
-                    .background(QuranifyColors.Primary)
+                    .background(Color(0xFFA855F7))
                     .border(1.5.dp, QuranifyColors.Background, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = "Verified",
-                    tint = QuranifyColors.OnPrimary,
+                    tint = Color.White,
                     modifier = Modifier.size(11.dp)
                 )
             }
@@ -169,7 +170,7 @@ fun ReciterAvatarItem(
         Text(
             text = reciter.fans,
             fontSize = 11.sp,
-            color = QuranifyColors.TextSecondary,
+            color = Color(0xFF9CA3AF),
             textAlign = TextAlign.Center,
             maxLines = 1
         )
