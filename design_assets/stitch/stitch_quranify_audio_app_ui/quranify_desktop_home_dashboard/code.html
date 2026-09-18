@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"error-container":"#93000a","on-primary":"#003824","surface-tint":"#4edea3","primary":"#4edea3","on-tertiary-fixed-variant":"#0b513d","primary-fixed":"#6ffbbe","secondary":"#45dfa4","on-tertiary-fixed":"#002117","on-secondary":"#003825","on-surface-variant":"#bbcabf","outline":"#86948a","primary-fixed-dim":"#4edea3","on-primary-container":"#00422b","on-error-container":"#ffdad6","primary-container":"#10b981","secondary-fixed-dim":"#45dfa4","on-secondary-fixed-variant":"#005137","on-secondary-fixed":"#002114","surface":"#0f1412","surface-dim":"#0f1412","surface-bright":"#353a38","on-primary-fixed":"#002113","tertiary-fixed-dim":"#95d3ba","on-secondary-container":"#00452e","surface-container":"#1c211e","surface-container-high":"#262b29","on-background":"#dfe4e0","surface-container-lowest":"#0a0f0d","surface-container-highest":"#313633","secondary-container":"#00bd85","surface-variant":"#313633","tertiary-container":"#71af97","error":"#ffb4ab","inverse-primary":"#006c49","on-tertiary-container":"#004231","outline-variant":"#3c4a42","surface-container-low":"#181d1a","secondary-fixed":"#68fcbf","inverse-on-surface":"#2c322f","tertiary":"#95d3ba","on-error":"#690005","on-primary-fixed-variant":"#005236","inverse-surface":"#dfe4e0","on-surface":"#dfe4e0","tertiary-fixed":"#b0f0d6","on-tertiary":"#003829","background":"#0f1412"},borderRadius:{DEFAULT:"0.25rem",lg:"0.5rem",xl:"0.75rem",full:"9999px"},spacing:{"space-xl":"2.5rem","space-sm":"0.5rem","gutter-desktop":"1.5rem","space-xs":"0.25rem","margin-tablet":"2rem","space-md":"1rem","margin-desktop":"3rem",margin:"1rem",gutter:"1rem","space-lg":"1.5rem","gutter-tablet":"1.25rem"},fontFamily:{"label-lg":["Plus Jakarta Sans"],"label-md":["Plus Jakarta Sans"],"display-lg":["Plus Jakarta Sans"],"label-sm":["Plus Jakarta Sans"],"headline-sm":["Plus Jakarta Sans"],"body-lg":["Plus Jakarta Sans"],"display-lg-mobile":["Plus Jakarta Sans"],"body-sm":["Plus Jakarta Sans"],"body-md":["Plus Jakarta Sans"],"headline-lg":["Plus Jakarta Sans"],"headline-md":["Plus Jakarta Sans"]},fontSize:{"label-lg":["14px",{lineHeight:"18px",letterSpacing:"0.01em",fontWeight:"600"}],"label-md":["12px",{lineHeight:"16px",letterSpacing:"0.02em",fontWeight:"500"}],"display-lg":["40px",{lineHeight:"48px",letterSpacing:"-0.03em",fontWeight:"700"}],"label-sm":["10px",{lineHeight:"12px",letterSpacing:"0.04em",fontWeight:"600"}],"headline-sm":["18px",{lineHeight:"24px",letterSpacing:"-0.01em",fontWeight:"600"}],"body-lg":["16px",{lineHeight:"24px",letterSpacing:"-0.005em",fontWeight:"400"}],"display-lg-mobile":["32px",{lineHeight:"38px",letterSpacing:"-0.025em",fontWeight:"700"}],"body-sm":["12px",{lineHeight:"16px",fontWeight:"400"}],"body-md":["14px",{lineHeight:"20px",fontWeight:"400"}],"headline-lg":["28px",{lineHeight:"36px",letterSpacing:"-0.02em",fontWeight:"600"}],"headline-md":["22px",{lineHeight:"28px",letterSpacing:"-0.015em",fontWeight:"600"}]}}}};</script></head><body class="bg-surface font-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen relative overflow-x-hidden"><div class="fixed inset-0 pointer-events-none z-0 overflow-hidden"><div class="absolute -top-40 left-64 w-[540px] h-[540px] rounded-full bg-primary/10 blur-[130px]"></div><div class="absolute top-1/3 -right-20 w-[480px] h-[480px] rounded-full bg-secondary-container/10 blur-[140px]"></div><div class="absolute -bottom-20 left-1/2 w-[600px] h-[500px] rounded-full bg-primary/5 blur-[160px]"></div></div><aside class="fixed left-0 top-0 bottom-24 w-72 bg-surface-container-lowest/85 backdrop-blur-2xl z-40 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col"><div class="h-16 px-space-lg flex items-center gap-space-sm"><img alt="Brand logo. - Primary color: #10b981
+- Font: plusJakartaSans
+- Mode: dark
+- Roundness: rounded-md
+" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1VSY3aPP_KJwBw8Z5b4fXNcpOg9Zslxkd6o3i7gPVIaruUyts9p6lNZewsVKJiK1RYWHf96fYxOm9PD4ojF1LGgA6cx-SlbkR6hRY-H6JeXh6k7RTCBDvVGH6qxu3cc9IpeI52x1d7HMcn6edFe6005jaVSsnmLZGqrvkdCacHCQ2KnupCjp2Lp5pvB0if1X3Tub7lcbfTSOHFEC__1EVSohZFe-S45_T6QSbELa71kWZHJJ0qIalmLxwrS"/><div class="flex flex-col"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight font-bold">Quranify</span><span class="font-label-sm text-label-sm text-primary tracking-widest uppercase">Audio Sanctuary</span></div></div><div class="px-space-md pt-space-md"><span class="px-space-md font-label-sm text-label-sm uppercase tracking-wider text-outline">Main Sanctuary</span><nav class="mt-space-xs flex flex-col gap-1" data-active-classes="bg-primary-container text-on-primary-container font-headline-sm"><a aria-current="page" class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl transition-all group bg-primary-container text-on-primary-container font-headline-sm" data-path="home" href="#"><span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">home</span><span class="font-body-md text-body-md font-medium">Home</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="explore-and-surahs" href="#"><span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">explore</span><span class="font-body-md text-body-md font-medium">Explore &amp; Surahs</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="mushaf-reader" href="#"><span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">menu_book</span><span class="font-body-md text-body-md font-medium">Mushaf Reader</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="your-library" href="#"><span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">library_music</span><span class="font-body-md text-body-md font-medium">Your Library</span></a></nav></div><div class="px-space-md pt-space-lg"><span class="px-space-md font-label-sm text-label-sm uppercase tracking-wider text-outline">Spiritual Playlists</span><nav class="mt-space-xs flex flex-col gap-1" data-active-classes="bg-primary-container text-on-primary-container font-headline-sm"><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="playlist-tahajjud-and-night-qiyam" href="#"><span class="material-symbols-outlined text-outline-variant group-hover:text-secondary transition-colors">dark_mode</span><span class="font-body-sm text-body-sm truncate">Tahajjud &amp; Night Qiyam</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="playlist-morning-adhkar" href="#"><span class="material-symbols-outlined text-outline-variant group-hover:text-secondary transition-colors">wb_sunny</span><span class="font-body-sm text-body-sm truncate">Morning Adhkar</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="playlist-juz-amma" href="#"><span class="material-symbols-outlined text-outline-variant group-hover:text-secondary transition-colors">auto_stories</span><span class="font-body-sm text-body-sm truncate">Juz Amma</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all group" data-path="playlist-calm-sleep" href="#"><span class="material-symbols-outlined text-outline-variant group-hover:text-secondary transition-colors">bedtime</span><span class="font-body-sm text-body-sm truncate">Calm Sleep</span></a></nav></div></div><div class="p-space-md"><div class="p-space-md rounded-xl bg-surface-container-low/70 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex items-center justify-between mb-space-xs"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-primary text-base">bookmark_manager</span><span class="font-label-md text-label-md text-on-surface font-semibold">Quick Khatm</span></div><span class="font-label-sm text-label-sm text-primary font-semibold">64%</span></div><p class="font-body-sm text-body-sm text-on-surface-variant mb-space-sm">Juz 21 • Surah Ar-Rum</p><div class="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden"><div class="h-full bg-primary-container rounded-full w-[64%]"></div></div><div class="mt-space-sm flex items-center justify-between"><span class="font-label-sm text-label-sm text-outline">Target: Ramadan D-12</span><a class="font-label-sm text-label-sm text-primary hover:underline" data-path="mushaf-reader" href="#">Resume</a></div></div></div></aside><div class="pl-72 flex flex-col min-h-screen relative z-10"><header class="fixed top-0 left-72 right-0 h-16 bg-surface-container-lowest/80 backdrop-blur-2xl z-30 flex items-center justify-between px-gutter-desktop shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex items-center gap-space-md flex-1 max-w-lg"><div class="relative w-full flex items-center"><span class="material-symbols-outlined absolute left-3.5 text-on-surface-variant pointer-events-none text-xl">search</span><input class="w-full h-10 pl-10 pr-12 rounded-full bg-surface-container/60 text-on-surface placeholder:text-outline text-body-sm font-body-sm focus:outline-none focus:ring-1 focus:ring-primary/40 backdrop-blur-md transition-all" placeholder="Search Surah, Qari, Juz, Ayah..." type="text"/><kbd class="absolute right-3 px-2 py-0.5 rounded bg-surface-container-high/80 text-outline text-label-sm font-label-sm uppercase font-mono shadow-sm">⌘K</kbd></div></div><div class="flex items-center gap-space-md"><div class="hidden lg:flex items-center gap-space-xs px-space-md py-1.5 rounded-full bg-surface-container/70 backdrop-blur-md text-on-surface-variant"><span class="material-symbols-outlined text-primary text-sm">local_fire_department</span><span class="font-label-md text-label-md text-on-surface font-semibold">7 Day Streak</span><span class="text-outline text-xs">•</span><span class="font-label-md text-label-md text-on-surface-variant">35m today</span></div><button class="flex items-center gap-1.5 px-space-md py-1.5 rounded-full bg-surface-container/50 hover:bg-surface-container-high hover:text-on-surface transition-all text-on-surface-variant"><span class="material-symbols-outlined text-base text-primary">speaker_group</span><span class="font-label-md text-label-md hidden xl:inline">Living Room AirPlay</span></button><button class="relative p-2 rounded-full hover:bg-surface-container-high hover:text-on-surface transition-all text-on-surface-variant"><span class="material-symbols-outlined">notifications</span><span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary ring-2 ring-surface"></span></button><div class="flex items-center gap-space-xs pl-space-xs"><div class="relative"><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1UCF5PmEzAuhY7h-DkvBOR6w6id1nLrU6RUzlsj3RtRRCuNHGbnvzSxg7yx7cBmZeMcPGYAo_FVvoNHzvAozB2URyU4ah9pshKza7ZJUnhrwfOj7YG0qpfg7016k1YsXyF59VejcFIUuII1qodt1lvGBl1GD8p7gDUMX3Va-GcixMHqkX9vJr5KPIpLxSd87Yj7HBU32_fLSCh4O3OXu82KPfN1cJWSmAv8ATMoqRX6BLQsBd4p6vhf8O4S"/><span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-primary-container ring-2 ring-surface"></span></div></div></div></header><main class="w-full pt-16 pb-28 min-h-screen bg-transparent px-gutter-desktop"><div class="flex flex-col w-full gap-space-xl">
+<!-- Top Ambient Glow Pool (Self-Contained) -->
+<div class="relative w-full">
+<div class="absolute -top-12 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+<div class="absolute top-8 right-1/4 w-80 h-80 bg-secondary-container/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+<!-- Section 1: Hero Showcase with Ayah of the Day & Apple-Style Khatm Tracker -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg w-full">
+<!-- Ayah of the Day Showcase (8 Cols) -->
+<div class="xl:col-span-8 rounded-3xl bg-surface-container/60 backdrop-blur-2xl p-space-xl shadow-xl flex flex-col justify-between relative overflow-hidden group transition-all duration-500 hover:shadow-[0_20px_50px_rgba(16,185,129,0.12)]">
+<!-- Specular highlight rim gradient -->
+<div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+<div class="absolute -bottom-24 -right-24 w-80 h-80 bg-primary-container/15 rounded-full blur-2xl pointer-events-none"></div>
+<!-- Geometric Watermark SVG -->
+<svg class="absolute right-6 top-6 w-72 h-72 text-surface-container-highest/20 pointer-events-none transition-transform duration-700 group-hover:scale-105 group-hover:rotate-3" fill="currentColor" viewbox="0 0 100 100">
+<circle cx="50" cy="50" fill="none" r="46" stroke="currentColor" stroke-dasharray="2 3" stroke-width="0.75"></circle>
+<path d="M50 4 L96 50 L50 96 L4 50 Z" fill="none" stroke="currentColor" stroke-width="0.8"></path>
+<path d="M50 14 L86 50 L50 86 L14 50 Z" fill="none" stroke="currentColor" stroke-width="0.6"></path>
+<path d="M26 26 L74 26 L74 74 L26 74 Z" fill="none" stroke="currentColor" stroke-width="0.8"></path>
+<circle cx="50" cy="50" fill="none" r="18" stroke="currentColor" stroke-width="0.6"></circle>
+<circle cx="50" cy="50" fill="currentColor" opacity="0.4" r="4"></circle>
+</svg>
+<!-- Header line of Ayah Card -->
+<div class="flex items-center justify-between relative z-10">
+<div class="flex items-center gap-space-sm">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/15 text-primary font-label-sm text-label-sm uppercase tracking-wider shadow-sm">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+              Ayah of the Day
+            </span>
+<span class="text-outline font-label-md text-label-md">•</span>
+<span class="text-on-surface-variant font-label-md text-label-md font-medium">Surah Ar-Rahman (55:13)</span>
+</div>
+<!-- Reciter Badge -->
+<div class="flex items-center gap-space-xs px-3 py-1 rounded-full bg-surface-container-highest/70 backdrop-blur-md">
+<span class="material-symbols-outlined text-primary text-sm">record_voice_over</span>
+<span class="font-label-sm text-label-sm text-on-surface">Mishary Rashid Alafasy</span>
+</div>
+</div>
+<!-- Center: Sacred Calligraphy & Meaning -->
+<div class="my-space-lg flex flex-col gap-space-sm relative z-10">
+<!-- Arabic Calligraphy Typography -->
+<p class="font-display-lg text-display-lg text-right text-primary-fixed tracking-wide leading-relaxed selection:bg-primary selection:text-on-primary" dir="rtl" style="font-family: 'Plus Jakarta Sans', serif;">
+            فَبِأَيِّ آلَاءِ رَبِّكُمَا تُكَذِّبَانِ
+          </p>
+<div class="flex items-start gap-space-sm max-w-xl">
+<span class="material-symbols-outlined text-primary text-xl flex-shrink-0 mt-0.5">format_quote</span>
+<p class="font-body-lg text-body-lg text-on-surface leading-relaxed">
+              “Which of the favors of your Lord will you both then deny?”
+            </p>
+</div>
+</div>
+<!-- Actions Deck -->
+<div class="flex flex-wrap items-center justify-between gap-space-md pt-space-md relative z-10">
+<div class="flex items-center gap-space-sm">
+<button class="flex items-center gap-2 px-space-md py-2 rounded-full bg-primary-container text-on-primary-container font-label-lg text-label-lg font-semibold shadow-md hover:scale-105 active:scale-95 transition-all" id="ayahSnippetBtn">
+<span class="material-symbols-outlined text-xl">play_arrow</span>
+<span>Listen Snippet</span>
+<span class="px-1.5 py-0.5 rounded-full bg-on-primary-container/20 text-on-primary-container text-label-sm font-mono">0:18</span>
+</button>
+<button class="flex items-center gap-1.5 px-space-md py-2 rounded-full bg-surface-container-high/80 text-on-surface hover:bg-surface-container-highest font-label-md text-label-md transition-all shadow-sm">
+<span class="material-symbols-outlined text-base text-primary">menu_book</span>
+<span>Open in Mushaf</span>
+</button>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="p-2 rounded-full bg-surface-container-high/60 text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-all" title="Bookmark Ayah">
+<span class="material-symbols-outlined text-lg">bookmark</span>
+</button>
+<button class="p-2 rounded-full bg-surface-container-high/60 text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-all" title="Add to Reflection Notes">
+<span class="material-symbols-outlined text-lg">edit_note</span>
+</button>
+<button class="p-2 rounded-full bg-surface-container-high/60 text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-all" title="Share Verse">
+<span class="material-symbols-outlined text-lg">share</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Khatm & Dhikr Tracker Widget (4 Cols) - Apple Fitness Style -->
+<div class="xl:col-span-4 rounded-3xl bg-surface-container/60 backdrop-blur-2xl p-space-xl shadow-xl flex flex-col justify-between relative overflow-hidden">
+<div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+<!-- Header -->
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-primary font-semibold uppercase tracking-wider">Ramadan Goal</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold">Khatm Tracker</span>
+</div>
+<div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-xl">auto_stories</span>
+</div>
+</div>
+<!-- Metric Donut + Stats -->
+<div class="flex items-center gap-space-lg my-space-md">
+<!-- Circular SVG Progress Ring -->
+<div class="relative w-28 h-28 flex-shrink-0 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90" viewbox="0 0 100 100">
+<!-- Background channel -->
+<circle class="text-surface-container-highest" cx="50" cy="50" fill="none" r="40" stroke="currentColor" stroke-width="9"></circle>
+<!-- Active Emerald Progress Arc (42% of ~251.32 = ~105.5 dash) -->
+<circle class="text-primary" cx="50" cy="50" fill="none" r="40" stroke="currentColor" stroke-dasharray="251.32" stroke-dashoffset="145.76" stroke-linecap="round" stroke-width="9"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-headline-lg text-headline-lg text-on-surface font-bold leading-none">42%</span>
+<span class="font-label-sm text-label-sm text-outline mt-0.5">Juz 13/30</span>
+</div>
+</div>
+<!-- Vertical Metrics breakdown -->
+<div class="flex flex-col gap-space-xs min-w-0">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-outline">Current Station</span>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold truncate">Surah Yusuf • Ayah 53</span>
+</div>
+<div class="flex items-center gap-1.5 text-primary">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span class="font-label-sm text-label-sm font-semibold">+18m daily avg pace</span>
+</div>
+<div class="text-on-surface-variant font-body-sm text-body-sm">
+              Estimated finish: Ramadan 27
+            </div>
+</div>
+</div>
+<!-- Action / Quick Resume -->
+<div class="pt-space-sm flex items-center gap-space-sm">
+<button class="flex-1 py-2.5 px-space-md rounded-full bg-primary-container text-on-primary-container font-label-md text-label-md font-semibold flex items-center justify-center gap-2 shadow-md hover:scale-[1.02] active:scale-98 transition-all">
+<span class="material-symbols-outlined text-lg">play_arrow</span>
+<span>Resume Juz 13</span>
+</button>
+<button class="p-2.5 rounded-full bg-surface-container-high/70 text-on-surface-variant hover:text-primary transition-colors" title="Adjust Khatm Schedule">
+<span class="material-symbols-outlined text-lg">tune</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Section 2: Jump Back In (4-Column Horizontal Cards) -->
+<div class="flex flex-col gap-space-md w-full">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-xl">history</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Jump Back In</h2>
+</div>
+<a class="font-label-md text-label-md text-primary hover:underline flex items-center gap-1" href="#">
+<span>View Listening History</span>
+<span class="material-symbols-outlined text-sm">arrow_forward</span>
+</a>
+</div>
+<!-- 4 Cards Mosaic Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md w-full">
+<!-- Item 1: Surah Al-Mulk -->
+<div class="group rounded-2xl bg-surface-container/50 hover:bg-surface-container-high/70 backdrop-blur-xl p-space-sm transition-all duration-300 shadow-md hover:shadow-xl flex items-center gap-space-md relative overflow-hidden cursor-pointer">
+<div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+<div class="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container-highest">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="A cinematic night sky over an ancient desert sanctuary with soft emerald aura, deep obsidian darkness, crescent moon, serene contemplative atmosphere" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBP6McYDNsoDmRBvaMVyljsMwWA95ijXBHDbl_hC64ePtUl7ZocfjIw1adysapkP4aPE24W7TdTljwWYhrrAwLCLjJbdYHJCXEJNMFmaCsM9lttn39ndTu_Z8PaT_HhyEcwKHaZciiX6qV3Qg1dbooV7lJ114hcBh7yXxWABqeGYOnLSCHX_Hlyaq1oaxEB_8r6Mwbk_RK-6QIp3iyczP9JfOFrGpt6PZDzrGSadjwN"/>
+<div class="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-lg">play_arrow</span>
+</span>
+</div>
+</div>
+<div class="flex flex-col min-w-0 flex-1 pr-1">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-primary font-mono font-semibold">67 • AL-MULK</span>
+<span class="font-label-sm text-label-sm text-outline">4:12 left</span>
+</div>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold truncate group-hover:text-primary transition-colors">The Sovereignty</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Ayah 14 • Yasser Al-Dossari</span>
+<!-- Progress hairline -->
+<div class="w-full h-1 bg-surface-container-highest rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-primary-container rounded-full w-[68%]"></div>
+</div>
+</div>
+</div>
+<!-- Item 2: Surah Al-Kahf -->
+<div class="group rounded-2xl bg-surface-container/50 hover:bg-surface-container-high/70 backdrop-blur-xl p-space-sm transition-all duration-300 shadow-md hover:shadow-xl flex items-center gap-space-md relative overflow-hidden cursor-pointer">
+<div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+<div class="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container-highest">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="An ethereal golden and emerald glowing cave illuminated by gentle divine light rays, soft mist, Islamic manuscript botanical motifs" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB68dKCFaJSusss73PP_FrnE5DN2fpTq_Xs93DauR4LmQX64gDaOWfY8oSZJNU7CE5wIMS7ue9QLgCZyRp3RC0xrOg0R4dlqS4gwTVUDPkSu1ELi_kTHEBbTYfmn38BADZAbxwACx5RXn36V1q4yHSVUJMPgn6ZYDfqwibcs0tFzW2b01YnoANfgzQ_mJUjOQFuCkhDbnJesBjSIwhQtUucSCQSOB-KRPvVO1LH4Re9"/>
+<div class="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-lg">replay</span>
+</span>
+</div>
+</div>
+<div class="flex flex-col min-w-0 flex-1 pr-1">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-secondary font-mono font-semibold">18 • AL-KAHF</span>
+<span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-primary/20 text-primary uppercase">Done</span>
+</div>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold truncate group-hover:text-primary transition-colors">The Cave</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Friday Sunnah • Complete</span>
+<!-- Completed Bar -->
+<div class="w-full h-1 bg-surface-container-highest rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-primary rounded-full w-full"></div>
+</div>
+</div>
+</div>
+<!-- Item 3: Surah Yaseen -->
+<div class="group rounded-2xl bg-surface-container/50 hover:bg-surface-container-high/70 backdrop-blur-xl p-space-sm transition-all duration-300 shadow-md hover:shadow-xl flex items-center gap-space-md relative overflow-hidden cursor-pointer">
+<div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+<div class="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container-highest">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Sacred emerald Quran book resting on a dark carved wooden stand with soft bokeh particles floating in meditative twilight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIQzmzZIvHEk_WqP213PBo1amBj8ts4AcozZiEYTd5z1_XS2Cl4Slj9yMiQqmK_PQqXlB_ynBRUDfcvfMtWoG2m6vSXd4q0wysGLRIA_91BIf9naYBtN9gGHhvc4pTe5Ssbl32JL7m7G4R6EyBSIqh3SEWfEomQAKw8Dyt4gT2Acm_EVoTESgqjd24nlSh4lLuKKhrmpvGr0ILDDwno3WtgkWOMtGzANqPIiqPeO9r"/>
+<div class="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-lg">play_arrow</span>
+</span>
+</div>
+</div>
+<div class="flex flex-col min-w-0 flex-1 pr-1">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-primary font-mono font-semibold">36 • YA-SEEN</span>
+<span class="font-label-sm text-label-sm text-outline">8:40 left</span>
+</div>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold truncate group-hover:text-primary transition-colors">Heart of the Quran</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Ayah 40 • Mishary Alafasy</span>
+<div class="w-full h-1 bg-surface-container-highest rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-primary-container rounded-full w-[45%]"></div>
+</div>
+</div>
+</div>
+<!-- Item 4: Tahajjud Peace Playlist -->
+<div class="group rounded-2xl bg-surface-container/50 hover:bg-surface-container-high/70 backdrop-blur-xl p-space-sm transition-all duration-300 shadow-md hover:shadow-xl flex items-center gap-space-md relative overflow-hidden cursor-pointer">
+<div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+<div class="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container-highest">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Quiet nighttime minaret silhouette against deep sapphire and emerald galaxy night sky with subtle atmospheric fog" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAYU3Kq7LjNTFELtE3E9KG8NNgpyasRhUP8hn7c2TTjyGUmWYv-R-y5zdn0UP3eAGF98CUDzJDUdSHpR4mQhahZUs6RwSZauFLXRi06EWo-cqNGH6tuKgOM9j6A4bhqrjBfO2URqNFuNMtmpnqUF5UCZnud-amxh4xXz8hGYRvGm-_HfD6huvL3IaYimzXPB2NA9SvAl5hX99shQR8-If5qJbKC7gjQDWY7nGDaTO56"/>
+<div class="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-lg">play_arrow</span>
+</span>
+</div>
+</div>
+<div class="flex flex-col min-w-0 flex-1 pr-1">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-tertiary font-mono font-semibold">PLAYLIST</span>
+<span class="font-label-sm text-label-sm text-outline">12:15 left</span>
+</div>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold truncate group-hover:text-primary transition-colors">Tahajjud Peace</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Heart Softeners • Track 4</span>
+<div class="w-full h-1 bg-surface-container-highest rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-primary-container rounded-full w-[82%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Section 3: Dual-Column Main Experience (8 Cols Left Content + 4 Cols Right Utilities) -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg w-full">
+<!-- Left Main Content Hub (8 Cols) -->
+<div class="xl:col-span-8 flex flex-col gap-space-xl min-w-0">
+<!-- Curated for Spiritual Peace Shelf -->
+<div class="flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Curated for Spiritual Peace</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Carefully sequenced for contemplation, memorization, and emotional calm</p>
+</div>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center hover:bg-surface-container-highest transition-colors" title="Scroll Previous">
+<span class="material-symbols-outlined text-lg">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center hover:bg-surface-container-highest transition-colors" title="Scroll Next">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- 4 Large Rich Glass Media Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
+<!-- Card 1 -->
+<div class="group relative rounded-3xl bg-surface-container/50 hover:bg-surface-container-high/60 backdrop-blur-xl p-space-md transition-all duration-300 shadow-lg hover:shadow-2xl flex flex-col justify-between overflow-hidden cursor-pointer">
+<div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"></div>
+<div class="relative w-full h-44 rounded-2xl overflow-hidden bg-surface-container-highest mb-space-sm">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Minimalist architectural arches bathed in soft morning emerald illumination with gentle shadows and peaceful atmosphere" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCuf7p_AT-U0l_kaykaGlI9w36auIkyM1F5d-2owlX5IWNUtvVU4u_CU2T7IXjQ4GfQQ1b_FVanTLlfEO_q_9iJ5XwLHQO36xLDr70NRZT9pWfUOCntLB8H1U7i528ylPudC1cphZlAqjNJO-SiHGS-LjJeeIquYu2VMAP8Gnqn8N1D2Eys4hz5v79WZtffc29UzZemlJtNtlerkcxPJ0R7sg9hYary4i-ZVXoNJBH9"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+<!-- Category Pill -->
+<span class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md text-primary font-label-sm text-label-sm font-semibold uppercase tracking-wider">
+                Tartil Focus
+              </span>
+<!-- Floating Play Trigger -->
+<button class="absolute bottom-3 right-3 w-11 h-11 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110">
+<span class="material-symbols-outlined text-2xl">play_arrow</span>
+</button>
+<div class="absolute bottom-3 left-3 text-white">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">18 Surahs • 2h 45m</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">Deep Focus &amp; Study</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">Measured, resonant recitations engineered for deep cognitive focus and sustained memorization sessions.</p>
+</div>
+<div class="mt-space-sm pt-space-sm flex items-center justify-between text-outline font-label-sm text-label-sm">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm text-primary">headphones</span>
+                142k listeners
+              </span>
+<span class="text-primary font-semibold">Play Session</span>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group relative rounded-3xl bg-surface-container/50 hover:bg-surface-container-high/60 backdrop-blur-xl p-space-md transition-all duration-300 shadow-lg hover:shadow-2xl flex flex-col justify-between overflow-hidden cursor-pointer">
+<div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"></div>
+<div class="relative w-full h-44 rounded-2xl overflow-hidden bg-surface-container-highest mb-space-sm">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Lush green garden courtyard with tranquil fountain reflections under moonlit midnight sky with emerald accents" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVmI8jiYLyv0OiNwarvFzULzqfhfdLbybsZttHiDYU0nyTpGV2JbNyN9y2OfsDYP7lSHVcJdM0xIpff4GkO-Ew9BeNJgl6XVlrZpJy6y-ErHrbkAQHuias3p9sYDAnFDMfo7hlJZMXWEcExd8aNq6fqY-u97A2D0TpTTzwgcNczdLPHXVgnuWOZkGVbXe4-N0WnRESeTqttGeaT4HX_Qeanhba_BrZLsTLeOPzsBua"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+<span class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md text-secondary font-label-sm text-label-sm font-semibold uppercase tracking-wider">
+                Emotional
+              </span>
+<button class="absolute bottom-3 right-3 w-11 h-11 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110">
+<span class="material-symbols-outlined text-2xl">play_arrow</span>
+</button>
+<div class="absolute bottom-3 left-3 text-white">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">12 Reciters • 1h 50m</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">Heart-Softening Khushu</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">Tender, emotional recitations of Surah Maryam, Taha, and Al-Insan to bring stillness to unsettled minds.</p>
+</div>
+<div class="mt-space-sm pt-space-sm flex items-center justify-between text-outline font-label-sm text-label-sm">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm text-secondary">favorite</span>
+                98k saved
+              </span>
+<span class="text-primary font-semibold">Play Session</span>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group relative rounded-3xl bg-surface-container/50 hover:bg-surface-container-high/60 backdrop-blur-xl p-space-md transition-all duration-300 shadow-lg hover:shadow-2xl flex flex-col justify-between overflow-hidden cursor-pointer">
+<div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"></div>
+<div class="relative w-full h-44 rounded-2xl overflow-hidden bg-surface-container-highest mb-space-sm">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Sunrise cresting over misty mountain peaks with warm golden and serene green hues, symbol of dawn Adhkar and renewal" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOZFel69Hy59Q_p1sVOH7ScVyjHW9aApKJe-8-tGpwOwHV2-scNCEYkAaYykt0WdwlijEIg7p7fgIXAp7qVhwyf4CsPDe0eY2oeUqfS1vmOpqZHsNsal0_ojFPkVpGJRk4DUDVUwpS3sVkgsgssEpS7KDiUCkzNnvxE_9Tk8tkbXtSsU9g2Bs7lbUAIasXUFqMm0d2UdAGKfWq0KtleI1z2Fx43VOEp4cc-YuL-asl"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+<span class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md text-tertiary-fixed font-label-sm text-label-sm font-semibold uppercase tracking-wider">
+                Morning Adhkar
+              </span>
+<button class="absolute bottom-3 right-3 w-11 h-11 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110">
+<span class="material-symbols-outlined text-2xl">play_arrow</span>
+</button>
+<div class="absolute bottom-3 left-3 text-white">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Daily Shield • 24m</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">Dawn Adhkar &amp; Protection</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">Authentic sunnah supplications and Mu'awwidhatayn recited with slow cadence for repetition.</p>
+</div>
+<div class="mt-space-sm pt-space-sm flex items-center justify-between text-outline font-label-sm text-label-sm">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm text-primary">wb_sunny</span>
+                Everyday ritual
+              </span>
+<span class="text-primary font-semibold">Play Morning</span>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="group relative rounded-3xl bg-surface-container/50 hover:bg-surface-container-high/60 backdrop-blur-xl p-space-md transition-all duration-300 shadow-lg hover:shadow-2xl flex flex-col justify-between overflow-hidden cursor-pointer">
+<div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"></div>
+<div class="relative w-full h-44 rounded-2xl overflow-hidden bg-surface-container-highest mb-space-sm">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Nocturnal dark forest canopy under twinkling emerald stars with quiet river, conveying peaceful sleep and divine rest" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDr6r6bB5lvcsVh0owV0Rca194YkxjalxpbEl-JZnZV5Iu_ckqdc5fFLKDp51XTIuelG82e_WYkPHg1dBJ6XysFRwob2qpk4ciiNo-SE3aDEVEYUOk93BsVF66rNMafJks-QVQkO5ctuNW6z_6emeuLaYGkO-T9q7kVbMl6ZRvssaZIAVIolx5IrKyIjF-KrW3kFTczUeEsZK4LkX7eccnp2B0WWAaEtFTBTArfMzcF"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+<span class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md text-primary font-label-sm text-label-sm font-semibold uppercase tracking-wider">
+                Sleep Sanctuary
+              </span>
+<button class="absolute bottom-3 right-3 w-11 h-11 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110">
+<span class="material-symbols-outlined text-2xl">play_arrow</span>
+</button>
+<div class="absolute bottom-3 left-3 text-white">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Continuous • Auto Sleep Timer</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold group-hover:text-primary transition-colors">Calm Sleep &amp; Tranquility</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">Whispered Tartil and gentle nocturnal recitations paired with subtle harmonic brown-noise acoustics.</p>
+</div>
+<div class="mt-space-sm pt-space-sm flex items-center justify-between text-outline font-label-sm text-label-sm">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm text-primary">bedtime</span>
+                Sleep Timer ready
+              </span>
+<span class="text-primary font-semibold">Start Bedtime</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Recitation By Mood Glass Badges Grid -->
+<div class="flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-xl">self_improvement</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">Recitations by State of Mind</h2>
+</div>
+<span class="font-label-sm text-label-sm text-outline">What is in your heart right now?</span>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-space-md">
+<!-- Mood 1: Gratitude -->
+<div class="group rounded-2xl bg-surface-container/40 hover:bg-primary-container/20 backdrop-blur-xl p-space-md flex flex-col items-start justify-between h-32 transition-all duration-300 cursor-pointer relative overflow-hidden shadow-sm hover:shadow-md">
+<div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 group-hover:bg-primary group-hover:text-on-primary transition-all">
+<span class="material-symbols-outlined text-xl">volunteer_activism</span>
+</div>
+<div>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold group-hover:text-primary-fixed transition-colors block">Gratitude (Shukr)</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Surahs of blessing</span>
+</div>
+</div>
+<!-- Mood 2: Anxiety & Relief -->
+<div class="group rounded-2xl bg-surface-container/40 hover:bg-secondary-container/20 backdrop-blur-xl p-space-md flex flex-col items-start justify-between h-32 transition-all duration-300 cursor-pointer relative overflow-hidden shadow-sm hover:shadow-md">
+<div class="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center group-hover:scale-110 group-hover:bg-secondary group-hover:text-on-secondary transition-all">
+<span class="material-symbols-outlined text-xl">healing</span>
+</div>
+<div>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold group-hover:text-secondary-fixed transition-colors block">Anxiety Relief</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Ad-Duha &amp; Ash-Sharh</span>
+</div>
+</div>
+<!-- Mood 3: Hifz Memorization -->
+<div class="group rounded-2xl bg-surface-container/40 hover:bg-primary-container/20 backdrop-blur-xl p-space-md flex flex-col items-start justify-between h-32 transition-all duration-300 cursor-pointer relative overflow-hidden shadow-sm hover:shadow-md">
+<div class="w-10 h-10 rounded-xl bg-tertiary/10 text-tertiary flex items-center justify-center group-hover:scale-110 group-hover:bg-tertiary-container group-hover:text-on-tertiary-container transition-all">
+<span class="material-symbols-outlined text-xl">repeat</span>
+</div>
+<div>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold group-hover:text-tertiary-fixed transition-colors block">Hifz &amp; Revision</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Word-by-word pacing</span>
+</div>
+</div>
+<!-- Mood 4: Qiyam al-Layl -->
+<div class="group rounded-2xl bg-surface-container/40 hover:bg-primary-container/20 backdrop-blur-xl p-space-md flex flex-col items-start justify-between h-32 transition-all duration-300 cursor-pointer relative overflow-hidden shadow-sm hover:shadow-md">
+<div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 group-hover:bg-primary group-hover:text-on-primary transition-all">
+<span class="material-symbols-outlined text-xl">nights_stay</span>
+</div>
+<div>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold group-hover:text-primary-fixed transition-colors block">Qiyam al-Layl</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Long midnight standing</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Side Panel: Verified Qaris & Live Prayer Tracker (4 Cols) -->
+<div class="xl:col-span-4 flex flex-col gap-space-lg">
+<!-- Prayer Schedule Widget with Specular Glow -->
+<div class="rounded-3xl bg-surface-container/60 backdrop-blur-2xl p-space-lg shadow-xl relative overflow-hidden">
+<div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+<div class="flex items-center justify-between mb-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-xl">schedule</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Today's Waqt</h3>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm font-semibold">Makkah Time</span>
+</div>
+<!-- Next Prayer Banner -->
+<div class="rounded-2xl bg-primary-container/15 p-space-md mb-space-md flex items-center justify-between relative overflow-hidden">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-primary uppercase tracking-wider font-semibold">Next Prayer</span>
+<span class="font-headline-md text-headline-md text-on-surface font-bold">Maghrib</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">in 48 minutes • 06:22 PM</span>
+</div>
+<div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl animate-pulse">wb_twilight</span>
+</div>
+</div>
+<!-- Prayer Times Timeline -->
+<div class="flex flex-col gap-2">
+<!-- Fajr (Passed) -->
+<div class="flex items-center justify-between px-space-sm py-1.5 rounded-xl text-on-surface-variant/70 font-body-md text-body-md">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-outline">done</span>
+<span>Fajr</span>
+</div>
+<span class="font-mono text-outline font-label-md text-label-md">05:12 AM</span>
+</div>
+<!-- Dhuhr (Passed) -->
+<div class="flex items-center justify-between px-space-sm py-1.5 rounded-xl text-on-surface-variant/70 font-body-md text-body-md">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-outline">done</span>
+<span>Dhuhr</span>
+</div>
+<span class="font-mono text-outline font-label-md text-label-md">12:30 PM</span>
+</div>
+<!-- Asr (Passed) -->
+<div class="flex items-center justify-between px-space-sm py-1.5 rounded-xl text-on-surface-variant/70 font-body-md text-body-md">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-outline">done</span>
+<span>Asr</span>
+</div>
+<span class="font-mono text-outline font-label-md text-label-md">03:55 PM</span>
+</div>
+<!-- Maghrib (Active highlight) -->
+<div class="flex items-center justify-between px-space-sm py-2 rounded-xl bg-primary/10 text-primary font-headline-sm text-headline-sm font-semibold">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+<span>Maghrib</span>
+</div>
+<span class="font-mono font-label-lg text-label-lg text-primary">06:22 PM</span>
+</div>
+<!-- Isha -->
+<div class="flex items-center justify-between px-space-sm py-1.5 rounded-xl text-on-surface font-body-md text-body-md">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-outline">radio_button_unchecked</span>
+<span>Isha</span>
+</div>
+<span class="font-mono text-on-surface font-label-md text-label-md">07:52 PM</span>
+</div>
+</div>
+</div>
+<!-- Verified Masters of Recitation (Qaris) -->
+<div class="rounded-3xl bg-surface-container/60 backdrop-blur-2xl p-space-lg shadow-xl relative overflow-hidden flex flex-col gap-space-md">
+<div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-xl">verified</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Featured Qaris</h3>
+</div>
+<a class="font-label-md text-label-md text-primary hover:underline" href="#">Explore All</a>
+</div>
+<!-- Reciters List -->
+<div class="flex flex-col gap-space-sm">
+<!-- Reciter 1 -->
+<div class="group flex items-center justify-between p-2 rounded-2xl hover:bg-surface-container-high transition-colors">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="Portrait of an esteemed traditional Quranic reciter wearing traditional white bisht and keffiyeh in warm studio light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmkctt7ln4bruGr1O-zuWJUl4bFkv9QUFVdT2xMLUaPTajAsAGosYVsuMqgkF8ahaXeFi83o7a0IuMLfm8PkpXOoCcEZAjv6Y_CklluOgL4nS898IZnAXxQu336VNr1OEFtXTNXlSa5_TSrSj2veobZP2RnXVKQXA7cpZnJxq4O_f3oYTVWbGGeeLS4o6zi3-DEGLsTr6xOCqwmwuUMkTyry4VT7O0MO-rC8wa-eOr"/>
+<span class="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center text-[8px] text-on-primary font-bold">✓</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="font-label-lg text-label-lg text-on-surface font-semibold truncate group-hover:text-primary transition-colors">Mishary Alafasy</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Kuwait • 2.4M followers</span>
+</div>
+</div>
+<button class="w-9 h-9 rounded-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary text-on-surface-variant flex items-center justify-center transition-all shadow-sm flex-shrink-0" title="Play Top Recitation">
+<span class="material-symbols-outlined text-lg">play_arrow</span>
+</button>
+</div>
+<!-- Reciter 2 -->
+<div class="group flex items-center justify-between p-2 rounded-2xl hover:bg-surface-container-high transition-colors">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="Portrait of an esteemed Quran reciter in the Grand Mosque of Makkah sanctuary environment with soft architectural depth" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDaSTs3A1taOwVsKPbpMG01pg9FY7uUUgpKG5pbO216NoMdiu1DFd6vhwUIahRga_Z-AeR8al9-DYDo3nTM2VK-n7DCez5vueBhvv38m6uqvtAknpaDj0sa091yfM7_mOzyMOiKVWfC_4ZqiARH-3hAJPfgHUqJ9JUTE2BaXPVZh6tgz3oWMMXHa9N0X09wvAM1QqYjJGaamzCww-YhBtvYjVOtVi7tM2nz3YQbWddf"/>
+<span class="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center text-[8px] text-on-primary font-bold">✓</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="font-label-lg text-label-lg text-on-surface font-semibold truncate group-hover:text-primary transition-colors">Abdul Rahman Al-Sudais</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Imam of Haram • Makkah</span>
+</div>
+</div>
+<button class="w-9 h-9 rounded-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary text-on-surface-variant flex items-center justify-center transition-all shadow-sm flex-shrink-0" title="Play Top Recitation">
+<span class="material-symbols-outlined text-lg">play_arrow</span>
+</button>
+</div>
+<!-- Reciter 3 -->
+<div class="group flex items-center justify-between p-2 rounded-2xl hover:bg-surface-container-high transition-colors">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="Portrait of an iconic Islamic scholar and reciter with gentle facial expression, solemn scholarly ambiance, emerald illumination" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDzkA5ow_MNOcjFCdOXdw_f3UIVCsCZo25YuEyUTrrYsoUUtSAa5SHvGo9aBO9zyKXW48YBVtkf8hfFNw7gWOKJNmJPqsx9iJc-mCPCdd5-lAjFBSaSryLF2wrGQCUIJp8dgRztRTOzHvXMYM0_pJM9m9ZwE1mSuOHjBK_KF9NK-T7QYa0kJv6g8pvkwnuuFWPLoOciuFYuJr7Ciho5JBNcVA5LQWyVVYwsWibQxNRb"/>
+<span class="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center text-[8px] text-on-primary font-bold">✓</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="font-label-lg text-label-lg text-on-surface font-semibold truncate group-hover:text-primary transition-colors">Maher Al-Muaiqly</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Imam of Haram • Makkah</span>
+</div>
+</div>
+<button class="w-9 h-9 rounded-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary text-on-surface-variant flex items-center justify-center transition-all shadow-sm flex-shrink-0" title="Play Top Recitation">
+<span class="material-symbols-outlined text-lg">play_arrow</span>
+</button>
+</div>
+<!-- Reciter 4 -->
+<div class="group flex items-center justify-between p-2 rounded-2xl hover:bg-surface-container-high transition-colors">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="Dignified portrait of a modern renowned Qari with dark background and focused emerald rim backlight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrxNVPZjSnqtpi9-t6n5vUk8lFLESXy6e0WdMvHc58R6xkl4HN97twUwCUWvEo7LtFSgTcaRN-dqIo_VjCfW73ZOQ7b162PH6Ygbt2ctG6F_oBeMUptXwH7fik0wFXaB0dt25Q8H8KbmJ9pGsB82uIdu1yB8txR759n5DUKBjN0Eo2l-D78n6fvzlktsNkuid5tY6nU4B-Mh5iprtdbtQJQRN4rL_qE-VDFHAz9iND"/>
+<span class="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center text-[8px] text-on-primary font-bold">✓</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="font-label-lg text-label-lg text-on-surface font-semibold truncate group-hover:text-primary transition-colors">Yasser Al-Dossari</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">Riyadh • Heart Stirring</span>
+</div>
+</div>
+<button class="w-9 h-9 rounded-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary text-on-surface-variant flex items-center justify-center transition-all shadow-sm flex-shrink-0" title="Play Top Recitation">
+<span class="material-symbols-outlined text-lg">play_arrow</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Quick Audio Setting Micro-widget -->
+<div class="rounded-3xl bg-surface-container-low/70 backdrop-blur-xl p-space-md flex items-center justify-between shadow-md">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-xl">spatial_audio</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Acoustic Mode</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Grand Mosque Reverberation (100%)</span>
+</div>
+</div>
+<button class="px-3 py-1.5 rounded-full bg-surface-container-high text-primary font-label-sm text-label-sm font-semibold hover:bg-surface-container-highest transition-colors">
+          Tune
+        </button>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Micro-interaction for snippet button toggle
+  const snippetBtn = document.getElementById('ayahSnippetBtn');
+  if (snippetBtn) {
+    let isPlaying = false;
+    snippetBtn.addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      const icon = snippetBtn.querySelector('.material-symbols-outlined');
+      const textSpan = snippetBtn.querySelector('span:nth-child(2)');
+      if (isPlaying) {
+        icon.textContent = 'pause';
+        textSpan.textContent = 'Playing...';
+        snippetBtn.classList.remove('bg-primary-container');
+        snippetBtn.classList.add('bg-secondary-container');
+      } else {
+        icon.textContent = 'play_arrow';
+        textSpan.textContent = 'Listen Snippet';
+        snippetBtn.classList.remove('bg-secondary-container');
+        snippetBtn.classList.add('bg-primary-container');
+      }
+    });
+  }
+</script></main></div><footer class="fixed bottom-0 left-0 right-0 h-24 bg-surface-container-lowest/90 backdrop-blur-2xl z-50 px-gutter-desktop flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.4)]"><div class="flex items-center gap-space-md w-1/4 min-w-[240px]"><div class="relative w-14 h-14 rounded-xl overflow-hidden bg-surface-container-high flex-shrink-0 flex items-center justify-center shadow-lg"><div class="absolute inset-0 bg-primary/20 blur-md"></div><span class="material-symbols-outlined text-primary text-2xl relative z-10">graphic_eq</span></div><div class="flex flex-col min-w-0"><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-on-surface font-semibold truncate">Surah Ar-Rahman</span><span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary uppercase">55:13</span></div><span class="font-body-sm text-body-sm text-on-surface-variant truncate">Sheikh Mishary Rashid Alafasy</span></div><button class="p-2 text-on-surface-variant hover:text-primary transition-colors flex-shrink-0"><span class="material-symbols-outlined text-xl">favorite</span></button></div><div class="flex flex-col items-center justify-center flex-1 max-w-2xl px-space-md"><div class="flex items-center gap-space-md mb-1"><button class="p-1.5 text-on-surface-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-lg">shuffle</span></button><button class="p-1.5 text-on-surface-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-xl">skip_previous</span></button><button class="w-11 h-11 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center hover:scale-105 transition-transform shadow-[0_0_16px_rgba(78,222,163,0.35)]"><span class="material-symbols-outlined text-2xl">play_arrow</span></button><button class="p-1.5 text-on-surface-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-xl">skip_next</span></button><button class="p-1.5 text-primary hover:text-primary-fixed transition-colors"><span class="material-symbols-outlined text-lg">repeat_one</span></button></div><div class="w-full flex items-center gap-space-sm"><span class="font-label-sm text-label-sm text-outline font-mono w-10 text-right">02:45</span><div class="relative flex-1 h-1.5 bg-surface-container-highest rounded-full cursor-pointer group flex items-center"><div class="h-full bg-gradient-to-r from-primary-container to-primary rounded-full w-[40%] relative"><span class="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white ring-2 ring-primary opacity-0 group-hover:opacity-100 transition-opacity"></span></div></div><span class="font-label-sm text-label-sm text-outline font-mono w-10">-04:15</span></div></div><div class="flex items-center justify-end gap-space-sm w-1/4 min-w-[240px]"><button class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 text-primary hover:bg-primary/25 transition-all"><span class="material-symbols-outlined text-base">lyrics</span><span class="font-label-sm text-label-sm font-semibold">Ayat</span></button><button class="p-2 text-on-surface-variant hover:text-on-surface transition-colors" title="Change Reciter"><span class="material-symbols-outlined text-xl">record_voice_over</span></button><button class="px-2 py-1 rounded bg-surface-container text-outline hover:text-on-surface font-label-sm text-label-sm font-mono transition-colors">1.0x</button><div class="flex items-center gap-1.5 w-24"><span class="material-symbols-outlined text-on-surface-variant text-lg">volume_up</span><div class="relative flex-1 h-1 bg-surface-container-highest rounded-full cursor-pointer"><div class="h-full bg-outline rounded-full w-[75%]"></div></div></div><button class="p-2 text-on-surface-variant hover:text-on-surface transition-colors" title="Full-screen Player"><span class="material-symbols-outlined text-xl">fullscreen</span></button></div></footer></body></html>

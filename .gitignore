@@ -11,3 +11,4 @@ local.properties
 /androidApp/build
 /shared/build
 /iosApp/Pods
+*.zip

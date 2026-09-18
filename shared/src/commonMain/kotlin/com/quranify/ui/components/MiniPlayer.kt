@@ -16,6 +16,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -25,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,17 +57,17 @@ fun MiniPlayer(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .background(
-                color = QuranifyColors.CardElevated,
-                shape = RoundedCornerShape(12.dp)
+                color = QuranifyColors.SurfaceContainer,
+                shape = RoundedCornerShape(16.dp)
             )
             .border(
                 width = 1.dp,
-                color = QuranifyColors.Primary.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(12.dp)
+                color = QuranifyColors.SurfaceHigh,
+                shape = RoundedCornerShape(16.dp)
             )
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable { 
                 navigator?.parent?.push(NowPlayingScreen()) ?: navigator?.push(NowPlayingScreen()) 
             }
@@ -74,64 +81,55 @@ fun MiniPlayer(modifier: Modifier = Modifier) {
             }
     ) {
         Column {
-            // Linear progress indicator at the very top
+            // Ultra-thin linear progress bar at the very top
             LinearProgressIndicator(
                 progress = { animatedProgress },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(2.dp),
                 color = QuranifyColors.Primary,
-                trackColor = QuranifyColors.Surface
+                trackColor = Color.Transparent
             )
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp),
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left: Rounded cover thumbnail with Surah number
+                // Left: Square dark box with soundwave / equalizer icon
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(CircleShape)
+                        .clip(RoundedCornerShape(10.dp))
                         .background(QuranifyColors.Surface),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = track.surahId.toString(),
-                        color = QuranifyColors.Primary,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                    Icon(
+                        imageVector = Icons.Default.GraphicEq,
+                        contentDescription = "Equalizer",
+                        tint = QuranifyColors.Primary,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Center: Surah English & Arabic name + Ayah number
+                // Center: Surah Name & Reciter
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = track.surahNameEn,
-                            color = QuranifyColors.TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = track.surahNameAr,
-                            color = QuranifyColors.Primary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Text(
+                        text = "${track.surahId}. ${track.surahNameEn}",
+                        color = QuranifyColors.TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Ayah ${track.ayahNo} • ${track.reciterName}",
+                        text = track.reciterName,
                         color = QuranifyColors.TextSecondary,
                         fontSize = 12.sp,
                         maxLines = 1,
@@ -139,32 +137,37 @@ fun MiniPlayer(modifier: Modifier = Modifier) {
                     )
                 }
 
-                // Right: Quick Play/Pause button, Next Ayah button, and Ambient sound active indicator
+                // Right: Bookmark button and Play/Pause button
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Ambient indicator
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(QuranifyColors.Secondary)
-                    )
-                    
-                    Spacer(modifier = Modifier.width(8.dp))
-                    
-                    IconButton(onClick = { AudioEngine.togglePlayPause() }) {
-                        Text(
-                            text = if (isPlaying) "⏸" else "▶", 
-                            color = QuranifyColors.TextPrimary,
-                            fontSize = 18.sp
+                    IconButton(
+                        onClick = { /* TODO: Bookmark action */ },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.BookmarkBorder,
+                            contentDescription = "Bookmark",
+                            tint = QuranifyColors.TextSecondary,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
-                    IconButton(onClick = { AudioEngine.nextAyah() }) {
-                        Text(
-                            text = "⏭", 
-                            color = QuranifyColors.TextPrimary,
-                            fontSize = 18.sp
+                    
+                    Spacer(modifier = Modifier.width(4.dp))
+                    
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(QuranifyColors.Primary)
+                            .clickable { AudioEngine.togglePlayPause() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            tint = Color.Black,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
