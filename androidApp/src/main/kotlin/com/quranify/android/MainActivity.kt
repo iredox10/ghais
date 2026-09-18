@@ -9,6 +9,7 @@ import com.quranify.App
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.quranify.player.PlayerBridge.init(this)
         enableEdgeToEdge()
         setContent {
             App()

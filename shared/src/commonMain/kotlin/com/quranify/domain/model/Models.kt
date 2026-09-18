@@ -55,6 +55,9 @@ enum class AmbientType(val displayName: String) {
     NIGHT("Night Crickets")
 }
 
+/** Sentinel for "duration not yet known" — real duration comes from PlayerBridge once streaming starts. */
+const val UNKNOWN_DURATION_MS: Long = 0L
+
 @Serializable
 data class TrackItem(
     val reciterSlug: String,
@@ -65,11 +68,27 @@ data class TrackItem(
     val ayahNo: Int,
     val audioUrl: String,
     val textUthmani: String = "",
-    val durationMs: Long = 0L
+    /**
+     * Estimated/known duration in ms. 0 == unknown (streaming, resolved at
+     * runtime via PlayerBridge.durationMs). Never treat 0 as "0-length" —
+     * use [hasKnownDuration] / [resolvedDurationMs].
+     */
+    val durationMs: Long = UNKNOWN_DURATION_MS
 )
 
 val TrackItem.imageUrl: String?
     get() = null
+
+/** True when the track carries a usable pre-known duration. */
+val TrackItem.hasKnownDuration: Boolean
+    get() = durationMs > 0L
+
+/**
+ * Effective duration: pre-known [TrackItem.durationMs] when > 0,
+ * otherwise [fallbackMs] (0 by default = still unknown).
+ */
+fun TrackItem.resolvedDurationMs(fallbackMs: Long = UNKNOWN_DURATION_MS): Long =
+    durationMs.takeIf { it > 0L } ?: fallbackMs
 
 enum class RepeatMode {
     OFF,
@@ -77,3 +96,4 @@ enum class RepeatMode {
     SURAH,
     QUEUE
 }
+
