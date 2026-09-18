@@ -45,9 +45,19 @@ data class Surah(
 object QuranData {
     val RECITERS = listOf(
         Reciter("mishary", "Mishary Rashid Alafasy", "مشاري راشد العفاسي", "Murattal", "Hafs", "Normal"),
+        Reciter("abdul-basit", "AbdulBaset AbdulSamad", "عبد الباسط عبد الصمد", "Mujawwad", "Hafs", "Slow"),
         Reciter("abdulbasit", "AbdulBaset AbdulSamad", "عبد الباسط عبد الصمد", "Mujawwad", "Hafs", "Slow"),
+        Reciter("al-sudais", "Abdur-Rahman As-Sudais", "عبد الرحمن السديس", "Taraweeh", "Hafs", "Fast"),
+        Reciter("sudais", "Abdur-Rahman As-Sudais", "عبد الرحمن السديس", "Taraweeh", "Hafs", "Fast"),
+        Reciter("al-muaiqly", "Maher Al-Muaiqly", "ماهر المعيقلي", "Murattal", "Hafs", "Normal"),
+        Reciter("muaiqly", "Maher Al-Muaiqly", "ماهر المعيقلي", "Murattal", "Hafs", "Normal"),
+        Reciter("minshawi", "Mohamed Siddiq Al-Minshawi", "محمد صديق المنشاوي", "Mujawwad", "Hafs", "Slow"),
         Reciter("husary", "Mahmoud Khalil Al-Husary", "محمود خليل الحصري", "Murattal", "Hafs", "Slow"),
-        Reciter("shuraim", "Saud Al-Shuraim", "سعود الشريم", "Taraweeh", "Hafs", "Fast")
+        Reciter("al-dossari", "Yasser Al-Dossari", "ياسر الدوسري", "Taraweeh", "Hafs", "Normal"),
+        Reciter("dossari", "Yasser Al-Dossari", "ياسر الدوسري", "Taraweeh", "Hafs", "Normal"),
+        Reciter("shuraim", "Saud Al-Shuraim", "سعود الشريم", "Taraweeh", "Hafs", "Fast"),
+        Reciter("islam-sobhi", "Islam Sobhi", "إسلام صبحي", "Murattal", "Hafs", "Slow"),
+        Reciter("omar-hisham", "Omar Hisham", "عمر هشام العربي", "Murattal", "Hafs", "Normal")
     )
     
     val SURAHS = (1..114).map { 

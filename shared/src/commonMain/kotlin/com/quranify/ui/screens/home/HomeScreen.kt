@@ -23,17 +23,22 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
 import com.quranify.data.seed.StitchAssets
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
+import com.quranify.ui.navigation.LocalRootNavigator
+import com.quranify.ui.screens.curated.AllCuratedPlaylistsScreen
+import com.quranify.ui.screens.curated.CuratedPlaylistDetailScreen
 import com.quranify.ui.screens.home.components.CuratedForPeaceSection
 import com.quranify.ui.screens.home.components.DhikrStreakCard
 import com.quranify.ui.screens.home.components.JumpBackInSection
 import com.quranify.ui.screens.home.components.RecitationByMoodSection
 import com.quranify.ui.screens.home.components.VerifiedRecitersSection
+import com.quranify.ui.screens.reciters.AllRecitersScreen
 import com.quranify.ui.theme.QuranifyColors
 
 // Trending Purple & Pitch Black Palette Tokens
@@ -54,6 +59,8 @@ object HomeScreen : Tab {
 
     @Composable
     override fun Content() {
+        val rootNavigator = LocalRootNavigator.current ?: LocalNavigator.current?.parent ?: LocalNavigator.current
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -108,24 +115,14 @@ object HomeScreen : Tab {
                     )
                 }
                 item {
-                    VerifiedRecitersSection()
+                    VerifiedRecitersSection(
+                        onSeeAllClick = { rootNavigator?.push(AllRecitersScreen()) }
+                    )
                 }
                 item {
                     CuratedForPeaceSection(
-                        onPlayClick = { playlistId ->
-                            AudioEngine.playTrack(
-                                TrackItem(
-                                    reciterSlug = "mishary_alafasy",
-                                    reciterName = "Mishary Alafasy",
-                                    surahId = 1,
-                                    surahNameEn = "Surah Al-Fatiha",
-                                    surahNameAr = "الفاتحة",
-                                    ayahNo = 1,
-                                    audioUrl = "https://cdn.islamic.network/quran/audio/128/ar.alafasy/1.mp3",
-                                    durationMs = 45000L
-                                )
-                            )
-                        }
+                        onSeeAllClick = { rootNavigator?.push(AllCuratedPlaylistsScreen()) },
+                        onPlaylistClick = { id -> rootNavigator?.push(CuratedPlaylistDetailScreen(id)) }
                     )
                 }
                 item {

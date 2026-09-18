@@ -18,7 +18,11 @@ data class CuratedPlaylist(
     val title: String,
     val tag: String,
     val subtitle: String = "",
-    val coverUrl: String
+    val coverUrl: String,
+    val id: String = title.lowercase().replace(" ", "-").replace("&", "and").replace("(", "").replace(")", "").replace("'", ""),
+    val trackCount: Int = 8,
+    val durationText: String = "35 mins",
+    val category: String = "Peace"
 )
 
 data class LibraryPlaylistItem(
@@ -143,6 +147,109 @@ object StitchAssets {
             tag = "Sleep",
             subtitle = "Gentle sleep timer mix",
             coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuCkC8No81KMkOzXz1WgSpwHPzqud63axS2WjPtLIC6_W7F3Wd9gX3465Bbu4pZr9e7krossjqUUaYsHrd9CB9HstJhcsKtxkawDEc5F90DGCjWfhxHxblmFCxPXMP4unstKiSAvhEk1OoKPmMh9ehfsTJoVz6Oc9yGFTs1lfgrRODGKmeh3ycxH1qVyhs2XEJ0-ZOcmiCtsASjF74TQ_dvUwSVO7AEU9yR-_CE-SdRGlIQKc13_BnfmjA"
+        )
+    )
+
+    val AllCuratedPlaylists = listOf(
+        CuratedPlaylist(
+            title = "Deep Focus & Study",
+            tag = "Focus",
+            subtitle = "Calm, slow tempo recitation",
+            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuAvJyeKgVjglzfWobcAH4Ng4YYbpbs_2fS1IWOSu1Fz-oQIhOMNH1ZzeVNknZCQDdjVSugK4iQ4UjFSNvaxH38zOWhM03xyJgvDPQyiZQyLaNRss6725PFTvsitvHiLlUfXXXDqHM8CwmgsYwD_Vnvia0rdeAb2U8Gq6Pt9hYdHkCGVCZ82NG7ACYdw_hjO8-duwxdsY1OLHmt8oTUexN6cj5hJPbXJwIeEyH7JbMLruDst6iZdffrsjA",
+            id = "deep-focus-study",
+            trackCount = 8,
+            durationText = "42 mins",
+            category = "Focus"
+        ),
+        CuratedPlaylist(
+            title = "Heart Soothing & Mercy",
+            tag = "Peace",
+            subtitle = "Comforting verses of divine tranquility",
+            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuDC7Seq-quBq_0CKLw3H6BEAermI0knNV2qvaJ7wCAIav9Ahp7jkTyyQVF5y-fB6ufMglhzL-1pA4z_qQMS7ghQBCHMA86n8SHAo88kPQbHLl_mQIWDpUkzmioA2EKoMwsaAP10CKJKTP4SdwSboWHQtpXe9XgzmQwbgNWCd_mmVUN7veSZJNIa0kI6U7WDF516jtVkk5In-Pgh4QjmtJjAVnIi9dArMmoxa-4nkIo3hTvTukt2_F4tLQ",
+            id = "heart-soothing",
+            trackCount = 10,
+            durationText = "48 mins",
+            category = "Peace"
+        ),
+        CuratedPlaylist(
+            title = "Morning Adhkar & Barakah",
+            tag = "Morning",
+            subtitle = "Protection & Barakah for dawn",
+            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuAmXfd4POG8k4TnIAguN0g7KfPFns5LeXPt9CuUdQFsrrJ7r671OZWhFRVhFsjzt5WS49rwcpXt5vKVePd221RFYoNezS0XxYACLqdKyHaVI_NZlrRdH-qcrQxDzuiQ0dXVw2ghZylgzFXPA3cXU2cWwY4lqHT9bWpEs8iR7_o-OK0Y1-P6s4slstQm01kyRDGVJvRmYaJeV-PvtHvQR15zkE6R36IzcBGu5VP2QzlMEaQYGrSom8hMlQ",
+            id = "morning-adhkar",
+            trackCount = 6,
+            durationText = "28 mins",
+            category = "Morning"
+        ),
+        CuratedPlaylist(
+            title = "Bedtime Sakinah & Sleep",
+            tag = "Night",
+            subtitle = "Gentle sleep timer mix with soothing cadence",
+            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuCkC8No81KMkOzXz1WgSpwHPzqud63axS2WjPtLIC6_W7F3Wd9gX3465Bbu4pZr9e7krossjqUUaYsHrd9CB9HstJhcsKtxkawDEc5F90DGCjWfhxHxblmFCxPXMP4unstKiSAvhEk1OoKPmMh9ehfsTJoVz6Oc9yGFTs1lfgrRODGKmeh3ycxH1qVyhs2XEJ0-ZOcmiCtsASjF74TQ_dvUwSVO7AEU9yR-_CE-SdRGlIQKc13_BnfmjA",
+            id = "bedtime-sakinah",
+            trackCount = 12,
+            durationText = "55 mins",
+            category = "Night"
+        ),
+        CuratedPlaylist(
+            title = "Ayat Ash-Shifa & Healing",
+            tag = "Healing",
+            subtitle = "Sacred verses of spiritual restoration",
+            coverUrl = LibraryTahajjudCover,
+            id = "ayat-ash-shifa",
+            trackCount = 7,
+            durationText = "36 mins",
+            category = "Healing"
+        ),
+        CuratedPlaylist(
+            title = "Mindful Memorization (Hifz)",
+            tag = "Focus",
+            subtitle = "Rhythmic murattal loops for deep retention",
+            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuBUe24go4tJzvwNZUQ_8UwI6gEDDgTs_Ol7UaxfpYa06PeqOU0r5u-XwOTVNmQjzyq_972QXKLDJoK59z0UZ0qxUrflzOtvpFjxj6xmO5Q6GknBk6q1q_Qs_siEE3_zB7EMQvVVrTvH3-fVefTA5zNQyAjH_rl0X6jr0lYyy3CCRjyGpCexQtAycX3UYvWTJWqnnyau-m9c0aDyJVVyf69-DywZIXP7sFIyDPgIKytzrnbX-KaWQP5fOQ",
+            id = "mindful-hifz",
+            trackCount = 14,
+            durationText = "1h 10m",
+            category = "Focus"
+        ),
+        CuratedPlaylist(
+            title = "Tahajjud & Night Qiyam",
+            tag = "Night",
+            subtitle = "Deep emotional recitations in stillness",
+            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuAPr6kdXhmVnAhFpZ9oCk9dJWVv4v2a0b7jMNoRAiFzDL3Zb2JTlEZFPWGrsHoJvC_j9LHL6o3LHjOGEmZxD-Kcr5BtvYyVn9yAGX-QwG7xwR4l8FCfBK1HREyPEI3cmK1w1EiYFQ1W1CCcPgEFCx0Kg0vYKDNoCvnwQ0_JI2Bkj_Efej3keX09Arqn1LyetzADwjOE4hHWxItZKSjV-8SRVESwxRwZZnLmvtjUCjN8QE4N--QjvqGpEQ",
+            id = "tahajjud-night-qiyam",
+            trackCount = 9,
+            durationText = "50 mins",
+            category = "Night"
+        ),
+        CuratedPlaylist(
+            title = "Anxiety Relief & Inshirah",
+            tag = "Healing",
+            subtitle = "Ash-Sharh & Ad-Duha for weary souls",
+            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuDfvEfM9eGeta57gmoKvCrVxuZ3oSNhWhSX2bU93QlbAGiavblVoxP_iY2CyTDgTO1nf_hRJVu1dP9BWtX37bZMe4sFlRqE-1rTP1ATpVeQuAepkC4r-NeKWsGq9Zq0UUJXLoG7QCOBY7W-0id_bid5AkOpBkIC49S5PCC2eg6TKa-HRKhpgVvN-NW8N9DTgnb72PTOAbXbBhriSMmIE_YcAg81INi-TaMYD_T_plEieFW1BcV_ZnGLyQ",
+            id = "anxiety-relief-inshirah",
+            trackCount = 8,
+            durationText = "32 mins",
+            category = "Healing"
+        ),
+        CuratedPlaylist(
+            title = "Sunrise Barakah & Gratitude",
+            tag = "Morning",
+            subtitle = "Surah Ar-Rahman & Al-Waqi'ah recitations",
+            coverUrl = LibraryMorningCover,
+            id = "sunrise-barakah",
+            trackCount = 8,
+            durationText = "40 mins",
+            category = "Morning"
+        ),
+        CuratedPlaylist(
+            title = "Garden of Tranquility",
+            tag = "Peace",
+            subtitle = "Soft acoustic ambiance with Surat Maryam",
+            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuCrHh8KdAdFyI3sO2ZmLEaF1tEHrUkskxWBu07rF_q8JyrKScuJYBDyQfjzeXgIGAHCal9DfF_EmMzhvauFJR6uLxwbjT5A5RhA4Z21DDguAkVAjVl5wkEPZ3pf2GNbg0UgjkeoMiMb2Rw6VYj66WaJNknVnChJOsytdnYXdUcrBQPsRsY9MWde5lkfLLbsjX7Cj_cTvyzye_ViP53Z6FPfa9MbqWUleiUuZYpuMo9HJE7QhefD2F1euA",
+            id = "garden-of-tranquility",
+            trackCount = 11,
+            durationText = "46 mins",
+            category = "Peace"
         )
     )
 

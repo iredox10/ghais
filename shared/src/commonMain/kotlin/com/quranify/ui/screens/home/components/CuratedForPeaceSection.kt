@@ -40,9 +40,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cafe.adriel.voyager.navigator.LocalNavigator
 import coil3.compose.AsyncImage
 import com.quranify.data.seed.CuratedPlaylist
 import com.quranify.data.seed.StitchAssets
+import com.quranify.domain.model.TrackItem
+import com.quranify.player.AudioEngine
+import com.quranify.ui.navigation.LocalRootNavigator
+import com.quranify.ui.screens.curated.AllCuratedPlaylistsScreen
+import com.quranify.ui.screens.curated.CuratedPlaylistDetailScreen
 
 private val TrendingElectricPurple = Color(0xFFA855F7)
 private val TrendingPurpleStart = Color(0xFF8B5CF6)
@@ -52,8 +58,12 @@ private val MutedGreyText = Color(0xFF9CA3AF)
 fun CuratedForPeaceSection(
     modifier: Modifier = Modifier,
     playlists: List<CuratedPlaylist> = StitchAssets.CuratedForPeace,
-    onPlayClick: (String) -> Unit = {}
+    onSeeAllClick: (() -> Unit)? = null,
+    onPlaylistClick: ((String) -> Unit)? = null,
+    onPlayClick: ((String) -> Unit)? = null
 ) {
+    val rootNavigator = LocalRootNavigator.current ?: LocalNavigator.current?.parent ?: LocalNavigator.current
+
     // Animated equalizer bars indicator in Trending Electric Purple (#A855F7)
     val infiniteTransition = rememberInfiniteTransition(label = "CuratedEqualizer")
     val eq1Height by infiniteTransition.animateFloat(
@@ -108,32 +118,55 @@ fun CuratedForPeaceSection(
                 )
             }
             
-            // Animated Equalizer Bars Indicator
+            // Equalizer Bars and See All Button in Trending Purple (#A855F7)
             Row(
-                modifier = Modifier.height(20.dp),
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                verticalAlignment = Alignment.Bottom
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Box(
+                // Animated Equalizer Bars Indicator
+                Row(
+                    modifier = Modifier.height(20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .height(eq1Height.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(TrendingElectricPurple)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .height(eq2Height.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(TrendingElectricPurple)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .height(eq3Height.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(TrendingElectricPurple)
+                    )
+                }
+
+                Text(
+                    text = "See All",
+                    fontSize = 13.sp,
+                    color = TrendingElectricPurple,
+                    fontWeight = FontWeight.Medium,
                     modifier = Modifier
-                        .width(3.dp)
-                        .height(eq1Height.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(TrendingElectricPurple)
-                )
-                Box(
-                    modifier = Modifier
-                        .width(3.dp)
-                        .height(eq2Height.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(TrendingElectricPurple)
-                )
-                Box(
-                    modifier = Modifier
-                        .width(3.dp)
-                        .height(eq3Height.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(TrendingElectricPurple)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable {
+                            if (onSeeAllClick != null) {
+                                onSeeAllClick()
+                            } else {
+                                rootNavigator?.push(AllCuratedPlaylistsScreen())
+                            }
+                        }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                 )
             }
         }
@@ -147,7 +180,20 @@ fun CuratedForPeaceSection(
             items(playlists) { playlist ->
                 PlaylistCard(
                     playlist = playlist,
-                    onPlayClick = { onPlayClick(playlist.title) }
+                    onClick = {
+                        if (onPlaylistClick != null) {
+                            onPlaylistClick(playlist.id)
+                        } else {
+                            rootNavigator?.push(CuratedPlaylistDetailScreen(playlist.id))
+                        }
+                    },
+                    onPlayClick = {
+                        if (onPlayClick != null) {
+                            onPlayClick(playlist.id)
+                        } else {
+                            playCuratedPlaylist(playlist)
+                        }
+                    }
                 )
             }
         }
@@ -157,10 +203,15 @@ fun CuratedForPeaceSection(
 @Composable
 fun PlaylistCard(
     playlist: CuratedPlaylist,
-    onPlayClick: () -> Unit,
+    onClick: () -> Unit = {},
+    onPlayClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.width(144.dp)) {
+    Column(
+        modifier = modifier
+            .width(144.dp)
+            .clickable { onClick() }
+    ) {
         Box(
             modifier = Modifier
                 .size(144.dp)
@@ -168,7 +219,13 @@ fun PlaylistCard(
                 .background(Color(0xFF16161A))
                 .border(
                     width = 1.dp,
-                    color = Color.White.copy(alpha = 0.08f),
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.16f),
+                            TrendingElectricPurple.copy(alpha = 0.28f),
+                            Color.White.copy(alpha = 0.06f)
+                        )
+                    ),
                     shape = RoundedCornerShape(20.dp)
                 )
         ) {
@@ -277,4 +334,63 @@ fun PlaylistCard(
             maxLines = 1
         )
     }
+}
+
+/**
+ * Direct playback of curated playlist using AudioEngine and real Quranic audio streams.
+ */
+private fun playCuratedPlaylist(playlist: CuratedPlaylist) {
+    val track = when (playlist.id) {
+        "deep-focus-study", "deep-focus-and-study" -> TrackItem(
+            reciterSlug = "al-husary",
+            reciterName = "Mahmoud Khalil Al-Husary",
+            surahId = 67,
+            surahNameEn = "Al-Mulk",
+            surahNameAr = "الملك",
+            ayahNo = 1,
+            audioUrl = "https://cdn.islamic.network/quran/audio/128/ar.husary/67.mp3",
+            durationMs = 445000L
+        )
+        "heart-soothing" -> TrackItem(
+            reciterSlug = "mishary_alafasy",
+            reciterName = "Mishary Rashid Alafasy",
+            surahId = 55,
+            surahNameEn = "Ar-Rahman",
+            surahNameAr = "الرحمن",
+            ayahNo = 1,
+            audioUrl = "https://cdn.islamic.network/quran/audio/128/ar.alafasy/55.mp3",
+            durationMs = 680000L
+        )
+        "morning-adhkar", "morning-adhkar-and-barakah" -> TrackItem(
+            reciterSlug = "mishary_alafasy",
+            reciterName = "Mishary Rashid Alafasy",
+            surahId = 1,
+            surahNameEn = "Al-Fatihah",
+            surahNameAr = "الفاتحة",
+            ayahNo = 1,
+            audioUrl = "https://cdn.islamic.network/quran/audio/128/ar.alafasy/1.mp3",
+            durationMs = 52000L
+        )
+        "bedtime-sakinah" -> TrackItem(
+            reciterSlug = "al-husary",
+            reciterName = "Mahmoud Khalil Al-Husary",
+            surahId = 112,
+            surahNameEn = "Al-Ikhlas",
+            surahNameAr = "الإخلاص",
+            ayahNo = 1,
+            audioUrl = "https://cdn.islamic.network/quran/audio/128/ar.husary/112.mp3",
+            durationMs = 30000L
+        )
+        else -> TrackItem(
+            reciterSlug = "mishary_alafasy",
+            reciterName = "Mishary Rashid Alafasy",
+            surahId = 1,
+            surahNameEn = playlist.title,
+            surahNameAr = "الفاتحة",
+            ayahNo = 1,
+            audioUrl = "https://cdn.islamic.network/quran/audio/128/ar.alafasy/1.mp3",
+            durationMs = 60000L
+        )
+    }
+    AudioEngine.playTrack(track)
 }
