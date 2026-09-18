@@ -12,39 +12,50 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.CurrentTab
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import com.quranify.player.AudioEngine
 import com.quranify.ui.components.MiniPlayer
 import com.quranify.ui.screens.home.HomeScreen
+import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.theme.QuranifyColors
 
-@Composable
-fun MainScreen() {
-    TabNavigator(HomeScreen) {
-        val currentTrack by AudioEngine.currentTrack.collectAsState()
-        
-        Scaffold(
-            bottomBar = {
-                Column {
-                    AnimatedVisibility(
-                        visible = currentTrack != null,
-                        enter = slideInVertically(initialOffsetY = { it }),
-                        exit = slideOutVertically(targetOffsetY = { it })
-                    ) {
-                        MiniPlayer()
+object MainScreen : Screen {
+    @Composable
+    override fun Content() {
+        val rootNavigator = LocalNavigator.currentOrThrow
+        TabNavigator(HomeScreen) {
+            val currentTrack by AudioEngine.currentTrack.collectAsState()
+            
+            Scaffold(
+                bottomBar = {
+                    Column {
+                        AnimatedVisibility(
+                            visible = currentTrack != null,
+                            enter = slideInVertically(initialOffsetY = { it }),
+                            exit = slideOutVertically(targetOffsetY = { it })
+                        ) {
+                            MiniPlayer(
+                                onOpenNowPlaying = {
+                                    rootNavigator.push(NowPlayingScreen())
+                                }
+                            )
+                        }
+                        QuranifyBottomNavBar()
                     }
-                    QuranifyBottomNavBar()
+                },
+                containerColor = QuranifyColors.Background
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    CurrentTab()
                 }
-            },
-            containerColor = QuranifyColors.Background
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                CurrentTab()
             }
         }
     }
