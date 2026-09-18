@@ -1,0 +1,163 @@
+{
+  "projectId": "quranify",
+  "projectName": "Quranify",
+  "databaseId": "quranify",
+  "databaseName": "Quranify Production",
+  "collections": [
+    {
+      "$id": "reciters",
+      "name": "Reciters",
+      "permissions": ["read(\"any\")"],
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "slug", "type": "string", "size": 64, "required": true },
+        { "key": "name_en", "type": "string", "size": 128, "required": true },
+        { "key": "name_ar", "type": "string", "size": 128, "required": true },
+        { "key": "riwayah", "type": "string", "size": 64, "required": false, "default": "Hafs" },
+        { "key": "style", "type": "string", "size": 32, "required": false, "default": "murattal" },
+        { "key": "tempo", "type": "string", "size": 32, "required": false, "default": "medium" },
+        { "key": "audio_folder", "type": "string", "size": 128, "required": true },
+        { "key": "image_url", "type": "string", "size": 512, "required": false },
+        { "key": "verified", "type": "boolean", "required": false, "default": true }
+      ],
+      "indexes": [
+        { "key": "slug_unique", "type": "unique", "attributes": ["slug"] },
+        { "key": "style_idx", "type": "key", "attributes": ["style"] },
+        { "key": "tempo_idx", "type": "key", "attributes": ["tempo"] }
+      ]
+    },
+    {
+      "$id": "surahs",
+      "name": "Surahs",
+      "permissions": ["read(\"any\")"],
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "surah_id", "type": "integer", "required": true },
+        { "key": "name_en", "type": "string", "size": 128, "required": true },
+        { "key": "name_ar", "type": "string", "size": 128, "required": true },
+        { "key": "transliteration", "type": "string", "size": 128, "required": true },
+        { "key": "ayahs_count", "type": "integer", "required": true },
+        { "key": "revelation_type", "type": "string", "size": 32, "required": true },
+        { "key": "meaning", "type": "string", "size": 256, "required": false }
+      ],
+      "indexes": [
+        { "key": "surah_id_unique", "type": "unique", "attributes": ["surah_id"] }
+      ]
+    },
+    {
+      "$id": "moods",
+      "name": "Moods & Routine Modes",
+      "permissions": ["read(\"any\")"],
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "slug", "type": "string", "size": 64, "required": true },
+        { "key": "title", "type": "string", "size": 128, "required": true },
+        { "key": "subtitle", "type": "string", "size": 256, "required": true },
+        { "key": "category", "type": "string", "size": 64, "required": true },
+        { "key": "default_reciter_slug", "type": "string", "size": 64, "required": true },
+        { "key": "default_ambient", "type": "string", "size": 64, "required": false },
+        { "key": "cover_url", "type": "string", "size": 512, "required": false }
+      ],
+      "indexes": [
+        { "key": "slug_unique", "type": "unique", "attributes": ["slug"] }
+      ]
+    },
+    {
+      "$id": "playlists",
+      "name": "User Playlists",
+      "permissions": ["read(\"users\")", "create(\"users\")"],
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "owner_id", "type": "string", "size": 64, "required": true },
+        { "key": "title", "type": "string", "size": 128, "required": true },
+        { "key": "description", "type": "string", "size": 512, "required": false },
+        { "key": "is_public", "type": "boolean", "required": false, "default": false },
+        { "key": "cover_url", "type": "string", "size": 512, "required": false }
+      ],
+      "indexes": [
+        { "key": "owner_idx", "type": "key", "attributes": ["owner_id"] },
+        { "key": "public_idx", "type": "key", "attributes": ["is_public"] }
+      ]
+    },
+    {
+      "$id": "playlist_items",
+      "name": "Playlist Items",
+      "permissions": ["read(\"users\")", "create(\"users\")"],
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "playlist_id", "type": "string", "size": 64, "required": true },
+        { "key": "position", "type": "integer", "required": true },
+        { "key": "reciter_slug", "type": "string", "size": 64, "required": true },
+        { "key": "surah_id", "type": "integer", "required": true },
+        { "key": "ayah_from", "type": "integer", "required": false, "default": 1 },
+        { "key": "ayah_to", "type": "integer", "required": false, "default": 1 }
+      ],
+      "indexes": [
+        { "key": "playlist_pos_idx", "type": "key", "attributes": ["playlist_id", "position"] }
+      ]
+    },
+    {
+      "$id": "likes",
+      "name": "Likes & Favorites",
+      "permissions": ["read(\"users\")", "create(\"users\")"],
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "user_id", "type": "string", "size": 64, "required": true },
+        { "key": "surah_id", "type": "integer", "required": true },
+        { "key": "ayah_no", "type": "integer", "required": false },
+        { "key": "level", "type": "string", "size": 32, "required": true, "default": "ayah" }
+      ],
+      "indexes": [
+        { "key": "user_like_idx", "type": "key", "attributes": ["user_id", "surah_id", "ayah_no"] }
+      ]
+    },
+    {
+      "$id": "playback_state",
+      "name": "Cross-Device Playback State",
+      "permissions": ["read(\"users\")", "create(\"users\")", "update(\"users\")"],
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "user_id", "type": "string", "size": 64, "required": true },
+        { "key": "current_ref", "type": "string", "size": 256, "required": true },
+        { "key": "position_ms", "type": "integer", "required": true },
+        { "key": "queue_json", "type": "string", "size": 65535, "required": true }
+      ],
+      "indexes": [
+        { "key": "user_state_unique", "type": "unique", "attributes": ["user_id"] }
+      ]
+    },
+    {
+      "$id": "khatma_plans",
+      "name": "Khatma Completion Plans",
+      "permissions": ["read(\"users\")", "create(\"users\")", "update(\"users\")"],
+      "documentSecurity": true,
+      "attributes": [
+        { "key": "user_id", "type": "string", "size": 64, "required": true },
+        { "key": "title", "type": "string", "size": 128, "required": true },
+        { "key": "total_days", "type": "integer", "required": true, "default": 30 },
+        { "key": "current_surah", "type": "integer", "required": true, "default": 1 },
+        { "key": "current_ayah", "type": "integer", "required": true, "default": 1 },
+        { "key": "percent", "type": "float", "required": false, "default": 0.0 }
+      ],
+      "indexes": [
+        { "key": "user_khatma_idx", "type": "key", "attributes": ["user_id"] }
+      ]
+    }
+  ],
+  "buckets": [
+    {
+      "$id": "covers",
+      "name": "Covers & Reciter Photos",
+      "permissions": ["read(\"any\")"],
+      "maximumFileSize": 5242880,
+      "allowedFileExtensions": ["jpg", "jpeg", "png", "webp", "avif"]
+    },
+    {
+      "$id": "manifests",
+      "name": "Audio Manifests",
+      "permissions": ["read(\"any\")"],
+      "maximumFileSize": 2097152,
+      "allowedFileExtensions": ["json"]
+    }
+  ]
+}
