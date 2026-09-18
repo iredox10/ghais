@@ -17,6 +17,8 @@ actual object PlayerBridge {
 
     private var exoPlayer: androidx.media3.exoplayer.ExoPlayer? = null
 
+    private var appContext: android.content.Context? = null
+
     private val _positionMs = MutableStateFlow(0L)
     actual val positionMs: StateFlow<Long> = _positionMs.asStateFlow()
 
@@ -91,11 +93,77 @@ actual object PlayerBridge {
      * singleton can build ExoPlayer with an application context.
      */
     fun init(context: android.content.Context) {
+        appContext = context.applicationContext
         player(context)
     }
 
+    /**
+     * Hook set by androidApp (MainActivity) so that any [play]/[resume]
+     * boots the [com.quranify.android.QuranPlaybackService] foreground
+     * service. Lives here (androidMain) instead of common code so the
+     * shared module never references the app module (no circular dep).
+     * AudioEngine.playTrack -> PlayerBridge.play -> this callback ->
+     * ContextCompat.startForegroundService(...).
+     */
+    var onPlayRequested: (() -> Unit)? = null
+
+    /** Canonical player owned (after service start) by QuranPlaybackService. */
+    fun playerOrNull(): androidx.media3.exoplayer.ExoPlayer? = exoPlayer
+
+    fun ensurePlayer(context: android.content.Context): androidx.media3.exoplayer.ExoPlayer =
+        player(context)
+
+    /**
+     * Adopt an externally built ExoPlayer (the foreground service's) as the
+     * canonical player. If a previous internal instance exists and differs,
+     * it is released to avoid two players holding audio focus.
+     */
+    fun attachPlayer(external: androidx.media3.exoplayer.ExoPlayer) {
+        val current = exoPlayer
+        if (current === external) return
+        if (current != null) {
+            try { current.removeListener(listener) } catch (_: Exception) { }
+            try { current.stop() } catch (_: Exception) { }
+            // Only release the old instance when it is NOT currently playing
+            // through the new path — safe because the service reuses the
+            // existing instance whenever one is already present.
+            try { current.release() } catch (_: Exception) { }
+        }
+        external.addListener(listener)
+        exoPlayer = external
+        startPolling()
+        // Sync cached flows with the adopted player state.
+        try {
+            val d = external.duration
+            _durationMs.value =
+                if (d != androidx.media3.common.C.TIME_UNSET && d > 0) d else _durationMs.value
+            _positionMs.value = external.currentPosition.coerceAtLeast(0L)
+        } catch (_: Exception) { }
+    }
+
+    /**
+     * Refresh the current MediaItem metadata (notification title/artist)
+     * without interrupting playback. Android-only helper — not part of the
+     * common expect contract, called by QuranPlaybackService when
+     * AudioEngine.currentTrack changes.
+     */
+    fun updateMetadata(title: String, artist: String? = null) {
+        try {
+            val p = exoPlayer ?: return
+            if (p.mediaItemCount == 0) return
+            val index = p.currentMediaItemIndex.coerceIn(0, p.mediaItemCount - 1)
+            val current = p.getMediaItemAt(index)
+            val meta = current.mediaMetadata.buildUpon()
+                .setTitle(title)
+                .apply { artist?.let { setArtist(it) } }
+                .build()
+            p.replaceMediaItem(index, current.buildUpon().setMediaMetadata(meta).build())
+        } catch (_: Exception) { }
+    }
+
     actual fun play(url: String) {
-        val p = exoPlayer ?: run {
+        try { onPlayRequested?.invoke() } catch (_: Exception) { }
+        val p = exoPlayer ?: appContext?.let { player(it) } ?: run {
             _errorMessage.value = "Player not initialised — call PlayerBridge.init(context) from MainActivity"
             return
         }
@@ -119,6 +187,7 @@ actual object PlayerBridge {
     }
 
     actual fun resume() {
+        try { onPlayRequested?.invoke() } catch (_: Exception) { }
         try { exoPlayer?.play() } catch (e: Exception) {
             _errorMessage.value = e.message
         }
