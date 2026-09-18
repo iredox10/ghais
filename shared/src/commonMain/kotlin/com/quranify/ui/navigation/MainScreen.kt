@@ -12,8 +12,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.CurrentTab
 import cafe.adriel.voyager.navigator.tab.TabNavigator
@@ -23,12 +26,15 @@ import com.quranify.ui.screens.home.HomeScreen
 import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.theme.QuranifyColors
 
+val LocalRootNavigator = compositionLocalOf<Navigator?> { null }
+
 object MainScreen : Screen {
     @Composable
     override fun Content() {
         val rootNavigator = LocalNavigator.currentOrThrow
-        TabNavigator(HomeScreen) {
-            val currentTrack by AudioEngine.currentTrack.collectAsState()
+        CompositionLocalProvider(LocalRootNavigator provides rootNavigator) {
+            TabNavigator(HomeScreen) {
+                val currentTrack by AudioEngine.currentTrack.collectAsState()
             
             Scaffold(
                 bottomBar = {
@@ -59,4 +65,5 @@ object MainScreen : Screen {
             }
         }
     }
+}
 }

@@ -76,7 +76,8 @@ fun MiniPlayer(
     val progress by AudioEngine.progress.collectAsState()
 
     val track = currentTrack ?: return
-    val navigator = LocalNavigator.current
+    val rootNav = com.quranify.ui.navigation.LocalRootNavigator.current
+    val navigator = rootNav ?: LocalNavigator.current?.parent ?: LocalNavigator.current
 
     // Smoothly animated progress
     val animatedProgress by animateFloatAsState(
@@ -129,7 +130,7 @@ fun MiniPlayer(
                         if (onOpenNowPlaying != null) {
                             onOpenNowPlaying()
                         } else {
-                            navigator?.parent?.push(NowPlayingScreen()) ?: navigator?.push(NowPlayingScreen())
+                            navigator?.push(NowPlayingScreen())
                         }
                     }
                     .pointerInput(Unit) {

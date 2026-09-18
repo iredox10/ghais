@@ -94,7 +94,8 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AppTab.entries.forEach { appTab ->
-                    val isSelected = tabNavigator.current == appTab.tab
+                    val currentTab = runCatching { tabNavigator.current }.getOrNull()
+                    val isSelected = currentTab == appTab.tab
 
                     val contentColor by animateColorAsState(
                         targetValue = if (isSelected) ActiveEmerald else InactiveGrey,

@@ -27,6 +27,7 @@ import coil3.compose.AsyncImage
 import com.quranify.data.seed.Reciter
 import com.quranify.data.seed.StitchAssets
 import com.quranify.ui.screens.reciters.ReciterProfileScreen
+import com.quranify.ui.navigation.LocalRootNavigator
 import com.quranify.ui.theme.QuranifyColors
 
 @Composable
@@ -34,7 +35,7 @@ fun VerifiedRecitersSection(
     reciters: List<Reciter> = StitchAssets.VerifiedReciters,
     onSeeAllClick: () -> Unit = {}
 ) {
-    val navigator = LocalNavigator.current
+    val rootNavigator = LocalRootNavigator.current ?: LocalNavigator.current?.parent ?: LocalNavigator.current
 
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
         // Header Row
@@ -79,7 +80,7 @@ fun VerifiedRecitersSection(
                     reciter = reciter,
                     isFeatured = index == 0,
                     onClick = {
-                        navigator?.push(ReciterProfileScreen(reciter.slug))
+                        rootNavigator?.push(ReciterProfileScreen(reciter.slug))
                     }
                 )
             }
