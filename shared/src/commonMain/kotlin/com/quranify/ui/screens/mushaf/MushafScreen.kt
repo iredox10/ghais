@@ -184,7 +184,7 @@ object MushafScreen : Tab {
                 modifier = Modifier
                     .fillMaxSize()
                     .background(QuranifyColors.Background),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 120.dp)
             ) {
                 // 1. Top Floating Mushaf Control Capsule
                 item {

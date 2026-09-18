@@ -46,7 +46,7 @@ object LibraryScreen : Tab {
             modifier = Modifier
                 .fillMaxSize()
                 .background(QuranifyColors.Background),
-            contentPadding = PaddingValues(bottom = 32.dp)
+            contentPadding = PaddingValues(bottom = 120.dp)
         ) {
             // 1. Fixed/Sticky Top Bar matching Stitch specs
             item {

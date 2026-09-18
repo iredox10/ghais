@@ -151,7 +151,7 @@ object ExploreScreen : Tab {
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 32.dp)
+                contentPadding = PaddingValues(bottom = 120.dp)
             ) {
                 // Top Bar
                 item {
