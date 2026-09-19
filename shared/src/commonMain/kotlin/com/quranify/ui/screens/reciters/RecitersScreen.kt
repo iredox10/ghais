@@ -8,10 +8,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.quranify.data.seed.QuranData
+import com.quranify.ui.navigation.LocalRootNavigator
 
 private val PureBlack = Color(0xFF000000)
 
@@ -31,7 +31,11 @@ class RecitersScreen : Tab {
 
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
+        // Push onto the ROOT navigator: the local one here is a TabNavigator,
+        // which can only render Tabs (pushing a plain Screen crashes in CurrentTab).
+        val rootNavigator = LocalRootNavigator.current
+            ?: LocalNavigator.current?.parent
+            ?: LocalNavigator.current
         var searchQuery by remember { mutableStateOf("") }
 
         val groups = remember(searchQuery) {
@@ -67,8 +71,8 @@ class RecitersScreen : Tab {
                             nation = nation,
                             reciters = reciters,
                             photoFor = ::photoForSlug,
-                            onSeeAll = { navigator.push(RegionRecitersScreen(nation)) },
-                            onReciter = { slug -> navigator.push(ReciterProfileScreen(slug)) }
+                            onSeeAll = { rootNavigator?.push(RegionRecitersScreen(nation)) },
+                            onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) }
                         )
                     }
                 }
