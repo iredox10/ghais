@@ -47,6 +47,8 @@ import com.quranify.domain.model.Surah
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
 import com.quranify.player.QuranDownloads
+import com.quranify.ui.navigation.LocalRootNavigator
+import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.theme.QuranifyColors
 
 /**
@@ -61,6 +63,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val rootNavigator = LocalRootNavigator.current ?: navigator.parent ?: navigator
 
         // 1 & 2: Look up reciter with fallback to Mishary
         val reciter: Reciter = remember(reciterSlug) {
@@ -253,7 +256,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                     val isDownloaded = downloadKey in downloaded
                     val surahProgress: Float? = dlProgress[downloadKey]
                     val isFailed = downloadKey in failedKeys
-                    val audioUrl = reciter.getAyahAudioUrl(surah.id, 1)
+                    val audioUrl = reciter.getFullSurahUrl(surah.id)
 
                     ReciterSurahListItem(
                         surah = surah,
@@ -278,7 +281,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                 surahNameEn = surah.nameEn,
                                 surahNameAr = surah.nameAr,
                                 ayahNo = 1,
-                                audioUrl = reciter.getAyahAudioUrl(surah.id, 1),
+                                audioUrl = reciter.getFullSurahUrl(surah.id),
                                 durationMs = surah.ayahsCount * 15_000L
                             )
                             if (isCurrentSurahPlaying) {
@@ -287,6 +290,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                 AudioEngine.resume()
                             } else {
                                 AudioEngine.playTrack(track)
+                                rootNavigator.push(NowPlayingScreen())
                             }
                         }
                     )
@@ -408,6 +412,8 @@ private fun ReciterActionButtonsRow(
     isFollowing: Boolean,
     onToggleFollow: () -> Unit
 ) {
+    val rootNavigator = LocalRootNavigator.current ?: LocalNavigator.current?.parent ?: LocalNavigator.current
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -424,10 +430,11 @@ private fun ReciterActionButtonsRow(
                     surahNameEn = firstSurah.nameEn,
                     surahNameAr = firstSurah.nameAr,
                     ayahNo = 1,
-                    audioUrl = reciter.getAyahAudioUrl(firstSurah.id, 1),
+                    audioUrl = reciter.getFullSurahUrl(firstSurah.id),
                     durationMs = firstSurah.ayahsCount * 15_000L
                 )
                 AudioEngine.playTrack(firstTrack)
+                rootNavigator?.push(NowPlayingScreen())
             },
             modifier = Modifier
                 .weight(1.2f)
@@ -481,10 +488,11 @@ private fun ReciterActionButtonsRow(
                     surahNameEn = randomSurah.nameEn,
                     surahNameAr = randomSurah.nameAr,
                     ayahNo = 1,
-                    audioUrl = reciter.getAyahAudioUrl(randomSurah.id, 1),
+                    audioUrl = reciter.getFullSurahUrl(randomSurah.id),
                     durationMs = randomSurah.ayahsCount * 15_000L
                 )
                 AudioEngine.playTrack(randomTrack)
+                rootNavigator?.push(NowPlayingScreen())
             },
             modifier = Modifier
                 .weight(1f)
@@ -575,7 +583,7 @@ private fun DownloadAllPill(
                         QuranDownloads.download(
                             reciter.slug,
                             surah.id,
-                            reciter.getAyahAudioUrl(surah.id, 1)
+                            reciter.getFullSurahUrl(surah.id)
                         )
                     }
                 }

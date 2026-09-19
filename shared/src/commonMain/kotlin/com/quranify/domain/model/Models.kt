@@ -39,6 +39,25 @@ data class Reciter(
         val a = ayahNo.toString().padStart(3, '0')
         return "https://everyayah.com/data/$audioFolder/$s$a.mp3"
     }
+
+    fun getFullSurahUrl(surahId: Int): String {
+        val pad = surahId.toString().padStart(3, '0')
+        return when (slug.lowercase()) {
+            "mishary" -> "https://server8.mp3quran.net/afs/$pad.mp3"
+            "al-sudais", "sudais" -> "https://server11.mp3quran.net/sds/$pad.mp3"
+            "al-muaiqly", "muaiqly" -> "https://server12.mp3quran.net/maher/$pad.mp3"
+            "al-dossari", "dossari" -> "https://server11.mp3quran.net/yasser/$pad.mp3"
+            "islam-sobhi", "islam_sobhi" -> "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/$pad.mp3"
+            "omar-hisham", "omar_hisham" -> "https://archive.org/download/Omar-Hisham/$pad.mp3"
+            "abdul-basit", "abdul_basit", "basit" -> "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/$pad.mp3"
+            "al-husary", "husary" -> "https://server13.mp3quran.net/husr/$pad.mp3"
+            "saud-shuraim", "shuraim" -> "https://server7.mp3quran.net/shur/$pad.mp3"
+            "saad-alghamdi", "alghamdi", "ghamdi" -> "https://server7.mp3quran.net/s_gmd/$pad.mp3"
+            "al-minshawi", "minshawi" -> "https://server10.mp3quran.net/minsh/$pad.mp3"
+            "ahmed-alajamy", "alajamy", "ajamy" -> "https://server10.mp3quran.net/ajm/$pad.mp3"
+            else -> "https://server8.mp3quran.net/afs/$pad.mp3"
+        }
+    }
 }
 
 enum class RoutineModeType(val title: String, val subtitle: String) {
