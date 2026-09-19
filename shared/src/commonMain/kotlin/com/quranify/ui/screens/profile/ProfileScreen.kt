@@ -22,18 +22,25 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -62,12 +69,16 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.quranify.data.repository.FavoritesStore
+import com.quranify.data.repository.QuranDataRepository
+import com.quranify.data.repository.RecitationSchedule
+import com.quranify.data.repository.SchedulesStore
 import com.quranify.player.QuranDownloads
 import com.quranify.ui.navigation.LocalRootNavigator
 import com.quranify.ui.screens.settings.AppSettingsScreen
 import com.quranify.ui.screens.stats.StatsScreen
 import com.russhwolf.settings.Settings
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
 
 // -----------------------------------------------------------------------------
 // Design System Tokens: Black-Glass (Pure Black + Glass Cards + Link Blue)
@@ -342,6 +353,13 @@ object ProfileScreen : Tab {
                         }
                     }
                 }
+            }
+
+            // -----------------------------------------------------------------
+            // Recitation schedules (multiple daily alarms)
+            // -----------------------------------------------------------------
+            item {
+                RecitationSchedulesSection()
             }
 
             // -----------------------------------------------------------------
@@ -997,4 +1015,518 @@ private fun SubtleDividerLine() {
             .height(1.dp)
             .background(SubtleDivider)
     )
+}
+
+// -----------------------------------------------------------------------------
+// Section: Recitation Schedules (multiple daily alarms: time + reciter +
+// surah range + optional play-for-minutes)
+// -----------------------------------------------------------------------------
+@Composable
+private fun RecitationSchedulesSection() {
+    val schedules by SchedulesStore.schedules.collectAsState()
+    val reciters = remember { QuranDataRepository.getReciters() }
+    val surahs = remember { QuranDataRepository.getSurahs() }
+
+    var showSheet by remember { mutableStateOf(false) }
+    var editingId by remember { mutableStateOf<String?>(null) }
+    var hour by remember { mutableStateOf(5) }
+    var minute by remember { mutableStateOf(30) }
+    var reciterSlug by remember { mutableStateOf(reciters.firstOrNull()?.slug ?: "") }
+    var fromSurah by remember { mutableStateOf(1) }
+    var toSurah by remember { mutableStateOf(114) }
+    var useMinutes by remember { mutableStateOf(false) }
+    var minutes by remember { mutableStateOf(30) }
+    var reciterExpanded by remember { mutableStateOf(false) }
+
+    fun surahName(id: Int): String = surahs.find { it.id == id }?.nameEn ?: "Surah $id"
+    fun reciterName(slug: String): String = reciters.find { it.slug == slug }?.nameEn ?: slug
+
+    fun openAdd() {
+        editingId = null
+        hour = 5
+        minute = 30
+        reciterSlug = reciters.firstOrNull()?.slug ?: ""
+        fromSurah = 1
+        toSurah = 114
+        useMinutes = false
+        minutes = 30
+        reciterExpanded = false
+        showSheet = true
+    }
+
+    fun openEdit(schedule: RecitationSchedule) {
+        editingId = schedule.id
+        hour = schedule.hour
+        minute = schedule.minute
+        reciterSlug = schedule.reciterSlug
+        fromSurah = schedule.fromSurah
+        toSurah = schedule.toSurah
+        useMinutes = schedule.durationMin != null
+        minutes = schedule.durationMin ?: 30
+        reciterExpanded = false
+        showSheet = true
+    }
+
+    fun saveSchedule() {
+        val safeReciter = reciterSlug.ifBlank { reciters.firstOrNull()?.slug ?: "" }
+        if (safeReciter.isBlank()) return
+        val safeHour = hour.coerceIn(0, 23)
+        val safeMinute = minute.coerceIn(0, 59)
+        val safeFrom = fromSurah.coerceIn(1, 114)
+        val preservedEnabled = editingId?.let { id -> schedules.find { it.id == id }?.enabled } ?: true
+        val schedule = if (useMinutes) {
+            RecitationSchedule(
+                id = editingId ?: ("sch-" + Clock.System.now().toEpochMilliseconds()),
+                hour = safeHour,
+                minute = safeMinute,
+                reciterSlug = safeReciter,
+                fromSurah = safeFrom,
+                toSurah = 114,
+                durationMin = minutes.coerceIn(5, 180),
+                enabled = preservedEnabled
+            )
+        } else {
+            RecitationSchedule(
+                id = editingId ?: ("sch-" + Clock.System.now().toEpochMilliseconds()),
+                hour = safeHour,
+                minute = safeMinute,
+                reciterSlug = safeReciter,
+                fromSurah = safeFrom,
+                toSurah = toSurah.coerceIn(safeFrom, 114),
+                durationMin = null,
+                enabled = preservedEnabled
+            )
+        }
+        if (editingId == null) SchedulesStore.add(schedule) else SchedulesStore.update(schedule)
+        showSheet = false
+    }
+
+    ProfileSectionHeader(title = "Recitation schedules", icon = Icons.Filled.Schedule)
+    Text(
+        text = "Play Quran automatically at your times",
+        color = TextMuted,
+        fontSize = 13.sp,
+        modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
+    )
+
+    if (schedules.isEmpty()) {
+        ProfileCardContainer {
+            Text(
+                text = "No schedules — add one to wake up to Quran",
+                color = TextMuted,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            )
+        }
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            schedules.forEach { schedule ->
+                val rangeCore = if (schedule.fromSurah == schedule.toSurah) {
+                    surahName(schedule.fromSurah)
+                } else {
+                    "${surahName(schedule.fromSurah)} → ${surahName(schedule.toSurah)}"
+                }
+                val rangeText = if (schedule.durationMin != null) {
+                    "$rangeCore • ${schedule.durationMin} min"
+                } else {
+                    "$rangeCore • full range"
+                }
+                ScheduleCard(
+                    schedule = schedule,
+                    timeText = formatScheduleTime(schedule.hour, schedule.minute),
+                    reciterText = reciterName(schedule.reciterSlug),
+                    rangeText = rangeText,
+                    onEdit = { openEdit(schedule) },
+                    onToggle = { SchedulesStore.setEnabled(schedule.id, it) },
+                    onDelete = { SchedulesStore.remove(schedule.id) }
+                )
+            }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    // Full-width "Add schedule" pill (mirrors the Edit Profile pill)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(50.dp))
+            .background(LinkBlue)
+            .clickable { openAdd() }
+            .padding(vertical = 14.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Add,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(18.dp)
+        )
+        Text(
+            text = "Add schedule",
+            color = Color.White,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+
+    if (showSheet) {
+        AlertDialog(
+            onDismissRequest = { showSheet = false },
+            title = {
+                Text(
+                    text = if (editingId == null) "Add schedule" else "Edit schedule",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Time steppers (HH 0-23 / MM 0-59, wrap-around)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        ScheduleStepper(
+                            label = "Hour",
+                            valueText = hour.toString().padStart(2, '0'),
+                            onMinus = { hour = (hour + 23) % 24 },
+                            onPlus = { hour = (hour + 1) % 24 }
+                        )
+                        ScheduleStepper(
+                            label = "Minute",
+                            valueText = minute.toString().padStart(2, '0'),
+                            onMinus = { minute = (minute + 59) % 60 },
+                            onPlus = { minute = (minute + 1) % 60 }
+                        )
+                    }
+
+                    // Reciter picker (inline expandable list)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Reciter",
+                            color = TextMuted,
+                            fontSize = 12.sp
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.White.copy(alpha = 0.06f))
+                                .border(1.dp, CardBorderSubtle, RoundedCornerShape(12.dp))
+                                .clickable { reciterExpanded = !reciterExpanded }
+                                .padding(horizontal = 14.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                text = reciterName(reciterSlug).ifBlank { "Choose reciter" },
+                                color = TextWhitePrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        if (reciterExpanded) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 200.dp)
+                                    .verticalScroll(rememberScrollState())
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(alpha = 0.04f))
+                                    .border(1.dp, CardBorderSubtle, RoundedCornerShape(12.dp))
+                            ) {
+                                reciters.forEach { reciter ->
+                                    val selected = reciter.slug == reciterSlug
+                                    Text(
+                                        text = reciter.nameEn,
+                                        color = if (selected) LinkBlue else TextWhitePrimary,
+                                        fontSize = 14.sp,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                reciterSlug = reciter.slug
+                                                reciterExpanded = false
+                                            }
+                                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Mode toggle: surah range vs play-for-minutes
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ScheduleModePill(
+                            text = "Surah range",
+                            selected = !useMinutes,
+                            onClick = { useMinutes = false },
+                            modifier = Modifier.weight(1f)
+                        )
+                        ScheduleModePill(
+                            text = "Play for",
+                            selected = useMinutes,
+                            onClick = { useMinutes = true },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    if (!useMinutes) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            ScheduleStepper(
+                                label = "From: ${surahName(fromSurah)}",
+                                valueText = fromSurah.toString(),
+                                onMinus = { fromSurah = (fromSurah - 1).coerceAtLeast(1) },
+                                onPlus = { fromSurah = (fromSurah + 1).coerceAtMost(114) }
+                            )
+                            ScheduleStepper(
+                                label = "To: ${surahName(toSurah.coerceIn(fromSurah, 114))}",
+                                valueText = toSurah.coerceIn(fromSurah, 114).toString(),
+                                onMinus = { toSurah = (toSurah - 1).coerceIn(fromSurah, 114) },
+                                onPlus = { toSurah = (toSurah + 1).coerceIn(fromSurah, 114) }
+                            )
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            ScheduleStepper(
+                                label = "Start: ${surahName(fromSurah)}",
+                                valueText = fromSurah.toString(),
+                                onMinus = { fromSurah = (fromSurah - 1).coerceAtLeast(1) },
+                                onPlus = { fromSurah = (fromSurah + 1).coerceAtMost(114) }
+                            )
+                            ScheduleStepper(
+                                label = "Minutes",
+                                valueText = "$minutes min",
+                                onMinus = { minutes = (minutes - 5).coerceAtLeast(5) },
+                                onPlus = { minutes = (minutes + 5).coerceAtMost(180) }
+                            )
+                            Text(
+                                text = "Plays from ${surahName(fromSurah)} onward",
+                                color = TextMuted,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { saveSchedule() }) {
+                    Text(
+                        text = "Save",
+                        color = LinkBlue,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSheet = false }) {
+                    Text(
+                        text = "Cancel",
+                        color = TextMuted
+                    )
+                }
+            },
+            containerColor = DarkCard,
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun ScheduleCard(
+    schedule: RecitationSchedule,
+    timeText: String,
+    reciterText: String,
+    rangeText: String,
+    onEdit: () -> Unit,
+    onToggle: (Boolean) -> Unit,
+    onDelete: () -> Unit
+) {
+    ProfileCardContainer {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(LinkBlue.copy(alpha = 0.14f))
+                    .border(0.5.dp, LinkBlue.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = timeText,
+                    color = LinkBlue,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onEdit() }
+            ) {
+                Text(
+                    text = reciterText,
+                    color = TextWhitePrimary,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = rangeText,
+                    color = TextMuted,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Switch(
+                checked = schedule.enabled,
+                onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = LinkBlue,
+                    checkedBorderColor = Color.Transparent,
+                    uncheckedThumbColor = Color(0xFF8E989C),
+                    uncheckedTrackColor = Color.White.copy(alpha = 0.12f),
+                    uncheckedBorderColor = Color.White.copy(alpha = 0.12f)
+                )
+            )
+
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = "Delete schedule",
+                    tint = HeartRed,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScheduleStepper(
+    label: String,
+    valueText: String,
+    onMinus: () -> Unit,
+    onPlus: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = label,
+            color = TextMuted,
+            fontSize = 12.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            ScheduleStepperButton(text = "−", onClick = onMinus)
+            Text(
+                text = valueText,
+                color = TextWhitePrimary,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+            ScheduleStepperButton(text = "+", onClick = onPlus)
+        }
+    }
+}
+
+@Composable
+private fun ScheduleStepperButton(
+    text: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.08f))
+            .border(1.dp, CardBorderSubtle, CircleShape)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            color = LinkBlue,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun ScheduleModePill(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(50.dp))
+            .background(if (selected) LinkBlue else Color.White.copy(alpha = 0.08f))
+            .border(
+                0.5.dp,
+                if (selected) LinkBlue else CardBorderSubtle,
+                RoundedCornerShape(50.dp)
+            )
+            .clickable { onClick() }
+            .padding(vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            color = if (selected) Color.White else TextMuted,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+// 24h "HH:MM" formatting for schedule times
+private fun formatScheduleTime(hour: Int, minute: Int): String {
+    return hour.toString().padStart(2, '0') + ":" + minute.toString().padStart(2, '0')
 }
