@@ -2,6 +2,7 @@ package com.quranify.player
 
 import com.quranify.domain.model.RepeatMode
 import com.quranify.domain.model.TrackItem
+import com.quranify.domain.model.isFullSurah
 import com.quranify.domain.model.resolvedDurationMs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -384,9 +385,14 @@ object AudioEngine {
         PlayerBridge.setSpeed(_playbackSpeed.value)
         PlayerBridge.setVolume(_volume.value)
         PlayerBridge.setPlaybackMetadata(trackDisplayTitle(track), track.reciterName)
-        // Prefer offline file when downloaded; a download completing mid-play
+        // Prefer offline file when downloaded for full surahs; a download completing mid-play
         // does not interrupt the current stream — offline applies from next startPlayback.
-        PlayerBridge.play(QuranDownloads.localUri(track.reciterSlug, track.surahId) ?: track.audioUrl)
+        val playbackUri = if (track.isFullSurah || track.ayahNo <= 0) {
+            QuranDownloads.localUri(track.reciterSlug, track.surahId) ?: track.audioUrl
+        } else {
+            track.audioUrl
+        }
+        PlayerBridge.play(playbackUri)
     }
 
     private fun stopPlayback() {
@@ -419,13 +425,25 @@ object AudioEngine {
         lastEndUrl = endedUrl
         lastEndAtMs = now
         consecutiveErrors = 0
-        SleepTimer.onAyahEnded()
         val current = _currentTrack.value
+        val isFullSurah = current?.isFullSurah == true || (current != null && current.ayahNo <= 0)
+        SleepTimer.onAyahEnded()
+        if (isFullSurah) {
+            SleepTimer.onSurahEnded()
+        }
+        if (!_isPlaying.value) return
+
         val nextTrack = queueManager.playNext(forceAdvance = false)
         if (nextTrack != null) {
-            if (current != null && nextTrack.surahId != current.surahId) SleepTimer.onSurahEnded()
+            if (!isFullSurah && current != null && nextTrack.surahId != current.surahId) {
+                SleepTimer.onSurahEnded()
+            }
+            if (!_isPlaying.value) return
             startPlayback(nextTrack)
         } else {
+            if (isFullSurah) {
+                SleepTimer.onSurahEnded()
+            }
             SleepTimer.onQueueEnded()
             stopPlayback()
         }
@@ -443,9 +461,15 @@ object AudioEngine {
         else -> 0L
     }
 
-    private fun trackDisplayTitle(track: TrackItem): String =
-        if (track.surahNameEn.isBlank()) "Quranify"
-        else "${track.surahNameEn} - Ayah ${track.ayahNo}"
+    fun trackDisplayTitle(track: TrackItem): String {
+        val name = track.surahNameEn.trim()
+        if (name.isBlank()) return "Quranify"
+        return if (track.ayahNo <= 0 || track.isFullSurah) {
+            name
+        } else {
+            "$name - Ayah ${track.ayahNo}"
+        }
+    }
 
     private fun currentTimeMs(): Long =
         try { platformTimeMs() } catch (_: Exception) { lastEndAtMs + 2000L }

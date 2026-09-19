@@ -85,7 +85,7 @@ data class TrackItem(
     val surahId: Int,
     val surahNameEn: String,
     val surahNameAr: String,
-    val ayahNo: Int,
+    val ayahNo: Int = 0,
     val audioUrl: String,
     val textUthmani: String = "",
     /**
@@ -102,6 +102,18 @@ val TrackItem.imageUrl: String?
 /** True when the track carries a usable pre-known duration. */
 val TrackItem.hasKnownDuration: Boolean
     get() = durationMs > 0L
+
+/** True when the track represents a full surah rather than an individual ayah recitation. */
+val TrackItem.isFullSurah: Boolean
+    get() {
+        if (ayahNo <= 0) return true
+        val url = audioUrl.lowercase()
+        if (url.contains("mp3quran.net") || url.contains("archive.org")) return true
+        if (url.startsWith("file:") || url.startsWith("/") || url.startsWith("content:")) return true
+        if (url.contains("everyayah.com")) return false
+        if (textUthmani.isBlank() && (durationMs > 60_000L || durationMs == UNKNOWN_DURATION_MS)) return true
+        return false
+    }
 
 /**
  * Effective duration: pre-known [TrackItem.durationMs] when > 0,
