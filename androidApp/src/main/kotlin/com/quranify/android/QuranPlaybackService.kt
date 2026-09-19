@@ -63,8 +63,15 @@ class QuranPlaybackService : MediaSessionService() {
             }
         }
 
-        fun displayTitle(surahNameEn: String, ayahNo: Int): String =
-            if (surahNameEn.isBlank()) "Quranify" else "$surahNameEn - Ayah $ayahNo"
+        fun displayTitle(surahNameEn: String, ayahNo: Int = 0): String {
+            val name = surahNameEn.trim()
+            if (name.isBlank()) return "Quranify"
+            return if (name.startsWith("Surah ", ignoreCase = true) || name.startsWith("Juz ", ignoreCase = true)) {
+                name
+            } else {
+                "Surah $name"
+            }
+        }
     }
 
     private var mediaSession: MediaSession? = null
@@ -250,13 +257,15 @@ class QuranPlaybackService : MediaSessionService() {
                 )
             }
             AudioEngine.resume()
+            val title = displayTitle(track.surahNameEn, track.ayahNo)
+            val artist = track.reciterName.ifBlank { "Quranify" }
             val item = MediaItem.Builder()
                 .setMediaId(track.audioUrl)
                 .setUri(track.audioUrl)
                 .setMediaMetadata(
                     MediaMetadata.Builder()
-                        .setTitle(displayTitle(track.surahNameEn, track.ayahNo))
-                        .setArtist(track.reciterName)
+                        .setTitle(title)
+                        .setArtist(artist)
                         .build(),
                 )
                 .build()
@@ -270,10 +279,20 @@ class QuranPlaybackService : MediaSessionService() {
         serviceScope.launch {
             AudioEngine.currentTrack.collect { track ->
                 if (track == null) return@collect
+                val title = displayTitle(track.surahNameEn, track.ayahNo)
+                val artist = track.reciterName.ifBlank { "Quranify" }
                 PlayerBridge.updateMetadata(
-                    displayTitle(track.surahNameEn, track.ayahNo),
-                    track.reciterName,
+                    title,
+                    artist,
                 )
+                player?.let { p ->
+                    try {
+                        p.playlistMetadata = MediaMetadata.Builder()
+                            .setTitle(title)
+                            .setArtist(artist)
+                            .build()
+                    } catch (_: Exception) { }
+                }
                 mediaSession?.let { session ->
                     try { onUpdateNotification(session, false) } catch (_: Exception) { }
                 }
@@ -283,9 +302,12 @@ class QuranPlaybackService : MediaSessionService() {
 
     private fun startForegroundWithPlaceholder() {
         try {
+            val track = AudioEngine.currentTrack.value
+            val initialTitle = track?.let { displayTitle(it.surahNameEn, it.ayahNo) } ?: "Quranify"
+            val initialSubtitle = track?.reciterName?.takeIf { it.isNotBlank() } ?: "Preparing recitation…"
             val placeholder = android.app.Notification.Builder(this, CHANNEL_ID)
-                .setContentTitle("Quranify")
-                .setContentText("Preparing recitation…")
+                .setContentTitle(initialTitle)
+                .setContentText(initialSubtitle)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setOngoing(true)
                 .build()
