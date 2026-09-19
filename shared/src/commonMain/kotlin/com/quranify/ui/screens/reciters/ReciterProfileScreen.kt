@@ -82,8 +82,9 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                     surahId = surah.id,
                     surahNameEn = surah.nameEn,
                     surahNameAr = surah.nameAr,
-                    ayahNo = 1,
+                    ayahNo = 0,
                     audioUrl = reciter.getFullSurahUrl(surah.id),
+                    textUthmani = "",
                     durationMs = surah.ayahsCount * 15_000L
                 )
             }
