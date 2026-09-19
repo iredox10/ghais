@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import com.quranify.player.AmbientMixer
 import com.quranify.player.AmbientType
 
@@ -93,6 +94,18 @@ fun AmbientMixerSheet(
     mixer: AmbientMixer,
     onDismissRequest: () -> Unit
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coroutineScope = rememberCoroutineScope()
+    fun dismiss() {
+        coroutineScope.launch {
+            try {
+                sheetState.hide()
+            } finally {
+                onDismissRequest()
+            }
+        }
+    }
+
     val channels by mixer.channels.collectAsState()
     val allOptions = remember { soundOptions() }
     // Live selection: highlight follows the mixer, taps apply instantly
@@ -109,6 +122,7 @@ fun AmbientMixerSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
         containerColor = SheetBg,
         scrimColor = Color.Black.copy(alpha = 0.5f),
         dragHandle = {
@@ -138,7 +152,7 @@ fun AmbientMixerSheet(
                         .size(44.dp)
                         .clip(CircleShape)
                         .background(CircleBtnBg)
-                        .clickable { onDismissRequest() },
+                        .clickable { dismiss() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -161,7 +175,7 @@ fun AmbientMixerSheet(
                         .size(48.dp)
                         .clip(CircleShape)
                         .background(ConfirmBg)
-                        .clickable { onDismissRequest() },
+                        .clickable { dismiss() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -208,21 +222,45 @@ fun AmbientMixerSheet(
                         inner()
                     }
                 )
+                if (query.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF48484A))
+                            .clickable { query = "" },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Clear",
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 items(visible, key = { it.key }) { option ->
                     SoundTile(
                         option = option,
-                        selected = selected == option.type,
-                        onClick = { mixer.selectExclusive(option.type) }
+                        selected = if (option.isNoSounds) selected == null else selected == option.type,
+                        onClick = {
+                            if (option.isNoSounds || option.type == null) {
+                                mixer.selectExclusive(null)
+                            } else {
+                                mixer.selectExclusive(option.type)
+                            }
+                        }
                     )
                 }
             }
