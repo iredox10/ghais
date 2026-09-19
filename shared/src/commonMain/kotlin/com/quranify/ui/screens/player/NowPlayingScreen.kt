@@ -9,6 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -141,15 +143,45 @@ class NowPlayingScreen : Screen {
             ) {
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Drag handle
+                // Swipe-down to minimize & click to dismiss handle
+                var dragOffsetY by remember { mutableStateOf(0f) }
                 Box(
                     modifier = Modifier
-                        .width(44.dp)
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.White.copy(alpha = 0.28f))
-                        .clickable { navigator?.pop() }
-                )
+                        .fillMaxWidth()
+                        .padding(top = 10.dp, bottom = 4.dp)
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures(
+                                onDragEnd = {
+                                    if (dragOffsetY > 60f) {
+                                        navigator?.pop()
+                                    }
+                                    dragOffsetY = 0f
+                                },
+                                onDragCancel = {
+                                    dragOffsetY = 0f
+                                },
+                                onVerticalDrag = { change, dragAmount ->
+                                    if (dragAmount > 0) {
+                                        dragOffsetY += dragAmount
+                                        if (dragOffsetY > 90f) {
+                                            navigator?.pop()
+                                            dragOffsetY = 0f
+                                        }
+                                    }
+                                }
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(48.dp)
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color.White.copy(alpha = 0.35f))
+                            .clickable { navigator?.pop() }
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(18.dp))
 
