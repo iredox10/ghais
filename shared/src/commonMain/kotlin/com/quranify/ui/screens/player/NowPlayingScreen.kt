@@ -77,7 +77,7 @@ class NowPlayingScreen : Screen {
         var showQueue by remember { mutableStateOf(false) }
         var showAmbient by remember { mutableStateOf(false) }
         var showLyrics by remember { mutableStateOf(false) }
-        val mixer = remember { AmbientMixer() }
+        val mixer = remember { AmbientMixer }
 
         val track = currentTrack
         val title = track?.surahNameEn ?: "Ar-Rahman"

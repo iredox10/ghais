@@ -19,6 +19,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.quranify.player.PlayerBridge.init(this)
+        com.quranify.player.AmbientPlayerBridge.init(this)
         // Any play/resume boots the foreground MediaSession service so audio
         // survives background + shows system notification controls.
         com.quranify.player.PlayerBridge.onPlayRequested = {
