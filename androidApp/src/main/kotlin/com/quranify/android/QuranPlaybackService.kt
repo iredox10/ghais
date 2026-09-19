@@ -82,6 +82,12 @@ class QuranPlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        setMediaNotificationProvider(
+            androidx.media3.session.DefaultMediaNotificationProvider.Builder(this)
+                .setChannelId(CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .build()
+        )
         val existing = PlayerBridge.playerOrNull()
         val exo: ExoPlayer = if (existing != null) {
             ownsPlayer = false
@@ -121,6 +127,15 @@ class QuranPlaybackService : MediaSessionService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Idle explicit start (e.g. legacy warm-start): no media -> no notification
+        // within 10s -> system kills the app. Stop immediately instead.
+        if (intent?.action == null && AudioEngine.currentTrack.value == null) {
+            val p = player ?: PlayerBridge.playerOrNull()
+            if (p == null || !p.isPlaying) {
+                stopSelf(startId)
+                return super.onStartCommand(intent, flags, startId)
+            }
+        }
         when (intent?.action) {
             ACTION_TOGGLE -> AudioEngine.togglePlayPause()
             ACTION_PLAY -> AudioEngine.resume()
@@ -143,7 +158,9 @@ class QuranPlaybackService : MediaSessionService() {
         }
         mediaSession = null
         if (ownsPlayer) {
-            try { player?.release() } catch (_: Exception) { }
+            val released = player
+            try { released?.release() } catch (_: Exception) { }
+            PlayerBridge.onPlayerReleased(released)
         } else {
             try { player?.removeListener(sessionListener) } catch (_: Exception) { }
         }
@@ -169,15 +186,20 @@ class QuranPlaybackService : MediaSessionService() {
             mediaSession: MediaSession,
             controller: MediaSession.ControllerInfo,
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-            AudioEngine.resume()
             val track = AudioEngine.currentTrack.value
+            if (track == null || track.audioUrl.isBlank()) {
+                return Futures.immediateFuture(
+                    MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L),
+                )
+            }
+            AudioEngine.resume()
             val item = MediaItem.Builder()
-                .setMediaId(track?.audioUrl.orEmpty())
-                .setUri(track?.audioUrl.orEmpty())
+                .setMediaId(track.audioUrl)
+                .setUri(track.audioUrl)
                 .setMediaMetadata(
                     MediaMetadata.Builder()
-                        .setTitle(if (track == null) "Quranify" else displayTitle(track.surahNameEn, track.ayahNo))
-                        .setArtist(track?.reciterName)
+                        .setTitle(displayTitle(track.surahNameEn, track.ayahNo))
+                        .setArtist(track.reciterName)
                         .build(),
                 )
                 .build()

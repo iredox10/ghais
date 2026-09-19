@@ -251,4 +251,13 @@ actual object PlayerBridge {
     actual fun setOnTrackEndListener(listener: (() -> Unit)?) {
         onTrackEnd = listener
     }
+
+    /** Drop a released ExoPlayer so the next play() builds a fresh instance. */
+    fun onPlayerReleased(released: androidx.media3.exoplayer.ExoPlayer?) {
+        if (released != null && exoPlayer === released) {
+            try { released.removeListener(listener) } catch (_: Exception) { }
+            exoPlayer = null
+            pollStarted = false
+        }
+    }
 }
