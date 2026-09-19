@@ -127,6 +127,7 @@ actual object AmbientVideoBridge {
                 _frontIsA.value = true
                 _frontKey.value = assetKeys[0]
                 _backReadyKey.value = null
+                android.util.Log.d(TAG, "rotation started: $assetKeys")
             }
         }
     }
@@ -187,6 +188,7 @@ actual object AmbientVideoBridge {
                 _frontIsA.value = isFrontA
                 _frontKey.value = readyKey
                 _backReadyKey.value = null
+                android.util.Log.d(TAG, "swapped to $readyKey")
                 nextIndex = if (rotation.isNotEmpty()) (nextIndex + 1) % rotation.size else 0
             }
         }
@@ -219,7 +221,9 @@ actual object AmbientVideoBridge {
                 return
             }
             if (_backReadyKey.value != null) return // swap already pending; wait for confirmSwap()
-            val backPlayer = back() ?: run {
+            // Lazily build the back player here: it is intentionally NOT created
+            // in playVideos (max 1 decoder until rotation actually needs the 2nd).
+            val backPlayer = (if (isFrontA) ensureB() else ensureA()) ?: run {
                 android.util.Log.e(TAG, "advance: back player null (init missing?)")
                 return
             }
