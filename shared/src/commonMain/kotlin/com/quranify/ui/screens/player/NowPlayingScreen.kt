@@ -1,5 +1,10 @@
 package com.quranify.ui.screens.player
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -57,6 +62,7 @@ import com.quranify.data.seed.StitchAssets
 import com.quranify.player.AmbientMixer
 import com.quranify.player.AudioEngine
 import com.quranify.ui.screens.player.components.NowPlayingLyricsCard
+import com.quranify.ui.screens.player.components.NowPlayingVolumePanel
 
 private val MutedGrey = Color(0xFF9A9AA0)
 private val Speeds = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 0.75f)
@@ -77,7 +83,9 @@ class NowPlayingScreen : Screen {
         var showQueue by remember { mutableStateOf(false) }
         var showAmbient by remember { mutableStateOf(false) }
         var showLyrics by remember { mutableStateOf(false) }
+        var showVolume by remember { mutableStateOf(false) }
         val mixer = remember { AmbientMixer }
+        val ambientVolume by mixer.masterAmbientVolume.collectAsState()
 
         val track = currentTrack
         val title = track?.surahNameEn ?: "Ar-Rahman"
@@ -327,13 +335,13 @@ class NowPlayingScreen : Screen {
                         .padding(horizontal = 6.dp)
                 ) {
                     IconButton(
-                        onClick = { AudioEngine.setVolume(if (volume > 0f) 0f else 1f) },
+                        onClick = { showVolume = !showVolume },
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = if (volume > 0f) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
                             contentDescription = "Volume",
-                            tint = MutedGrey,
+                            tint = if (volume > 0f) MutedGrey else MutedGrey.copy(alpha = 0.5f),
                             modifier = Modifier.size(30.dp)
                         )
                     }
@@ -366,6 +374,20 @@ class NowPlayingScreen : Screen {
                             modifier = Modifier.size(30.dp)
                         )
                     }
+                }
+
+                AnimatedVisibility(
+                    visible = showVolume,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    NowPlayingVolumePanel(
+                        quranVolume = volume,
+                        onQuranVolumeChange = { mixer.setQuranVolume(it) },
+                        ambientVolume = ambientVolume,
+                        onAmbientVolumeChange = { mixer.setMasterAmbientVolume(it) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 12.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(28.dp))
