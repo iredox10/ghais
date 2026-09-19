@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -71,6 +72,21 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
         }
         val surahs: List<Surah> = remember {
             QuranDataRepository.getSurahs()
+        }
+
+        val allTracks: List<TrackItem> = remember(reciter, surahs) {
+            surahs.map { surah ->
+                TrackItem(
+                    reciterSlug = reciter.slug,
+                    reciterName = reciter.nameEn,
+                    surahId = surah.id,
+                    surahNameEn = surah.nameEn,
+                    surahNameAr = surah.nameAr,
+                    ayahNo = 1,
+                    audioUrl = reciter.getFullSurahUrl(surah.id),
+                    durationMs = surah.ayahsCount * 15_000L
+                )
+            }
         }
 
         val meta = remember(reciter) {
@@ -194,6 +210,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                         ReciterActionButtonsRow(
                             reciter = reciter,
                             surahs = surahs,
+                            allTracks = allTracks,
                             isFollowing = isFollowing,
                             onToggleFollow = { isFollowing = !isFollowing }
                         )
@@ -246,10 +263,10 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                 }
 
                 // Discography / Surahs List
-                items(
+                itemsIndexed(
                     items = surahs,
-                    key = { it.id }
-                ) { surah ->
+                    key = { _, it -> it.id }
+                ) { index, surah ->
                     val isCurrentSurah = currentTrack?.surahId == surah.id && currentTrack?.reciterSlug == reciter.slug
                     val isCurrentSurahPlaying = isCurrentSurah && isPlaying
                     val downloadKey = "${reciter.slug}/${surah.id}"
@@ -274,22 +291,12 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                             }
                         },
                         onItemClick = {
-                            val track = TrackItem(
-                                reciterSlug = reciter.slug,
-                                reciterName = reciter.nameEn,
-                                surahId = surah.id,
-                                surahNameEn = surah.nameEn,
-                                surahNameAr = surah.nameAr,
-                                ayahNo = 1,
-                                audioUrl = reciter.getFullSurahUrl(surah.id),
-                                durationMs = surah.ayahsCount * 15_000L
-                            )
                             if (isCurrentSurahPlaying) {
                                 AudioEngine.pause()
                             } else if (isCurrentSurah) {
                                 AudioEngine.resume()
                             } else {
-                                AudioEngine.playTrack(track)
+                                AudioEngine.playQueue(allTracks, startIndex = index)
                                 rootNavigator.push(NowPlayingScreen())
                             }
                         }
@@ -409,6 +416,7 @@ private fun FrostedGlassBadge(
 private fun ReciterActionButtonsRow(
     reciter: Reciter,
     surahs: List<Surah>,
+    allTracks: List<TrackItem>,
     isFollowing: Boolean,
     onToggleFollow: () -> Unit
 ) {
@@ -422,19 +430,10 @@ private fun ReciterActionButtonsRow(
         // "Play All" button with Trending Purple gradient
         Button(
             onClick = {
-                val firstSurah = surahs.firstOrNull() ?: QuranDataRepository.getSurahs().first()
-                val firstTrack = TrackItem(
-                    reciterSlug = reciter.slug,
-                    reciterName = reciter.nameEn,
-                    surahId = firstSurah.id,
-                    surahNameEn = firstSurah.nameEn,
-                    surahNameAr = firstSurah.nameAr,
-                    ayahNo = 1,
-                    audioUrl = reciter.getFullSurahUrl(firstSurah.id),
-                    durationMs = firstSurah.ayahsCount * 15_000L
-                )
-                AudioEngine.playTrack(firstTrack)
-                rootNavigator?.push(NowPlayingScreen())
+                if (allTracks.isNotEmpty()) {
+                    AudioEngine.playQueue(allTracks, startIndex = 0)
+                    rootNavigator?.push(NowPlayingScreen())
+                }
             },
             modifier = Modifier
                 .weight(1.2f)
@@ -480,19 +479,10 @@ private fun ReciterActionButtonsRow(
         // "Shuffle" button in frosted dark glass
         Surface(
             onClick = {
-                val randomSurah = surahs.randomOrNull() ?: QuranDataRepository.getSurahs().first()
-                val randomTrack = TrackItem(
-                    reciterSlug = reciter.slug,
-                    reciterName = reciter.nameEn,
-                    surahId = randomSurah.id,
-                    surahNameEn = randomSurah.nameEn,
-                    surahNameAr = randomSurah.nameAr,
-                    ayahNo = 1,
-                    audioUrl = reciter.getFullSurahUrl(randomSurah.id),
-                    durationMs = randomSurah.ayahsCount * 15_000L
-                )
-                AudioEngine.playTrack(randomTrack)
-                rootNavigator?.push(NowPlayingScreen())
+                if (allTracks.isNotEmpty()) {
+                    AudioEngine.playQueue(allTracks.shuffled(), startIndex = 0)
+                    rootNavigator?.push(NowPlayingScreen())
+                }
             },
             modifier = Modifier
                 .weight(1f)
