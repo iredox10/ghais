@@ -48,7 +48,8 @@ object AudioEngine {
 
     val errorMessage: StateFlow<String?> = PlayerBridge.errorMessage
 
-    val queue: List<TrackItem> get() = queueManager.queue
+    private val _queue = MutableStateFlow<List<TrackItem>>(emptyList())
+    val queue: StateFlow<List<TrackItem>> = _queue.asStateFlow()
 
     init {
         PlayerBridge.setOnTrackEndListener { onBridgeTrackEnd() }
@@ -139,11 +140,13 @@ object AudioEngine {
     fun playTrack(track: TrackItem) {
         queueManager.clear()
         queueManager.addToQueue(track)
+        _queue.value = queueManager.queue
         startPlayback(track)
     }
 
     fun playQueue(tracks: List<TrackItem>, startIndex: Int = 0) {
         queueManager.setQueue(tracks, startIndex)
+        _queue.value = queueManager.queue
         queueManager.currentTrack?.let { startPlayback(it) }
     }
 
@@ -228,6 +231,7 @@ object AudioEngine {
 
     fun toggleShuffle() {
         queueManager.toggleShuffle()
+        _queue.value = queueManager.queue
         _playbackState.update { state ->
             state.copy(settings = state.settings.copy(shuffle = queueManager.isShuffle))
         }
@@ -264,9 +268,39 @@ object AudioEngine {
 
     fun skipPrevious() = previous()
 
+    fun skipToIndex(index: Int) {
+        val tracks = queueManager.queue
+        if (index in tracks.indices) {
+            playQueue(tracks, startIndex = index)
+        }
+    }
+
+    fun removeFromQueue(index: Int) {
+        val tracks = queueManager.queue.toMutableList()
+        if (index in tracks.indices) {
+            val removingCurrent = (index == queueManager.currentIndex)
+            tracks.removeAt(index)
+            if (tracks.isEmpty()) {
+                clear()
+            } else if (removingCurrent) {
+                val nextIndex = index.coerceAtMost(tracks.size - 1)
+                playQueue(tracks, startIndex = nextIndex)
+            } else {
+                val newCurrentIndex = if (index < queueManager.currentIndex) {
+                    queueManager.currentIndex - 1
+                } else {
+                    queueManager.currentIndex
+                }
+                queueManager.setQueue(tracks, startIndex = newCurrentIndex)
+                _queue.value = queueManager.queue
+            }
+        }
+    }
+
     fun clear() {
         stopPlayback()
         queueManager.clear()
+        _queue.value = emptyList()
     }
 
     fun stop() {
