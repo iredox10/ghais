@@ -40,7 +40,7 @@ fun ExploreTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -52,11 +52,11 @@ fun ExploreTopBar(
             // App Logo in glass pill
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(QuranifyColors.SurfaceHigh.copy(alpha = 0.7f))
-                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
-                    .padding(3.dp),
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .border(0.5.dp, HairlineSpecularBorder, RoundedCornerShape(12.dp))
+                    .padding(4.dp),
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
@@ -67,61 +67,75 @@ fun ExploreTopBar(
                 )
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             Column {
                 Text(
                     text = "ASSALAMU ALAIKUM",
                     color = QuranifyColors.Primary,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 1.2.sp
                 )
                 Text(
                     text = "Explore",
-                    color = QuranifyColors.TextPrimary,
-                    fontSize = 22.sp,
+                    color = OffWhiteText,
+                    fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp
                 )
             }
         }
 
-        // Action Icons
+        // Action Icons with 48dp minimum touch target areas
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Search button in glass pill
+            // Search button with full 48dp touch target
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
-                    .background(QuranifyColors.SurfaceContainer.copy(alpha = 0.7f))
-                    .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape)
                     .clickable { onSearchClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = QuranifyColors.TextPrimary.copy(alpha = 0.8f),
-                    modifier = Modifier.size(18.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .border(0.5.dp, HairlineSpecularBorder, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = SystemGrey,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
 
-            // Profile avatar with glass border
-            AsyncImage(
-                model = StitchAssets.ProfileAvatarUrl,
-                contentDescription = "Profile",
-                contentScale = ContentScale.Crop,
+            // Profile avatar with full 48dp touch target
+            Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
-                    .border(1.5.dp, Color.White.copy(alpha = 0.15f), CircleShape)
-                    .background(QuranifyColors.SurfaceHigh)
-                    .clickable { onProfileClick() }
-            )
+                    .clickable { onProfileClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = StitchAssets.ProfileAvatarUrl,
+                    contentDescription = "Profile",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .border(1.dp, Color.White.copy(alpha = 0.20f), CircleShape)
+                        .background(DarkObsidian)
+                )
+            }
         }
     }
 }
@@ -133,32 +147,38 @@ fun ExploreSearchBar(
     onFilterClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val activeBorder = Brush.verticalGradient(
+        listOf(
+            QuranifyColors.Primary.copy(alpha = 0.45f),
+            QuranifyColors.Primary.copy(alpha = 0.15f)
+        )
+    )
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .height(48.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(QuranifyColors.SurfaceLow.copy(alpha = 0.9f))
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White.copy(alpha = 0.08f))
             .border(
-                1.dp,
-                if (query.isNotEmpty()) QuranifyColors.Primary.copy(alpha = 0.4f)
-                else Color.White.copy(alpha = 0.08f),
-                RoundedCornerShape(24.dp)
+                width = 0.5.dp,
+                brush = if (query.isNotEmpty()) activeBorder else HairlineSpecularBorder,
+                shape = RoundedCornerShape(14.dp)
             )
-            .padding(horizontal = 14.dp),
+            .padding(start = 14.dp, end = 4.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Emerald Search Icon
+            // Refined Emerald/Grey Search Icon
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "Search",
-                tint = QuranifyColors.Primary,
-                modifier = Modifier.size(20.dp)
+                tint = if (query.isNotEmpty()) QuranifyColors.Primary else SystemGrey,
+                modifier = Modifier.size(18.dp)
             )
 
             Spacer(modifier = Modifier.width(10.dp))
@@ -171,8 +191,9 @@ fun ExploreSearchBar(
                 if (query.isEmpty()) {
                     Text(
                         text = "Surah name, verse keywords, reciter...",
-                        fontSize = 13.sp,
-                        color = QuranifyColors.TextTertiary
+                        fontSize = 15.sp,
+                        color = SystemGrey,
+                        fontWeight = FontWeight.Normal
                     )
                 }
 
@@ -181,8 +202,8 @@ fun ExploreSearchBar(
                     onValueChange = onQueryChange,
                     singleLine = true,
                     textStyle = TextStyle(
-                        color = QuranifyColors.TextPrimary,
-                        fontSize = 13.sp,
+                        color = OffWhiteText,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Normal
                     ),
                     cursorBrush = SolidColor(QuranifyColors.Primary),
@@ -190,30 +211,30 @@ fun ExploreSearchBar(
                 )
             }
 
-            // Clear button if query has text
+            // Clear button if query has text with 48dp touch target
             if (query.isNotEmpty()) {
                 IconButton(
                     onClick = { onQueryChange("") },
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Clear search",
-                        tint = QuranifyColors.TextSecondary,
+                        tint = SystemGrey,
                         modifier = Modifier.size(16.dp)
                     )
                 }
             }
 
-            // Filter button
+            // Filter button with 48dp touch target
             IconButton(
                 onClick = onFilterClick,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(48.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Tune,
                     contentDescription = "Filter",
-                    tint = QuranifyColors.TextSecondary,
+                    tint = SystemGrey,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -231,41 +252,51 @@ fun ExploreFilterPills(
 
     LazyRow(
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(pills) { pill ->
             val isSelected = pill == selectedPill
+            // Wrapper ensuring full 48dp touch target
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .then(
-                        if (isSelected) {
-                            Modifier
-                                .background(
-                                    Brush.horizontalGradient(
-                                        listOf(
-                                            QuranifyColors.PrimaryContainer,
-                                            QuranifyColors.Primary
+                    .heightIn(min = 48.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .clickable { onSelectPill(pill) },
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .heightIn(min = 34.dp)
+                        .clip(RoundedCornerShape(17.dp))
+                        .then(
+                            if (isSelected) {
+                                Modifier
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            listOf(
+                                                QuranifyColors.Primary.copy(alpha = 0.28f),
+                                                QuranifyColors.PrimaryContainer.copy(alpha = 0.18f)
+                                            )
                                         )
                                     )
-                                )
-                                .border(1.dp, QuranifyColors.Primary, RoundedCornerShape(20.dp))
-                        } else {
-                            Modifier
-                                .background(QuranifyColors.SurfaceContainer.copy(alpha = 0.7f))
-                                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
-                        }
+                                    .border(0.5.dp, QuranifyColors.Primary.copy(alpha = 0.50f), RoundedCornerShape(17.dp))
+                            } else {
+                                Modifier
+                                    .background(Color.White.copy(alpha = 0.07f))
+                                    .border(0.5.dp, HairlineSubtleBorder, RoundedCornerShape(17.dp))
+                            }
+                        )
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = pill,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        color = if (isSelected) OffWhiteText else SystemGrey
                     )
-                    .clickable { onSelectPill(pill) }
-                    .padding(horizontal = 14.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = pill,
-                    fontSize = 11.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) QuranifyColors.OnPrimary else QuranifyColors.TextSecondary
-                )
+                }
             }
         }
     }

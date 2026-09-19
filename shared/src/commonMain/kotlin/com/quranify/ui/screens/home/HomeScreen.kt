@@ -16,10 +16,9 @@ import com.quranify.data.repository.QuranDataRepository
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
 import com.quranify.ui.navigation.LocalRootNavigator
-import com.quranify.ui.screens.curated.AllCuratedPlaylistsScreen
 import com.quranify.ui.screens.library.FavoritesScreen
-import com.quranify.ui.screens.mood.RoutineModeScreen
 import com.quranify.ui.screens.player.NowPlayingScreen
+import com.quranify.ui.screens.playlists.PlaylistDetailsScreen
 import com.quranify.ui.screens.reciters.RecitersScreen
 import com.quranify.ui.screens.reciters.ReciterProfileScreen
 import com.quranify.ui.screens.search.SearchScreen
@@ -101,8 +100,8 @@ object HomeScreen : Tab {
                 item {
                     HomePlaylistsRow(
                         onFavourites = { rootNavigator?.push(FavoritesScreen) },
-                        onFocusWork = { rootNavigator?.push(AllCuratedPlaylistsScreen()) },
-                        onNightSleep = { rootNavigator?.push(RoutineModeScreen(com.quranify.domain.model.RoutineModeType.SLEEP)) }
+                        onFocusWork = { rootNavigator?.push(PlaylistDetailsScreen("focus-work")) },
+                        onNightSleep = { rootNavigator?.push(PlaylistDetailsScreen("sleep-mode")) }
                     )
                 }
                 item {
@@ -114,9 +113,21 @@ object HomeScreen : Tab {
                 item {
                     HomeNewlyAddedRow(onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) })
                 }
-                item { HomeSectionHeader(title = "Listen by routine", onSeeAll = null) }
                 item {
-                    HomeRoutineRow(onMode = { mode -> rootNavigator?.push(RoutineModeScreen(mode)) })
+                    HomeSectionHeader(
+                        title = "Listen by routine",
+                        onSeeAll = { tabNavigator.current = com.quranify.ui.screens.explore.ExploreScreen }
+                    )
+                }
+                item {
+                    HomeRoutineRow(onMode = { mode ->
+                        val playlistId = when (mode) {
+                            com.quranify.domain.model.RoutineModeType.STUDY -> "study-focus"
+                            com.quranify.domain.model.RoutineModeType.WORK -> "focus-work"
+                            com.quranify.domain.model.RoutineModeType.SLEEP -> "sleep-mode"
+                        }
+                        rootNavigator?.push(PlaylistDetailsScreen(playlistId))
+                    })
                 }
                 item { HomeSectionHeader(title = "Your stats", onSeeAll = null) }
                 item { HomeStatsCard() }

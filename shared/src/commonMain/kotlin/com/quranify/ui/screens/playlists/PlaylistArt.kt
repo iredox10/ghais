@@ -46,6 +46,9 @@ fun PlaylistCover(art: PlaylistArt, modifier: Modifier = Modifier) {
             PlaylistArt.SLEEP -> SleepArt()
             PlaylistArt.DUAA_RUQIA -> RaysArt()
             PlaylistArt.EMOTIONAL -> BurstArt()
+            PlaylistArt.STUDY -> ConcentricRingsArt()
+            PlaylistArt.TAHAJJUD -> SleepArt()
+            PlaylistArt.SUNRISE -> RaysArt()
         }
     }
 }
@@ -57,6 +60,9 @@ private fun coverBackground(art: PlaylistArt): Brush = when (art) {
     PlaylistArt.SLEEP -> Brush.verticalGradient(listOf(Color(0xFF1B2A6B), Color(0xFF05070F)))
     PlaylistArt.DUAA_RUQIA -> Brush.verticalGradient(listOf(Color(0xFF5E8F5A), Color(0xFF1E3320)))
     PlaylistArt.EMOTIONAL -> Brush.verticalGradient(listOf(Color(0xFF5B3DF5), Color(0xFF120B33)))
+    PlaylistArt.STUDY -> Brush.verticalGradient(listOf(Color(0xFF1E3A5F), Color(0xFF0A1424)))
+    PlaylistArt.TAHAJJUD -> Brush.verticalGradient(listOf(Color(0xFF2A1B4E), Color(0xFF0F0A1E)))
+    PlaylistArt.SUNRISE -> Brush.verticalGradient(listOf(Color(0xFF6B4A1B), Color(0xFF241505)))
 }
 
 @Composable
