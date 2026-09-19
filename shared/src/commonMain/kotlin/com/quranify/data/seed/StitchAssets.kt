@@ -13,7 +13,9 @@ data class JumpBackInItem(
     val progress: Float,
     val coverUrl: String,
     val surahId: Int = 67,
-    val reciterSlug: String = "mishary"
+    val reciterSlug: String = "mishary",
+    val positionMs: Long = 0L,
+    val durationMs: Long = 0L
 )
 
 data class CuratedPlaylist(

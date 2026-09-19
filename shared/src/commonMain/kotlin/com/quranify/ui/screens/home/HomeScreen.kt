@@ -57,7 +57,6 @@ object HomeScreen : Tab {
                         onStatsClick = { rootNavigator?.push(SearchScreen()) }
                     )
                 }
-                item { HomeFeaturedHero(onClick = { rootNavigator?.push(ReciterProfileScreen("mishary")) }) }
                 item { HomeSectionHeader(title = "Continue listening", onSeeAll = null) }
                 item {
                     HomeContinueListeningRow(onPlay = { item ->
@@ -87,6 +86,9 @@ object HomeScreen : Tab {
                             rootNavigator?.push(NowPlayingScreen())
                         } else {
                             AudioEngine.playQueue(allTracks, startIndex = startIndex)
+                            if (item.positionMs > 0L) {
+                                AudioEngine.seekTo(item.positionMs)
+                            }
                             rootNavigator?.push(NowPlayingScreen())
                         }
                     })

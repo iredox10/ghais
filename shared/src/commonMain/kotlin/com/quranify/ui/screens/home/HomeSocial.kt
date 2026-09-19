@@ -26,8 +26,12 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.quranify.data.repository.UserUsageRepository
+import com.quranify.ui.theme.QuranifyColors
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -106,16 +110,18 @@ fun HomeNewlyAddedRow(onReciter: (String) -> Unit) {
 
 @Composable
 fun HomeStatsCard() {
+    val stats by UserUsageRepository.stats.collectAsState()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color.White.copy(alpha = 0.05f))
+            .clip(RoundedCornerShape(22.dp))
+            .background(Color(0xFF141418))
             .border(
                 width = 1.dp,
                 color = Color.White.copy(alpha = 0.08f),
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(22.dp)
             )
             .padding(vertical = 18.dp)
     ) {
@@ -127,20 +133,23 @@ fun HomeStatsCard() {
             HomeStatCell(
                 icon = Icons.Filled.LocalFireDepartment,
                 contentDescription = "Days streak",
-                value = "9",
-                label = "days streak"
+                value = stats.daysStreak.toString(),
+                label = if (stats.daysStreak == 1) "day streak" else "days streak",
+                iconTint = Color(0xFFF59E0B)
             )
             HomeStatCell(
                 icon = Icons.Filled.Timer,
                 contentDescription = "Minutes today",
-                value = "13",
-                label = "min today"
+                value = stats.minutesToday.toString(),
+                label = "min today",
+                iconTint = QuranifyColors.Primary
             )
             HomeStatCell(
                 icon = Icons.Filled.RecordVoiceOver,
-                contentDescription = "Reciters",
-                value = QuranData.RECITERS.size.toString(),
-                label = "reciters"
+                contentDescription = "Reciters listened",
+                value = stats.uniqueRecitersCount.toString(),
+                label = if (stats.uniqueRecitersCount == 1) "reciter" else "reciters",
+                iconTint = Color(0xFF8B5CF6)
             )
         }
     }
@@ -151,26 +160,36 @@ private fun HomeStatCell(
     icon: ImageVector,
     contentDescription: String,
     value: String,
-    label: String
+    label: String,
+    iconTint: Color = Color.White
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = Color.White,
-            modifier = Modifier.size(22.dp)
-        )
-        Spacer(modifier = Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(iconTint.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = iconTint,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = value,
             fontSize = 24.sp,
-            fontWeight = FontWeight.ExtraBold,
+            fontWeight = FontWeight.Bold,
             color = Color.White,
             textAlign = TextAlign.Center
         )
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = label,
             fontSize = 12.sp,
