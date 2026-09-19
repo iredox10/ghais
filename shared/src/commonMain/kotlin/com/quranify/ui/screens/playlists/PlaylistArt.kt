@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -93,7 +94,7 @@ private fun FlowerArt() {
         val petalR = size.width * 0.20f
         val orbitR = size.width * 0.20f
         repeat(8) { k ->
-            val a = k * (Math.PI / 4.0)
+            val a = k * (PI / 4.0)
             drawCircle(
                 color = Color.White.copy(alpha = 0.35f),
                 radius = petalR,
@@ -171,7 +172,7 @@ private fun RaysArt() {
         val origin = Offset(size.width * 0.15f, size.height * 1.05f)
         for (i in 0..10) {
             val a = -90.0 + i * (80.0 / 10.0)
-            val rad = a * Math.PI / 180.0
+            val rad = a * PI / 180.0
             drawLine(
                 color = Color.White.copy(alpha = 0.30f),
                 start = origin,
@@ -201,7 +202,7 @@ private fun BurstArt() {
         val center = Offset(size.width / 2f, size.height * 0.36f)
         // radiating thin strokes
         repeat(24) { k ->
-            val a = k * (Math.PI * 2.0 / 24.0)
+            val a = k * (PI * 2.0 / 24.0)
             val r1 = size.width * 0.16f
             val r2 = size.width * (0.30f + (k % 3) * 0.05f)
             drawLine(
@@ -213,7 +214,7 @@ private fun BurstArt() {
         }
         // petals ring
         repeat(10) { k ->
-            val a = k * (Math.PI * 2.0 / 10.0)
+            val a = k * (PI * 2.0 / 10.0)
             drawCircle(
                 color = Color.White.copy(alpha = 0.28f),
                 radius = size.width * 0.13f,

@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import coil3.compose.AsyncImage
 import com.quranify.data.seed.CuratedPlaylist
+import com.quranify.data.seed.QuranDataRepository
 import com.quranify.data.seed.StitchAssets
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
@@ -192,8 +193,11 @@ fun CuratedForPeaceSection(
                         if (onPlayClick != null) {
                             onPlayClick(playlist.id)
                         } else {
-                            playCuratedPlaylist(playlist)
-                            rootNavigator?.push(NowPlayingScreen())
+                            val playlistTracks = QuranDataRepository.getCuratedTracksForPlaylist(playlist.id)
+                            if (playlistTracks.isNotEmpty()) {
+                                AudioEngine.playQueue(playlistTracks, startIndex = 0)
+                                rootNavigator?.push(NowPlayingScreen())
+                            }
                         }
                     }
                 )
@@ -342,57 +346,8 @@ fun PlaylistCard(
  * Direct playback of curated playlist using AudioEngine and real Quranic audio streams.
  */
 private fun playCuratedPlaylist(playlist: CuratedPlaylist) {
-    val track = when (playlist.id) {
-        "deep-focus-study", "deep-focus-and-study" -> TrackItem(
-            reciterSlug = "al-husary",
-            reciterName = "Mahmoud Khalil Al-Husary",
-            surahId = 67,
-            surahNameEn = "Al-Mulk",
-            surahNameAr = "الملك",
-            ayahNo = 1,
-            audioUrl = "https://server13.mp3quran.net/husr/067.mp3",
-            durationMs = 445000L
-        )
-        "heart-soothing" -> TrackItem(
-            reciterSlug = "mishary",
-            reciterName = "Mishary Rashid Alafasy",
-            surahId = 55,
-            surahNameEn = "Ar-Rahman",
-            surahNameAr = "الرحمن",
-            ayahNo = 1,
-            audioUrl = "https://server8.mp3quran.net/afs/055.mp3",
-            durationMs = 680000L
-        )
-        "morning-adhkar", "morning-adhkar-and-barakah" -> TrackItem(
-            reciterSlug = "mishary",
-            reciterName = "Mishary Rashid Alafasy",
-            surahId = 1,
-            surahNameEn = "Al-Fatihah",
-            surahNameAr = "الفاتحة",
-            ayahNo = 1,
-            audioUrl = "https://server8.mp3quran.net/afs/001.mp3",
-            durationMs = 52000L
-        )
-        "bedtime-sakinah" -> TrackItem(
-            reciterSlug = "al-husary",
-            reciterName = "Mahmoud Khalil Al-Husary",
-            surahId = 112,
-            surahNameEn = "Al-Ikhlas",
-            surahNameAr = "الإخلاص",
-            ayahNo = 1,
-            audioUrl = "https://server13.mp3quran.net/husr/112.mp3",
-            durationMs = 30000L
-        )
-        else -> TrackItem(
-            reciterSlug = "mishary",
-            reciterName = "Mishary Rashid Alafasy",
-            surahId = 1,
-            surahNameEn = playlist.title,
-            surahNameAr = "الفاتحة",
-            ayahNo = 1,
-            audioUrl = "https://server8.mp3quran.net/afs/001.mp3",
-            durationMs = 60000L
-        )
+    val playlistTracks = QuranDataRepository.getCuratedTracksForPlaylist(playlist.id)
+    if (playlistTracks.isNotEmpty()) {
+        AudioEngine.playQueue(playlistTracks, startIndex = 0)
     }
-    AudioEngine.playTrack(track)
 }

@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import com.quranify.data.seed.toTrackItem
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,19 +27,25 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.quranify.data.seed.QuranDataRepository
 import com.quranify.domain.model.TrackItem
+import com.quranify.player.AudioEngine
+import com.quranify.ui.navigation.LocalRootNavigator
+import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.theme.QuranifyColors
 
 data class PlaylistDetailScreen(val playlistId: String) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val rootNavigator = LocalRootNavigator.current ?: navigator.parent ?: navigator
 
-        // Mock data
-        val tracks = listOf(
-            TrackItem("alafasy", "Mishary Alafasy", 1, "Al-Fatihah", "الفاتحة", 1, "url", "Bismillah", 3000),
-            TrackItem("alafasy", "Mishary Alafasy", 1, "Al-Fatihah", "الفاتحة", 2, "url", "Alhamdulillah", 4000)
-        )
+        val playlist = remember(playlistId) {
+            QuranDataRepository.getCuratedPlaylistOrDefault(playlistId)
+        }
+        val tracks = remember(playlist) {
+            playlist.tracks.map { it.toTrackItem() }
+        }
 
         Column(
             modifier = Modifier
@@ -60,7 +68,7 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Morning Adhkar",
+                    text = playlist.title,
                     color = QuranifyColors.TextPrimary,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
@@ -90,7 +98,7 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "2 Tracks • 15 mins",
+                    text = "${tracks.size} Tracks • ${playlist.totalDuration}",
                     color = QuranifyColors.TextSecondary,
                     fontSize = 14.sp
                 )
@@ -102,7 +110,12 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Button(
-                        onClick = { },
+                        onClick = {
+                            if (tracks.isNotEmpty()) {
+                                AudioEngine.playQueue(tracks, startIndex = 0)
+                                rootNavigator.push(NowPlayingScreen())
+                            }
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = QuranifyColors.Primary),
                         modifier = Modifier.weight(1f)
                     ) {
@@ -111,7 +124,15 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
                         Text("Play All", color = Color.White)
                     }
                     Spacer(modifier = Modifier.width(16.dp))
-                    IconButton(onClick = { }, modifier = Modifier.background(QuranifyColors.Card, RoundedCornerShape(50))) {
+                    IconButton(
+                        onClick = {
+                            if (tracks.isNotEmpty()) {
+                                AudioEngine.playQueue(tracks.shuffled(), startIndex = 0)
+                                rootNavigator.push(NowPlayingScreen())
+                            }
+                        },
+                        modifier = Modifier.background(QuranifyColors.Card, RoundedCornerShape(50))
+                    ) {
                         Icon(imageVector = Icons.Filled.Shuffle, contentDescription = "Shuffle", tint = QuranifyColors.TextPrimary)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
@@ -127,8 +148,15 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
             LazyColumn(
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                items(tracks) { track ->
-                    PlaylistTrackRow(track)
+                items(items = tracks) { track ->
+                    PlaylistTrackRow(
+                        track = track,
+                        onTrackClick = {
+                            val index = tracks.indexOf(track).coerceAtLeast(0)
+                            AudioEngine.playQueue(tracks, startIndex = index)
+                            rootNavigator.push(NowPlayingScreen())
+                        }
+                    )
                 }
             }
         }
@@ -136,17 +164,20 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
 }
 
 @Composable
-fun PlaylistTrackRow(track: TrackItem) {
+fun PlaylistTrackRow(
+    track: TrackItem,
+    onTrackClick: () -> Unit = {}
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { }
+            .clickable { onTrackClick() }
             .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "${track.surahNameEn} • Ayah ${track.ayahNo}",
+                text = "${track.surahNameEn} (${track.surahNameAr})",
                 color = QuranifyColors.TextPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium

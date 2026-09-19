@@ -87,13 +87,7 @@ data class CuratedPlaylistDetailScreen(val playlistId: String) : Screen {
 
         // Look up playlist from QuranDataRepository with fallback to first curated playlist
         val playlist: DetailedCuratedPlaylist = remember(playlistId) {
-            QuranDataRepository.getCuratedPlaylist(playlistId)
-                ?: QuranDataRepository.curatedPlaylists.find { cp ->
-                    val cleanId = playlistId.lowercase().replace("-", " ")
-                    val cleanTitle = cp.title.lowercase()
-                    cleanId.contains(cp.id) || cleanTitle.contains(cleanId) || cleanId.contains(cleanTitle)
-                }
-                ?: QuranDataRepository.curatedPlaylists.first()
+            QuranDataRepository.getCuratedPlaylistOrDefault(playlistId)
         }
 
         // Active AudioEngine playback state observation

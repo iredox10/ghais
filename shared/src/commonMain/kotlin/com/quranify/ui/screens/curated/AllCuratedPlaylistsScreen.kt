@@ -41,6 +41,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.quranify.data.seed.CuratedPlaylist
+import com.quranify.data.seed.QuranDataRepository
 import com.quranify.data.seed.StitchAssets
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
@@ -206,20 +207,12 @@ class AllCuratedPlaylistsScreen : Screen {
                                         rootNavigator.push(CuratedPlaylistDetailScreen(playlist.id))
                                     },
                                     onPlayClick = {
-                                        // Play representative track for this curated playlist
-                                        AudioEngine.playTrack(
-                                            TrackItem(
-                                                reciterSlug = "mishary",
-                                                reciterName = "Mishary Rashid Alafasy",
-                                                surahId = 1,
-                                                surahNameEn = playlist.title,
-                                                surahNameAr = "سورة هادئة",
-                                                ayahNo = 1,
-                                                audioUrl = "https://server8.mp3quran.net/afs/001.mp3",
-                                                durationMs = 240000L
-                                            )
-                                        )
-                                        rootNavigator.push(NowPlayingScreen())
+                                        // Enqueue full list of tracks for this curated playlist
+                                        val playlistTracks = QuranDataRepository.getCuratedTracksForPlaylist(playlist.id)
+                                        if (playlistTracks.isNotEmpty()) {
+                                            AudioEngine.playQueue(playlistTracks, startIndex = 0)
+                                            rootNavigator.push(NowPlayingScreen())
+                                        }
                                     }
                                 )
                             }

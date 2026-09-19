@@ -148,7 +148,7 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
                             .clickable {
                                 val tracks = buildTracks()
                                 if (tracks.isNotEmpty()) {
-                                    AudioEngine.playQueue(tracks, 0)
+                                    AudioEngine.playQueue(tracks, startIndex = 0)
                                     rootNavigator.push(NowPlayingScreen())
                                 }
                             }
@@ -170,9 +170,9 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
                             .background(Color.White.copy(alpha = 0.10f))
                             .border(1.dp, Color.White.copy(alpha = 0.14f), CircleShape)
                             .clickable {
-                                val tracks = buildTracks()
+                                val tracks = buildTracks().shuffled()
                                 if (tracks.isNotEmpty()) {
-                                    AudioEngine.playQueue(tracks, (0 until tracks.size).random())
+                                    AudioEngine.playQueue(tracks, startIndex = 0)
                                     rootNavigator.push(NowPlayingScreen())
                                 }
                             },
@@ -257,7 +257,7 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
                                     val start = tracks.indexOfFirst { it.surahId == surah.id }
                                         .takeIf { it >= 0 } ?: 0
                                     if (tracks.isNotEmpty()) {
-                                        AudioEngine.playQueue(tracks, start)
+                                        AudioEngine.playQueue(tracks, startIndex = start)
                                         rootNavigator.push(NowPlayingScreen())
                                     }
                                 },

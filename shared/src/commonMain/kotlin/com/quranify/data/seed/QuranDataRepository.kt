@@ -543,6 +543,118 @@ object QuranDataRepository {
                 CuratedTrack(87, "Al-A'la", "الأعلى", "Omar Hisham Al Arabi", "1:55", "https://archive.org/download/Omar-Hisham/087.mp3"),
                 CuratedTrack(112, "Al-Ikhlas", "الإخلاص", "Mishary Rashid Alafasy", "0:24", "https://server8.mp3quran.net/afs/112.mp3")
             )
+        ),
+
+        // 9. Ayat Ash-Shifa & Healing
+        DetailedCuratedPlaylist(
+            id = "ayat-ash-shifa",
+            title = "Ayat Ash-Shifa & Healing",
+            tag = "Healing",
+            subtitle = "Sacred verses of spiritual restoration",
+            description = "Selected healing Surahs and ruqyah recitations bringing comfort, tranquility, and divine shifa to the soul and physical body.",
+            curator = "Quranify Wellness",
+            totalDuration = "36 mins",
+            coverUrl = StitchAssets.LibraryTahajjudCover,
+            tracks = listOf(
+                CuratedTrack(1, "Al-Fatihah", "الفاتحة", "Mishary Rashid Alafasy", "0:52", "https://server8.mp3quran.net/afs/001.mp3"),
+                CuratedTrack(94, "Ash-Sharh", "الشرح", "Maher Al-Muaiqly", "0:45", "https://server12.mp3quran.net/maher/094.mp3"),
+                CuratedTrack(93, "Ad-Duha", "الضحى", "Abdul Basit Abdul Samad", "2:40", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/093.mp3"),
+                CuratedTrack(55, "Ar-Rahman", "الرحمن", "Mishary Rashid Alafasy", "11:20", "https://server8.mp3quran.net/afs/055.mp3"),
+                CuratedTrack(112, "Al-Ikhlas", "الإخلاص", "Mahmoud Khalil Al-Husary", "0:30", "https://server13.mp3quran.net/husr/112.mp3"),
+                CuratedTrack(113, "Al-Falaq", "الفلق", "Ahmed ibn Ali Al-Ajamy", "0:30", "https://server10.mp3quran.net/ajm/113.mp3"),
+                CuratedTrack(114, "An-Nas", "الناس", "Saud Al-Shuraim", "0:30", "https://server7.mp3quran.net/shur/114.mp3")
+            )
+        ),
+
+        // 10. Mindful Memorization (Hifz)
+        DetailedCuratedPlaylist(
+            id = "mindful-hifz",
+            title = "Mindful Memorization (Hifz)",
+            tag = "Focus",
+            subtitle = "Rhythmic murattal loops for deep retention",
+            description = "Clear, articulate, and rhythmic Tartil recitations designed to anchor verses in memory through repetitive focused listening.",
+            curator = "Al-Azhar Quranic Institute",
+            totalDuration = "1 hr 10 mins",
+            coverUrl = StitchAssets.JumpBackInItems[2].coverUrl,
+            tracks = listOf(
+                CuratedTrack(1, "Al-Fatihah", "الفاتحة", "Mahmoud Khalil Al-Husary", "1:00", "https://server13.mp3quran.net/husr/001.mp3"),
+                CuratedTrack(87, "Al-A'la", "الأعلى", "Omar Hisham Al Arabi", "1:55", "https://archive.org/download/Omar-Hisham/087.mp3"),
+                CuratedTrack(36, "Ya-Sin", "يس", "Mahmoud Khalil Al-Husary", "15:40", "https://server13.mp3quran.net/husr/036.mp3"),
+                CuratedTrack(67, "Al-Mulk", "الملك", "Mohamed Siddiq Al-Minshawi", "7:15", "https://server10.mp3quran.net/minsh/067.mp3"),
+                CuratedTrack(112, "Al-Ikhlas", "الإخلاص", "Mishary Rashid Alafasy", "0:24", "https://server8.mp3quran.net/afs/112.mp3")
+            )
+        ),
+
+        // 11. Tahajjud & Night Qiyam
+        DetailedCuratedPlaylist(
+            id = "tahajjud-night-qiyam",
+            title = "Tahajjud & Night Qiyam",
+            tag = "Night",
+            subtitle = "Deep emotional recitations in stillness",
+            description = "Deeply moving recitations from late-night Qiyam prayers by Imams of Makkah and Medina, fostering intimate devotion.",
+            curator = "Mishary Alafasy & Friends",
+            totalDuration = "50 mins",
+            coverUrl = StitchAssets.JumpBackInItems[3].coverUrl,
+            tracks = listOf(
+                CuratedTrack(50, "Qaf", "ق", "Yasser Al-Dossari", "8:40", "https://server11.mp3quran.net/yasser/050.mp3"),
+                CuratedTrack(19, "Maryam", "مريم", "Maher Al-Muaiqly", "19:40", "https://server12.mp3quran.net/maher/019.mp3"),
+                CuratedTrack(89, "Al-Fajr", "الفجر", "Abdul Basit Abdul Samad", "7:15", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/089.mp3"),
+                CuratedTrack(36, "Ya-Sin", "يس", "Islam Sobhi", "16:45", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/036.mp3")
+            )
+        ),
+
+        // 12. Anxiety Relief & Inshirah
+        DetailedCuratedPlaylist(
+            id = "anxiety-relief-inshirah",
+            title = "Anxiety Relief & Inshirah",
+            tag = "Healing",
+            subtitle = "Ash-Sharh & Ad-Duha for weary souls",
+            description = "A therapeutic selection of soothing verses reminding us that with every hardship comes ease, alleviating grief, anxiety, and distress.",
+            curator = "Quranify Wellness",
+            totalDuration = "32 mins",
+            coverUrl = StitchAssets.JumpBackInItems[0].coverUrl,
+            tracks = listOf(
+                CuratedTrack(94, "Ash-Sharh", "الشرح", "Maher Al-Muaiqly", "0:45", "https://server12.mp3quran.net/maher/094.mp3"),
+                CuratedTrack(93, "Ad-Duha", "الضحى", "Abdul Basit Abdul Samad", "2:40", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/093.mp3"),
+                CuratedTrack(67, "Al-Mulk", "الملك", "Islam Sobhi", "7:40", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/067.mp3"),
+                CuratedTrack(55, "Ar-Rahman", "الرحمن", "Mishary Rashid Alafasy", "11:20", "https://server8.mp3quran.net/afs/055.mp3")
+            )
+        ),
+
+        // 13. Sunrise Barakah & Gratitude
+        DetailedCuratedPlaylist(
+            id = "sunrise-barakah",
+            title = "Sunrise Barakah & Gratitude",
+            tag = "Morning",
+            subtitle = "Surah Ar-Rahman & Al-Waqi'ah recitations",
+            description = "Uplifting dawn recitations celebrating Allah's creation, boundless blessings, and opening the gates of sustenance and barakah.",
+            curator = "Quranify Editorial",
+            totalDuration = "40 mins",
+            coverUrl = StitchAssets.LibraryMorningCover,
+            tracks = listOf(
+                CuratedTrack(55, "Ar-Rahman", "الرحمن", "Yasser Al-Dossari", "11:05", "https://server11.mp3quran.net/yasser/055.mp3"),
+                CuratedTrack(56, "Al-Waqi'ah", "الواقعة", "Saad Al-Ghamdi", "8:45", "https://server7.mp3quran.net/s_gmd/056.mp3"),
+                CuratedTrack(93, "Ad-Duha", "الضحى", "Maher Al-Muaiqly", "0:55", "https://server12.mp3quran.net/maher/093.mp3"),
+                CuratedTrack(67, "Al-Mulk", "الملك", "Islam Sobhi", "7:40", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/067.mp3")
+            )
+        ),
+
+        // 14. Garden of Tranquility
+        DetailedCuratedPlaylist(
+            id = "garden-of-tranquility",
+            title = "Garden of Tranquility",
+            tag = "Peace",
+            subtitle = "Soft acoustic ambiance with Surat Maryam",
+            description = "Gentle, heart-settling recitations echoing the tranquility of Paradise, perfect for peaceful evening contemplation and relaxation.",
+            curator = "Quranify Peace Team",
+            totalDuration = "46 mins",
+            coverUrl = StitchAssets.CuratedForPeace[1].coverUrl,
+            tracks = listOf(
+                CuratedTrack(19, "Maryam", "مريم", "Maher Al-Muaiqly", "19:40", "https://server12.mp3quran.net/maher/019.mp3"),
+                CuratedTrack(12, "Yusuf", "يوسف", "Mohamed Siddiq Al-Minshawi", "28:30", "https://server10.mp3quran.net/minsh/012.mp3"),
+                CuratedTrack(50, "Qaf", "ق", "Islam Sobhi", "10:20", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/050.mp3"),
+                CuratedTrack(89, "Al-Fajr", "الفجر", "Yasser Al-Dossari", "3:50", "https://server11.mp3quran.net/yasser/089.mp3")
+            )
         )
     )
 
@@ -596,13 +708,24 @@ object QuranDataRepository {
 
     /**
      * Find a [DetailedCuratedPlaylist] by playlist ID (case-insensitive).
+     * Supports exact ID, title matching, normalized hyphen/space variations, and fuzzy matching.
      */
     fun getPlaylistById(id: String): DetailedCuratedPlaylist? {
-        val normalized = id.trim().lowercase()
-        return curatedPlaylists.firstOrNull { 
-            it.id.lowercase() == normalized ||
-            it.title.lowercase() == normalized ||
-            it.id.replace("-", "").lowercase() == normalized.replace("-", "")
+        val normalized = id.trim().lowercase().replace("_", "-")
+        val cleanNoHyphen = normalized.replace("-", "").replace(" ", "")
+
+        return curatedPlaylists.firstOrNull { cp ->
+            val cpId = cp.id.lowercase().replace("_", "-")
+            val cpTitle = cp.title.lowercase()
+            val cpClean = cpId.replace("-", "").replace(" ", "")
+
+            cpId == normalized ||
+            cpTitle == normalized ||
+            cpClean == cleanNoHyphen ||
+            normalized.contains(cpId) ||
+            cpId.contains(normalized) ||
+            normalized.contains(cpClean) ||
+            cpTitle.contains(normalized.replace("-", " "))
         }
     }
 
@@ -610,6 +733,21 @@ object QuranDataRepository {
      * Alias for [getPlaylistById] to retrieve a curated playlist.
      */
     fun getCuratedPlaylist(playlistId: String): DetailedCuratedPlaylist? = getPlaylistById(playlistId)
+
+    /**
+     * Get a curated playlist by ID or fuzzy matching, with fallback to first playlist.
+     */
+    fun getCuratedPlaylistOrDefault(playlistId: String): DetailedCuratedPlaylist {
+        return getCuratedPlaylist(playlistId) ?: curatedPlaylists.first()
+    }
+
+    /**
+     * Get full list of domain [TrackItem]s for a curated playlist by ID.
+     */
+    fun getCuratedTracksForPlaylist(playlistId: String): List<TrackItem> {
+        val playlist = getCuratedPlaylistOrDefault(playlistId)
+        return playlist.tracks.map { it.toTrackItem() }
+    }
 
     /**
      * Search curated playlists by title, tag, subtitle, or description.

@@ -11,7 +11,9 @@ data class JumpBackInItem(
     val title: String,
     val subtitle: String,
     val progress: Float,
-    val coverUrl: String
+    val coverUrl: String,
+    val surahId: Int = 67,
+    val reciterSlug: String = "mishary"
 )
 
 data class CuratedPlaylist(
@@ -101,25 +103,33 @@ object StitchAssets {
             title = "Al-Mulk",
             subtitle = "Ayah 14 • 4:12 left",
             progress = 0.67f,
-            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuCrHh8KdAdFyI3sO2ZmLEaF1tEHrUkskxWBu07rF_q8JyrKScuJYBDyQfjzeXgIGAHCal9DfF_EmMzhvauFJR6uLxwbjT5A5RhA4Z21DDguAkVAjVl5wkEPZ3pf2GNbg0UgjkeoMiMb2Rw6VYj66WaJNknVnChJOsytdnYXdUcrBQPsRsY9MWde5lkfLLbsjX7Cj_cTvyzye_ViP53Z6FPfa9MbqWUleiUuZYpuMo9HJE7QhefD2F1euA"
+            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuCrHh8KdAdFyI3sO2ZmLEaF1tEHrUkskxWBu07rF_q8JyrKScuJYBDyQfjzeXgIGAHCal9DfF_EmMzhvauFJR6uLxwbjT5A5RhA4Z21DDguAkVAjVl5wkEPZ3pf2GNbg0UgjkeoMiMb2Rw6VYj66WaJNknVnChJOsytdnYXdUcrBQPsRsY9MWde5lkfLLbsjX7Cj_cTvyzye_ViP53Z6FPfa9MbqWUleiUuZYpuMo9HJE7QhefD2F1euA",
+            surahId = 67,
+            reciterSlug = "mishary"
         ),
         JumpBackInItem(
             title = "Al-Kahf",
             subtitle = "Friday Sunnah",
             progress = 0.25f,
-            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuDfvEfM9eGeta57gmoKvCrVxuZ3oSNhWhSX2bU93QlbAGiavblVoxP_iY2CyTDgTO1nf_hRJVu1dP9BWtX37bZMe4sFlRqE-1rTP1ATpVeQuAepkC4r-NeKWsGq9Zq0UUJXLoG7QCOBY7W-0id_bid5AkOpBkIC49S5PCC2eg6TKa-HRKhpgVvN-NW8N9DTgnb72PTOAbXbBhriSMmIE_YcAg81INi-TaMYD_T_plEieFW1BcV_ZnGLyQ"
+            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuDfvEfM9eGeta57gmoKvCrVxuZ3oSNhWhSX2bU93QlbAGiavblVoxP_iY2CyTDgTO1nf_hRJVu1dP9BWtX37bZMe4sFlRqE-1rTP1ATpVeQuAepkC4r-NeKWsGq9Zq0UUJXLoG7QCOBY7W-0id_bid5AkOpBkIC49S5PCC2eg6TKa-HRKhpgVvN-NW8N9DTgnb72PTOAbXbBhriSMmIE_YcAg81INi-TaMYD_T_plEieFW1BcV_ZnGLyQ",
+            surahId = 18,
+            reciterSlug = "mishary"
         ),
         JumpBackInItem(
             title = "Surah Yaseen",
             subtitle = "Mishary Alafasy",
             progress = 0.8f,
-            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuBUe24go4tJzvwNZUQ_8UwI6gEDDgTs_Ol7UaxfpYa06PeqOU0r5u-XwOTVNmQjzyq_972QXKLDJoK59z0UZ0qxUrflzOtvpFjxj6xmO5Q6GknBk6q1q_Qs_siEE3_zB7EMQvVVrTvH3-fVefTA5zNQyAjH_rl0X6jr0lYyy3CCRjyGpCexQtAycX3UYvWTJWqnnyau-m9c0aDyJVVyf69-DywZIXP7sFIyDPgIKytzrnbX-KaWQP5fOQ"
+            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuBUe24go4tJzvwNZUQ_8UwI6gEDDgTs_Ol7UaxfpYa06PeqOU0r5u-XwOTVNmQjzyq_972QXKLDJoK59z0UZ0qxUrflzOtvpFjxj6xmO5Q6GknBk6q1q_Qs_siEE3_zB7EMQvVVrTvH3-fVefTA5zNQyAjH_rl0X6jr0lYyy3CCRjyGpCexQtAycX3UYvWTJWqnnyau-m9c0aDyJVVyf69-DywZIXP7sFIyDPgIKytzrnbX-KaWQP5fOQ",
+            surahId = 36,
+            reciterSlug = "mishary"
         ),
         JumpBackInItem(
             title = "Tahajjud Peace",
             subtitle = "Heart Softeners",
             progress = 0.5f,
-            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuAPr6kdXhmVnAhFpZ9oCk9dJWVv4v2a0b7jMNoRAiFzDL3Zb2JTlEZFPWGrsHoJvC_j9LHL6o3LHjOGEmZxD-Kcr5BtvYyVn9yAGX-QwG7xwR4l8FCfBK1HREyPEI3cmK1w1EiYFQ1W1CCcPgEFCx0Kg0vYKDNoCvnwQ0_JI2Bkj_Efej3keX09Arqn1LyetzADwjOE4hHWxItZKSjV-8SRVESwxRwZZnLmvtjUCjN8QE4N--QjvqGpEQ"
+            coverUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuAPr6kdXhmVnAhFpZ9oCk9dJWVv4v2a0b7jMNoRAiFzDL3Zb2JTlEZFPWGrsHoJvC_j9LHL6o3LHjOGEmZxD-Kcr5BtvYyVn9yAGX-QwG7xwR4l8FCfBK1HREyPEI3cmK1w1EiYFQ1W1CCcPgEFCx0Kg0vYKDNoCvnwQ0_JI2Bkj_Efej3keX09Arqn1LyetzADwjOE4hHWxItZKSjV-8SRVESwxRwZZnLmvtjUCjN8QE4N--QjvqGpEQ",
+            surahId = 55,
+            reciterSlug = "mishary"
         )
     )
 
