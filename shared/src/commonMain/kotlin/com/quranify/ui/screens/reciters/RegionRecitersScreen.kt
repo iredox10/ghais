@@ -12,10 +12,13 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,6 +36,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
+import com.quranify.data.repository.FollowStore
 import com.quranify.data.repository.QuranDataRepository
 import com.quranify.data.seed.QuranData
 import com.quranify.domain.model.TrackItem
@@ -43,6 +47,7 @@ private val PureBlack = Color(0xFF000000)
 private val MutedGrey = Color(0xFF9A9AA0)
 private val LinkBlue = Color(0xFF4C8DFF)
 private val DarkCard = Color(0xFF1C1C1E)
+private val Emerald = Color(0xFF30D158)
 
 data class RegionRecitersScreen(val nation: String) : Screen {
     @Composable
@@ -51,6 +56,7 @@ data class RegionRecitersScreen(val nation: String) : Screen {
         var searchQuery by remember { mutableStateOf("") }
         val currentTrack by AudioEngine.currentTrack.collectAsState()
         val isPlaying by AudioEngine.isPlaying.collectAsState()
+        val followedSlugs by FollowStore.followedSlugs.collectAsState()
 
         val reciters = remember(nation) {
             QuranData.RECITERS.filter { it.country == nation }
@@ -295,6 +301,19 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                                     imageVector = if (activelyPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                                     contentDescription = if (activelyPlaying) "Pause" else "Play",
                                     tint = if (activelyPlaying) QuranifyColors.Primary else Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+
+                            // Follow toggle — trailing, next to the play pill
+                            val isFollowing = reciter.slug in followedSlugs
+                            IconButton(
+                                onClick = { FollowStore.toggle(reciter.slug) }
+                            ) {
+                                Icon(
+                                    imageVector = if (isFollowing) Icons.Filled.Check else Icons.Filled.PersonAdd,
+                                    contentDescription = if (isFollowing) "Following" else "Follow",
+                                    tint = if (isFollowing) Emerald else Color.White.copy(alpha = 0.85f),
                                     modifier = Modifier.size(22.dp)
                                 )
                             }

@@ -21,7 +21,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -40,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.quranify.data.repository.FollowStore
 import com.quranify.domain.model.Reciter
 import com.quranify.player.AudioEngine
 import com.quranify.ui.theme.QuranifyColors
@@ -50,6 +53,7 @@ private val LinkBlue = Color(0xFF4C8DFF)
 
 private val CardShape = RoundedCornerShape(28.dp)
 private val AvatarShape = RoundedCornerShape(24.dp)
+private val Emerald = Color(0xFF30D158)
 
 @Composable
 fun NationReelBlock(
@@ -60,6 +64,7 @@ fun NationReelBlock(
     onReciter: (String) -> Unit,
     onPlayReciter: (Reciter) -> Unit = {}
 ) {
+    val followedSlugs by FollowStore.followedSlugs.collectAsState()
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -97,7 +102,9 @@ fun NationReelBlock(
                     reciter = reciter,
                     photoUrl = photoFor(reciter.slug),
                     onClick = { onReciter(reciter.slug) },
-                    onPlayClick = { onPlayReciter(reciter) }
+                    onPlayClick = { onPlayReciter(reciter) },
+                    isFollowing = reciter.slug in followedSlugs,
+                    onFollowClick = { FollowStore.toggle(reciter.slug) }
                 )
             }
         }
@@ -109,7 +116,9 @@ fun ReciterReelCard(
     reciter: Reciter,
     photoUrl: String?,
     onClick: () -> Unit,
-    onPlayClick: () -> Unit = {}
+    onPlayClick: () -> Unit = {},
+    isFollowing: Boolean = false,
+    onFollowClick: () -> Unit = {}
 ) {
     val currentTrack by AudioEngine.currentTrack.collectAsState()
     val isPlaying by AudioEngine.isPlaying.collectAsState()
@@ -214,6 +223,29 @@ fun ReciterReelCard(
                         contentDescription = if (activelyPlaying) "Pause" else "Play",
                         tint = if (activelyPlaying) Color.Black else Color.White,
                         modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                // Follow badge — top-end overlapped on the avatar
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(DarkCard)
+                        .border(
+                            1.dp,
+                            Color.White.copy(alpha = 0.25f),
+                            CircleShape
+                        )
+                        .clickable(onClick = onFollowClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isFollowing) Icons.Filled.Check else Icons.Filled.PersonAdd,
+                        contentDescription = if (isFollowing) "Following" else "Follow",
+                        tint = if (isFollowing) Emerald else Color.White,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
