@@ -68,19 +68,31 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
             )
         }
 
-        /** Same ayah currently loaded (regardless of play/pause) -> highlight. */
+        /** Same ayah currently loaded (regardless of play/pause or reciter switch) -> highlight. */
         fun isAyahActive(ayahNo: Int): Boolean {
             val t = currentTrack ?: return false
-            return t.surahId == surah.id && t.ayahNo == ayahNo && t.reciterSlug == selectedReciter.slug
+            return t.surahId == surah.id && t.ayahNo == ayahNo
         }
 
-        /** Same ayah loaded AND engine reports playing -> show pause icon. */
-        fun isAyahPlaying(ayahNo: Int): Boolean = isAyahActive(ayahNo) && isEnginePlaying
+        /** Same ayah loaded from the selected reciter AND engine reports playing -> pause icon. */
+        fun isAyahPlaying(ayahNo: Int): Boolean {
+            val t = currentTrack ?: return false
+            return t.surahId == surah.id && t.ayahNo == ayahNo &&
+                t.reciterSlug == selectedReciter.slug && isEnginePlaying
+        }
 
-        /** Per-ayah toggle: pause if this ayah is playing; resume if paused; else play queue from clicked index. */
+        /** Per-ayah toggle: pause if playing; switch reciter if slug differs; resume if paused; else play queue. */
         fun onAyahToggle(ayah: Ayah, index: Int) {
             if (isAyahPlaying(ayah.ayahNo)) {
                 AudioEngine.pause()
+                return
+            }
+            val t = currentTrack
+            if (t != null && t.surahId == surah.id && t.ayahNo == ayah.ayahNo &&
+                t.reciterSlug != selectedReciter.slug
+            ) {
+                // Reciter switched while this ayah is loaded -> restart same ayah with new reciter.
+                AudioEngine.playQueue(buildTracks(), index)
                 return
             }
             if (isAyahActive(ayah.ayahNo)) {
