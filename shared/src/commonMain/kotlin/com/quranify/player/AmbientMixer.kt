@@ -188,7 +188,6 @@ object AmbientMixer {
         }
         if (AudioEngine.isPlaying.value) {
             AmbientPlayerBridge.playAmbient(selected.type.assetKey())
-            AmbientPlayerBridge.resumeAmbient()
         } else {
             AmbientPlayerBridge.pauseAmbient()
         }
