@@ -11,12 +11,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.quranify.data.repository.FavoritesStore
 import com.quranify.data.seed.QuranData
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
@@ -52,6 +59,7 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
         val surahs = remember(playlist) {
             playlist.surahIds.mapNotNull { id -> QuranData.SURAHS.firstOrNull { it.id == id } }
         }
+        val favorites by FavoritesStore.favoriteTracks.collectAsState()
 
         fun buildTracks(): List<TrackItem> = surahs.map { surah ->
             TrackItem(
@@ -198,6 +206,9 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
             }
             // Surah rows
             itemsIndexed(surahs, key = { _, s -> "pl_${playlist.id}_${s.id}" }) { index, surah ->
+                val tracks = buildTracks()
+                val track = tracks.firstOrNull { it.surahId == surah.id }
+                val isFavorite = track?.let { t -> favorites.any { it.audioUrl == t.audioUrl } } ?: false
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -245,14 +256,25 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
                             )
                         }
                         Text(text = surah.nameAr, color = Color.White.copy(alpha = 0.85f), fontSize = 16.sp)
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = { track?.let { FavoritesStore.toggle(it) } },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                                tint = if (isFavorite) MaterialTheme.colorScheme.error else MutedGrey,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
                                 .background(Color.White.copy(alpha = 0.10f))
                                 .clickable {
-                                    val tracks = buildTracks()
                                     val start = tracks.indexOfFirst { it.surahId == surah.id }
                                         .takeIf { it >= 0 } ?: 0
                                     if (tracks.isNotEmpty()) {
