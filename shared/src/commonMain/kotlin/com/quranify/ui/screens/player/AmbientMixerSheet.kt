@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.FlutterDash
 import androidx.compose.material.icons.filled.Pets
@@ -288,23 +287,6 @@ private fun SoundTile(
                         imageVector = Icons.Filled.Check,
                         contentDescription = null,
                         tint = Color.Black,
-                        modifier = Modifier.size(13.dp)
-                    )
-                }
-            } else if (option.needsDownload) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = 6.dp, y = (-6).dp)
-                        .size(20.dp)
-                        .clip(CircleShape)
-                        .background(BadgeGrey),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Download,
-                        contentDescription = null,
-                        tint = Color.White,
                         modifier = Modifier.size(13.dp)
                     )
                 }
