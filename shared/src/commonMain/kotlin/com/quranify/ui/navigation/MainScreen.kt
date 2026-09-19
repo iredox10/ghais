@@ -6,11 +6,13 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -37,8 +39,21 @@ object MainScreen : Screen {
                 val currentTrack by AudioEngine.currentTrack.collectAsState()
             
             Scaffold(
-                bottomBar = {
-                    Column {
+                containerColor = QuranifyColors.Background
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    CurrentTab()
+                    // Floating overlay: transparent glass dock + mini-player hover
+                    // over the scrolling content (no bottomBar so content ghosts through).
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                    ) {
                         AnimatedVisibility(
                             visible = currentTrack != null,
                             enter = slideInVertically(initialOffsetY = { it }),
@@ -52,15 +67,6 @@ object MainScreen : Screen {
                         }
                         QuranifyBottomNavBar()
                     }
-                },
-                containerColor = QuranifyColors.Background
-            ) { innerPadding ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                ) {
-                    CurrentTab()
                 }
             }
         }

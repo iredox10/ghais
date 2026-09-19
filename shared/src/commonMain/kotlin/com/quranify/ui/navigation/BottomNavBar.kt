@@ -42,19 +42,22 @@ import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import com.quranify.ui.theme.QuranifyColors
 import com.quranify.ui.theme.QuranifyShapes
 
-// Modern Floating Dock Tokens: Black & White + Trending Purple
-private val ObsidianGlassBg = Color(0xF00B0C0E)
-private val ActiveElectricPurple = Color(0xFFA855F7)
-private val ActivePillBackground = Color(0xFFA855F7).copy(alpha = 0.14f)
-private val ActivePillBorder = Color(0xFFA855F7).copy(alpha = 0.28f)
-private val InactiveGrey = Color(0xFF8E989C)
+// Floating Dock Tokens: transparent black glass + white (reference design)
+private val GlassTop = Color(0x8C141416) // ~55% black — content ghosts through
+private val GlassBottom = Color(0x59101012) // ~35% black — lighter at the base
+private val GlassSheen = Color.White.copy(alpha = 0.06f)
+private val ActiveWhite = Color(0xFFFFFFFF)
+private val ActivePillBackground = Color(0xFFFFFFFF).copy(alpha = 0.12f)
+private val ActivePillBorder = Color(0xFFFFFFFF).copy(alpha = 0.20f)
+private val InactiveGrey = Color(0xFF8E8E93)
 
 /**
- * Floating frosted glassmorphic bottom navigation dock in Black & White + Trending Purple:
- * - Pitch black obsidian glass backdrop (Color(0xF00B0C0E)) with rounded pill silhouette
- * - Subtle purple to white specular gradient border highlight
- * - Selected tab: Trending Electric Purple (Color(0xFFA855F7)) with glowing purple pill capsule and purple underglow dot indicator
- * - Inactive tabs: Crisp muted grey / white (Color(0xFF8E989C))
+ * Transparent frosted-glass bottom navigation dock (reference design).
+ * Floats over the scrolling content (see MainScreen overlay):
+ * - Translucent black vertical gradient so content ghosts through
+ * - Diagonal white sheen + bright top specular hairline for the glass read
+ * - Selected tab: white icon + label on a soft white pill, white dot indicator
+ * - Inactive tabs: iOS-style system grey
  */
 @Composable
 fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
@@ -70,21 +73,54 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = 520.dp)
-                .height(64.dp),
+                .height(66.dp),
             shape = QuranifyShapes.navDock,
-            color = ObsidianGlassBg,
+            color = Color.Transparent,
             border = BorderStroke(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color(0x40A855F7),
-                        Color(0x15FFFFFF)
+                        Color(0x4DFFFFFF),
+                        Color(0x1FFFFFFF)
                     )
                 )
             ),
-            shadowElevation = 12.dp,
+            shadowElevation = 16.dp,
             tonalElevation = 0.dp
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(listOf(GlassTop, GlassBottom)),
+                        QuranifyShapes.navDock
+                    )
+                    .clip(QuranifyShapes.navDock)
+            ) {
+                // Diagonal glass sheen
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    GlassSheen,
+                                    Color.Transparent,
+                                    Color.Transparent,
+                                    GlassSheen.copy(alpha = 0.03f)
+                                )
+                            )
+                        )
+                )
+                // Bright top specular hairline
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .padding(horizontal = 22.dp)
+                        .background(Color.White.copy(alpha = 0.22f))
+                        .align(Alignment.TopCenter)
+                )
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -97,7 +133,7 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
                     val isSelected = currentTab == appTab.tab
 
                     val contentColor by animateColorAsState(
-                        targetValue = if (isSelected) ActiveElectricPurple else InactiveGrey,
+                        targetValue = if (isSelected) ActiveWhite else InactiveGrey,
                         animationSpec = tween(durationMillis = 200),
                         label = "tabContentColor"
                     )
@@ -161,7 +197,7 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
 
                             Spacer(modifier = Modifier.height(2.dp))
 
-                            // Glowing purple underglow dot indicator
+                            // Glowing white underglow dot indicator
                             Box(
                                 modifier = Modifier
                                     .size(6.dp)
@@ -173,7 +209,7 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
                                     modifier = Modifier
                                         .size(6.dp)
                                         .background(
-                                            color = ActiveElectricPurple.copy(alpha = 0.35f),
+                                            color = ActiveWhite.copy(alpha = 0.35f),
                                             shape = CircleShape
                                         )
                                 )
@@ -182,7 +218,7 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
                                     modifier = Modifier
                                         .size(3.5.dp)
                                         .background(
-                                            color = ActiveElectricPurple,
+                                            color = ActiveWhite,
                                             shape = CircleShape
                                         )
                                 )
@@ -190,6 +226,7 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
                         }
                     }
                 }
+            }
             }
         }
     }

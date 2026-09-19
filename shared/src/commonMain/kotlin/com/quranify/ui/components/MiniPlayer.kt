@@ -73,36 +73,23 @@ fun MiniPlayer(
 ) {
     val currentTrack by AudioEngine.currentTrack.collectAsState()
     val isPlaying by AudioEngine.isPlaying.collectAsState()
-    val progress by AudioEngine.progress.collectAsState()
 
     val track = currentTrack ?: return
     val rootNav = com.quranify.ui.navigation.LocalRootNavigator.current
     val navigator = rootNav ?: LocalNavigator.current?.parent ?: LocalNavigator.current
 
-    // Smoothly animated progress
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 250, easing = LinearEasing),
-        label = "MiniPlayerProgress"
-    )
-
-    // Glassmorphic Obsidian Background Gradient
+    // Glassmorphic black background
     val glassGradient = Brush.verticalGradient(
         colors = listOf(
-            Color(0xEE16161A), // Frosted obsidian top
-            Color(0xF60F0F12)  // Deep obsidian base
+            Color(0xFF1A1A1C),
+            Color(0xFF101012)
         )
     )
 
-    // Glowing specular purple top rim with subtle glass border
+    // Subtle white glass border
     val glassBorder = BorderStroke(
         width = 1.dp,
-        brush = Brush.verticalGradient(
-            colors = listOf(
-                Color(0xFF8B5CF6).copy(alpha = 0.35f),
-                Color(0xFFFFFFFF).copy(alpha = 0.10f)
-            )
-        )
+        color = Color.White.copy(alpha = 0.12f)
     )
 
     Box(
@@ -142,174 +129,79 @@ fun MiniPlayer(
                         }
                     }
             ) {
-                // Subtle radiant purple underglow at top border
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(18.dp)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color(0xFF8B5CF6).copy(alpha = 0.12f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    // Playback progress track: Trending Purple to Neon Lilac gradient running across top border
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(2.5.dp)
-                            .background(Color(0x33FFFFFF))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(fraction = animatedProgress)
-                                .fillMaxHeight()
-                                .background(
-                                    Brush.horizontalGradient(
-                                        colors = listOf(
-                                            Color(0xFF8B5CF6),
-                                            Color(0xFFA855F7)
-                                        )
-                                    )
-                                )
-                        )
-                    }
-
-                    // Content Row: Equalizer Artwork | Surah Info | Controls
+                    // Content Row: Photo thumbnail | Title + Reciter | Controls
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Left: Obsidian tile with animated trending purple equalizer visualizer
-                        Box(
+                        // Left: reciter photo thumbnail
+                        coil3.compose.AsyncImage(
+                            model = miniPlayerPhotoFor(track.reciterSlug),
+                            contentDescription = track.reciterName,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                             modifier = Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(
-                                            Color(0xFF202024),
-                                            Color(0xFF121214)
-                                        )
-                                    )
-                                )
-                                .border(
-                                    width = 1.dp,
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(
-                                            Color(0xFF8B5CF6).copy(alpha = 0.35f),
-                                            Color(0xFFFFFFFF).copy(alpha = 0.08f)
-                                        )
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            MiniPlayerEqualizer(isPlaying = isPlaying)
-                        }
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFF242426))
+                        )
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
 
-                        // Center: Current Surah Name, Arabic typography, and Reciter info
+                        // Center: "15. Al-Hijr (الحجر)" + reciter
                         Column(
                             modifier = Modifier.weight(1f)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "${track.surahId}. ${track.surahNameEn}",
-                                    color = Color.White,
-                                    fontSize = 13.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f, fill = false)
-                                )
-                                if (track.surahNameAr.isNotBlank()) {
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = track.surahNameAr,
-                                        color = Color(0xFF9CA3AF),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Normal,
-                                        maxLines = 1
-                                    )
-                                }
-                            }
+                            Text(
+                                text = "${track.surahId}. ${track.surahNameEn} (${track.surahNameAr})",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
 
                             Spacer(modifier = Modifier.height(2.dp))
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = track.reciterName,
-                                    color = Color(0xFF9CA3AF),
-                                    fontSize = 11.5.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f, fill = false)
-                                )
-                                if (track.ayahNo > 0) {
-                                    Text(
-                                        text = " • Ayah ${track.ayahNo}",
-                                        color = Color(0xFF9CA3AF),
-                                        fontSize = 11.sp,
-                                        maxLines = 1
-                                    )
-                                }
-                            }
+                            Text(
+                                text = track.reciterName,
+                                color = Color(0xFF9A9AA0),
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
 
-                        // Right: Controls (Play/Pause Electric Purple Gradient Circular Button & Crisp White Skip Button)
+                        // Right: white play + skip-next (reference design)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            // Electric Purple Circular Play/Pause Button
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(
-                                                Color(0xFF8B5CF6),
-                                                Color(0xFFA855F7)
-                                            )
-                                        )
-                                    )
-                                    .clickable { AudioEngine.togglePlayPause() },
-                                contentAlignment = Alignment.Center
+                            IconButton(
+                                onClick = { AudioEngine.togglePlayPause() },
+                                modifier = Modifier.size(40.dp)
                             ) {
                                 Icon(
                                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = if (isPlaying) "Pause" else "Play",
                                     tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
+                                    modifier = Modifier.size(26.dp)
                                 )
                             }
 
-                            // Skip Button (Crisp White)
                             IconButton(
                                 onClick = { AudioEngine.skipNext() },
-                                modifier = Modifier.size(38.dp)
+                                modifier = Modifier.size(40.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SkipNext,
                                     contentDescription = "Skip Next",
                                     tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
+                                    modifier = Modifier.size(26.dp)
                                 )
                             }
                         }
@@ -318,6 +210,24 @@ fun MiniPlayer(
             }
         }
     }
+}
+
+/**
+ * Maps a playback reciter slug to the closest display photo.
+ * Falls back to the app logo when no photo exists.
+ */
+private fun miniPlayerPhotoFor(reciterSlug: String): String {
+    val photos = com.quranify.data.seed.StitchAssets.VerifiedReciters
+    val match = when (reciterSlug) {
+        "alafasy" -> photos.firstOrNull { it.slug == "mishary" }
+        "sudais" -> photos.firstOrNull { it.slug == "al-sudais" }
+        "muaiqly" -> photos.firstOrNull { it.slug == "al-muaiqly" }
+        "dossari" -> photos.firstOrNull { it.slug == "al-dossari" }
+        "abdulbaset_murattal", "abdulbaset_mujawwad" ->
+            photos.firstOrNull { it.slug == "abdul-basit" }
+        else -> photos.firstOrNull { it.slug == reciterSlug }
+    }
+    return match?.photoUrl ?: com.quranify.data.seed.StitchAssets.LogoUrl
 }
 
 /**

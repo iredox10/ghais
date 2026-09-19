@@ -13,7 +13,8 @@ object QuranData {
             riwayah = "Hafs",
             style = "murattal",
             tempo = "medium",
-            audioFolder = "Alafasy_64kbps"
+            audioFolder = "Alafasy_64kbps",
+            country = "Kuwait"
         ),
         Reciter(
             slug = "husary",
@@ -22,7 +23,8 @@ object QuranData {
             riwayah = "Hafs",
             style = "murattal",
             tempo = "slow",
-            audioFolder = "Husary_64kbps"
+            audioFolder = "Husary_64kbps",
+            country = "Egypt"
         ),
         Reciter(
             slug = "minshawi_murattal",
@@ -31,7 +33,8 @@ object QuranData {
             riwayah = "Hafs",
             style = "murattal",
             tempo = "slow",
-            audioFolder = "Minshawy_Murattal_128kbps"
+            audioFolder = "Minshawy_Murattal_128kbps",
+            country = "Egypt"
         ),
         Reciter(
             slug = "minshawi_mujawwad",
@@ -40,7 +43,8 @@ object QuranData {
             riwayah = "Hafs",
             style = "mujawwad",
             tempo = "slow",
-            audioFolder = "Minshawy_Mujawwad_192kbps"
+            audioFolder = "Minshawy_Mujawwad_192kbps",
+            country = "Egypt"
         ),
         Reciter(
             slug = "abdulbaset_murattal",
@@ -49,7 +53,8 @@ object QuranData {
             riwayah = "Hafs",
             style = "murattal",
             tempo = "medium",
-            audioFolder = "Abdul_Basit_Murattal_64kbps"
+            audioFolder = "Abdul_Basit_Murattal_64kbps",
+            country = "Egypt"
         ),
         Reciter(
             slug = "abdulbaset_mujawwad",
@@ -58,7 +63,8 @@ object QuranData {
             riwayah = "Hafs",
             style = "mujawwad",
             tempo = "slow",
-            audioFolder = "Abdul_Basit_Mujawwad_128kbps"
+            audioFolder = "Abdul_Basit_Mujawwad_128kbps",
+            country = "Egypt"
         ),
         Reciter(
             slug = "sudais",
@@ -67,7 +73,8 @@ object QuranData {
             riwayah = "Hafs",
             style = "taraweeh",
             tempo = "fast",
-            audioFolder = "Abdurrahmaan_As-Sudais_192kbps"
+            audioFolder = "Abdurrahmaan_As-Sudais_192kbps",
+            country = "Saudi Arabia"
         ),
         Reciter(
             slug = "shuraym",
@@ -76,7 +83,8 @@ object QuranData {
             riwayah = "Hafs",
             style = "taraweeh",
             tempo = "medium",
-            audioFolder = "Saood_ash-Shuraym_128kbps"
+            audioFolder = "Saood_ash-Shuraym_128kbps",
+            country = "Saudi Arabia"
         ),
         Reciter(
             slug = "ghamdi",
@@ -85,7 +93,8 @@ object QuranData {
             riwayah = "Hafs",
             style = "murattal",
             tempo = "medium",
-            audioFolder = "Ghamadi_40kbps"
+            audioFolder = "Ghamadi_40kbps",
+            country = "Saudi Arabia"
         ),
         Reciter(
             slug = "muaiqly",
@@ -94,7 +103,8 @@ object QuranData {
             riwayah = "Hafs",
             style = "murattal",
             tempo = "medium",
-            audioFolder = "Maher_AlMuaiqly_64kbps"
+            audioFolder = "Maher_AlMuaiqly_64kbps",
+            country = "Saudi Arabia"
         ),
         Reciter(
             slug = "ajamy",
@@ -103,7 +113,8 @@ object QuranData {
             riwayah = "Hafs",
             style = "murattal",
             tempo = "medium",
-            audioFolder = "Ahmed_ibn_Ali_al-Ajamy_128kbps_Quran-Review.net"
+            audioFolder = "Ahmed_ibn_Ali_al-Ajamy_128kbps_Quran-Review.net",
+            country = "Saudi Arabia"
         ),
         Reciter(
             slug = "rifai",
@@ -112,7 +123,8 @@ object QuranData {
             riwayah = "Hafs",
             style = "murattal",
             tempo = "slow",
-            audioFolder = "Hani_Rifai_192kbps"
+            audioFolder = "Hani_Rifai_192kbps",
+            country = "Saudi Arabia"
         ),
         Reciter(
             slug = "dossari",
@@ -121,7 +133,8 @@ object QuranData {
             riwayah = "Hafs",
             style = "taraweeh",
             tempo = "medium",
-            audioFolder = "Yasser_Ad-Dussary_128kbps"
+            audioFolder = "Yasser_Ad-Dussary_128kbps",
+            country = "Saudi Arabia"
         )
     )
 

@@ -31,7 +31,8 @@ data class Reciter(
     val style: String = "murattal",
     val tempo: String = "medium",
     val imageUrl: String? = null,
-    val audioFolder: String
+    val audioFolder: String,
+    val country: String = ""
 ) {
     fun getAyahAudioUrl(surahId: Int, ayahNo: Int): String {
         val s = surahId.toString().padStart(3, '0')
