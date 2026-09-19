@@ -1,6 +1,5 @@
 package com.quranify.ui.screens.profile
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,28 +22,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
@@ -67,16 +53,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
-import com.quranify.data.repository.QuranDataRepository
 import com.quranify.data.repository.FavoritesStore
-import com.quranify.data.repository.UserUsageRepository
 import com.quranify.player.QuranDownloads
+import com.quranify.ui.navigation.LocalRootNavigator
+import com.quranify.ui.screens.settings.AppSettingsScreen
+import com.quranify.ui.screens.stats.StatsScreen
 import com.russhwolf.settings.Settings
 import kotlinx.coroutines.launch
 
@@ -91,7 +78,6 @@ private val ElectricViolet = Color(0xFF8B5CF6)                // Electric Violet
 private val NeonLilac = Color(0xFFC084FC)                     // Neon Lilac Highlight
 private val EmeraldAccent = Color(0xFF10B981)                 // Islamic Emerald
 private val AmberGoldAccent = Color(0xFFF59E0B)               // Streak & Achievement Gold
-private val CyanAccent = Color(0xFF06B6D4)                    // Discovered Reciters Cyan
 private val CardBorderSubtle = Color.White.copy(alpha = 0.08f)// Apple-style Hairline Border
 private val TextWhitePrimary = Color(0xFFFFFFFF)              // Crisp White
 private val TextMutedSecondary = Color(0xFF94A3B8)            // iOS Muted Slate
@@ -100,14 +86,7 @@ private val SubtleDivider = Color.White.copy(alpha = 0.06f)   // Hairline Separa
 // Persistence Keys
 private const val PREF_USER_NAME = "quranify_profile_name"
 private const val PREF_USER_BIO = "quranify_profile_bio"
-private const val PREF_BITRATE = "quranify_profile_bitrate"
-private const val PREF_RECITER = "quranify_profile_reciter"
-private const val PREF_GAPLESS = "quranify_profile_gapless"
-private const val PREF_LOUDNESS = "quranify_profile_loudness"
-private const val PREF_WIFI_ONLY = "quranify_profile_wifi_only"
 private const val PREF_DHIKR_ALERT = "quranify_profile_dhikr_alert"
-private const val PREF_FRIDAY_ALERT = "quranify_profile_friday_alert"
-private const val PREF_PRAYER_ALERT = "quranify_profile_prayer_alert"
 
 object ProfileScreen : Tab {
     override val options: TabOptions
@@ -124,9 +103,9 @@ object ProfileScreen : Tab {
     override fun Content() {
         val settings = remember { Settings() }
         val scope = rememberCoroutineScope()
-
-        // Real user stats from UserUsageRepository
-        val stats by UserUsageRepository.stats.collectAsState()
+        val rootNavigator = LocalRootNavigator.current
+            ?: LocalNavigator.current?.parent
+            ?: LocalNavigator.current
 
         // Live favourites count
         val favoriteTracks by FavoritesStore.favoriteTracks.collectAsState()
@@ -141,33 +120,9 @@ object ProfileScreen : Tab {
         }
         var showEditDialog by remember { mutableStateOf(false) }
 
-        // Settings toggles & selectors
-        var selectedBitrate by remember {
-            mutableStateOf(settings.getString(PREF_BITRATE, "High (320kbps)"))
-        }
-        var selectedReciter by remember {
-            mutableStateOf(settings.getString(PREF_RECITER, "Mishary Rashid Alafasy"))
-        }
-        var isReciterPickerOpen by remember { mutableStateOf(false) }
-
-        var darkModeEnabled by remember { mutableStateOf(true) }
-        var gaplessPlayback by remember {
-            mutableStateOf(settings.getBoolean(PREF_GAPLESS, true))
-        }
-        var loudnessNormalization by remember {
-            mutableStateOf(settings.getBoolean(PREF_LOUDNESS, true))
-        }
-        var wifiOnlyDownloads by remember {
-            mutableStateOf(settings.getBoolean(PREF_WIFI_ONLY, true))
-        }
+        // Spiritual reminder master toggle
         var dailyDhikrReminder by remember {
             mutableStateOf(settings.getBoolean(PREF_DHIKR_ALERT, true))
-        }
-        var fridayKahfAlert by remember {
-            mutableStateOf(settings.getBoolean(PREF_FRIDAY_ALERT, true))
-        }
-        var prayerRecitationAlert by remember {
-            mutableStateOf(settings.getBoolean(PREF_PRAYER_ALERT, true))
         }
 
         // Live offline-download storage state
@@ -177,14 +132,6 @@ object ProfileScreen : Tab {
             storageSizeBytes = QuranDownloads.storageBytes()
         }
         val cachedSurahCount = downloadedKeys.size
-
-        // Calculate Khatmah progress (out of 114 Surahs)
-        val khatmahPercent = ((stats.uniqueSurahsCount.toFloat() / 114f) * 100).toInt().coerceIn(1, 100)
-
-        // Calculate formatted total listening time
-        val totalHours = stats.totalSecondsListened / 3600
-        val totalMinutes = (stats.totalSecondsListened % 3600) / 60
-        val formattedTotalTime = if (totalHours > 0) "${totalHours}h ${totalMinutes}m" else "${stats.minutesToday}m"
 
         LazyColumn(
             modifier = Modifier
@@ -204,8 +151,8 @@ object ProfileScreen : Tab {
                         Text(
                             text = "Profile",
                             color = TextWhitePrimary,
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.ExtraBold,
                             letterSpacing = (-0.5).sp
                         )
                         Box(
@@ -246,97 +193,9 @@ object ProfileScreen : Tab {
             }
 
             // -----------------------------------------------------------------
-            // 3. Real User Stats (Apple-style Modular 2x2 Grid)
+            // Favorites row (live count — kept)
             // -----------------------------------------------------------------
             item {
-                Text(
-                    text = "SPIRITUAL MILESTONES",
-                    color = TrendingPurpleAccent,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
-                )
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Card 1: Streak
-                        ModularStatCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Filled.LocalFireDepartment,
-                            iconColor = AmberGoldAccent,
-                            iconBg = AmberGoldAccent.copy(alpha = 0.15f),
-                            value = "${stats.daysStreak} Days",
-                            label = "Daily Streak",
-                            subtext = "Spiritual consistency"
-                        )
-
-                        // Card 2: Total Time
-                        ModularStatCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Filled.Timer,
-                            iconColor = TrendingPurpleAccent,
-                            iconBg = TrendingPurpleAccent.copy(alpha = 0.15f),
-                            value = formattedTotalTime,
-                            label = "Quran Time",
-                            subtext = "${stats.minutesToday}m listened today"
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Card 3: Surahs Explored
-                        ModularStatCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.AutoMirrored.Filled.MenuBook,
-                            iconColor = EmeraldAccent,
-                            iconBg = EmeraldAccent.copy(alpha = 0.15f),
-                            value = "${stats.uniqueSurahsCount} / 114",
-                            label = "Surahs Explored",
-                            subtext = "Tanzil verified"
-                        )
-
-                        // Card 4: Reciters Heard
-                        ModularStatCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Filled.Mic,
-                            iconColor = CyanAccent,
-                            iconBg = CyanAccent.copy(alpha = 0.15f),
-                            value = "${stats.uniqueRecitersCount} / 242",
-                            label = "Reciters Heard",
-                            subtext = "38 global nations"
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(18.dp))
-            }
-
-            // -----------------------------------------------------------------
-            // 4. Khatmah Quran Journey Progress Card
-            // -----------------------------------------------------------------
-            item {
-                KhatmahProgressCard(
-                    surahsCompleted = stats.uniqueSurahsCount,
-                    totalSurahs = 114,
-                    percentage = khatmahPercent
-                )
-                Spacer(modifier = Modifier.height(18.dp))
-            }
-
-            // -----------------------------------------------------------------
-            // 5. My Quran Library & Saved Shortcuts
-            // -----------------------------------------------------------------
-            item {
-                ProfileSectionHeader(title = "My Quran Library", icon = Icons.Filled.Bookmark)
                 ProfileCardContainer {
                     ProfileLinkRow(
                         icon = Icons.Filled.Favorite,
@@ -345,365 +204,8 @@ object ProfileScreen : Tab {
                         subtitle = "Bookmarked ayahs and cherished recitations",
                         badge = "$favoriteCount items"
                     )
-
-                    SubtleDividerLine()
-
-                    ProfileLinkRow(
-                        icon = Icons.Filled.Storage,
-                        iconTint = EmeraldAccent,
-                        title = "Offline Recitations",
-                        subtitle = if (cachedSurahCount == 1) "1 surah cached • ${formatStorageBytes(storageSizeBytes)}" else "$cachedSurahCount surahs cached • ${formatStorageBytes(storageSizeBytes)}",
-                        badge = formatStorageBytes(storageSizeBytes)
-                    )
-
-                    SubtleDividerLine()
-
-                    ProfileLinkRow(
-                        icon = Icons.Filled.GridView,
-                        iconTint = TrendingPurpleAccent,
-                        title = "Custom Playlists",
-                        subtitle = "Morning Adhkar, Tahajjud & Tranquility mixes",
-                        badge = "3 Lists"
-                    )
                 }
-            }
-
-            // -----------------------------------------------------------------
-            // 6. Section: Audio Engine & Streaming Bitrate
-            // -----------------------------------------------------------------
-            item {
-                ProfileSectionHeader(title = "Audio Engine & Bitrate", icon = Icons.Filled.Headphones)
-                ProfileCardContainer {
-                    // Bitrate Selector Chips
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Streaming Bitrate",
-                                color = TextWhitePrimary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = selectedBitrate,
-                                color = TrendingPurpleAccent,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            val bitrateOptions = listOf(
-                                "High (320kbps)" to "Studio AAC",
-                                "Lossless" to "24-bit FLAC",
-                                "Normal" to "128kbps"
-                            )
-                            bitrateOptions.forEach { (name, format) ->
-                                val isSelected = selectedBitrate == name || (name == "Lossless" && selectedBitrate.contains("Lossless"))
-                                val pillBg = if (isSelected) TrendingPurpleAccent.copy(alpha = 0.16f) else Color(0xFF171A1F)
-                                val pillBorder = if (isSelected) TrendingPurpleAccent else CardBorderSubtle
-                                val textColor = if (isSelected) TextWhitePrimary else TextMutedSecondary
-
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(pillBg)
-                                        .border(1.dp, pillBorder, RoundedCornerShape(12.dp))
-                                        .clickable {
-                                            selectedBitrate = name
-                                            settings.putString(PREF_BITRATE, name)
-                                        }
-                                        .padding(vertical = 10.dp, horizontal = 4.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(
-                                            text = name,
-                                            color = textColor,
-                                            fontSize = 12.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = format,
-                                            color = if (isSelected) TrendingPurpleAccent else TextMutedSecondary.copy(alpha = 0.7f),
-                                            fontSize = 10.sp
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    SubtleDividerLine()
-
-                    ProfileValueRow(
-                        icon = Icons.Filled.GraphicEq,
-                        title = "Audio Engine",
-                        subtitle = "Multiplatform low-latency Core Audio",
-                        value = "v2.19 Hi-Res"
-                    )
-
-                    SubtleDividerLine()
-
-                    ProfileSwitchRow(
-                        icon = Icons.Filled.AutoAwesome,
-                        title = "Gapless Recitation",
-                        subtitle = "Seamless zero-latency transition between ayahs",
-                        checked = gaplessPlayback,
-                        onCheckedChange = {
-                            gaplessPlayback = it
-                            settings.putBoolean(PREF_GAPLESS, it)
-                        }
-                    )
-
-                    SubtleDividerLine()
-
-                    ProfileSwitchRow(
-                        icon = Icons.Filled.Headphones,
-                        title = "Loudness Normalization",
-                        subtitle = "Harmonize volume levels across different reciters",
-                        checked = loudnessNormalization,
-                        onCheckedChange = {
-                            loudnessNormalization = it
-                            settings.putBoolean(PREF_LOUDNESS, it)
-                        }
-                    )
-                }
-            }
-
-            // -----------------------------------------------------------------
-            // 7. Section: Default Reciter Preference
-            // -----------------------------------------------------------------
-            item {
-                ProfileSectionHeader(title = "Reciter Preference", icon = Icons.Filled.Mic)
-                ProfileCardContainer {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { isReciterPickerOpen = !isReciterPickerOpen }
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .background(TrendingPurpleAccent.copy(alpha = 0.14f))
-                                .border(1.dp, TrendingPurpleAccent.copy(alpha = 0.4f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Mic,
-                                contentDescription = null,
-                                tint = TrendingPurpleAccent,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(14.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    text = "Default Reciter",
-                                    color = TextWhitePrimary,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(TrendingPurpleAccent.copy(alpha = 0.14f))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = "MURATTAL",
-                                        color = TrendingPurpleAccent,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text(
-                                text = "$selectedReciter • Hafs 'an 'Asim",
-                                color = TextMutedSecondary,
-                                fontSize = 12.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-
-                        Icon(
-                            imageVector = Icons.Filled.ChevronRight,
-                            contentDescription = "Expand reciter picker",
-                            tint = TextMutedSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    // Reciter Quick Picker Expandable List
-                    AnimatedVisibility(visible = isReciterPickerOpen) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(0xFF0F1115))
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            val popularReciters = listOf(
-                                "Mishary Rashid Alafasy",
-                                "Abdul Basit Abdul Samad",
-                                "Mahmoud Khalil Al-Husary",
-                                "Maher Al-Muaiqly",
-                                "Ahmad bin Ali Al-Ajmi",
-                                "Abu Bakr Al-Shatri",
-                                "Saad Al-Ghamdi",
-                                "Abdul Rahman Al-Sudais",
-                                "Saud Al-Shuraim"
-                            )
-                            popularReciters.forEach { reciter ->
-                                val isSelected = selectedReciter == reciter
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .clickable {
-                                            selectedReciter = reciter
-                                            settings.putString(PREF_RECITER, reciter)
-                                            isReciterPickerOpen = false
-                                        }
-                                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = reciter,
-                                        color = if (isSelected) TrendingPurpleAccent else TextWhitePrimary,
-                                        fontSize = 14.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                    if (isSelected) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Check,
-                                            contentDescription = "Selected",
-                                            tint = TrendingPurpleAccent,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // -----------------------------------------------------------------
-            // 8. Section: Appearance & Theme
-            // -----------------------------------------------------------------
-            item {
-                ProfileSectionHeader(title = "Appearance & Theme", icon = Icons.Filled.Palette)
-                ProfileCardContainer {
-                    ProfileSwitchRow(
-                        icon = Icons.Filled.DarkMode,
-                        title = "Dark Obsidian Mode",
-                        subtitle = "Pitch Black #07080A OLED theme",
-                        checked = darkModeEnabled,
-                        onCheckedChange = { darkModeEnabled = it }
-                    )
-
-                    SubtleDividerLine()
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(TrendingPurpleAccent.copy(alpha = 0.16f))
-                                .border(1.dp, TrendingPurpleAccent.copy(alpha = 0.4f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Palette,
-                                contentDescription = null,
-                                tint = TrendingPurpleAccent,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(14.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Accent Color",
-                                color = TextWhitePrimary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text(
-                                text = "Trending Purple (#A855F7)",
-                                color = TextMutedSecondary,
-                                fontSize = 12.sp
-                            )
-                        }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(TrendingPurpleAccent.copy(alpha = 0.14f))
-                                .border(1.dp, TrendingPurpleAccent.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .clip(CircleShape)
-                                    .background(TrendingPurpleAccent)
-                                    .border(1.dp, Color.White, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Check,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(9.dp)
-                                )
-                            }
-                            Text(
-                                text = "Active",
-                                color = TrendingPurpleAccent,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    SubtleDividerLine()
-
-                    ProfileValueRow(
-                        icon = Icons.Filled.AutoAwesome,
-                        title = "Quranic Typography",
-                        subtitle = "Medina Mushaf rendering typography",
-                        value = "Uthmani Hafs v2"
-                    )
-                }
+                Spacer(modifier = Modifier.height(18.dp))
             }
 
             // -----------------------------------------------------------------
@@ -780,19 +282,6 @@ object ProfileScreen : Tab {
 
                     SubtleDividerLine()
 
-                    ProfileSwitchRow(
-                        icon = Icons.Filled.Wifi,
-                        title = "Download via Wi-Fi Only",
-                        subtitle = "Prevent mobile cellular data consumption",
-                        checked = wifiOnlyDownloads,
-                        onCheckedChange = {
-                            wifiOnlyDownloads = it
-                            settings.putBoolean(PREF_WIFI_ONLY, it)
-                        }
-                    )
-
-                    SubtleDividerLine()
-
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -853,7 +342,7 @@ object ProfileScreen : Tab {
             }
 
             // -----------------------------------------------------------------
-            // 10. Section: Notifications & Spiritual Reminders
+            // Spiritual Reminders (single summary row + toggle)
             // -----------------------------------------------------------------
             item {
                 ProfileSectionHeader(title = "Spiritual Reminders", icon = Icons.Filled.Notifications)
@@ -868,37 +357,36 @@ object ProfileScreen : Tab {
                             settings.putBoolean(PREF_DHIKR_ALERT, it)
                         }
                     )
+                }
+            }
 
-                    SubtleDividerLine()
-
-                    ProfileSwitchRow(
-                        icon = Icons.Filled.AutoAwesome,
-                        title = "Friday Surah Al-Kahf Alert",
-                        subtitle = "Gentle reminder every Friday morning",
-                        checked = fridayKahfAlert,
-                        onCheckedChange = {
-                            fridayKahfAlert = it
-                            settings.putBoolean(PREF_FRIDAY_ALERT, it)
-                        }
+            // -----------------------------------------------------------------
+            // Settings & Stats link rows
+            // -----------------------------------------------------------------
+            item {
+                ProfileCardContainer {
+                    ProfileLinkRow(
+                        icon = Icons.Filled.Settings,
+                        iconTint = TrendingPurpleAccent,
+                        title = "Settings",
+                        subtitle = "Audio, reciter, appearance & downloads",
+                        onClick = { rootNavigator?.push(AppSettingsScreen) }
                     )
 
                     SubtleDividerLine()
 
-                    ProfileSwitchRow(
-                        icon = Icons.Filled.CloudDone,
-                        title = "Prayer Recitation Alerts",
-                        subtitle = "Curated verses following Salah prayers",
-                        checked = prayerRecitationAlert,
-                        onCheckedChange = {
-                            prayerRecitationAlert = it
-                            settings.putBoolean(PREF_PRAYER_ALERT, it)
-                        }
+                    ProfileLinkRow(
+                        icon = Icons.Filled.BarChart,
+                        iconTint = EmeraldAccent,
+                        title = "Your stats",
+                        subtitle = "Streaks, listening time & Khatmah journey",
+                        onClick = { rootNavigator?.push(StatsScreen) }
                     )
                 }
             }
 
             // -----------------------------------------------------------------
-            // 11. Section: About Quranify
+            // About Quranify (trimmed)
             // -----------------------------------------------------------------
             item {
                 ProfileSectionHeader(title = "About Quranify", icon = Icons.Filled.Info)
@@ -913,46 +401,10 @@ object ProfileScreen : Tab {
                     SubtleDividerLine()
 
                     ProfileValueRow(
-                        icon = Icons.Filled.AutoAwesome,
+                        icon = Icons.Filled.Favorite,
                         title = "Audio Sources",
                         subtitle = "MP3Quran (242 reciters), Tanzil & EveryAyah",
                         value = "Verified"
-                    )
-
-                    SubtleDividerLine()
-
-                    ProfileValueRow(
-                        icon = Icons.Filled.Favorite,
-                        title = "Open Source License",
-                        subtitle = "Apache 2.0 • 100% Free & Ad-Free forever",
-                        value = "GitHub"
-                    )
-                }
-            }
-
-            // -----------------------------------------------------------------
-            // 12. Spiritual Footer
-            // -----------------------------------------------------------------
-            item {
-                Spacer(modifier = Modifier.height(28.dp))
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Made with devotion for the Ummah worldwide ☪",
-                        color = TextMutedSecondary.copy(alpha = 0.8f),
-                        fontSize = 12.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Quranify • Modern Audio Experience",
-                        color = TrendingPurpleAccent.copy(alpha = 0.7f),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium
                     )
                 }
             }
@@ -1233,199 +685,18 @@ private fun ProfileHeroCard(
 }
 
 @Composable
-private fun ModularStatCard(
-    modifier: Modifier = Modifier,
-    icon: ImageVector,
-    iconColor: Color,
-    iconBg: Color,
-    value: String,
-    label: String,
-    subtext: String
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(22.dp))
-            .background(ObsidianGlassCard)
-            .border(1.dp, CardBorderSubtle, RoundedCornerShape(22.dp))
-            .padding(16.dp)
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(iconBg),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = iconColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = value,
-                color = TextWhitePrimary,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Text(
-                text = label,
-                color = TextWhitePrimary.copy(alpha = 0.9f),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Spacer(modifier = Modifier.height(1.dp))
-
-            Text(
-                text = subtext,
-                color = TextMutedSecondary,
-                fontSize = 11.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-@Composable
-private fun KhatmahProgressCard(
-    surahsCompleted: Int,
-    totalSurahs: Int,
-    percentage: Int
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(ObsidianGlassCard)
-            .border(1.dp, CardBorderSubtle, RoundedCornerShape(24.dp))
-            .padding(18.dp)
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(EmeraldAccent.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                            contentDescription = null,
-                            tint = EmeraldAccent,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Column {
-                        Text(
-                            text = "Current Khatmah",
-                            color = TextWhitePrimary,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "$surahsCompleted of $totalSurahs Surahs listened",
-                            color = TextMutedSecondary,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(EmeraldAccent.copy(alpha = 0.15f))
-                        .border(0.5.dp, EmeraldAccent.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "$percentage%",
-                        color = EmeraldAccent,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Progress bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color(0xFF20242B))
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(percentage.toFloat() / 100f)
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(TrendingPurpleAccent, EmeraldAccent)
-                            )
-                        )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = "« خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ »",
-                color = EmeraldAccent.copy(alpha = 0.9f),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "\"The best of you are those who learn the Quran and teach it.\"",
-                color = TextMutedSecondary,
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }
-}
-
-@Composable
 private fun ProfileLinkRow(
     icon: ImageVector,
     iconTint: Color,
     title: String,
     subtitle: String,
-    badge: String = ""
+    badge: String = "",
+    onClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
