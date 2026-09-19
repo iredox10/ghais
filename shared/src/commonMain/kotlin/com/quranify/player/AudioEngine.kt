@@ -99,10 +99,27 @@ object AudioEngine {
                             currentTrackInfo = state.currentTrackInfo.copy(isPlaying = false)
                         )
                     }
+                    // Auto-skip a broken ayah (404/timeout) so the surah plays fully.
+                    val failed = _currentTrack.value
+                    if (failed != null && consecutiveErrors < maxAutoSkipErrors) {
+                        consecutiveErrors++
+                        val nextTrack = queueManager.playNext()
+                        if (nextTrack != null) {
+                            startPlayback(nextTrack)
+                        } else {
+                            SleepTimer.onQueueEnded()
+                            stopPlayback()
+                        }
+                    } else if (failed != null) {
+                        stopPlayback()
+                    }
                 } else if (error == null && _playbackState.value.status == PlaybackStatus.ERROR) {
+                    consecutiveErrors = 0
                     _playbackState.update { state ->
                         state.copy(status = if (_isPlaying.value) PlaybackStatus.PLAYING else PlaybackStatus.PAUSED)
                     }
+                } else if (error == null) {
+                    consecutiveErrors = 0
                 }
             }
         }
@@ -110,6 +127,14 @@ object AudioEngine {
     }
 
     private var progressJob: kotlinx.coroutines.Job? = null
+
+    // Single-flight / de-dupe for STATE_ENDED re-emission + manual/auto race.
+    private var lastEndUrl: String? = null
+    private var lastEndAtMs: Long = 0L
+    // Bounded auto-skip so one 404 ayah doesn't halt the surah,
+    // but a fully-broken reciter folder doesn't loop forever.
+    private var consecutiveErrors: Int = 0
+    private val maxAutoSkipErrors: Int = 10
 
     fun playTrack(track: TrackItem) {
         queueManager.clear()
@@ -147,6 +172,11 @@ object AudioEngine {
     fun resume() {
         val track = queueManager.currentTrack ?: _currentTrack.value ?: return
         if (_currentTrack.value?.audioUrl != track.audioUrl || _playbackState.value.status == PlaybackStatus.IDLE) {
+            startPlayback(track)
+            return
+        }
+        // After a transient error ExoPlayer sits in IDLE — bare play() is a no-op.
+        if (_playbackState.value.status == PlaybackStatus.ERROR) {
             startPlayback(track)
             return
         }
@@ -288,6 +318,12 @@ object AudioEngine {
     }
 
     private fun onBridgeTrackEnd() {
+        val endedUrl = _currentTrack.value?.audioUrl
+        val now = currentTimeMs()
+        if (endedUrl != null && endedUrl == lastEndUrl && (now - lastEndAtMs) < 1500L) return
+        lastEndUrl = endedUrl
+        lastEndAtMs = now
+        consecutiveErrors = 0
         SleepTimer.onAyahEnded()
         val current = _currentTrack.value
         val nextTrack = queueManager.playNext()
@@ -311,4 +347,9 @@ object AudioEngine {
         knownMs > 0L -> knownMs
         else -> 0L
     }
+
+    private fun currentTimeMs(): Long =
+        try { platformTimeMs() } catch (_: Exception) { lastEndAtMs + 2000L }
+
+    private fun platformTimeMs(): Long = kotlin.time.Clock.System.now().toEpochMilliseconds()
 }
