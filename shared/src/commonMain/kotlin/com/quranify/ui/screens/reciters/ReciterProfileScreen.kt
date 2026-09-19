@@ -18,10 +18,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.*
@@ -41,6 +41,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
+import com.quranify.data.repository.FollowStore
 import com.quranify.data.repository.QuranDataRepository
 import com.quranify.data.seed.StitchAssets
 import com.quranify.domain.model.Reciter
@@ -103,8 +104,9 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
         val dlProgress by QuranDownloads.progress.collectAsState()
         val failedKeys by QuranDownloads.failedKeys.collectAsState()
 
-        // Follow state
-        var isFollowing by remember { mutableStateOf(false) }
+        // Follow state (persisted global store)
+        val followedSlugs by FollowStore.followedSlugs.collectAsState()
+        val isFollowing = reciter.slug in followedSlugs
 
         Scaffold(
             containerColor = QuranifyColors.PitchBlack,
@@ -213,7 +215,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                             surahs = surahs,
                             allTracks = allTracks,
                             isFollowing = isFollowing,
-                            onToggleFollow = { isFollowing = !isFollowing }
+                            onToggleFollow = { FollowStore.toggle(reciter.slug) }
                         )
 
                         Spacer(modifier = Modifier.height(10.dp))
@@ -529,15 +531,15 @@ private fun ReciterActionButtonsRow(
                 horizontalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    imageVector = if (isFollowing) Icons.Default.Check else Icons.Default.Add,
+                    imageVector = if (isFollowing) Icons.Default.Check else Icons.Default.PersonAdd,
                     contentDescription = if (isFollowing) "Following" else "Follow",
-                    tint = if (isFollowing) Color(0xFFC084FC) else Color.White,
+                    tint = if (isFollowing) Color(0xFF10B981) else Color.White,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = if (isFollowing) "Following" else "Follow",
-                    color = if (isFollowing) Color(0xFFC084FC) else Color.White,
+                    text = if (isFollowing) "Following ✓" else "Follow",
+                    color = if (isFollowing) Color(0xFF10B981) else Color.White,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp
                 )
