@@ -61,7 +61,17 @@ actual object PlayerBridge {
     private fun player(context: android.content.Context): androidx.media3.exoplayer.ExoPlayer {
         var p = exoPlayer
         if (p == null) {
-            p = androidx.media3.exoplayer.ExoPlayer.Builder(context.applicationContext).build()
+            p = androidx.media3.exoplayer.ExoPlayer.Builder(context.applicationContext)
+                .setAudioAttributes(
+                    androidx.media3.common.AudioAttributes.Builder()
+                        .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_SPEECH)
+                        .setUsage(androidx.media3.common.C.USAGE_MEDIA)
+                        .build(),
+                    true,
+                )
+                .setHandleAudioBecomingNoisy(true)
+                .setWakeMode(androidx.media3.common.C.WAKE_MODE_NETWORK)
+                .build()
             p.addListener(listener)
             exoPlayer = p
             startPolling()
