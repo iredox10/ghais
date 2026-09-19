@@ -31,19 +31,38 @@ data class Reciter(
     val style: String = "murattal",
     val tempo: String = "medium",
     val imageUrl: String? = null,
-    val audioFolder: String,
-    val country: String = ""
+    val audioFolder: String = "",
+    val country: String = "",
+    val serverUrl: String = "",
+    val availableSurahList: String = ""
 ) {
     fun getAyahAudioUrl(surahId: Int, ayahNo: Int): String {
         val s = surahId.toString().padStart(3, '0')
         val a = ayahNo.toString().padStart(3, '0')
-        return "https://everyayah.com/data/$audioFolder/$s$a.mp3"
+        val folder = audioFolder.ifEmpty { "Alafasy_64kbps" }
+        return "https://everyayah.com/data/$folder/$s$a.mp3"
+    }
+
+    fun isSurahAvailable(surahId: Int): Boolean {
+        if (availableSurahList.isBlank()) return true
+        val ids = availableSurahList.split(",").mapNotNull { it.trim().toIntOrNull() }
+        return ids.isEmpty() || ids.contains(surahId)
+    }
+
+    fun getAvailableSurahIds(): List<Int> {
+        if (availableSurahList.isBlank()) return (1..114).toList()
+        val ids = availableSurahList.split(",").mapNotNull { it.trim().toIntOrNull() }
+        return if (ids.isEmpty()) (1..114).toList() else ids
     }
 
     fun getFullSurahUrl(surahId: Int): String {
         val pad = surahId.toString().padStart(3, '0')
+        if (serverUrl.isNotBlank()) {
+            val base = if (serverUrl.endsWith("/")) serverUrl else "$serverUrl/"
+            return "$base$pad.mp3"
+        }
         return when (slug.lowercase()) {
-            "mishary" -> "https://server8.mp3quran.net/afs/$pad.mp3"
+            "mishary", "alafasy" -> "https://server8.mp3quran.net/afs/$pad.mp3"
             "al-sudais", "sudais" -> "https://server11.mp3quran.net/sds/$pad.mp3"
             "al-muaiqly", "muaiqly" -> "https://server12.mp3quran.net/maher/$pad.mp3"
             "al-dossari", "dossari" -> "https://server11.mp3quran.net/yasser/$pad.mp3"

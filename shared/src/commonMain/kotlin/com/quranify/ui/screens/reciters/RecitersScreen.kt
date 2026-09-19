@@ -10,13 +10,13 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.quranify.data.repository.QuranDataRepository
 import com.quranify.data.seed.QuranData
+import com.quranify.domain.model.TrackItem
+import com.quranify.player.AudioEngine
 import com.quranify.ui.navigation.LocalRootNavigator
 
 private val PureBlack = Color(0xFF000000)
-
-// Preferred display order for nation groups
-private val NationOrder = listOf("Saudi Arabia", "Egypt", "Kuwait")
 
 class RecitersScreen : Tab {
     override val options: TabOptions
@@ -48,7 +48,7 @@ class RecitersScreen : Tab {
                 }
                 .groupBy { it.country.ifBlank { "Other" } }
                 .entries
-                .sortedBy { (nation, _) -> NationOrder.indexOf(nation).takeIf { i -> i >= 0 } ?: Int.MAX_VALUE }
+                .sortedByDescending { (_, reciters) -> reciters.size }
         }
 
         Column(
@@ -73,7 +73,26 @@ class RecitersScreen : Tab {
                             reciters = reciters,
                             photoFor = ::photoForSlug,
                             onSeeAll = { rootNavigator?.push(RegionRecitersScreen(nation)) },
-                            onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) }
+                            onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) },
+                            onPlayReciter = { reciter ->
+                                val surahs = QuranDataRepository.getSurahsForReciter(reciter)
+                                val tracks = surahs.map { surah ->
+                                    TrackItem(
+                                        reciterSlug = reciter.slug,
+                                        reciterName = reciter.nameEn,
+                                        surahId = surah.id,
+                                        surahNameEn = surah.nameEn,
+                                        surahNameAr = surah.nameAr,
+                                        ayahNo = 0,
+                                        audioUrl = reciter.getFullSurahUrl(surah.id),
+                                        textUthmani = "",
+                                        durationMs = surah.ayahsCount * 15_000L
+                                    )
+                                }
+                                if (tracks.isNotEmpty()) {
+                                    AudioEngine.playQueue(tracks, startIndex = 0)
+                                }
+                            }
                         )
                     }
                 }

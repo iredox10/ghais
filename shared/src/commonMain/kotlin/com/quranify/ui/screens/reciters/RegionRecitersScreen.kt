@@ -12,6 +12,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -31,7 +33,11 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
+import com.quranify.data.repository.QuranDataRepository
 import com.quranify.data.seed.QuranData
+import com.quranify.domain.model.TrackItem
+import com.quranify.player.AudioEngine
+import com.quranify.ui.theme.QuranifyColors
 
 private val PureBlack = Color(0xFF000000)
 private val MutedGrey = Color(0xFF9A9AA0)
@@ -43,6 +49,8 @@ data class RegionRecitersScreen(val nation: String) : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         var searchQuery by remember { mutableStateOf("") }
+        val currentTrack by AudioEngine.currentTrack.collectAsState()
+        val isPlaying by AudioEngine.isPlaying.collectAsState()
 
         val reciters = remember(nation) {
             QuranData.RECITERS.filter { it.country == nation }
@@ -160,14 +168,25 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                         items = filtered,
                         key = { it.slug }
                     ) { reciter ->
+                        val isCurrentReciter = currentTrack?.reciterSlug == reciter.slug
+                        val activelyPlaying = isCurrentReciter && isPlaying
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 5.dp)
                                 .clip(RoundedCornerShape(24.dp))
-                                .background(Color.White.copy(alpha = 0.05f))
-                                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
+                                .background(
+                                    if (activelyPlaying) QuranifyColors.Primary.copy(alpha = 0.08f)
+                                    else Color.White.copy(alpha = 0.05f)
+                                )
+                                .border(
+                                    1.dp,
+                                    if (activelyPlaying) QuranifyColors.Primary.copy(alpha = 0.40f)
+                                    else Color.White.copy(alpha = 0.08f),
+                                    RoundedCornerShape(24.dp)
+                                )
                                 .clickable { navigator.push(ReciterProfileScreen(reciter.slug)) }
                                 .padding(12.dp)
                         ) {
@@ -228,12 +247,57 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                                 )
                             }
 
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = "Open",
-                                tint = LinkBlue,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            // Play / Pause pill button
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (activelyPlaying) QuranifyColors.Primary.copy(alpha = 0.25f)
+                                        else Color.White.copy(alpha = 0.08f)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (activelyPlaying) QuranifyColors.Primary.copy(alpha = 0.60f)
+                                        else Color.White.copy(alpha = 0.15f),
+                                        CircleShape
+                                    )
+                                    .clickable {
+                                        if (activelyPlaying) {
+                                            AudioEngine.pause()
+                                        } else if (isCurrentReciter) {
+                                            AudioEngine.resume()
+                                        } else {
+                                            val surahs = QuranDataRepository.getSurahsForReciter(reciter)
+                                            val tracks = surahs.map { surah ->
+                                                TrackItem(
+                                                    reciterSlug = reciter.slug,
+                                                    reciterName = reciter.nameEn,
+                                                    surahId = surah.id,
+                                                    surahNameEn = surah.nameEn,
+                                                    surahNameAr = surah.nameAr,
+                                                    ayahNo = 0,
+                                                    audioUrl = reciter.getFullSurahUrl(surah.id),
+                                                    textUthmani = "",
+                                                    durationMs = surah.ayahsCount * 15_000L
+                                                )
+                                            }
+                                            if (tracks.isNotEmpty()) {
+                                                AudioEngine.playQueue(tracks, startIndex = 0)
+                                            }
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (activelyPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                    contentDescription = if (activelyPlaying) "Pause" else "Play",
+                                    tint = if (activelyPlaying) QuranifyColors.Primary else Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
                         }
                     }
                 }

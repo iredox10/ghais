@@ -70,8 +70,8 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
         val reciter: Reciter = remember(reciterSlug) {
             QuranDataRepository.getReciterBySlug(reciterSlug)
         }
-        val surahs: List<Surah> = remember {
-            QuranDataRepository.getSurahs()
+        val surahs: List<Surah> = remember(reciter) {
+            QuranDataRepository.getSurahsForReciter(reciter)
         }
 
         val allTracks: List<TrackItem> = remember(reciter, surahs) {
@@ -791,7 +791,9 @@ private fun ReciterSurahListItem(
 
         // Play Button or Active Trending Purple Equalizer Bar
         Box(
-            modifier = Modifier.size(36.dp),
+            modifier = Modifier
+                .size(36.dp)
+                .clickable { onItemClick() },
             contentAlignment = Alignment.Center
         ) {
             if (isPlaying) {
@@ -958,31 +960,21 @@ private fun resolveReciterMetadata(reciter: Reciter): ReciterDisplayMeta {
             (cleanSlug == "dossari" && it.slug == "al-dossari") ||
             (cleanSlug.startsWith("abdulbaset") && it.slug.startsWith("abdul"))
         }?.photoUrl
-        ?: StitchAssets.LibraryMisharyAvatar
 
-    val followers = verifiedFromList?.followers ?: when {
-        cleanSlug.contains("alafasy") || cleanSlug == "mishary" -> "4.8M followers"
-        cleanSlug.startsWith("abdul") -> "5.1M followers"
-        cleanSlug.contains("minshawi") -> "4.6M followers"
-        cleanSlug.contains("husary") -> "4.2M followers"
-        cleanSlug.contains("sudais") -> "3.9M followers"
-        cleanSlug.contains("shuraym") || cleanSlug == "shuraim" -> "3.4M followers"
-        cleanSlug.contains("muaiqly") -> "3.2M followers"
-        cleanSlug.contains("dossari") -> "2.7M followers"
-        cleanSlug.contains("ghamdi") -> "2.5M followers"
-        cleanSlug.contains("ajamy") -> "2.3M followers"
-        cleanSlug.contains("sobhi") -> "2.1M followers"
-        cleanSlug.contains("rifai") -> "1.9M followers"
-        cleanSlug.contains("hisham") -> "1.5M followers"
-        else -> "2.4M followers"
+    val followers = verifiedFromList?.followers ?: run {
+        val hash = reciter.nameEn.hashCode().let { if (it < 0) -it else it }
+        val fansK = (hash % 850) + 120
+        "${(fansK / 100.0).toString().take(3)}M followers"
     }
 
-    val country = verifiedFromList?.country ?: when {
-        cleanSlug.contains("alafasy") || cleanSlug == "mishary" -> "Kuwait"
-        cleanSlug.contains("husary") || cleanSlug.contains("minshawi") ||
-            cleanSlug.startsWith("abdul") || cleanSlug.contains("sobhi") ||
-            cleanSlug.contains("hisham") -> "Egypt"
-        else -> "Saudi Arabia"
+    val country = reciter.country.ifBlank {
+        verifiedFromList?.country ?: when {
+            cleanSlug.contains("alafasy") || cleanSlug == "mishary" -> "Kuwait"
+            cleanSlug.contains("husary") || cleanSlug.contains("minshawi") ||
+                cleanSlug.startsWith("abdul") || cleanSlug.contains("sobhi") ||
+                cleanSlug.contains("hisham") -> "Egypt"
+            else -> "Saudi Arabia"
+        }
     }
 
     val riwayah = if (reciter.riwayah.isNotBlank()) reciter.riwayah else "Hafs"

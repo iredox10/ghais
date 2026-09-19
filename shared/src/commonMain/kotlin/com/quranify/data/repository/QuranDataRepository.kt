@@ -56,4 +56,12 @@ object QuranDataRepository {
      * Returns a surah by its 1-indexed ID.
      */
     fun getSurahById(id: Int): Surah? = QuranData.SURAHS.find { it.id == id }
+
+    /**
+     * Returns the list of surahs recorded and available for this reciter.
+     */
+    fun getSurahsForReciter(reciter: Reciter): List<Surah> {
+        val availableIds = reciter.getAvailableSurahIds()
+        return QuranData.SURAHS.filter { availableIds.contains(it.id) }
+    }
 }
