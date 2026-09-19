@@ -75,6 +75,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import coil3.compose.AsyncImage
+import com.quranify.data.repository.FavoritesStore
 import com.quranify.data.seed.StitchAssets
 import com.quranify.player.AmbientMixer
 import com.quranify.player.AudioEngine
@@ -120,6 +121,7 @@ class NowPlayingScreen : Screen {
         val currentIndex by AudioEngine.currentIndex.collectAsState()
         val playbackState by AudioEngine.playbackState.collectAsState()
         val sleepTimerState by com.quranify.player.SleepTimer.state.collectAsState()
+        val favorites by FavoritesStore.favoriteTracks.collectAsState()
         val repeatMode = playbackState.settings.repeatMode
 
         var showSleepTimer by remember { mutableStateOf(false) }
@@ -137,7 +139,7 @@ class NowPlayingScreen : Screen {
         val title = track?.surahNameEn ?: "Ar-Rahman"
         val surahNameAr = track?.surahNameAr ?: "الرحمن"
         val reciterName = track?.reciterName ?: "Mishary Rashid Alafasy"
-        var isFav by remember(track?.audioUrl) { mutableStateOf(false) }
+        val isFav = track?.let { t -> favorites.any { it.audioUrl == t.audioUrl } } == true
 
         val canSkipNext = remember(queue, currentIndex, repeatMode, track) {
             if (track == null || queue.isEmpty()) false
@@ -406,7 +408,7 @@ class NowPlayingScreen : Screen {
                             .size(52.dp)
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.07f))
-                            .clickable { isFav = !isFav },
+                            .clickable { track?.let { FavoritesStore.toggle(it) } },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
