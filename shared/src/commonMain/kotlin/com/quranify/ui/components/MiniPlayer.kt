@@ -63,7 +63,7 @@ import com.quranify.ui.theme.QuranifyShapes
  * - Frosted translucent obsidian backdrop with specular purple top border
  * - Top-edge animated Trending Purple to Neon Lilac progress track
  * - Dynamic pulsing Trending Purple equalizer indicator
- * - Live Surah name in pure white, reciter and Ayah info in muted light grey
+ * - Live Surah name in pure white, reciter and Surah info in muted light grey
  * - Electric Purple gradient circular play/pause button and crisp white skip next button
  * - Swipe-down to dismiss gesture and tap to expand to NowPlayingScreen
  */
@@ -90,9 +90,9 @@ fun MiniPlayer(
     }
 
     val subtitleText = if (queue.size > 1 && currentIndex in queue.indices) {
-        "${track.reciterName} • Track ${currentIndex + 1} of ${queue.size}"
+        "${track.reciterName} • Surah ${track.surahId} of 114 • Track ${currentIndex + 1} of ${queue.size}"
     } else {
-        track.reciterName
+        "${track.reciterName} • Surah ${track.surahId} of 114"
     }
 
     // Glassmorphic black background
@@ -200,12 +200,12 @@ fun MiniPlayer(
 
                         Spacer(modifier = Modifier.width(10.dp))
 
-                        // Center: "15. Al-Hijr (الحجر)" + reciter
+                        // Center: Surah name + reciter
                         Column(
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = "${track.surahId}. ${track.surahNameEn} (${track.surahNameAr})",
+                                text = track.surahNameEn,
                                 color = Color.White,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,

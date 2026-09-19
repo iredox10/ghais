@@ -100,6 +100,7 @@ class NowPlayingScreen : Screen {
 
         val track = currentTrack
         val title = track?.surahNameEn ?: "Ar-Rahman"
+        val surahNameAr = track?.surahNameAr ?: "الرحمن"
         val reciterName = track?.reciterName ?: "Mishary Rashid Alafasy"
         var isFav by remember(track?.audioUrl) { mutableStateOf(false) }
 
@@ -123,7 +124,7 @@ class NowPlayingScreen : Screen {
             } else if (queue.size > 1 && currentIndex in queue.indices) {
                 "Track ${currentIndex + 1} of ${queue.size} • Surah ${track.surahId} of 114"
             } else {
-                "Surah ${track.surahId} of 114" + if (track.ayahNo > 0) " • Ayah ${track.ayahNo}" else ""
+                "Surah ${track.surahId} of 114"
             }
         }
 
@@ -276,14 +277,29 @@ class NowPlayingScreen : Screen {
                             overflow = TextOverflow.Ellipsis
                         )
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = title,
-                            color = Color.White,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = title,
+                                color = Color.White,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            if (surahNameAr.isNotBlank()) {
+                                Text(
+                                    text = surahNameAr,
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.height(3.dp))
                         Text(
                             text = reciterName,
