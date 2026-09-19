@@ -301,6 +301,18 @@ object AudioEngine {
 
     fun skipPrevious() = previous()
 
+    fun canSkipNext(): Boolean {
+        if (_currentTrack.value == null || _queue.value.isEmpty()) return false
+        return queueManager.canSkipNext()
+    }
+
+    fun canSkipPrevious(): Boolean {
+        if (_currentTrack.value == null) return false
+        if (_currentPositionMs.value > 3_000L) return true
+        if (_queue.value.isEmpty()) return false
+        return queueManager.canSkipPrevious()
+    }
+
     fun skipToIndex(index: Int) {
         val track = queueManager.skipToIndex(index)
         if (track != null) {

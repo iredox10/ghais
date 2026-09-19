@@ -251,6 +251,22 @@ class QueueManager {
         return true
     }
 
+    fun canSkipNext(): Boolean {
+        if (_queue.isEmpty()) return false
+        return when (repeatMode) {
+            RepeatMode.AYAH, RepeatMode.SURAH, RepeatMode.QUEUE -> true
+            RepeatMode.OFF -> currentIndex < _queue.size - 1
+        }
+    }
+
+    fun canSkipPrevious(): Boolean {
+        if (_queue.isEmpty()) return false
+        return when (repeatMode) {
+            RepeatMode.AYAH, RepeatMode.SURAH, RepeatMode.QUEUE -> true
+            RepeatMode.OFF -> currentIndex > 0
+        }
+    }
+
     fun clear() {
         _queue.clear()
         _originalQueue.clear()

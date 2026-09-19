@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,10 +74,26 @@ fun MiniPlayer(
 ) {
     val currentTrack by AudioEngine.currentTrack.collectAsState()
     val isPlaying by AudioEngine.isPlaying.collectAsState()
+    val progress by AudioEngine.progress.collectAsState()
+    val queue by AudioEngine.queue.collectAsState()
+    val currentIndex by AudioEngine.currentIndex.collectAsState()
+    val playbackState by AudioEngine.playbackState.collectAsState()
 
     val track = currentTrack ?: return
     val rootNav = com.quranify.ui.navigation.LocalRootNavigator.current
     val navigator = rootNav ?: LocalNavigator.current?.parent ?: LocalNavigator.current
+
+    val canSkipNext = remember(queue, currentIndex, playbackState.settings.repeatMode, track) {
+        if (queue.isEmpty()) false
+        else if (playbackState.settings.repeatMode != com.quranify.domain.model.RepeatMode.OFF) true
+        else currentIndex < queue.size - 1
+    }
+
+    val subtitleText = if (queue.size > 1 && currentIndex in queue.indices) {
+        "${track.reciterName} • Track ${currentIndex + 1} of ${queue.size}"
+    } else {
+        track.reciterName
+    }
 
     // Glassmorphic black background
     val glassGradient = Brush.verticalGradient(
@@ -141,6 +158,28 @@ fun MiniPlayer(
                     }
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
+                    // Top-edge progress track
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(2.dp)
+                            .background(Color.White.copy(alpha = 0.08f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                                .fillMaxHeight()
+                                .background(
+                                    Brush.horizontalGradient(
+                                        colors = listOf(
+                                            Color(0xFFA855F7),
+                                            Color(0xFFC084FC)
+                                        )
+                                    )
+                                )
+                        )
+                    }
+
                     // Content Row: Photo thumbnail | Title + Reciter | Controls
                     Row(
                         modifier = Modifier
@@ -177,7 +216,7 @@ fun MiniPlayer(
                             Spacer(modifier = Modifier.height(2.dp))
 
                             Text(
-                                text = track.reciterName,
+                                text = subtitleText,
                                 color = Color(0xFF9A9AA0),
                                 fontSize = 12.sp,
                                 maxLines = 1,
@@ -206,12 +245,13 @@ fun MiniPlayer(
 
                             IconButton(
                                 onClick = { AudioEngine.skipNext() },
+                                enabled = canSkipNext,
                                 modifier = Modifier.size(40.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SkipNext,
                                     contentDescription = "Skip Next",
-                                    tint = Color.White,
+                                    tint = if (canSkipNext) Color.White else Color.White.copy(alpha = 0.35f),
                                     modifier = Modifier.size(26.dp)
                                 )
                             }

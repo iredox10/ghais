@@ -81,6 +81,11 @@ class NowPlayingScreen : Screen {
         val durationMs by AudioEngine.durationMs.collectAsState()
         val speed by AudioEngine.playbackSpeed.collectAsState()
         val volume by AudioEngine.volume.collectAsState()
+        val queue by AudioEngine.queue.collectAsState()
+        val currentIndex by AudioEngine.currentIndex.collectAsState()
+        val playbackState by AudioEngine.playbackState.collectAsState()
+        val sleepTimerState by com.quranify.player.SleepTimer.state.collectAsState()
+        val repeatMode = playbackState.settings.repeatMode
 
         var showSleepTimer by remember { mutableStateOf(false) }
         var showQueue by remember { mutableStateOf(false) }
@@ -97,6 +102,30 @@ class NowPlayingScreen : Screen {
         val title = track?.surahNameEn ?: "Ar-Rahman"
         val reciterName = track?.reciterName ?: "Mishary Rashid Alafasy"
         var isFav by remember(track?.audioUrl) { mutableStateOf(false) }
+
+        val canSkipNext = remember(queue, currentIndex, repeatMode, track) {
+            if (track == null || queue.isEmpty()) false
+            else if (repeatMode != com.quranify.domain.model.RepeatMode.OFF) true
+            else currentIndex < queue.size - 1
+        }
+
+        val canSkipPrevious = remember(queue, currentIndex, repeatMode, track, currentPositionMs) {
+            if (track == null) false
+            else if (currentPositionMs > 3_000L) true
+            else if (queue.isEmpty()) false
+            else if (repeatMode != com.quranify.domain.model.RepeatMode.OFF) true
+            else currentIndex > 0
+        }
+
+        val queuePositionText = remember(queue.size, currentIndex, track) {
+            if (track == null) {
+                "Surah 55 of 114"
+            } else if (queue.size > 1 && currentIndex in queue.indices) {
+                "Track ${currentIndex + 1} of ${queue.size} • Surah ${track.surahId} of 114"
+            } else {
+                "Surah ${track.surahId} of 114" + if (track.ayahNo > 0) " • Ayah ${track.ayahNo}" else ""
+            }
+        }
 
         val totalMs = if (durationMs > 0L) durationMs
             else (track?.durationMs?.takeIf { it > 0L } ?: 0L)
@@ -239,6 +268,15 @@ class NowPlayingScreen : Screen {
                     Spacer(modifier = Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
+                            text = queuePositionText,
+                            color = Color(0xFFD4A853),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
                             text = title,
                             color = Color.White,
                             fontSize = 22.sp,
@@ -275,60 +313,21 @@ class NowPlayingScreen : Screen {
                 Spacer(modifier = Modifier.height(22.dp))
 
                 // Controls: speed | prev | play | next | sleep
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .width(52.dp)
-                            .clickable {
-                                val idx = Speeds.indexOf(speed).takeIf { it >= 0 } ?: 0
-                                AudioEngine.setPlaybackSpeed(Speeds[(idx + 1) % Speeds.size])
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = formatSpeed(speed),
-                            color = MutedGrey,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    IconButton(onClick = { AudioEngine.skipPrevious() }, modifier = Modifier.size(56.dp)) {
-                        Icon(
-                            imageVector = Icons.Filled.FastRewind,
-                            contentDescription = "Previous",
-                            tint = Color.White,
-                            modifier = Modifier.size(40.dp)
-                        )
-                    }
-                    IconButton(onClick = { AudioEngine.togglePlayPause() }, modifier = Modifier.size(72.dp)) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                            contentDescription = if (isPlaying) "Pause" else "Play",
-                            tint = Color.White,
-                            modifier = Modifier.size(62.dp)
-                        )
-                    }
-                    IconButton(onClick = { AudioEngine.skipNext() }, modifier = Modifier.size(56.dp)) {
-                        Icon(
-                            imageVector = Icons.Filled.FastForward,
-                            contentDescription = "Next",
-                            tint = Color.White,
-                            modifier = Modifier.size(40.dp)
-                        )
-                    }
-                    IconButton(onClick = { showSleepTimer = true }, modifier = Modifier.size(52.dp)) {
-                        Icon(
-                            imageVector = Icons.Filled.Bedtime,
-                            contentDescription = "Sleep timer",
-                            tint = MutedGrey,
-                            modifier = Modifier.size(27.dp)
-                        )
-                    }
-                }
+                PlayerControls(
+                    isPlaying = isPlaying,
+                    speed = speed,
+                    canSkipPrevious = canSkipPrevious,
+                    canSkipNext = canSkipNext,
+                    isSleepTimerActive = sleepTimerState.isActive,
+                    onTogglePlayPause = { AudioEngine.togglePlayPause() },
+                    onPrevious = { AudioEngine.skipPrevious() },
+                    onNext = { AudioEngine.skipNext() },
+                    onSpeedChange = { currentSpd ->
+                        val idx = Speeds.indexOf(currentSpd).takeIf { it >= 0 } ?: 0
+                        AudioEngine.setPlaybackSpeed(Speeds[(idx + 1) % Speeds.size])
+                    },
+                    onSleepTimerClick = { showSleepTimer = true }
+                )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
@@ -414,7 +413,7 @@ class NowPlayingScreen : Screen {
                         Icon(
                             imageVector = Icons.Filled.QueueMusic,
                             contentDescription = "Queue",
-                            tint = MutedGrey,
+                            tint = if (queue.isNotEmpty()) Color(0xFFD4A853) else MutedGrey,
                             modifier = Modifier.size(30.dp)
                         )
                     }
