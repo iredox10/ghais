@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.FastForward
@@ -69,10 +71,11 @@ fun PlayerControls(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier.fillMaxWidth()
     ) {
-        // Speed selector
+        // Speed selector (generous touch target >= 48dp)
         Box(
             modifier = Modifier
-                .width(52.dp)
+                .size(width = 52.dp, height = 48.dp)
+                .clip(RoundedCornerShape(8.dp))
                 .clickable { onSpeedChange(speed) },
             contentAlignment = Alignment.Center
         ) {
