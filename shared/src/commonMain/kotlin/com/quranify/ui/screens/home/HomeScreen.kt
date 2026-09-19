@@ -16,6 +16,7 @@ import com.quranify.data.repository.QuranDataRepository
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
 import com.quranify.ui.navigation.LocalRootNavigator
+import com.quranify.ui.screens.history.HistoryScreen
 import com.quranify.ui.screens.library.FavoritesScreen
 import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.screens.playlists.PlaylistDetailsScreen
@@ -57,10 +58,10 @@ object HomeScreen : Tab {
                         onStatsClick = { rootNavigator?.push(SearchScreen()) }
                     )
                 }
-                item { HomeSectionHeader(title = "Continue listening", onSeeAll = null) }
+                item { HomeSectionHeader(title = "Continue listening", onSeeAll = { rootNavigator?.push(HistoryScreen) }) }
                 item {
-                    HomeContinueListeningRow(onPlay = { item ->
-                        val reciter = QuranDataRepository.getReciterBySlug(item.reciterSlug)
+                    HomeContinueListeningRow(onPlay = { entry ->
+                        val reciter = QuranDataRepository.getReciterBySlug(entry.reciterSlug)
                         val surahs = QuranDataRepository.getSurahs()
                         val allTracks = surahs.map { s ->
                             TrackItem(
@@ -74,10 +75,10 @@ object HomeScreen : Tab {
                                 durationMs = s.ayahsCount * 15_000L
                             )
                         }
-                        val startIndex = allTracks.indexOfFirst { it.surahId == item.surahId }.coerceAtLeast(0)
+                        val startIndex = allTracks.indexOfFirst { it.surahId == entry.surahId }.coerceAtLeast(0)
                         val currentTrack = AudioEngine.currentTrack.value
                         val isCurrent = currentTrack != null &&
-                            currentTrack.surahId == item.surahId &&
+                            currentTrack.surahId == entry.surahId &&
                             currentTrack.reciterSlug == reciter.slug
                         if (isCurrent && AudioEngine.isPlaying.value) {
                             rootNavigator?.push(NowPlayingScreen())
@@ -86,9 +87,6 @@ object HomeScreen : Tab {
                             rootNavigator?.push(NowPlayingScreen())
                         } else {
                             AudioEngine.playQueue(allTracks, startIndex = startIndex)
-                            if (item.positionMs > 0L) {
-                                AudioEngine.seekTo(item.positionMs)
-                            }
                             rootNavigator?.push(NowPlayingScreen())
                         }
                     })
