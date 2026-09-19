@@ -33,6 +33,8 @@ actual object PlayerBridge {
 
     private var onTrackEnd: (() -> Unit)? = null
     private var pollStarted = false
+    private var pendingTitle: String? = null
+    private var pendingArtist: String? = null
 
     private val listener = object : androidx.media3.common.Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -158,11 +160,14 @@ actual object PlayerBridge {
      * AudioEngine.currentTrack changes.
      */
     fun updateMetadata(title: String, artist: String? = null) {
+        pendingTitle = title
+        pendingArtist = artist
         try {
             val p = exoPlayer ?: return
             if (p.mediaItemCount == 0) return
             val index = p.currentMediaItemIndex.coerceIn(0, p.mediaItemCount - 1)
             val current = p.getMediaItemAt(index)
+            if (current.mediaMetadata.title?.toString() == title) return
             val meta = current.mediaMetadata.buildUpon()
                 .setTitle(title)
                 .apply { artist?.let { setArtist(it) } }
@@ -172,6 +177,13 @@ actual object PlayerBridge {
     }
 
     actual fun play(url: String) {
+        playWithMetadata(url, null, null)
+    }
+
+    /** Android-only: start playback with lockscreen/notification metadata set atomically. */
+    fun playWithMetadata(url: String, title: String?, artist: String?) {
+        if (!title.isNullOrBlank()) pendingTitle = title
+        if (!artist.isNullOrBlank()) pendingArtist = artist
         try { onPlayRequested?.invoke() } catch (_: Exception) { }
         val p = exoPlayer ?: appContext?.let { player(it) } ?: run {
             _errorMessage.value = "Player not initialised — call PlayerBridge.init(context) from MainActivity"
@@ -182,7 +194,19 @@ actual object PlayerBridge {
             _isBuffering.value = true
             _positionMs.value = 0L
             _durationMs.value = 0L
-            val item = androidx.media3.common.MediaItem.fromUri(android.net.Uri.parse(url))
+            val metadata = androidx.media3.common.MediaMetadata.Builder()
+                .apply {
+                    val t = pendingTitle ?: title
+                    val a = pendingArtist ?: artist
+                    if (!t.isNullOrBlank()) setTitle(t) else setTitle("Quranify")
+                    if (!a.isNullOrBlank()) setArtist(a)
+                }
+                .build()
+            val item = androidx.media3.common.MediaItem.Builder()
+                .setUri(android.net.Uri.parse(url))
+                .setMediaId(url)
+                .setMediaMetadata(metadata)
+                .build()
             p.setMediaItem(item)
             p.prepare()
             p.play()
