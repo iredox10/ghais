@@ -48,6 +48,7 @@ import coil3.compose.AsyncImage
 import com.quranify.data.seed.CuratedTrack
 import com.quranify.data.seed.DetailedCuratedPlaylist
 import com.quranify.data.seed.QuranDataRepository
+import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.data.seed.toTrackItem
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
@@ -331,6 +332,7 @@ data class CuratedPlaylistDetailScreen(val playlistId: String) : Screen {
                                             val trackItems = playlist.tracks.map { it.toTrackItem() }
                                             if (trackItems.isNotEmpty()) {
                                                 AudioEngine.playQueue(trackItems, startIndex = 0)
+                                                rootNavigator.push(NowPlayingScreen())
                                             }
                                         },
                                     contentAlignment = Alignment.Center
@@ -366,6 +368,7 @@ data class CuratedPlaylistDetailScreen(val playlistId: String) : Screen {
                                             val shuffled = playlist.tracks.shuffled().map { it.toTrackItem() }
                                             if (shuffled.isNotEmpty()) {
                                                 AudioEngine.playQueue(shuffled, startIndex = 0)
+                                                rootNavigator.push(NowPlayingScreen())
                                             }
                                         }
                                         .padding(horizontal = 16.dp),
@@ -465,6 +468,7 @@ data class CuratedPlaylistDetailScreen(val playlistId: String) : Screen {
                                 } else {
                                     val allTracks = playlist.tracks.map { it.toTrackItem() }
                                     AudioEngine.playQueue(allTracks, startIndex = index)
+                                    rootNavigator.push(NowPlayingScreen())
                                 }
                             }
                         )

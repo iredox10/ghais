@@ -32,6 +32,8 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.quranify.data.seed.QuranData
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
+import com.quranify.ui.navigation.LocalRootNavigator
+import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.screens.surah.SurahDetailScreen
 
 private val MutedGrey = Color(0xFF9A9AA0)
@@ -44,6 +46,7 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val rootNavigator = LocalRootNavigator.current ?: navigator.parent ?: navigator
         val playlist = remember(playlistId) { moodPlaylistById(playlistId) }
         val reciter = remember { QuranData.RECITERS.first() }
         val surahs = remember(playlist) {
@@ -144,7 +147,10 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
                             .background(Color.White)
                             .clickable {
                                 val tracks = buildTracks()
-                                if (tracks.isNotEmpty()) AudioEngine.playQueue(tracks, 0)
+                                if (tracks.isNotEmpty()) {
+                                    AudioEngine.playQueue(tracks, 0)
+                                    rootNavigator.push(NowPlayingScreen())
+                                }
                             }
                             .padding(vertical = 12.dp)
                     ) {
@@ -165,7 +171,10 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
                             .border(1.dp, Color.White.copy(alpha = 0.14f), CircleShape)
                             .clickable {
                                 val tracks = buildTracks()
-                                if (tracks.isNotEmpty()) AudioEngine.playQueue(tracks, (0 until tracks.size).random())
+                                if (tracks.isNotEmpty()) {
+                                    AudioEngine.playQueue(tracks, (0 until tracks.size).random())
+                                    rootNavigator.push(NowPlayingScreen())
+                                }
                             },
                         contentAlignment = Alignment.Center
                     ) {
@@ -247,7 +256,10 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
                                     val tracks = buildTracks()
                                     val start = tracks.indexOfFirst { it.surahId == surah.id }
                                         .takeIf { it >= 0 } ?: 0
-                                    if (tracks.isNotEmpty()) AudioEngine.playQueue(tracks, start)
+                                    if (tracks.isNotEmpty()) {
+                                        AudioEngine.playQueue(tracks, start)
+                                        rootNavigator.push(NowPlayingScreen())
+                                    }
                                 },
                             contentAlignment = Alignment.Center
                         ) {

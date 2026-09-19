@@ -45,6 +45,7 @@ import com.quranify.data.seed.StitchAssets
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
 import com.quranify.ui.navigation.LocalRootNavigator
+import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.theme.QuranifyColors
 
 /**
@@ -208,16 +209,17 @@ class AllCuratedPlaylistsScreen : Screen {
                                         // Play representative track for this curated playlist
                                         AudioEngine.playTrack(
                                             TrackItem(
-                                                reciterSlug = "mishary_alafasy",
+                                                reciterSlug = "mishary",
                                                 reciterName = "Mishary Rashid Alafasy",
                                                 surahId = 1,
                                                 surahNameEn = playlist.title,
                                                 surahNameAr = "سورة هادئة",
                                                 ayahNo = 1,
-                                                audioUrl = "https://cdn.islamic.network/quran/audio/128/ar.alafasy/5241.mp3",
+                                                audioUrl = "https://server8.mp3quran.net/afs/001.mp3",
                                                 durationMs = 240000L
                                             )
                                         )
+                                        rootNavigator.push(NowPlayingScreen())
                                     }
                                 )
                             }
