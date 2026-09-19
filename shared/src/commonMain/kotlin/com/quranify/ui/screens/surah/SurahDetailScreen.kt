@@ -24,6 +24,8 @@ import com.quranify.data.seed.QuranData
 import com.quranify.domain.model.Ayah
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
+import com.quranify.ui.navigation.LocalRootNavigator
+import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.theme.QuranifyColors
 
 data class SurahDetailScreen(val surahId: Int) : Screen {
@@ -32,6 +34,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val rootNavigator = LocalRootNavigator.current ?: navigator.parent ?: navigator
         val surah = remember(surahId) {
             QuranData.SURAHS.find { it.id == surahId } ?: QuranData.SURAHS.first()
         }
@@ -93,6 +96,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
             ) {
                 // Reciter switched while this ayah is loaded -> restart same ayah with new reciter.
                 AudioEngine.playQueue(buildTracks(), index)
+                rootNavigator.push(NowPlayingScreen())
                 return
             }
             if (isAyahActive(ayah.ayahNo)) {
@@ -100,6 +104,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                 return
             }
             AudioEngine.playQueue(buildTracks(), index)
+            rootNavigator.push(NowPlayingScreen())
         }
 
         val favoriteAyahs = remember { mutableStateListOf<Int>() }
@@ -178,10 +183,8 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                         }
                         Button(
                             onClick = {
-                                // playAll builds TrackItems with selectedReciter.getAyahAudioUrl
-                                // per ayah, then plays queue from 0. Setting currentTrack
-                                // triggers MainScreen AnimatedVisibility -> MiniPlayer shows.
                                 AudioEngine.playQueue(buildTracks(), 0)
+                                rootNavigator.push(NowPlayingScreen())
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = QuranifyColors.Primary),
                             shape = RoundedCornerShape(8.dp)
@@ -191,7 +194,10 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                     }
                 }
 
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 100.dp)
+                ) {
                     // Bismillah Header
                     if (surahId != 9) {
                         item {
