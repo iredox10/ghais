@@ -14,7 +14,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.quranify.player.AmbientMixer
 import com.quranify.player.AmbientType
@@ -38,7 +37,7 @@ import kotlinx.coroutines.delay
  * visible) and stops the players.
  */
 @Composable
-actual fun AmbientVideoView(selectedType: AmbientType?, modifier: Modifier = Modifier) {
+actual fun AmbientVideoView(selectedType: AmbientType?, modifier: Modifier) {
     // Subscribed so mixer resets (clearAll / preset switches) recompose us even
     // if the caller holds a stale selectedType.
     AmbientMixer.channels.collectAsState()
@@ -93,12 +92,12 @@ actual fun AmbientVideoView(selectedType: AmbientType?, modifier: Modifier = Mod
         if (keys.isNotEmpty()) {
             AndroidView(
                 factory = { ctx ->
-                    PlayerView(ctx).apply {
-                        useController = false
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                        // TextureView (not SurfaceView): the ONLY surface type
-                        // Compose alpha crossfades can actually fade.
-                        setVideoSurfaceType(PlayerView.SURFACE_TYPE_TEXTURE_VIEW)
+                    (android.view.LayoutInflater.from(ctx).inflate(
+                        com.quranify.shared.R.layout.ambient_video_texture_view,
+                        null
+                    ) as PlayerView).apply {
+                        // surface_type/use_controller/resize_mode/show_buffering
+                        // all come from the XML (texture_view is required for alpha fade).
                         setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
                         // Tap-passthrough to the scrubber underneath.
                         isClickable = false
@@ -112,12 +111,10 @@ actual fun AmbientVideoView(selectedType: AmbientType?, modifier: Modifier = Mod
             )
             AndroidView(
                 factory = { ctx ->
-                    PlayerView(ctx).apply {
-                        useController = false
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                        // TextureView (not SurfaceView): the ONLY surface type
-                        // Compose alpha crossfades can actually fade.
-                        setVideoSurfaceType(PlayerView.SURFACE_TYPE_TEXTURE_VIEW)
+                    (android.view.LayoutInflater.from(ctx).inflate(
+                        com.quranify.shared.R.layout.ambient_video_texture_view,
+                        null
+                    ) as PlayerView).apply {
                         setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
                         // Tap-passthrough to the scrubber underneath.
                         isClickable = false
