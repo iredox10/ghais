@@ -19,6 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.*
@@ -44,6 +46,7 @@ import com.quranify.domain.model.Reciter
 import com.quranify.domain.model.Surah
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
+import com.quranify.player.QuranDownloads
 import com.quranify.ui.theme.QuranifyColors
 
 /**
@@ -74,6 +77,11 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
         // Playback state observation from AudioEngine
         val currentTrack by AudioEngine.currentTrack.collectAsState()
         val isPlaying by AudioEngine.isPlaying.collectAsState()
+
+        // Download state observation from QuranDownloads (key = "$slug/$surahId")
+        val downloaded by QuranDownloads.downloadedKeys.collectAsState()
+        val dlProgress by QuranDownloads.progress.collectAsState()
+        val failedKeys by QuranDownloads.failedKeys.collectAsState()
 
         // Follow state
         var isFollowing by remember { mutableStateOf(false) }
@@ -187,6 +195,17 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                             onToggleFollow = { isFollowing = !isFollowing }
                         )
 
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // "Download all" pill next to play-all controls (dark card / glass,
+                        // consistent with Shuffle button styling).
+                        DownloadAllPill(
+                            reciter = reciter,
+                            surahs = surahs,
+                            downloaded = downloaded,
+                            dlProgress = dlProgress
+                        )
+
                         Spacer(modifier = Modifier.height(28.dp))
 
                         // Recitations Section Header
@@ -230,12 +249,27 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                 ) { surah ->
                     val isCurrentSurah = currentTrack?.surahId == surah.id && currentTrack?.reciterSlug == reciter.slug
                     val isCurrentSurahPlaying = isCurrentSurah && isPlaying
+                    val downloadKey = "${reciter.slug}/${surah.id}"
+                    val isDownloaded = downloadKey in downloaded
+                    val surahProgress: Float? = dlProgress[downloadKey]
+                    val isFailed = downloadKey in failedKeys
+                    val audioUrl = reciter.getAyahAudioUrl(surah.id, 1)
 
                     ReciterSurahListItem(
                         surah = surah,
                         reciter = reciter,
                         isCurrentTrack = isCurrentSurah,
                         isPlaying = isCurrentSurahPlaying,
+                        isDownloaded = isDownloaded,
+                        downloadProgress = surahProgress,
+                        isDownloadFailed = isFailed,
+                        onDownloadClick = {
+                            if (isDownloaded) {
+                                QuranDownloads.delete(reciter.slug, surah.id)
+                            } else {
+                                QuranDownloads.download(reciter.slug, surah.id, audioUrl)
+                            }
+                        },
                         onItemClick = {
                             val track = TrackItem(
                                 reciterSlug = reciter.slug,
@@ -514,6 +548,94 @@ private fun ReciterActionButtonsRow(
 }
 
 /**
+ * "Download all" pill placed next to the play-all controls (dark card / glass,
+ * consistent with the Shuffle button). If every surah key is downloaded it shows
+ * a static DownloadDone state (tap does nothing harmful); otherwise tapping
+ * enqueues all missing surahs via [QuranDownloads.download].
+ */
+@Composable
+private fun DownloadAllPill(
+    reciter: Reciter,
+    surahs: List<Surah>,
+    downloaded: Set<String>,
+    dlProgress: Map<String, Float>
+) {
+    val allKeys = remember(reciter.slug, surahs) {
+        surahs.map { "${reciter.slug}/${it.id}" }
+    }
+    val allDone = allKeys.isNotEmpty() && allKeys.all { it in downloaded }
+    val downloadingCount = allKeys.count { dlProgress.containsKey(it) }
+
+    Surface(
+        onClick = {
+            if (!allDone) {
+                surahs.forEach { surah ->
+                    val key = "${reciter.slug}/${surah.id}"
+                    if (key !in downloaded && !dlProgress.containsKey(key)) {
+                        QuranDownloads.download(
+                            reciter.slug,
+                            surah.id,
+                            reciter.getAyahAudioUrl(surah.id, 1)
+                        )
+                    }
+                }
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(46.dp),
+        shape = RoundedCornerShape(23.dp),
+        color = Color(0xFF161822),
+        border = BorderStroke(1.dp, Color(0x33A855F7))
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            if (allDone) {
+                Icon(
+                    imageVector = Icons.Default.DownloadDone,
+                    contentDescription = "All downloaded",
+                    tint = Color(0xFF10B981),
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Downloaded",
+                    color = Color(0xFF10B981),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+            } else {
+                if (downloadingCount > 0) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = Color(0xFFA855F7)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = "Download all",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (downloadingCount > 0) "Downloading ($downloadingCount/${surahs.size})"
+                    else "Download all",
+                    color = Color(0xFFE1E3E4),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+            }
+        }
+    }
+}
+
+/**
  * Single Surah item displaying Surah number pill, English name, Arabic name,
  * ayah count ("7 Ayahs • 1:45"), and play button or Trending Purple equalizer.
  */
@@ -523,7 +645,11 @@ private fun ReciterSurahListItem(
     reciter: Reciter,
     isCurrentTrack: Boolean,
     isPlaying: Boolean,
-    onItemClick: () -> Unit
+    onItemClick: () -> Unit,
+    isDownloaded: Boolean = false,
+    downloadProgress: Float? = null,
+    isDownloadFailed: Boolean = false,
+    onDownloadClick: () -> Unit = {}
 ) {
     val durationText = remember(surah.ayahsCount) {
         formatSurahDuration(surah.ayahsCount)
@@ -594,6 +720,75 @@ private fun ReciterSurahListItem(
         )
 
         Spacer(modifier = Modifier.width(16.dp))
+
+        // Per-surah download affordance (placed before play control, 6dp spacing).
+        Box(
+            modifier = Modifier.size(34.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val isDownloading = downloadProgress != null
+            when {
+                isDownloaded -> {
+                    IconButton(
+                        onClick = onDownloadClick,
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DownloadDone,
+                            contentDescription = "Downloaded — tap to delete",
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                isDownloading -> {
+                    val p = downloadProgress ?: -1f
+                    if (p >= 0f && p <= 1f) {
+                        CircularProgressIndicator(
+                            progress = { p },
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = Color(0xFFA855F7),
+                            trackColor = Color(0x33A855F7)
+                        )
+                    } else {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = Color(0xFFA855F7)
+                        )
+                    }
+                }
+                isDownloadFailed -> {
+                    IconButton(
+                        onClick = onDownloadClick,
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = "Download failed — tap to retry",
+                            tint = Color(0xFFEF4444),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                else -> {
+                    IconButton(
+                        onClick = onDownloadClick,
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = "Download",
+                            tint = Color(0xFF6B7280),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.width(6.dp))
 
         // Play Button or Active Trending Purple Equalizer Bar
         Box(
