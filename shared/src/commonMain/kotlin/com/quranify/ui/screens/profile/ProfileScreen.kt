@@ -39,12 +39,16 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.ui.window.Dialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -1021,6 +1025,7 @@ private fun SubtleDividerLine() {
 // Section: Recitation Schedules (multiple daily alarms: time + reciter +
 // surah range + optional play-for-minutes)
 // -----------------------------------------------------------------------------
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RecitationSchedulesSection() {
     val schedules by SchedulesStore.schedules.collectAsState()
@@ -1192,23 +1197,96 @@ private fun RecitationSchedulesSection() {
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // Time steppers (HH 0-23 / MM 0-59, wrap-around)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                    // Clock time picker (tap the time to open the clock dial)
+                    var showClock by remember { mutableStateOf(false) }
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        ScheduleStepper(
-                            label = "Hour",
-                            valueText = hour.toString().padStart(2, '0'),
-                            onMinus = { hour = (hour + 23) % 24 },
-                            onPlus = { hour = (hour + 1) % 24 }
+                        Text(
+                            text = "Starts at",
+                            color = TextMuted,
+                            fontSize = 12.sp
                         )
-                        ScheduleStepper(
-                            label = "Minute",
-                            valueText = minute.toString().padStart(2, '0'),
-                            onMinus = { minute = (minute + 59) % 60 },
-                            onPlus = { minute = (minute + 1) % 60 }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(Color.White.copy(alpha = 0.06f))
+                                .border(1.dp, LinkBlue.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+                                .clickable { showClock = true }
+                                .padding(horizontal = 28.dp, vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = formatScheduleTime(hour, minute),
+                                color = Color.White,
+                                fontSize = 44.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = (-0.5).sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Tap to set time",
+                            color = LinkBlue,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable { showClock = true }
                         )
+                    }
+
+                    if (showClock) {
+                        val clockState = rememberTimePickerState(
+                            initialHour = hour,
+                            initialMinute = minute,
+                            is24Hour = true
+                        )
+                        Dialog(onDismissRequest = { showClock = false }) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(28.dp))
+                                    .background(DarkCard)
+                                    .padding(20.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    TimePicker(state = clockState)
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(50.dp))
+                                                .background(Color.White.copy(alpha = 0.08f))
+                                                .clickable { showClock = false }
+                                                .padding(vertical = 12.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("Cancel", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(50.dp))
+                                                .background(LinkBlue)
+                                                .clickable {
+                                                    hour = clockState.hour
+                                                    minute = clockState.minute
+                                                    showClock = false
+                                                }
+                                                .padding(vertical = 12.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("Set time", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     // Reciter picker (inline expandable list)
