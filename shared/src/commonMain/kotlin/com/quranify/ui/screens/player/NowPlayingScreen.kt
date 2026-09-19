@@ -61,6 +61,7 @@ import coil3.compose.AsyncImage
 import com.quranify.data.seed.StitchAssets
 import com.quranify.player.AmbientMixer
 import com.quranify.player.AudioEngine
+import com.quranify.player.videoKeys
 import com.quranify.ui.screens.player.components.NowPlayingLyricsCard
 import com.quranify.ui.screens.player.components.NowPlayingVolumePanel
 
@@ -85,7 +86,10 @@ class NowPlayingScreen : Screen {
         var showLyrics by remember { mutableStateOf(false) }
         var showVolume by remember { mutableStateOf(false) }
         val mixer = remember { AmbientMixer }
+        val ambientChannels by mixer.channels.collectAsState()
         val ambientVolume by mixer.masterAmbientVolume.collectAsState()
+        val selectedAmbientType = ambientChannels.firstOrNull { it.isEnabled }?.type
+        val hasAmbientVideo = selectedAmbientType?.videoKeys()?.isNotEmpty() == true
 
         val track = currentTrack
         val title = track?.surahNameEn ?: "Ar-Rahman"
@@ -102,6 +106,14 @@ class NowPlayingScreen : Screen {
                 .fillMaxSize()
                 .background(Color(0xFF05050C))
         ) {
+            AmbientVideoView(selectedType = selectedAmbientType, modifier = Modifier.fillMaxSize())
+            if (hasAmbientVideo) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.55f))
+                )
+            }
             // Deep blue glow rising from the bottom (reference look)
             Box(
                 modifier = Modifier
