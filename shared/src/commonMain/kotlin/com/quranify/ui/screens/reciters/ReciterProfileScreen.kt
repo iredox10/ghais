@@ -51,13 +51,12 @@ import com.quranify.player.AudioEngine
 import com.quranify.player.QuranDownloads
 import com.quranify.ui.navigation.LocalRootNavigator
 import com.quranify.ui.screens.player.NowPlayingScreen
-import com.quranify.ui.theme.QuranifyColors
 
 /**
  * Screen displaying the profile of a verified reciter, their metadata badges,
  * action controls ("Play All", "Shuffle", "Follow"), and their full discography of Surahs.
  *
- * Fully styled in Black & White + Trending Purple theme (#A855F7).
+ * Fully styled in black-glass theme with LinkBlue accent (#4C8DFF).
  */
 data class ReciterProfileScreen(val reciterSlug: String) : Screen {
 
@@ -109,7 +108,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
         val isFollowing = reciter.slug in followedSlugs
 
         Scaffold(
-            containerColor = QuranifyColors.PitchBlack,
+            containerColor = Color(0xFF000000),
             topBar = {
                 TopAppBar(
                     title = {},
@@ -122,8 +121,8 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0x22FFFFFF))
-                                    .border(1.dp, Color(0x1AFFFFFF), CircleShape),
+                                    .background(Color.White.copy(alpha = 0.05f))
+                                    .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -157,7 +156,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                     ) {
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Avatar container with Glowing Purple Ring & Verified Badge
+                        // Avatar container with glowing blue ring & verified badge
                         ReciterAvatarHeader(
                             photoUrl = meta.photoUrl,
                             nameEn = reciter.nameEn
@@ -170,7 +169,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                             text = reciter.nameAr,
                             color = Color.White,
                             fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.ExtraBold,
                             textAlign = TextAlign.Center
                         )
 
@@ -179,7 +178,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                         // English Name in High-Contrast Text
                         Text(
                             text = reciter.nameEn,
-                            color = QuranifyColors.HighContrast,
+                            color = Color.White,
                             fontSize = 17.sp,
                             fontWeight = FontWeight.SemiBold,
                             textAlign = TextAlign.Center
@@ -187,7 +186,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Badges: Country, Riwayah, Style in Frosted Glass Pills with Purple Micro-Borders
+                        // Badges: Country, Riwayah, Style in frosted glass pills with white micro-borders
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -202,7 +201,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                         // Follower Count Text
                         Text(
                             text = meta.followers,
-                            color = Color(0xFF9CA3AF),
+                            color = Color(0xFF9A9AA0),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Normal
                         )
@@ -243,17 +242,17 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                 text = "Recitations",
                                 color = Color.White,
                                 fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.ExtraBold
                             )
 
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color(0x1FA855F7),
-                                border = BorderStroke(1.dp, Color(0x33A855F7))
+                                color = Color(0xFF4C8DFF).copy(alpha = 0.12f),
+                                border = BorderStroke(1.dp, Color(0xFF4C8DFF).copy(alpha = 0.3f))
                             ) {
                                 Text(
                                     text = "${surahs.size} Surahs",
-                                    color = Color(0xFFA855F7),
+                                    color = Color(0xFF4C8DFF),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -311,7 +310,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
 }
 
 /**
- * Avatar with Glowing Purple Ring (#A855F7) and verified badge.
+ * Avatar with glowing blue ring (#4C8DFF) and verified badge.
  */
 @Composable
 private fun ReciterAvatarHeader(
@@ -322,20 +321,20 @@ private fun ReciterAvatarHeader(
         modifier = Modifier.size(118.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Glowing purple ring & frosted halo
+        // Glowing blue ring & frosted halo
         Box(
             modifier = Modifier
                 .size(118.dp)
                 .clip(CircleShape)
-                .background(Color(0x33A855F7))
+                .background(Color(0xFF2E7CF6).copy(alpha = 0.2f))
                 .border(
                     width = 2.5.dp,
                     brush = Brush.sweepGradient(
                         listOf(
-                            Color(0xFF8B5CF6),
-                            Color(0xFFA855F7),
-                            Color(0xFFC084FC),
-                            Color(0xFF8B5CF6)
+                            Color(0xFF2E7CF6),
+                            Color(0xFF4C8DFF),
+                            Color(0xFF7AA8FF),
+                            Color(0xFF2E7CF6)
                         )
                     ),
                     shape = CircleShape
@@ -347,7 +346,7 @@ private fun ReciterAvatarHeader(
             modifier = Modifier
                 .size(106.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF161821)),
+                .background(Color(0xFF1C1C1E)),
             contentAlignment = Alignment.Center
         ) {
             if (!photoUrl.isNullOrBlank()) {
@@ -373,8 +372,8 @@ private fun ReciterAvatarHeader(
                 .size(28.dp)
                 .align(Alignment.BottomEnd)
                 .clip(CircleShape)
-                .background(Color(0xFFA855F7))
-                .border(2.5.dp, QuranifyColors.PitchBlack, CircleShape),
+                .background(Color(0xFF4C8DFF))
+                .border(2.5.dp, Color(0xFF000000), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -388,7 +387,7 @@ private fun ReciterAvatarHeader(
 }
 
 /**
- * Frosted glass badge pill with Trending Purple micro-border.
+ * Frosted glass badge pill with white micro-border.
  */
 @Composable
 private fun FrostedGlassBadge(
@@ -397,13 +396,13 @@ private fun FrostedGlassBadge(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = Color(0x1FA855F7), // subtle purple glass tint
-        border = BorderStroke(1.dp, Color(0x4DA855F7)) // purple micro-border
+        shape = RoundedCornerShape(50),
+        color = Color.White.copy(alpha = 0.05f), // subtle white glass tint
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)) // white micro-border
     ) {
         Text(
             text = text,
-            color = Color(0xFFF3F4F6),
+            color = Color.White,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
@@ -412,8 +411,8 @@ private fun FrostedGlassBadge(
 }
 
 /**
- * Action buttons: "Play All" (Trending Purple gradient), "Shuffle" (frosted dark glass),
- * and "Follow" (toggle state with purple outline).
+ * Action buttons: "Play All" (LinkBlue gradient), "Shuffle" (frosted dark glass),
+ * and "Follow" (toggle state with blue outline).
  */
 @Composable
 private fun ReciterActionButtonsRow(
@@ -430,7 +429,7 @@ private fun ReciterActionButtonsRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // "Play All" button with Trending Purple gradient
+        // "Play All" button with LinkBlue gradient
         Button(
             onClick = {
                 if (allTracks.isNotEmpty()) {
@@ -452,7 +451,7 @@ private fun ReciterActionButtonsRow(
                     .fillMaxSize()
                     .background(
                         brush = Brush.horizontalGradient(
-                            listOf(Color(0xFF8B5CF6), Color(0xFFA855F7))
+                            listOf(Color(0xFF2E7CF6), Color(0xFF4C8DFF))
                         ),
                         shape = RoundedCornerShape(23.dp)
                     ),
@@ -491,8 +490,8 @@ private fun ReciterActionButtonsRow(
                 .weight(1f)
                 .height(46.dp),
             shape = RoundedCornerShape(23.dp),
-            color = Color(0xFF161822),
-            border = BorderStroke(1.dp, Color(0x33A855F7))
+            color = Color(0xFF1C1C1E),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
         ) {
             Row(
                 modifier = Modifier.fillMaxSize(),
@@ -508,22 +507,22 @@ private fun ReciterActionButtonsRow(
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Shuffle",
-                    color = Color(0xFFE1E3E4),
+                    color = Color.White,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp
                 )
             }
         }
 
-        // "Follow" toggle button with purple outline
+        // "Follow" toggle button with blue outline
         Surface(
             onClick = onToggleFollow,
             modifier = Modifier
                 .weight(1f)
                 .height(46.dp),
             shape = RoundedCornerShape(23.dp),
-            color = if (isFollowing) Color(0x2FA855F7) else Color(0x12A855F7),
-            border = BorderStroke(1.5.dp, Color(0xFFA855F7))
+            color = if (isFollowing) Color(0xFF4C8DFF).copy(alpha = 0.18f) else Color.White.copy(alpha = 0.05f),
+            border = BorderStroke(1.dp, Color(0xFF4C8DFF))
         ) {
             Row(
                 modifier = Modifier.fillMaxSize(),
@@ -533,13 +532,13 @@ private fun ReciterActionButtonsRow(
                 Icon(
                     imageVector = if (isFollowing) Icons.Default.Check else Icons.Default.PersonAdd,
                     contentDescription = if (isFollowing) "Following" else "Follow",
-                    tint = if (isFollowing) Color(0xFF10B981) else Color.White,
+                    tint = if (isFollowing) Color(0xFF4C8DFF) else Color.White,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = if (isFollowing) "Following ✓" else "Follow",
-                    color = if (isFollowing) Color(0xFF10B981) else Color.White,
+                    color = if (isFollowing) Color(0xFF4C8DFF) else Color.White,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp
                 )
@@ -586,8 +585,8 @@ private fun DownloadAllPill(
             .fillMaxWidth()
             .height(46.dp),
         shape = RoundedCornerShape(23.dp),
-        color = Color(0xFF161822),
-        border = BorderStroke(1.dp, Color(0x33A855F7))
+        color = Color(0xFF1C1C1E),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
     ) {
         Row(
             modifier = Modifier.fillMaxSize(),
@@ -613,7 +612,7 @@ private fun DownloadAllPill(
                     CircularProgressIndicator(
                         modifier = Modifier.size(18.dp),
                         strokeWidth = 2.dp,
-                        color = Color(0xFFA855F7)
+                        color = Color(0xFF4C8DFF)
                     )
                 } else {
                     Icon(
@@ -627,7 +626,7 @@ private fun DownloadAllPill(
                 Text(
                     text = if (downloadingCount > 0) "Downloading ($downloadingCount/${surahs.size})"
                     else "Download all",
-                    color = Color(0xFFE1E3E4),
+                    color = Color.White,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp
                 )
@@ -638,7 +637,7 @@ private fun DownloadAllPill(
 
 /**
  * Single Surah item displaying Surah number pill, English name, Arabic name,
- * ayah count ("7 Ayahs • 1:45"), and play button or Trending Purple equalizer.
+ * ayah count ("7 Ayahs • 1:45"), and play button or LinkBlue equalizer.
  */
 @Composable
 private fun ReciterSurahListItem(
@@ -669,18 +668,18 @@ private fun ReciterSurahListItem(
                 .size(42.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(
-                    if (isCurrentTrack) Color(0x26A855F7) else Color(0xFF151821)
+                    if (isCurrentTrack) Color(0xFF4C8DFF).copy(alpha = 0.15f) else Color(0xFF1C1C1E)
                 )
                 .border(
                     width = 1.dp,
-                    color = if (isCurrentTrack) Color(0xFFA855F7) else Color(0x1FFFFFFF),
+                    color = if (isCurrentTrack) Color(0xFF4C8DFF) else Color.White.copy(alpha = 0.08f),
                     shape = RoundedCornerShape(10.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = surah.id.toString(),
-                color = if (isCurrentTrack) Color(0xFFA855F7) else Color(0xFFE1E3E4),
+                color = if (isCurrentTrack) Color(0xFF4C8DFF) else Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )
@@ -694,7 +693,7 @@ private fun ReciterSurahListItem(
         ) {
             Text(
                 text = surah.nameEn,
-                color = if (isCurrentTrack) Color(0xFFC084FC) else Color.White,
+                color = if (isCurrentTrack) Color(0xFF4C8DFF) else Color.White,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -703,7 +702,7 @@ private fun ReciterSurahListItem(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "${surah.ayahsCount} Ayahs • $durationText",
-                color = Color(0xFF9CA3AF),
+                color = Color(0xFF9A9AA0),
                 fontSize = 12.sp,
                 maxLines = 1
             )
@@ -749,14 +748,14 @@ private fun ReciterSurahListItem(
                             progress = { p },
                             modifier = Modifier.size(20.dp),
                             strokeWidth = 2.dp,
-                            color = Color(0xFFA855F7),
-                            trackColor = Color(0x33A855F7)
+                            color = Color(0xFF4C8DFF),
+                            trackColor = Color(0xFF4C8DFF).copy(alpha = 0.2f)
                         )
                     } else {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
                             strokeWidth = 2.dp,
-                            color = Color(0xFFA855F7)
+                            color = Color(0xFF4C8DFF)
                         )
                     }
                 }
@@ -781,7 +780,7 @@ private fun ReciterSurahListItem(
                         Icon(
                             imageVector = Icons.Default.Download,
                             contentDescription = "Download",
-                            tint = Color(0xFF6B7280),
+                            tint = Color(0xFF9A9AA0),
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -791,7 +790,7 @@ private fun ReciterSurahListItem(
 
         Spacer(modifier = Modifier.width(6.dp))
 
-        // Play Button or Active Trending Purple Equalizer Bar
+        // Play Button or Active LinkBlue Equalizer Bar
         Box(
             modifier = Modifier
                 .size(36.dp)
@@ -799,19 +798,19 @@ private fun ReciterSurahListItem(
             contentAlignment = Alignment.Center
         ) {
             if (isPlaying) {
-                ActiveTrendingPurpleEqualizer()
+                ActiveLinkBlueEqualizer()
             } else if (isCurrentTrack) {
                 Box(
                     modifier = Modifier
                         .size(34.dp)
                         .clip(CircleShape)
-                        .background(Color(0x26A855F7)),
+                        .background(Color(0xFF4C8DFF).copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = "Resume",
-                        tint = Color(0xFFA855F7),
+                        tint = Color(0xFF4C8DFF),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -820,13 +819,13 @@ private fun ReciterSurahListItem(
                     modifier = Modifier
                         .size(34.dp)
                         .clip(CircleShape)
-                        .background(Color(0x14FFFFFF)),
+                        .background(Color.White.copy(alpha = 0.05f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = "Play",
-                        tint = Color(0xFFE1E3E4),
+                        tint = Color.White,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -836,10 +835,10 @@ private fun ReciterSurahListItem(
 }
 
 /**
- * Animated live equalizer bars pulsing in Trending Purple (#A855F7).
+ * Animated live equalizer bars pulsing in LinkBlue (#4C8DFF).
  */
 @Composable
-private fun ActiveTrendingPurpleEqualizer(
+private fun ActiveLinkBlueEqualizer(
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "ReciterEq")
@@ -890,25 +889,25 @@ private fun ActiveTrendingPurpleEqualizer(
             modifier = Modifier
                 .width(3.dp)
                 .height(h1.dp)
-                .background(Color(0xFFA855F7), RoundedCornerShape(1.5.dp))
+                .background(Color(0xFF4C8DFF), RoundedCornerShape(1.5.dp))
         )
         Box(
             modifier = Modifier
                 .width(3.dp)
                 .height(h2.dp)
-                .background(Color(0xFFA855F7), RoundedCornerShape(1.5.dp))
+                .background(Color(0xFF4C8DFF), RoundedCornerShape(1.5.dp))
         )
         Box(
             modifier = Modifier
                 .width(3.dp)
                 .height(h3.dp)
-                .background(Color(0xFFA855F7), RoundedCornerShape(1.5.dp))
+                .background(Color(0xFF4C8DFF), RoundedCornerShape(1.5.dp))
         )
         Box(
             modifier = Modifier
                 .width(3.dp)
                 .height(h4.dp)
-                .background(Color(0xFFA855F7), RoundedCornerShape(1.5.dp))
+                .background(Color(0xFF4C8DFF), RoundedCornerShape(1.5.dp))
         )
     }
 }
