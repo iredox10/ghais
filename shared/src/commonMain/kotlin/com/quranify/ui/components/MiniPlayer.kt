@@ -121,12 +121,23 @@ fun MiniPlayer(
                         }
                     }
                     .pointerInput(Unit) {
-                        detectVerticalDragGestures { change, dragAmount ->
-                            change.consume()
-                            if (dragAmount > 20) {
-                                AudioEngine.clear()
+                        var cumulativeDragY = 0f
+                        detectVerticalDragGestures(
+                            onDragEnd = {
+                                if (cumulativeDragY > 100f) {
+                                    AudioEngine.clear()
+                                }
+                                cumulativeDragY = 0f
+                            },
+                            onDragCancel = {
+                                cumulativeDragY = 0f
+                            },
+                            onVerticalDrag = { _, dragAmount ->
+                                if (dragAmount > 0) {
+                                    cumulativeDragY += dragAmount
+                                }
                             }
-                        }
+                        )
                     }
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
