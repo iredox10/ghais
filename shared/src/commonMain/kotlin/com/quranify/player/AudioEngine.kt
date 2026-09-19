@@ -1,5 +1,6 @@
 package com.quranify.player
 
+import com.quranify.data.repository.PlayHistoryStore
 import com.quranify.domain.model.RepeatMode
 import com.quranify.domain.model.TrackItem
 import com.quranify.domain.model.isFullSurah
@@ -360,6 +361,7 @@ object AudioEngine {
     private fun startPlayback(track: TrackItem) {
         progressJob?.cancel()
         _currentTrack.value = track
+        PlayHistoryStore.record(track.reciterSlug, track.reciterName, track.surahId, track.surahNameEn)
         _currentIndex.value = queueManager.currentIndex
         _isPlaying.value = true
         _currentPositionMs.value = 0L
