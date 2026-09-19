@@ -57,6 +57,30 @@ fun AmbientType.videoKeys(): List<String> = when (this) {
     AmbientType.Train -> emptyList()
 }
 
+/** User-facing display name per type. */
+fun AmbientType.displayName(): String = when (this) {
+    AmbientType.Rain -> "Rain"
+    AmbientType.Birdsong -> "Birds"
+    AmbientType.Fire -> "Fire"
+    AmbientType.OceanWaves -> "Waves"
+    AmbientType.GentleWind -> "Wind"
+    AmbientType.Cat -> "Cat"
+    AmbientType.Owl -> "Owl"
+    AmbientType.River -> "River"
+    AmbientType.ForestStream -> "Stream"
+    AmbientType.Whale -> "Whale"
+    AmbientType.NightCrickets -> "Crickets"
+    AmbientType.Thunder -> "Thunder"
+    AmbientType.Storm -> "Storm"
+    AmbientType.Train -> "Train"
+}
+
+val List<AmbientChannel>.selectedAmbientChannel: AmbientChannel?
+    get() = firstOrNull { it.isEnabled }
+
+val List<AmbientChannel>.selectedAmbientType: AmbientType?
+    get() = selectedAmbientChannel?.type
+
 /**
  * Global ambient-sound state. Singleton (not per-screen) so the loop keeps
  * going across navigation and stays in sync with [AudioEngine]:
@@ -73,6 +97,14 @@ object AmbientMixer {
         AmbientType.values().map { AmbientChannel(it) }
     )
     val channels: StateFlow<List<AmbientChannel>> = _channels.asStateFlow()
+
+    /** Currently active ambient channel, or null if none is enabled. */
+    val selectedAmbientChannel: AmbientChannel?
+        get() = _channels.value.firstOrNull { it.isEnabled }
+
+    /** Currently active ambient type, or null if no ambient sound is enabled. */
+    val selectedAmbientType: AmbientType?
+        get() = selectedAmbientChannel?.type
 
     private val _masterAmbientVolume = MutableStateFlow(1.0f)
     val masterAmbientVolume: StateFlow<Float> = _masterAmbientVolume.asStateFlow()
@@ -180,7 +212,7 @@ object AmbientMixer {
      * playing -> loop audible (load or resume), otherwise pause in place.
      */
     private fun syncAmbient() {
-        val selected = _channels.value.firstOrNull { it.isEnabled }
+        val selected = selectedAmbientChannel
         if (selected == null || _isMuted.value) {
             if (selected == null) AmbientPlayerBridge.stopAmbient()
             else AmbientPlayerBridge.pauseAmbient()
