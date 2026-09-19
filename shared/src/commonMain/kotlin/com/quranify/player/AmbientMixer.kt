@@ -39,6 +39,24 @@ fun AmbientType.assetKey(): String = when (this) {
     AmbientType.Train -> "train"
 }
 
+/** Bundled looping background videos per sound (`androidApp/.../assets/videos/<key>.mp4`). Empty = audio-only glow fallback. */
+fun AmbientType.videoKeys(): List<String> = when (this) {
+    AmbientType.Rain -> listOf("Rain1", "Rain2")
+    AmbientType.Birdsong -> listOf("birds1")
+    AmbientType.Fire -> listOf("fire1", "fire2")
+    AmbientType.OceanWaves -> listOf("wave1")
+    AmbientType.GentleWind -> listOf("wind1", "wind2", "wind3")
+    AmbientType.Cat -> listOf("cat1")
+    AmbientType.Owl -> emptyList()
+    AmbientType.River -> listOf("river1", "river2")
+    AmbientType.ForestStream -> listOf("river1", "river2")
+    AmbientType.Whale -> emptyList()
+    AmbientType.NightCrickets -> listOf("Night_Ambient")
+    AmbientType.Thunder -> listOf("thunder1")
+    AmbientType.Storm -> emptyList()
+    AmbientType.Train -> emptyList()
+}
+
 /**
  * Global ambient-sound state. Singleton (not per-screen) so the loop keeps
  * going across navigation and stays in sync with [AudioEngine]:
