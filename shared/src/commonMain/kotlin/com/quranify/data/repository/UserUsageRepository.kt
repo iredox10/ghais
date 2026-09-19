@@ -375,7 +375,8 @@ object UserUsageRepository {
             surahId = surahId,
             reciterSlug = reciterSlug,
             positionMs = positionMs,
-            durationMs = durationMs
+            durationMs = durationMs,
+            lastPlayedTimestampMs = lastPlayedTimestampMs
         )
     }
 

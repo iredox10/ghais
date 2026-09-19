@@ -15,7 +15,8 @@ data class JumpBackInItem(
     val surahId: Int = 67,
     val reciterSlug: String = "mishary",
     val positionMs: Long = 0L,
-    val durationMs: Long = 0L
+    val durationMs: Long = 0L,
+    val lastPlayedTimestampMs: Long = 0L
 )
 
 data class CuratedPlaylist(
