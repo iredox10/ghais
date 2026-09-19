@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.quranify.data.repository.FavoritesStore
 
 // Self-contained tokens (pure-black design language)
 private val DarkCard = Color(0xFF1C1C1E)
@@ -40,6 +43,7 @@ private val NightGradientBottom = Color(0xFF0B0B18)
 
 @Composable
 fun HomePlaylistsRow(onFavourites: () -> Unit, onFocusWork: () -> Unit, onNightSleep: () -> Unit) {
+    val favorites by FavoritesStore.favoriteTracks.collectAsState()
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -47,7 +51,7 @@ fun HomePlaylistsRow(onFavourites: () -> Unit, onFocusWork: () -> Unit, onNightS
         item {
             PlaylistShell(
                 label = "Favourites",
-                subtitle = "Your saved",
+                subtitle = "${favorites.size} saved",
                 onClick = onFavourites,
                 bgModifier = Modifier.background(DarkCard),
                 artwork = {

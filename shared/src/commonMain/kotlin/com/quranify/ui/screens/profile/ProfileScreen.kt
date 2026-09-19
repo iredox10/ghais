@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.quranify.data.repository.QuranDataRepository
+import com.quranify.data.repository.FavoritesStore
 import com.quranify.data.repository.UserUsageRepository
 import com.quranify.player.QuranDownloads
 import com.russhwolf.settings.Settings
@@ -126,6 +127,10 @@ object ProfileScreen : Tab {
 
         // Real user stats from UserUsageRepository
         val stats by UserUsageRepository.stats.collectAsState()
+
+        // Live favourites count
+        val favoriteTracks by FavoritesStore.favoriteTracks.collectAsState()
+        val favoriteCount = favoriteTracks.size
 
         // User profile editable state
         var userName by remember {
@@ -338,7 +343,7 @@ object ProfileScreen : Tab {
                         iconTint = Color(0xFFF43F5E),
                         title = "Favorite Verses & Surahs",
                         subtitle = "Bookmarked ayahs and cherished recitations",
-                        badge = "Saved"
+                        badge = "$favoriteCount items"
                     )
 
                     SubtleDividerLine()
