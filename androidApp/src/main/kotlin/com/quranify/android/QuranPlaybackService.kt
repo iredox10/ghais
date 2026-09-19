@@ -91,7 +91,11 @@ class QuranPlaybackService : MediaSessionService() {
         setMediaNotificationProvider(
             androidx.media3.session.DefaultMediaNotificationProvider.Builder(this)
                 .setChannelId(CHANNEL_ID)
+                .setNotificationId(PLACEHOLDER_NOTIFICATION_ID)
                 .build()
+                .apply {
+                    setSmallIcon(R.drawable.ic_notification)
+                }
         )
         val existing = PlayerBridge.playerOrNull()
         val exo: ExoPlayer = if (existing != null) {
@@ -118,9 +122,50 @@ class QuranPlaybackService : MediaSessionService() {
         }
         exo.removeListener(sessionListener)
         exo.addListener(sessionListener)
-        mediaSession = MediaSession.Builder(this, exo)
+
+        val forwardingPlayer = object : androidx.media3.common.ForwardingPlayer(exo) {
+            override fun getAvailableCommands(): Player.Commands {
+                return super.getAvailableCommands().buildUpon()
+                    .add(Player.COMMAND_SEEK_TO_NEXT)
+                    .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                    .add(Player.COMMAND_SEEK_TO_PREVIOUS)
+                    .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                    .build()
+            }
+
+            override fun isCommandAvailable(command: Int): Boolean {
+                return when (command) {
+                    Player.COMMAND_SEEK_TO_NEXT,
+                    Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
+                    Player.COMMAND_SEEK_TO_PREVIOUS,
+                    Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> true
+                    else -> super.isCommandAvailable(command)
+                }
+            }
+
+            override fun seekToNext() {
+                AudioEngine.next()
+            }
+
+            override fun seekToNextMediaItem() {
+                AudioEngine.next()
+            }
+
+            override fun seekToPrevious() {
+                AudioEngine.previous()
+            }
+
+            override fun seekToPreviousMediaItem() {
+                AudioEngine.previous()
+            }
+        }
+
+        val session = MediaSession.Builder(this, forwardingPlayer)
             .setCallback(QuranSessionCallback())
             .build()
+        mediaSession = session
+        addSession(session)
+
         // Guarantee FGS promotion within the 10s rule even if the Media3
         // notification update is delayed (blank metadata, slow network).
         // Media3 replaces this placeholder with the real media notification.
@@ -162,6 +207,7 @@ class QuranPlaybackService : MediaSessionService() {
     override fun onDestroy() {
         serviceScope.cancel()
         mediaSession?.let {
+            try { removeSession(it) } catch (_: Exception) { }
             try { it.player.removeListener(sessionListener) } catch (_: Exception) { }
             try { it.release() } catch (_: Exception) { }
         }
@@ -185,7 +231,9 @@ class QuranPlaybackService : MediaSessionService() {
             return MediaSession.ConnectionResult.accept(
                 MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS,
                 MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
+                    .add(Player.COMMAND_SEEK_TO_NEXT)
                     .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                    .add(Player.COMMAND_SEEK_TO_PREVIOUS)
                     .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
                     .build(),
             )
@@ -226,6 +274,9 @@ class QuranPlaybackService : MediaSessionService() {
                     displayTitle(track.surahNameEn, track.ayahNo),
                     track.reciterName,
                 )
+                mediaSession?.let { session ->
+                    try { onUpdateNotification(session, false) } catch (_: Exception) { }
+                }
             }
         }
     }
@@ -238,7 +289,15 @@ class QuranPlaybackService : MediaSessionService() {
                 .setSmallIcon(R.drawable.ic_notification)
                 .setOngoing(true)
                 .build()
-            startForeground(PLACEHOLDER_NOTIFICATION_ID, placeholder)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    PLACEHOLDER_NOTIFICATION_ID,
+                    placeholder,
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+                )
+            } else {
+                startForeground(PLACEHOLDER_NOTIFICATION_ID, placeholder)
+            }
         } catch (_: Exception) { }
     }
 
