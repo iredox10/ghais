@@ -143,6 +143,12 @@ fun MiniPlayer(
                             onDragEnd = {
                                 if (cumulativeDragY > 100f) {
                                     AudioEngine.clear()
+                                } else if (cumulativeDragY < -50f) {
+                                    if (onOpenNowPlaying != null) {
+                                        onOpenNowPlaying()
+                                    } else {
+                                        navigator?.push(NowPlayingScreen())
+                                    }
                                 }
                                 cumulativeDragY = 0f
                             },
@@ -150,8 +156,17 @@ fun MiniPlayer(
                                 cumulativeDragY = 0f
                             },
                             onVerticalDrag = { _, dragAmount ->
-                                if (dragAmount > 0) {
-                                    cumulativeDragY += dragAmount
+                                cumulativeDragY += dragAmount
+                                if (cumulativeDragY > 120f) {
+                                    AudioEngine.clear()
+                                    cumulativeDragY = 0f
+                                } else if (cumulativeDragY < -70f) {
+                                    if (onOpenNowPlaying != null) {
+                                        onOpenNowPlaying()
+                                    } else {
+                                        navigator?.push(NowPlayingScreen())
+                                    }
+                                    cumulativeDragY = 0f
                                 }
                             }
                         )
