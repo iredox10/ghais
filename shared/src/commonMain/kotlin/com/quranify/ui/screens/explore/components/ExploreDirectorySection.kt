@@ -44,6 +44,9 @@ import com.quranify.data.seed.StitchAssets
 import com.quranify.domain.model.Surah
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
+import cafe.adriel.voyager.navigator.LocalNavigator
+import com.quranify.ui.navigation.LocalRootNavigator
+import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.theme.QuranifyColors
 
 enum class SurahSortType(val label: String, val icon: ImageVector) {
@@ -79,6 +82,7 @@ fun ExploreDirectorySection(
     var sortType by remember { mutableStateOf(SurahSortType.MUSHAF) }
     var showSortModal by remember { mutableStateOf(false) }
     var bookmarkedSurahIds by remember { mutableStateOf(setOf(1, 18, 36, 55, 67)) }
+    val rootNavigator = LocalRootNavigator.current ?: LocalNavigator.current?.parent ?: LocalNavigator.current
 
     val sortedSurahs = remember(surahs, sortType) {
         when (sortType) {
@@ -184,6 +188,7 @@ fun ExploreDirectorySection(
                             durationMs = 300000L
                         )
                         AudioEngine.playTrack(track)
+                        rootNavigator?.push(NowPlayingScreen())
                     },
                     onBookmarkClick = {
                         bookmarkedSurahIds = if (isBookmarked) {

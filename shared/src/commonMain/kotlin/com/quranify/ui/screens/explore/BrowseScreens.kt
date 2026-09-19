@@ -27,6 +27,8 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.quranify.data.seed.QuranData
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
+import com.quranify.ui.navigation.LocalRootNavigator
+import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.screens.explore.components.SurahDirectoryItem
 import com.quranify.ui.screens.surah.SurahDetailScreen
 import com.quranify.ui.theme.QuranifyColors
@@ -43,6 +45,7 @@ object SurahsScreen : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val rootNavigator = LocalRootNavigator.current ?: navigator.parent ?: navigator
         var bookmarkedSurahs by remember { mutableStateOf(setOf(1, 18, 36, 55, 67)) }
 
         Scaffold(
@@ -95,6 +98,7 @@ object SurahsScreen : Screen {
                                 durationMs = 300000L
                             )
                             AudioEngine.playTrack(track)
+                            rootNavigator.push(NowPlayingScreen())
                         },
                         onBookmarkClick = {
                             bookmarkedSurahs = if (isBookmarked) {
@@ -115,6 +119,7 @@ object JuzBrowserScreen : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val rootNavigator = LocalRootNavigator.current ?: navigator.parent ?: navigator
 
         val juzList = listOf(
             JuzInfo(1, "الجزء الأول", "Al-Fatihah 1 - Al-Baqarah 141", "Surahs 1 - 2"),
@@ -320,6 +325,7 @@ object JuzBrowserScreen : Screen {
                                             durationMs = 300000L
                                         )
                                         AudioEngine.playTrack(track)
+                                        rootNavigator.push(NowPlayingScreen())
                                     },
                                 contentAlignment = Alignment.Center
                             ) {

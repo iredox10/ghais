@@ -59,6 +59,9 @@ import com.quranify.data.seed.StitchAssets
 import com.quranify.data.seed.toTrackItem
 import com.quranify.player.AudioEngine
 import com.quranify.player.QuranDownloads
+import cafe.adriel.voyager.navigator.LocalNavigator
+import com.quranify.ui.navigation.LocalRootNavigator
+import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.theme.QuranifyColors
 
 /**
@@ -804,12 +807,15 @@ private fun DownloadedSurahRow(
     item: LibraryPlaylistItem,
     modifier: Modifier = Modifier
 ) {
+    val rootNavigator = LocalRootNavigator.current ?: LocalNavigator.current?.parent ?: LocalNavigator.current
+
     fun playOffline() {
         val slug = item.reciterSlug ?: return
         val surahNumber = item.surahNumber ?: return
         val reciter = QuranDataRepository.getReciterBySlug(slug) ?: return
         val track = reciter.recitations.firstOrNull { it.surahNumber == surahNumber } ?: return
         AudioEngine.playTrack(track.toTrackItem(reciter))
+        rootNavigator?.push(NowPlayingScreen())
     }
 
     Row(

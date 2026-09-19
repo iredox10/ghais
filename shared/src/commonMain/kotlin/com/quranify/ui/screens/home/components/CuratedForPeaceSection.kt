@@ -49,6 +49,7 @@ import com.quranify.player.AudioEngine
 import com.quranify.ui.navigation.LocalRootNavigator
 import com.quranify.ui.screens.curated.AllCuratedPlaylistsScreen
 import com.quranify.ui.screens.curated.CuratedPlaylistDetailScreen
+import com.quranify.ui.screens.player.NowPlayingScreen
 
 private val TrendingElectricPurple = Color(0xFFA855F7)
 private val TrendingPurpleStart = Color(0xFF8B5CF6)
@@ -192,6 +193,7 @@ fun CuratedForPeaceSection(
                             onPlayClick(playlist.id)
                         } else {
                             playCuratedPlaylist(playlist)
+                            rootNavigator?.push(NowPlayingScreen())
                         }
                     }
                 )
@@ -348,27 +350,27 @@ private fun playCuratedPlaylist(playlist: CuratedPlaylist) {
             surahNameEn = "Al-Mulk",
             surahNameAr = "الملك",
             ayahNo = 1,
-            audioUrl = "https://cdn.islamic.network/quran/audio/128/ar.husary/67.mp3",
+            audioUrl = "https://server13.mp3quran.net/husr/067.mp3",
             durationMs = 445000L
         )
         "heart-soothing" -> TrackItem(
-            reciterSlug = "mishary_alafasy",
+            reciterSlug = "mishary",
             reciterName = "Mishary Rashid Alafasy",
             surahId = 55,
             surahNameEn = "Ar-Rahman",
             surahNameAr = "الرحمن",
             ayahNo = 1,
-            audioUrl = "https://cdn.islamic.network/quran/audio/128/ar.alafasy/55.mp3",
+            audioUrl = "https://server8.mp3quran.net/afs/055.mp3",
             durationMs = 680000L
         )
         "morning-adhkar", "morning-adhkar-and-barakah" -> TrackItem(
-            reciterSlug = "mishary_alafasy",
+            reciterSlug = "mishary",
             reciterName = "Mishary Rashid Alafasy",
             surahId = 1,
             surahNameEn = "Al-Fatihah",
             surahNameAr = "الفاتحة",
             ayahNo = 1,
-            audioUrl = "https://cdn.islamic.network/quran/audio/128/ar.alafasy/1.mp3",
+            audioUrl = "https://server8.mp3quran.net/afs/001.mp3",
             durationMs = 52000L
         )
         "bedtime-sakinah" -> TrackItem(
@@ -378,17 +380,17 @@ private fun playCuratedPlaylist(playlist: CuratedPlaylist) {
             surahNameEn = "Al-Ikhlas",
             surahNameAr = "الإخلاص",
             ayahNo = 1,
-            audioUrl = "https://cdn.islamic.network/quran/audio/128/ar.husary/112.mp3",
+            audioUrl = "https://server13.mp3quran.net/husr/112.mp3",
             durationMs = 30000L
         )
         else -> TrackItem(
-            reciterSlug = "mishary_alafasy",
+            reciterSlug = "mishary",
             reciterName = "Mishary Rashid Alafasy",
             surahId = 1,
             surahNameEn = playlist.title,
             surahNameAr = "الفاتحة",
             ayahNo = 1,
-            audioUrl = "https://cdn.islamic.network/quran/audio/128/ar.alafasy/1.mp3",
+            audioUrl = "https://server8.mp3quran.net/afs/001.mp3",
             durationMs = 60000L
         )
     }

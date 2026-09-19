@@ -18,6 +18,7 @@ import com.quranify.ui.navigation.LocalRootNavigator
 import com.quranify.ui.screens.curated.AllCuratedPlaylistsScreen
 import com.quranify.ui.screens.library.FavoritesScreen
 import com.quranify.ui.screens.mood.RoutineModeScreen
+import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.screens.reciters.RecitersScreen
 import com.quranify.ui.screens.reciters.ReciterProfileScreen
 import com.quranify.ui.screens.search.SearchScreen
@@ -62,16 +63,17 @@ object HomeScreen : Tab {
                     HomeContinueListeningRow(onPlay = { title ->
                         AudioEngine.playTrack(
                             TrackItem(
-                                reciterSlug = "alafasy",
+                                reciterSlug = "mishary",
                                 reciterName = "Mishary Rashid Alafasy",
                                 surahId = 67,
                                 surahNameEn = title,
                                 surahNameAr = "الملك",
                                 ayahNo = 1,
-                                audioUrl = "https://everyayah.com/data/Alafasy_64kbps/067001.mp3",
+                                audioUrl = "https://server8.mp3quran.net/afs/067.mp3",
                                 durationMs = 0L
                             )
                         )
+                        rootNavigator?.push(NowPlayingScreen())
                     })
                 }
                 item {
