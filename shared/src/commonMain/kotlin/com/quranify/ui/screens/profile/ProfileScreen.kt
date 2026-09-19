@@ -68,19 +68,20 @@ import com.russhwolf.settings.Settings
 import kotlinx.coroutines.launch
 
 // -----------------------------------------------------------------------------
-// Design System Tokens: iOS Human Interface + Dark Minimalist Glassmorphism
+// Design System Tokens: Black-Glass (Pure Black + Glass Cards + Link Blue)
 // -----------------------------------------------------------------------------
-private val PitchBlackBg = Color(0xFF07080A)                  // Deep OLED Canvas
-private val ObsidianGlassCard = Color(0xFF121419)             // Translucent Glass Container
-private val ObsidianGlassInner = Color(0xFF181B22)            // Secondary Glass Inset
-private val TrendingPurpleAccent = Color(0xFFA855F7)          // Trending Purple Accent
-private val ElectricViolet = Color(0xFF8B5CF6)                // Electric Violet
-private val NeonLilac = Color(0xFFC084FC)                     // Neon Lilac Highlight
-private val EmeraldAccent = Color(0xFF10B981)                 // Islamic Emerald
-private val AmberGoldAccent = Color(0xFFF59E0B)               // Streak & Achievement Gold
-private val CardBorderSubtle = Color.White.copy(alpha = 0.08f)// Apple-style Hairline Border
+private val PureBlackBg = Color(0xFF000000)                    // Pure Black page bg
+private val DarkCard = Color(0xFF1C1C1E)                       // Dark card base (dialogs)
+private val GlassCard = Color.White.copy(alpha = 0.05f)        // Glass card fill
+private val LinkBlue = Color(0xFF4C8DFF)                       // Primary accent (blue)
+private val HeroBlue = Color(0xFF2E7CF6)                       // Hero gradient start
+private val HeroIndigo = Color(0xFF0A1F44)                     // Hero gradient end
+private val Emerald = Color(0xFF30D158)                        // Success / following green
+private val HeartRed = Color(0xFFFF5A6E)                       // Favorites / heart red
+private val StreakGold = Color(0xFFFFC94D)                     // Warm gold — streak flame ONLY (unused on this screen)
+private val CardBorderSubtle = Color.White.copy(alpha = 0.08f)// Glass hairline border
 private val TextWhitePrimary = Color(0xFFFFFFFF)              // Crisp White
-private val TextMutedSecondary = Color(0xFF94A3B8)            // iOS Muted Slate
+private val TextMuted = Color(0xFF9A9AA0)                      // Muted grey
 private val SubtleDivider = Color.White.copy(alpha = 0.06f)   // Hairline Separator
 
 // Persistence Keys
@@ -136,7 +137,7 @@ object ProfileScreen : Tab {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(PitchBlackBg),
+                .background(PureBlackBg),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 120.dp)
         ) {
             // -----------------------------------------------------------------
@@ -157,14 +158,14 @@ object ProfileScreen : Tab {
                         )
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(TrendingPurpleAccent.copy(alpha = 0.15f))
-                                .border(0.5.dp, TrendingPurpleAccent.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(50.dp))
+                                .background(LinkBlue.copy(alpha = 0.15f))
+                                .border(0.5.dp, LinkBlue.copy(alpha = 0.35f), RoundedCornerShape(50.dp))
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
                             Text(
                                 text = "PRO",
-                                color = TrendingPurpleAccent,
+                                color = LinkBlue,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp
@@ -174,7 +175,7 @@ object ProfileScreen : Tab {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Your spiritual journey, stats & preferences",
-                        color = TextMutedSecondary,
+                        color = TextMuted,
                         fontSize = 13.sp
                     )
                 }
@@ -199,7 +200,7 @@ object ProfileScreen : Tab {
                 ProfileCardContainer {
                     ProfileLinkRow(
                         icon = Icons.Filled.Favorite,
-                        iconTint = Color(0xFFF43F5E),
+                        iconTint = HeartRed,
                         title = "Favorite Verses & Surahs",
                         subtitle = "Bookmarked ayahs and cherished recitations",
                         badge = "$favoriteCount items"
@@ -225,13 +226,13 @@ object ProfileScreen : Tab {
                                     modifier = Modifier
                                         .size(36.dp)
                                         .clip(CircleShape)
-                                        .background(TrendingPurpleAccent.copy(alpha = 0.14f)),
+                                        .background(LinkBlue.copy(alpha = 0.14f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.Storage,
                                         contentDescription = null,
-                                        tint = TrendingPurpleAccent,
+                                        tint = LinkBlue,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -244,7 +245,7 @@ object ProfileScreen : Tab {
                                     )
                                     Text(
                                         text = if (cachedSurahCount == 1) "1 surah cached offline • ${formatStorageBytes(storageSizeBytes)}" else "$cachedSurahCount surahs cached offline • ${formatStorageBytes(storageSizeBytes)}",
-                                        color = TextMutedSecondary,
+                                        color = TextMuted,
                                         fontSize = 12.sp
                                     )
                                 }
@@ -264,7 +265,7 @@ object ProfileScreen : Tab {
                                 .fillMaxWidth()
                                 .height(6.dp)
                                 .clip(RoundedCornerShape(3.dp))
-                                .background(Color(0xFF22262B))
+                                .background(Color.White.copy(alpha = 0.10f))
                         ) {
                             Box(
                                 modifier = Modifier
@@ -273,7 +274,7 @@ object ProfileScreen : Tab {
                                     .clip(RoundedCornerShape(3.dp))
                                     .background(
                                         Brush.horizontalGradient(
-                                            listOf(TrendingPurpleAccent, NeonLilac)
+                                            listOf(LinkBlue, HeroBlue)
                                         )
                                     )
                             )
@@ -300,13 +301,13 @@ object ProfileScreen : Tab {
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFF22171B)),
+                                    .background(HeartRed.copy(alpha = 0.14f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.DeleteOutline,
                                     contentDescription = "Clear Cache",
-                                    tint = Color(0xFFFF6B6B),
+                                    tint = HeartRed,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -319,20 +320,20 @@ object ProfileScreen : Tab {
                                 )
                                 Text(
                                     text = "Frees temporary streaming buffer",
-                                    color = TextMutedSecondary,
+                                    color = TextMuted,
                                     fontSize = 12.sp
                                 )
                             }
                         }
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF22262B))
+                                .clip(RoundedCornerShape(50.dp))
+                                .background(Color.White.copy(alpha = 0.08f))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = formatStorageBytes(storageSizeBytes),
-                                color = TextMutedSecondary,
+                                color = TextMuted,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -367,7 +368,7 @@ object ProfileScreen : Tab {
                 ProfileCardContainer {
                     ProfileLinkRow(
                         icon = Icons.Filled.Settings,
-                        iconTint = TrendingPurpleAccent,
+                        iconTint = LinkBlue,
                         title = "Settings",
                         subtitle = "Audio, reciter, appearance & downloads",
                         onClick = { rootNavigator?.push(AppSettingsScreen) }
@@ -377,7 +378,7 @@ object ProfileScreen : Tab {
 
                     ProfileLinkRow(
                         icon = Icons.Filled.BarChart,
-                        iconTint = EmeraldAccent,
+                        iconTint = Emerald,
                         title = "Your stats",
                         subtitle = "Streaks, listening time & Khatmah journey",
                         onClick = { rootNavigator?.push(StatsScreen) }
@@ -434,14 +435,14 @@ object ProfileScreen : Tab {
                     ) {
                         Text(
                             text = "Display Name",
-                            color = TextMutedSecondary,
+                            color = TextMuted,
                             fontSize = 12.sp
                         )
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF171A21))
+                                .background(Color.White.copy(alpha = 0.06f))
                                 .border(1.dp, CardBorderSubtle, RoundedCornerShape(12.dp))
                                 .padding(horizontal = 14.dp, vertical = 10.dp)
                         ) {
@@ -456,14 +457,14 @@ object ProfileScreen : Tab {
 
                         Text(
                             text = "Spiritual Bio / Intention",
-                            color = TextMutedSecondary,
+                            color = TextMuted,
                             fontSize = 12.sp
                         )
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF171A21))
+                                .background(Color.White.copy(alpha = 0.06f))
                                 .border(1.dp, CardBorderSubtle, RoundedCornerShape(12.dp))
                                 .padding(horizontal = 14.dp, vertical = 10.dp)
                         ) {
@@ -493,7 +494,7 @@ object ProfileScreen : Tab {
                     ) {
                         Text(
                             text = "Save",
-                            color = TrendingPurpleAccent,
+                            color = LinkBlue,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -502,11 +503,11 @@ object ProfileScreen : Tab {
                     TextButton(onClick = { showEditDialog = false }) {
                         Text(
                             text = "Cancel",
-                            color = TextMutedSecondary
+                            color = TextMuted
                         )
                     }
                 },
-                containerColor = Color(0xFF161920),
+                containerColor = DarkCard,
                 shape = RoundedCornerShape(20.dp)
             )
         }
@@ -527,13 +528,13 @@ private fun ProfileHeroCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(26.dp))
-            .background(ObsidianGlassCard)
+            .background(GlassCard)
             .border(
                 BorderStroke(
                     width = 1.dp,
                     brush = Brush.verticalGradient(
                         listOf(
-                            Color(0x33A855F7),
+                            LinkBlue.copy(alpha = 0.25f),
                             CardBorderSubtle
                         )
                     )
@@ -556,12 +557,12 @@ private fun ProfileHeroCard(
                             width = 3.dp,
                             brush = Brush.sweepGradient(
                                 listOf(
-                                    TrendingPurpleAccent,
-                                    NeonLilac,
-                                    EmeraldAccent,
-                                    AmberGoldAccent,
-                                    ElectricViolet,
-                                    TrendingPurpleAccent
+                                    LinkBlue,
+                                    HeroBlue,
+                                    LinkBlue.copy(alpha = 0.6f),
+                                    HeroBlue.copy(alpha = 0.7f),
+                                    LinkBlue,
+                                    LinkBlue
                                 )
                             )
                         ),
@@ -577,8 +578,8 @@ private fun ProfileHeroCard(
                         .background(
                             Brush.radialGradient(
                                 listOf(
-                                    Color(0xFF2C1A4A),
-                                    Color(0xFF120E1C)
+                                    HeroBlue.copy(alpha = 0.45f),
+                                    HeroIndigo
                                 )
                             )
                         ),
@@ -586,7 +587,7 @@ private fun ProfileHeroCard(
                 ) {
                     Text(
                         text = userName.firstOrNull()?.toString()?.uppercase() ?: "A",
-                        color = TrendingPurpleAccent,
+                        color = LinkBlue,
                         fontSize = 32.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
@@ -598,8 +599,8 @@ private fun ProfileHeroCard(
                         .align(Alignment.BottomEnd)
                         .size(24.dp)
                         .clip(CircleShape)
-                        .background(TrendingPurpleAccent)
-                        .border(2.dp, PitchBlackBg, CircleShape)
+                        .background(LinkBlue)
+                        .border(2.dp, PureBlackBg, CircleShape)
                         .clickable { onEditClick() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -633,7 +634,7 @@ private fun ProfileHeroCard(
 
                 Text(
                     text = userBio,
-                    color = TextMutedSecondary,
+                    color = TextMuted,
                     fontSize = 12.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -649,14 +650,14 @@ private fun ProfileHeroCard(
                     // Synced Badge
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(TrendingPurpleAccent.copy(alpha = 0.16f))
-                            .border(0.5.dp, TrendingPurpleAccent.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(50.dp))
+                            .background(LinkBlue.copy(alpha = 0.16f))
+                            .border(0.5.dp, LinkBlue.copy(alpha = 0.35f), RoundedCornerShape(50.dp))
                             .padding(horizontal = 7.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = "PRO MEMBER",
-                            color = TrendingPurpleAccent,
+                            color = LinkBlue,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.8.sp
@@ -665,14 +666,14 @@ private fun ProfileHeroCard(
 
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(EmeraldAccent.copy(alpha = 0.16f))
-                            .border(0.5.dp, EmeraldAccent.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(50.dp))
+                            .background(Emerald.copy(alpha = 0.16f))
+                            .border(0.5.dp, Emerald.copy(alpha = 0.35f), RoundedCornerShape(50.dp))
                             .padding(horizontal = 7.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = "CLOUD SYNCED",
-                            color = EmeraldAccent,
+                            color = Emerald,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.8.sp
@@ -727,7 +728,7 @@ private fun ProfileLinkRow(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                color = TextMutedSecondary,
+                color = TextMuted,
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -738,13 +739,13 @@ private fun ProfileLinkRow(
             Spacer(modifier = Modifier.width(8.dp))
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF1E2128))
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Text(
                     text = badge,
-                    color = TextMutedSecondary,
+                    color = TextMuted,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -756,7 +757,7 @@ private fun ProfileLinkRow(
         Icon(
             imageVector = Icons.Filled.ChevronRight,
             contentDescription = null,
-            tint = TextMutedSecondary.copy(alpha = 0.6f),
+            tint = TextMuted.copy(alpha = 0.6f),
             modifier = Modifier.size(18.dp)
         )
     }
@@ -778,15 +779,15 @@ private fun ProfileSectionHeader(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = TrendingPurpleAccent,
+                tint = LinkBlue,
                 modifier = Modifier.size(16.dp)
             )
         }
         Text(
             text = title.uppercase(),
-            color = TrendingPurpleAccent,
+            color = LinkBlue,
             fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
             letterSpacing = 1.sp
         )
     }
@@ -800,7 +801,7 @@ private fun ProfileCardContainer(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(ObsidianGlassCard)
+            .background(GlassCard)
             .border(
                 BorderStroke(1.dp, CardBorderSubtle),
                 shape = RoundedCornerShape(20.dp)
@@ -835,14 +836,14 @@ private fun ProfileSwitchRow(
                 .size(40.dp)
                 .clip(CircleShape)
                 .background(
-                    if (checked) TrendingPurpleAccent.copy(alpha = 0.14f) else Color(0xFF191C20)
+                    if (checked) LinkBlue.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.06f)
                 ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (checked) TrendingPurpleAccent else TextMutedSecondary,
+                tint = if (checked) LinkBlue else TextMuted,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -860,7 +861,7 @@ private fun ProfileSwitchRow(
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = subtitle,
-                    color = TextMutedSecondary,
+                    color = TextMuted,
                     fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -875,10 +876,10 @@ private fun ProfileSwitchRow(
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = TrendingPurpleAccent,
+                checkedTrackColor = LinkBlue,
                 checkedBorderColor = Color.Transparent,
                 uncheckedThumbColor = Color(0xFF8E989C),
-                uncheckedTrackColor = Color(0xFF1E2325),
+                uncheckedTrackColor = Color.White.copy(alpha = 0.12f),
                 uncheckedBorderColor = Color.White.copy(alpha = 0.12f)
             )
         )
@@ -902,13 +903,13 @@ private fun ProfileValueRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF191C20)),
+                .background(Color.White.copy(alpha = 0.06f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = TextMutedSecondary,
+                tint = TextMuted,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -926,7 +927,7 @@ private fun ProfileValueRow(
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = subtitle,
-                    color = TextMutedSecondary,
+                    color = TextMuted,
                     fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -938,9 +939,9 @@ private fun ProfileValueRow(
             Spacer(modifier = Modifier.width(12.dp))
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF1A1D22))
-                    .border(0.5.dp, CardBorderSubtle, RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .border(0.5.dp, CardBorderSubtle, RoundedCornerShape(50.dp))
                     .padding(horizontal = 9.dp, vertical = 4.dp)
             ) {
                 Text(
