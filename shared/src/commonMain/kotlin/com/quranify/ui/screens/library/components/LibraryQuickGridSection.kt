@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GridView
@@ -34,6 +35,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,7 +54,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.quranify.data.seed.QuranDataRepository
 import com.quranify.data.seed.StitchAssets
+import com.quranify.data.seed.toTrackItem
+import com.quranify.player.AudioEngine
+import com.quranify.player.QuranDownloads
 import com.quranify.ui.theme.QuranifyColors
 
 /**
@@ -65,6 +72,9 @@ fun LibraryQuickGridSection(
     onDownloadedClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    // Live offline count (keys are "$reciterSlug/$surahId").
+    val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
+    val offlineCount = downloadedKeys.size
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -230,7 +240,7 @@ fun LibraryQuickGridSection(
                             modifier = Modifier.size(12.dp)
                         )
                         Text(
-                            text = "3 Surahs • 128 MB",
+                            text = "$offlineCount surahs offline",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
                             color = QuranifyColors.Primary
@@ -374,8 +384,38 @@ data class LibraryPlaylistItem(
     val coverUrl: String? = null,
     val iconVector: ImageVector? = null,
     val iconColor: Color? = null,
-    val categories: List<String> = listOf("All", "Playlists")
+    val categories: List<String> = listOf("All", "Playlists"),
+    /** Set for resolved offline surahs: "$reciterSlug/$surahId" download key parts. */
+    val reciterSlug: String? = null,
+    val surahNumber: Int? = null
 )
+
+/**
+ * Resolves live [QuranDownloads.downloadedKeys] ("$reciterSlug/$surahId") into
+ * display items via [QuranDataRepository] lookup. Keys that don't resolve to a
+ * known reciter + surah are skipped.
+ */
+private fun resolveDownloadedItems(keys: Set<String>): List<LibraryPlaylistItem> {
+    return keys.mapNotNull { key ->
+        val slug = key.substringBeforeLast("/", missingDelimiterValue = "")
+        val surahNumber = key.substringAfterLast("/").toIntOrNull()
+        if (slug.isEmpty() || surahNumber == null) return@mapNotNull null
+        val reciter = QuranDataRepository.getReciterBySlug(slug) ?: return@mapNotNull null
+        val track = reciter.recitations.firstOrNull { it.surahNumber == surahNumber }
+            ?: return@mapNotNull null
+        LibraryPlaylistItem(
+            id = key,
+            title = track.surahNameEn,
+            subtitle = reciter.nameEn,
+            trackCount = 1,
+            type = "Offline",
+            isDownloaded = true,
+            reciterSlug = reciter.slug,
+            surahNumber = track.surahNumber,
+            categories = listOf("All", "Downloaded")
+        )
+    }.sortedWith(compareBy({ it.subtitle }, { it.surahNumber ?: 0 }))
+}
 
 /**
  * Custom playlists and library items shelf matching Stitch specs.
@@ -451,13 +491,19 @@ fun LibraryPlaylistsSection(
         when (selectedFilter) {
             "All" -> allItems
             "Playlists" -> allItems.filter { it.categories.contains("Playlists") }
-            "Downloaded" -> allItems.filter { it.categories.contains("Downloaded") }
+            // "Downloaded" renders live offline items (downloadedItems) instead of mocks.
+            "Downloaded" -> emptyList()
             "Reciters" -> allItems.filter { it.categories.contains("Reciters") }
             "Saved Verses" -> emptyList()
             "Hifz Goals" -> emptyList()
             else -> allItems.filter { it.categories.contains(selectedFilter) }
         }
     }
+
+    // Live offline surahs resolved from QuranDownloads keys; unresolvable keys skipped.
+    val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
+    val downloadedItems = remember(downloadedKeys) { resolveDownloadedItems(downloadedKeys) }
+    val isDownloadedFilter = selectedFilter == "Downloaded"
 
     Column(
         modifier = modifier
@@ -503,8 +549,39 @@ fun LibraryPlaylistsSection(
             }
         }
 
-        // Shelf item rows
-        filteredItems.forEach { item ->
+        // Shelf item rows: the Downloaded filter lists live offline surahs
+        // (tap plays offline, trailing icon deletes); other filters keep mock behavior.
+        if (isDownloadedFilter) {
+            if (downloadedItems.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp, horizontal = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CloudDownload,
+                        contentDescription = null,
+                        tint = QuranifyColors.TextTertiary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "No downloads yet — open a reciter and tap Download",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = QuranifyColors.TextSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                downloadedItems.forEach { item ->
+                    DownloadedSurahRow(item = item)
+                }
+            }
+        } else {
+            filteredItems.forEach { item ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -712,6 +789,131 @@ fun LibraryPlaylistsSection(
                     )
                 }
             }
+        }
+        }
+    }
+}
+
+/**
+ * Offline surah row for the Downloaded filter: same shelf row styling as
+ * [LibraryPlaylistsSection]. Tapping plays offline ([AudioEngine] auto-uses the
+ * local file for downloaded keys); the trailing icon deletes the download.
+ */
+@Composable
+private fun DownloadedSurahRow(
+    item: LibraryPlaylistItem,
+    modifier: Modifier = Modifier
+) {
+    fun playOffline() {
+        val slug = item.reciterSlug ?: return
+        val surahNumber = item.surahNumber ?: return
+        val reciter = QuranDataRepository.getReciterBySlug(slug) ?: return
+        val track = reciter.recitations.firstOrNull { it.surahNumber == surahNumber } ?: return
+        AudioEngine.playTrack(track.toTrackItem(reciter))
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable { playOffline() }
+            .padding(vertical = 6.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            // Surah number thumbnail, matching the HifzGoalCard number-box style.
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(QuranifyColors.SurfaceContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${item.surahNumber ?: "–"}",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = QuranifyColors.Primary
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Title & meta details
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = QuranifyColors.TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                QuranifyColors.SurfaceHighest,
+                                RoundedCornerShape(4.dp)
+                            )
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            text = item.type,
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = QuranifyColors.TextSecondary
+                        )
+                    }
+                    Text(
+                        text = "•",
+                        fontSize = 11.sp,
+                        color = QuranifyColors.TextTertiary
+                    )
+                    Text(
+                        text = item.subtitle,
+                        fontSize = 11.5.sp,
+                        color = QuranifyColors.TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "•",
+                        fontSize = 11.sp,
+                        color = QuranifyColors.TextTertiary
+                    )
+                    Icon(
+                        imageVector = Icons.Default.DownloadDone,
+                        contentDescription = "Downloaded",
+                        tint = QuranifyColors.Primary,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+            }
+        }
+
+        IconButton(
+            onClick = {
+                val slug = item.reciterSlug ?: return@IconButton
+                val surahNumber = item.surahNumber ?: return@IconButton
+                QuranDownloads.delete(slug, surahNumber)
+            },
+            modifier = Modifier.size(36.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Delete download",
+                tint = QuranifyColors.TextSecondary,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }
