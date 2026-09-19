@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.quranify.data.repository.QuranDataRepository
 import com.quranify.data.seed.QuranData
 import com.quranify.data.seed.StitchAssets
 import com.quranify.domain.model.Surah
@@ -177,17 +178,21 @@ fun ExploreDirectorySection(
                     isBookmarked = isBookmarked,
                     onClick = { onSurahClick(surah) },
                     onPlayClick = {
-                        val track = TrackItem(
-                            reciterSlug = "mishary",
-                            reciterName = "Sheikh Mishary Rashid Alafasy",
-                            surahId = surah.id,
-                            surahNameEn = surah.nameEn,
-                            surahNameAr = surah.nameAr,
-                            ayahNo = 1,
-                            audioUrl = "https://server8.mp3quran.net/afs/${surah.id.toString().padStart(3, '0')}.mp3",
-                            durationMs = 300000L
-                        )
-                        AudioEngine.playTrack(track)
+                        val reciter = QuranDataRepository.getReciterBySlug("mishary")
+                        val allTracks = sortedSurahs.map { s ->
+                            TrackItem(
+                                reciterSlug = reciter.slug,
+                                reciterName = reciter.nameEn,
+                                surahId = s.id,
+                                surahNameEn = s.nameEn,
+                                surahNameAr = s.nameAr,
+                                ayahNo = 1,
+                                audioUrl = reciter.getFullSurahUrl(s.id),
+                                durationMs = s.ayahsCount * 15_000L
+                            )
+                        }
+                        val startIndex = allTracks.indexOfFirst { it.surahId == surah.id }.coerceAtLeast(0)
+                        AudioEngine.playQueue(allTracks, startIndex = startIndex)
                         rootNavigator?.push(NowPlayingScreen())
                     },
                     onBookmarkClick = {

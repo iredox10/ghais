@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.quranify.data.seed.JumpBackInItem
 import com.quranify.data.seed.StitchAssets
 
 private val DarkCard = Color(0xFF1C1C1E)
@@ -40,7 +41,7 @@ private val LinkBlue = Color(0xFF4C8DFF)
 private val MutedGrey = Color(0xFF9A9AA0)
 
 @Composable
-fun HomeContinueListeningRow(onPlay: (String) -> Unit) {
+fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -53,7 +54,7 @@ fun HomeContinueListeningRow(onPlay: (String) -> Unit) {
                     .clip(RoundedCornerShape(20.dp))
                     .background(Color.White.copy(alpha = 0.06f))
                     .border(1.dp, Color.White.copy(alpha = 0.09f), RoundedCornerShape(20.dp))
-                    .clickable { onPlay(item.title) }
+                    .clickable { onPlay(item) }
                     .padding(12.dp)
             ) {
                 AsyncImage(

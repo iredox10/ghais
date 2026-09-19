@@ -36,8 +36,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cafe.adriel.voyager.navigator.LocalNavigator
+import com.quranify.data.repository.QuranDataRepository
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
+import com.quranify.ui.navigation.LocalRootNavigator
+import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.theme.QuranifyColors
 
 @Composable
@@ -47,6 +51,8 @@ fun AyahOfTheDayCard(
     onBookmarkClick: () -> Unit = {},
     onShareClick: () -> Unit = {}
 ) {
+    val rootNavigator = LocalRootNavigator.current ?: LocalNavigator.current?.parent ?: LocalNavigator.current
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -198,19 +204,23 @@ fun AyahOfTheDayCard(
                             shape = CircleShape
                         )
                         .clickable {
-                            AudioEngine.playTrack(
+                            val reciter = QuranDataRepository.getReciterBySlug("mishary")
+                            val surah = QuranDataRepository.getSurahById(55)
+                            val ayahs = (1..(surah?.ayahsCount ?: 78)).map { ayahNo ->
                                 TrackItem(
-                                    reciterSlug = "mishary-rashid-alafasy",
-                                    reciterName = "Mishary Rashid Alafasy",
+                                    reciterSlug = reciter.slug,
+                                    reciterName = reciter.nameEn,
                                     surahId = 55,
                                     surahNameEn = "Ar-Rahman",
                                     surahNameAr = "الرحمن",
-                                    ayahNo = 13,
-                                    audioUrl = "https://everyayah.com/data/Alafasy_128kbps/055013.mp3",
-                                    textUthmani = "فَبِأَيِّ آلَاءِ رَبِّكُمَا تُكَذِّبَانِ",
+                                    ayahNo = ayahNo,
+                                    audioUrl = reciter.getAyahAudioUrl(55, ayahNo),
+                                    textUthmani = if (ayahNo == 13) "فَبِأَيِّ آلَاءِ رَبِّكُمَا تُكَذِّبَانِ" else "آية رقم $ayahNo من سورة الرحمن",
                                     durationMs = 18000L
                                 )
-                            )
+                            }
+                            AudioEngine.playQueue(ayahs, startIndex = 12)
+                            rootNavigator?.push(NowPlayingScreen())
                         }
                         .padding(horizontal = 16.dp, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically

@@ -12,6 +12,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.quranify.data.repository.QuranDataRepository
 import com.quranify.domain.model.TrackItem
 import com.quranify.player.AudioEngine
 import com.quranify.ui.navigation.LocalRootNavigator
@@ -60,20 +61,35 @@ object HomeScreen : Tab {
                 item { HomeFeaturedHero(onClick = { rootNavigator?.push(ReciterProfileScreen("mishary")) }) }
                 item { HomeSectionHeader(title = "Continue listening", onSeeAll = null) }
                 item {
-                    HomeContinueListeningRow(onPlay = { title ->
-                        AudioEngine.playTrack(
+                    HomeContinueListeningRow(onPlay = { item ->
+                        val reciter = QuranDataRepository.getReciterBySlug(item.reciterSlug)
+                        val surahs = QuranDataRepository.getSurahs()
+                        val allTracks = surahs.map { s ->
                             TrackItem(
-                                reciterSlug = "mishary",
-                                reciterName = "Mishary Rashid Alafasy",
-                                surahId = 67,
-                                surahNameEn = title,
-                                surahNameAr = "الملك",
+                                reciterSlug = reciter.slug,
+                                reciterName = reciter.nameEn,
+                                surahId = s.id,
+                                surahNameEn = s.nameEn,
+                                surahNameAr = s.nameAr,
                                 ayahNo = 1,
-                                audioUrl = "https://server8.mp3quran.net/afs/067.mp3",
-                                durationMs = 0L
+                                audioUrl = reciter.getFullSurahUrl(s.id),
+                                durationMs = s.ayahsCount * 15_000L
                             )
-                        )
-                        rootNavigator?.push(NowPlayingScreen())
+                        }
+                        val startIndex = allTracks.indexOfFirst { it.surahId == item.surahId }.coerceAtLeast(0)
+                        val currentTrack = AudioEngine.currentTrack.value
+                        val isCurrent = currentTrack != null &&
+                            currentTrack.surahId == item.surahId &&
+                            currentTrack.reciterSlug == reciter.slug
+                        if (isCurrent && AudioEngine.isPlaying.value) {
+                            rootNavigator?.push(NowPlayingScreen())
+                        } else if (isCurrent) {
+                            AudioEngine.resume()
+                            rootNavigator?.push(NowPlayingScreen())
+                        } else {
+                            AudioEngine.playQueue(allTracks, startIndex = startIndex)
+                            rootNavigator?.push(NowPlayingScreen())
+                        }
                     })
                 }
                 item {

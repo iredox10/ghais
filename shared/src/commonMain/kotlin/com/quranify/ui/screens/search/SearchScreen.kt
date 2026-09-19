@@ -22,7 +22,12 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.quranify.data.repository.QuranDataRepository
 import com.quranify.data.seed.QuranData
+import com.quranify.domain.model.TrackItem
+import com.quranify.player.AudioEngine
+import com.quranify.ui.navigation.LocalRootNavigator
+import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.screens.reciters.ReciterProfileScreen
 import com.quranify.ui.screens.surah.SurahDetailScreen
 import com.quranify.ui.theme.QuranifyColors
@@ -32,6 +37,7 @@ class SearchScreen : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val rootNavigator = LocalRootNavigator.current ?: navigator.parent ?: navigator
         var query by remember { mutableStateOf("") }
         var selectedFilter by remember { mutableStateOf("All") }
         val filters = listOf("All", "Surahs", "Reciters", "Ayahs")
@@ -110,7 +116,33 @@ class SearchScreen : Screen {
                         val ayahRef = searchResults.ayahReference
                         if (ayahRef != null && (selectedFilter == "All" || selectedFilter == "Ayahs")) {
                             item {
-                                AyahQuickPlayCard(ayahRef)
+                                AyahQuickPlayCard(
+                                    ayahRef = ayahRef,
+                                    onClick = { navigator.push(SurahDetailScreen(ayahRef.surahId)) },
+                                    onPlay = {
+                                        val reciter = AudioEngine.currentTrack.value?.let {
+                                            QuranDataRepository.getReciterBySlug(it.reciterSlug)
+                                        } ?: QuranDataRepository.getFallbackReciter()
+                                        val surah = QuranDataRepository.getSurahById(ayahRef.surahId)
+                                        if (surah != null) {
+                                            val ayahs = (1..surah.ayahsCount).map { ayahNo ->
+                                                TrackItem(
+                                                    reciterSlug = reciter.slug,
+                                                    reciterName = reciter.nameEn,
+                                                    surahId = surah.id,
+                                                    surahNameEn = surah.nameEn,
+                                                    surahNameAr = surah.nameAr,
+                                                    ayahNo = ayahNo,
+                                                    audioUrl = reciter.getAyahAudioUrl(surah.id, ayahNo),
+                                                    textUthmani = if (ayahNo == 1 && surah.id == 1) "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ" else "آية رقم $ayahNo من سورة ${surah.nameAr}"
+                                                )
+                                            }
+                                            val startIndex = (ayahRef.ayahNo - 1).coerceIn(0, ayahs.size - 1)
+                                            AudioEngine.playQueue(ayahs, startIndex = startIndex)
+                                            rootNavigator.push(NowPlayingScreen())
+                                        }
+                                    }
+                                )
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
                         }
@@ -127,6 +159,37 @@ class SearchScreen : Screen {
                                         .padding(vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    IconButton(
+                                        onClick = {
+                                            val reciter = AudioEngine.currentTrack.value?.let {
+                                                QuranDataRepository.getReciterBySlug(it.reciterSlug)
+                                            } ?: QuranDataRepository.getFallbackReciter()
+                                            val allSurahs = QuranDataRepository.getSurahs()
+                                            val allTracks = allSurahs.map { s ->
+                                                TrackItem(
+                                                    reciterSlug = reciter.slug,
+                                                    reciterName = reciter.nameEn,
+                                                    surahId = s.id,
+                                                    surahNameEn = s.nameEn,
+                                                    surahNameAr = s.nameAr,
+                                                    ayahNo = 1,
+                                                    audioUrl = reciter.getFullSurahUrl(s.id),
+                                                    durationMs = s.ayahsCount * 15_000L
+                                                )
+                                            }
+                                            val startIndex = allTracks.indexOfFirst { it.surahId == surah.id }.coerceAtLeast(0)
+                                            AudioEngine.playQueue(allTracks, startIndex = startIndex)
+                                            rootNavigator.push(NowPlayingScreen())
+                                        },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.PlayArrow,
+                                            contentDescription = "Play Surah ${surah.nameEn}",
+                                            tint = QuranifyColors.Primary
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(surah.nameEn, color = QuranifyColors.TextPrimary, fontWeight = FontWeight.SemiBold)
                                         Text("Surah ${surah.id} • ${surah.ayahsCount} Ayahs", color = QuranifyColors.TextSecondary, fontSize = 12.sp)
@@ -148,6 +211,33 @@ class SearchScreen : Screen {
                                         .padding(vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    IconButton(
+                                        onClick = {
+                                            val allSurahs = QuranDataRepository.getSurahs()
+                                            val allTracks = allSurahs.map { s ->
+                                                TrackItem(
+                                                    reciterSlug = reciter.slug,
+                                                    reciterName = reciter.nameEn,
+                                                    surahId = s.id,
+                                                    surahNameEn = s.nameEn,
+                                                    surahNameAr = s.nameAr,
+                                                    ayahNo = 1,
+                                                    audioUrl = reciter.getFullSurahUrl(s.id),
+                                                    durationMs = s.ayahsCount * 15_000L
+                                                )
+                                            }
+                                            AudioEngine.playQueue(allTracks, startIndex = 0)
+                                            rootNavigator.push(NowPlayingScreen())
+                                        },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.PlayArrow,
+                                            contentDescription = "Play reciter ${reciter.nameEn}",
+                                            tint = QuranifyColors.Primary
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(reciter.nameEn, color = QuranifyColors.TextPrimary, fontWeight = FontWeight.SemiBold)
                                         Text(reciter.style.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }, color = QuranifyColors.TextSecondary, fontSize = 12.sp)
@@ -163,9 +253,16 @@ class SearchScreen : Screen {
 }
 
 @Composable
-fun AyahQuickPlayCard(ayahRef: AyahReference) {
+fun AyahQuickPlayCard(
+    ayahRef: AyahReference,
+    onClick: () -> Unit = {},
+    onPlay: () -> Unit = {}
+) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = QuranifyColors.Card),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -180,12 +277,12 @@ fun AyahQuickPlayCard(ayahRef: AyahReference) {
                 Text("${surah?.nameEn} - Ayah ${ayahRef.ayahNo}", color = QuranifyColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
             IconButton(
-                onClick = { /* Play action */ },
+                onClick = onPlay,
                 modifier = Modifier
                     .background(QuranifyColors.Primary, shape = RoundedCornerShape(24.dp))
                     .size(48.dp)
             ) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = "Play", tint = QuranifyColors.Background)
+                Icon(Icons.Filled.PlayArrow, contentDescription = "Play Ayah", tint = QuranifyColors.Background)
             }
         }
     }
