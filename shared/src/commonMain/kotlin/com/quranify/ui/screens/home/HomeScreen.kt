@@ -86,7 +86,13 @@ object HomeScreen : Tab {
                             AudioEngine.resume()
                             rootNavigator?.push(NowPlayingScreen())
                         } else {
-                            AudioEngine.playQueue(allTracks, startIndex = startIndex)
+                            // Resume from where the user stopped (restart if finished).
+                            val resumeAt = if (entry.durationMs > 0L && entry.positionMs >= entry.durationMs - 5_000L) {
+                                0L
+                            } else {
+                                entry.positionMs.coerceAtLeast(0L)
+                            }
+                            AudioEngine.playQueue(allTracks, startIndex = startIndex, startPositionMs = resumeAt)
                             rootNavigator?.push(NowPlayingScreen())
                         }
                     })

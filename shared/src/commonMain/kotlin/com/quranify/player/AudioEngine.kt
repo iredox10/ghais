@@ -59,6 +59,11 @@ object AudioEngine {
         PlayerBridge.setOnTrackEndListener { onBridgeTrackEnd() }
         scope.launch {
             PlayerBridge.positionMs.collect { pos ->
+                val pending = pendingSeekMs
+                if (pending > 0L && PlayerBridge.durationMs.value > 0L) {
+                    pendingSeekMs = 0L
+                    seekTo(pending)
+                }
                 _currentPositionMs.value = pos
                 val duration = effectiveDuration()
                 _progress.value = if (duration > 0L) {
@@ -133,6 +138,9 @@ object AudioEngine {
 
     private var progressJob: kotlinx.coroutines.Job? = null
 
+    /** One-shot resume offset applied once the bridge reports a known duration. */
+    private var pendingSeekMs: Long = 0L
+
     // Single-flight / de-dupe for STATE_ENDED re-emission + manual/auto race.
     private var lastEndUrl: String? = null
     private var lastEndAtMs: Long = 0L
@@ -141,14 +149,15 @@ object AudioEngine {
     private var consecutiveErrors: Int = 0
     private val maxAutoSkipErrors: Int = 10
 
-    fun playTrack(track: TrackItem) {
+    fun playTrack(track: TrackItem, startPositionMs: Long = 0L) {
         queueManager.clear()
         queueManager.addToQueue(track)
         _queue.value = queueManager.queue
+        pendingSeekMs = startPositionMs.coerceAtLeast(0L)
         startPlayback(track)
     }
 
-    fun playQueue(tracks: List<TrackItem>, startIndex: Int = 0) {
+    fun playQueue(tracks: List<TrackItem>, startIndex: Int = 0, startPositionMs: Long = 0L) {
         if (tracks.isEmpty()) {
             clear()
             return
@@ -157,6 +166,7 @@ object AudioEngine {
         _queue.value = queueManager.queue
         val track = queueManager.currentTrack
         if (track != null) {
+            pendingSeekMs = startPositionMs.coerceAtLeast(0L)
             startPlayback(track)
         } else {
             stopPlayback()
@@ -228,10 +238,11 @@ object AudioEngine {
     }
 
     fun seekTo(positionMs: Long) {
-        val clamped = positionMs.coerceAtLeast(0L)
+        pendingSeekMs = 0L
+        val duration = effectiveDuration()
+        val clamped = positionMs.coerceIn(0L, if (duration > 0L) duration else Long.MAX_VALUE)
         PlayerBridge.seekTo(clamped)
         _currentPositionMs.value = clamped
-        val duration = effectiveDuration()
         _progress.value = if (duration > 0L) (clamped.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
         _playbackState.update { state ->
             state.copy(currentTrackInfo = state.currentTrackInfo.copy(progressMs = clamped))
@@ -398,6 +409,7 @@ object AudioEngine {
     private fun stopPlayback() {
         PlayerBridge.stop()
         progressJob?.cancel()
+        pendingSeekMs = 0L
         _currentTrack.value = null
         _currentIndex.value = -1
         _isPlaying.value = false

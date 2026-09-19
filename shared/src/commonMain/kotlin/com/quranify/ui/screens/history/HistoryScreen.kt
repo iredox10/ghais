@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -32,9 +33,12 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
+import com.quranify.data.repository.QuranDataRepository
 import com.quranify.data.repository.UserUsageRepository
 import com.quranify.data.repository.resolveFollowedQari
-import com.quranify.ui.screens.reciters.ReciterProfileScreen
+import com.quranify.domain.model.TrackItem
+import com.quranify.player.AudioEngine
+import com.quranify.ui.screens.player.NowPlayingScreen
 import kotlin.time.Clock
 
 private const val HISTORY_WINDOW_MS = 30L * 24 * 60 * 60 * 1000
@@ -44,12 +48,17 @@ private val MutedGrey = Color(0xFF9A9AA0)
 private val LinkBlue = Color(0xFF4C8DFF)
 private val DarkCard = Color(0xFF1C1C1E)
 
-private data class HistoryQariGroup(
-    val slug: String,
-    val displayName: String,
+private data class HistorySurahGroup(
+    val key: String,
+    val surahId: Int,
+    val reciterSlug: String,
+    val title: String,
+    val reciterName: String,
+    val coverUrl: String,
     val lastPlayedMs: Long,
     val playsCount: Int,
-    val lastSurahName: String,
+    val positionMs: Long,
+    val durationMs: Long,
 )
 
 private fun relativeTime(timestampMs: Long): String {
@@ -72,21 +81,62 @@ object HistoryScreen : Screen {
         var searchQuery by remember { mutableStateOf("") }
         val history by UserUsageRepository.history.collectAsState()
 
+        fun replaySurah(group: HistorySurahGroup) {
+            val reciter = QuranDataRepository.getReciterBySlug(group.reciterSlug)
+            val surahs = QuranDataRepository.getSurahs()
+            val allTracks = surahs.map { s ->
+                TrackItem(
+                    reciterSlug = reciter.slug,
+                    reciterName = reciter.nameEn,
+                    surahId = s.id,
+                    surahNameEn = s.nameEn,
+                    surahNameAr = s.nameAr,
+                    ayahNo = 0,
+                    audioUrl = reciter.getFullSurahUrl(s.id),
+                    durationMs = s.ayahsCount * 15_000L
+                )
+            }
+            val startIndex = allTracks.indexOfFirst { it.surahId == group.surahId }.coerceAtLeast(0)
+            val currentTrack = AudioEngine.currentTrack.value
+            val isCurrent = currentTrack != null &&
+                currentTrack.surahId == group.surahId &&
+                currentTrack.reciterSlug == reciter.slug
+            if (isCurrent && AudioEngine.isPlaying.value) {
+                navigator.push(NowPlayingScreen())
+            } else if (isCurrent) {
+                AudioEngine.resume()
+                navigator.push(NowPlayingScreen())
+            } else {
+                val resumeAt = if (group.durationMs > 0L && group.positionMs >= group.durationMs - 5_000L) {
+                    0L
+                } else {
+                    group.positionMs.coerceAtLeast(0L)
+                }
+                AudioEngine.playQueue(allTracks, startIndex = startIndex, startPositionMs = resumeAt)
+                navigator.push(NowPlayingScreen())
+            }
+        }
+
         val groups = remember(history) {
             val cutoff = Clock.System.now().toEpochMilliseconds() - HISTORY_WINDOW_MS
             history.filter { it.lastPlayedTimestampMs == 0L || it.lastPlayedTimestampMs >= cutoff }
-                .groupBy { it.reciterSlug }
-                .mapNotNull { (_, perReciter) ->
-                    if (perReciter.isEmpty()) return@mapNotNull null
-                    val latest = perReciter.maxByOrNull { it.lastPlayedTimestampMs } ?: return@mapNotNull null
+                .groupBy { "${it.surahId}|${it.reciterSlug.trim().lowercase()}" }
+                .mapNotNull { (key, perSurah) ->
+                    if (perSurah.isEmpty()) return@mapNotNull null
+                    val latest = perSurah.maxByOrNull { it.lastPlayedTimestampMs } ?: return@mapNotNull null
                     val resolvedName = resolveFollowedQari(latest.reciterSlug)?.reciter?.nameEn
-                    HistoryQariGroup(
-                        slug = latest.reciterSlug,
-                        displayName = resolvedName
+                    HistorySurahGroup(
+                        key = key,
+                        surahId = latest.surahId,
+                        reciterSlug = latest.reciterSlug,
+                        title = latest.title.ifBlank { "Surah ${latest.surahId}" },
+                        reciterName = resolvedName
                             ?: latest.subtitle.substringBefore("•").trim().ifEmpty { latest.reciterSlug },
-                        lastPlayedMs = perReciter.maxOf { it.lastPlayedTimestampMs },
-                        playsCount = perReciter.size,
-                        lastSurahName = latest.title,
+                        coverUrl = latest.coverUrl,
+                        lastPlayedMs = perSurah.maxOf { it.lastPlayedTimestampMs },
+                        playsCount = perSurah.size,
+                        positionMs = latest.positionMs,
+                        durationMs = latest.durationMs,
                     )
                 }
                 .sortedByDescending { it.lastPlayedMs }
@@ -95,8 +145,8 @@ object HistoryScreen : Screen {
         val filtered = remember(groups, searchQuery) {
             if (searchQuery.isBlank()) groups
             else groups.filter {
-                it.displayName.contains(searchQuery, ignoreCase = true) ||
-                    it.lastSurahName.contains(searchQuery, ignoreCase = true)
+                it.title.contains(searchQuery, ignoreCase = true) ||
+                    it.reciterName.contains(searchQuery, ignoreCase = true)
             }
         }
 
@@ -151,7 +201,7 @@ object HistoryScreen : Screen {
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "${filtered.size} qari • last 30 days",
+                            text = "${filtered.size} surahs • last 30 days",
                             color = MutedGrey,
                             fontSize = 12.sp
                         )
@@ -218,10 +268,10 @@ object HistoryScreen : Screen {
                     ) {
                         items(
                             items = filtered,
-                            key = { it.slug }
+                            key = { it.key }
                         ) { group ->
-                            val photoUrl = remember(group.slug) {
-                                resolveFollowedQari(group.slug)?.photoUrl
+                            val photoUrl = remember(group.key) {
+                                resolveFollowedQari(group.reciterSlug)?.photoUrl
                             }
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -235,13 +285,23 @@ object HistoryScreen : Screen {
                                         Color.White.copy(alpha = 0.08f),
                                         RoundedCornerShape(24.dp)
                                     )
-                                    .clickable { navigator.push(ReciterProfileScreen(group.slug)) }
+                                    .clickable { replaySurah(group) }
                                     .padding(12.dp)
                             ) {
-                                if (photoUrl != null) {
+                                if (group.coverUrl.isNotBlank()) {
+                                    AsyncImage(
+                                        model = group.coverUrl,
+                                        contentDescription = group.title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(76.dp)
+                                            .clip(RoundedCornerShape(22.dp))
+                                            .background(DarkCard)
+                                    )
+                                } else if (photoUrl != null) {
                                     AsyncImage(
                                         model = photoUrl,
-                                        contentDescription = group.displayName,
+                                        contentDescription = group.reciterName,
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .size(76.dp)
@@ -257,7 +317,7 @@ object HistoryScreen : Screen {
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = group.displayName.take(1),
+                                            text = group.title.take(1),
                                             color = Color.White,
                                             fontSize = 28.sp,
                                             fontWeight = FontWeight.Bold
@@ -269,7 +329,7 @@ object HistoryScreen : Screen {
 
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = group.displayName,
+                                        text = group.title,
                                         color = Color.White,
                                         fontSize = 17.sp,
                                         fontWeight = FontWeight.Bold,
@@ -278,7 +338,7 @@ object HistoryScreen : Screen {
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "${group.playsCount} plays • last ${group.lastSurahName}",
+                                        text = "${group.reciterName} • ${group.playsCount} plays",
                                         color = MutedGrey,
                                         fontSize = 13.sp,
                                         maxLines = 1,
@@ -299,9 +359,9 @@ object HistoryScreen : Screen {
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                        contentDescription = "Open profile",
-                                        tint = MutedGrey,
+                                        imageVector = Icons.Filled.PlayArrow,
+                                        contentDescription = "Replay",
+                                        tint = LinkBlue,
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
