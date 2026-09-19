@@ -85,7 +85,6 @@ class QuranPlaybackService : MediaSessionService() {
         setMediaNotificationProvider(
             androidx.media3.session.DefaultMediaNotificationProvider.Builder(this)
                 .setChannelId(CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification)
                 .build()
         )
         val existing = PlayerBridge.playerOrNull()
