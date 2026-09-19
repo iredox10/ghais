@@ -1,6 +1,9 @@
 package com.quranify.ui.screens.player
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -8,9 +11,11 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -20,9 +25,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -45,6 +53,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,12 +62,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
+import com.quranify.ui.navigation.LocalRootNavigator
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import coil3.compose.AsyncImage
 import com.quranify.data.seed.StitchAssets
 import com.quranify.player.AmbientMixer
@@ -75,6 +90,25 @@ class NowPlayingScreen : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.current
+        val rootNavigator = LocalRootNavigator.current ?: LocalNavigator.current
+        val coroutineScope = rememberCoroutineScope()
+        val density = LocalDensity.current
+        val dismissThresholdPx = with(density) { 120.dp.toPx() }
+
+        var dragOffsetY by remember { mutableStateOf(0f) }
+        var isDismissed by remember { mutableStateOf(false) }
+        var settleJob by remember { mutableStateOf<Job?>(null) }
+        var lastDragTime by remember { mutableStateOf(0L) }
+        var dragVelocityY by remember { mutableStateOf(0f) }
+
+        val dismissPlayer: () -> Unit = remember(rootNavigator, navigator) {
+            {
+                if (!isDismissed) {
+                    isDismissed = true
+                    (rootNavigator ?: navigator)?.pop()
+                }
+            }
+        }
         val currentTrack by AudioEngine.currentTrack.collectAsState()
         val isPlaying by AudioEngine.isPlaying.collectAsState()
         val progress by AudioEngine.progress.collectAsState()
@@ -137,7 +171,69 @@ class NowPlayingScreen : Screen {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .offset { IntOffset(0, dragOffsetY.roundToInt()) }
                 .background(Color(0xFF05050C))
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures(
+                        onDragStart = {
+                            settleJob?.cancel()
+                            dragVelocityY = 0f
+                            lastDragTime = 0L
+                        },
+                        onDragEnd = {
+                            val shouldDismiss = dragOffsetY >= dismissThresholdPx ||
+                                (dragVelocityY > 700f && dragOffsetY > with(density) { 20.dp.toPx() })
+                            if (shouldDismiss) {
+                                dismissPlayer()
+                            } else {
+                                settleJob = coroutineScope.launch {
+                                    animate(
+                                        initialValue = dragOffsetY,
+                                        targetValue = 0f,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessLow
+                                        )
+                                    ) { value, _ ->
+                                        dragOffsetY = value
+                                    }
+                                }
+                            }
+                            dragVelocityY = 0f
+                            lastDragTime = 0L
+                        },
+                        onDragCancel = {
+                            settleJob = coroutineScope.launch {
+                                animate(
+                                    initialValue = dragOffsetY,
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                ) { value, _ ->
+                                    dragOffsetY = value
+                                }
+                            }
+                            dragVelocityY = 0f
+                            lastDragTime = 0L
+                        },
+                        onVerticalDrag = { change, dragAmount ->
+                            val now = change.uptimeMillis
+                            if (lastDragTime > 0L) {
+                                val dt = (now - lastDragTime).coerceAtLeast(1L)
+                                val instantVelocity = (dragAmount / dt.toFloat()) * 1000f
+                                dragVelocityY = 0.7f * dragVelocityY + 0.3f * instantVelocity
+                            }
+                            lastDragTime = now
+
+                            dragOffsetY = (dragOffsetY + dragAmount).coerceAtLeast(0f)
+                            if (dragOffsetY > dismissThresholdPx) {
+                                dismissPlayer()
+                            }
+                        }
+                    )
+                }
         ) {
             AmbientVideoView(selectedType = selectedAmbientType, modifier = Modifier.fillMaxSize())
             if (hasAmbientVideo) {
@@ -174,54 +270,39 @@ class NowPlayingScreen : Screen {
             ) {
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Swipe-down to minimize & click to dismiss handle
-                var dragOffsetY by remember { mutableStateOf(0f) }
+                // Top pill bar handle (tap-to-dismiss option with generous touch target)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 10.dp, bottom = 4.dp)
-                        .pointerInput(Unit) {
-                            detectVerticalDragGestures(
-                                onDragEnd = {
-                                    if (dragOffsetY > 60f) {
-                                        navigator?.pop()
-                                    }
-                                    dragOffsetY = 0f
-                                },
-                                onDragCancel = {
-                                    dragOffsetY = 0f
-                                },
-                                onVerticalDrag = { change, dragAmount ->
-                                    if (dragAmount > 0) {
-                                        dragOffsetY += dragAmount
-                                        if (dragOffsetY > 90f) {
-                                            navigator?.pop()
-                                            dragOffsetY = 0f
-                                        }
-                                    }
-                                }
-                            )
-                        },
+                        .padding(top = 8.dp, bottom = 2.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
-                            .width(48.dp)
-                            .height(5.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Color.White.copy(alpha = 0.35f))
-                            .clickable { navigator?.pop() }
-                    )
+                            .size(width = 64.dp, height = 36.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .clickable { (rootNavigator ?: navigator)?.pop() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(48.dp)
+                                .height(5.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(Color.White.copy(alpha = 0.35f))
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // Background sound pill
+                // Background sound pill (accessible touch target >= 48dp)
                 val ambientButtonText = selectedAmbientType?.displayName() ?: "Background sound"
                 val isAmbientActive = selectedAmbientType != null
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
+                        .heightIn(min = 48.dp)
                         .clip(RoundedCornerShape(50))
                         .background(
                             if (isAmbientActive) Color(0xFFD4A853).copy(alpha = 0.14f)
@@ -358,40 +439,105 @@ class NowPlayingScreen : Screen {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Progress bar (tap to seek)
+                // Progress bar / touch scrubber (tap & horizontal scrub with live preview)
+                var isScrubbing by remember { mutableStateOf(false) }
+                var scrubFraction by remember { mutableStateOf(0f) }
+
+                val activeProgress = if (isScrubbing) scrubFraction else progress.coerceIn(0f, 1f)
+                val activePositionMs = if (isScrubbing && totalMs > 0L) {
+                    (scrubFraction * totalMs).toLong()
+                } else {
+                    currentPositionMs
+                }
+                val activeElapsedText = formatMs(activePositionMs)
+                val activeRemainingText = if (totalMs > 0L) {
+                    "-${formatMs((totalMs - activePositionMs).coerceAtLeast(0L))}"
+                } else {
+                    "--:--"
+                }
+
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val width = maxWidth
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(5.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Color.White.copy(alpha = 0.16f))
+                            .height(36.dp)
                             .pointerInput(totalMs) {
-                                detectTapGestures { offset ->
-                                    if (totalMs > 0L) {
-                                        val fraction = (offset.x / width.toPx()).coerceIn(0f, 1f)
-                                        AudioEngine.seekTo((fraction * totalMs).toLong())
+                                awaitEachGesture {
+                                    val down = awaitFirstDown(requireUnconsumed = false)
+                                    val widthPx = size.width.toFloat()
+                                    if (widthPx <= 0f) return@awaitEachGesture
+
+                                    down.consume()
+                                    scrubFraction = (down.position.x / widthPx).coerceIn(0f, 1f)
+                                    isScrubbing = true
+
+                                    var pointerId = down.id
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        val change = event.changes.firstOrNull { it.id == pointerId } ?: break
+                                        if (change.changedToUp()) {
+                                            change.consume()
+                                            if (totalMs > 0L) {
+                                                AudioEngine.seekTo((scrubFraction * totalMs).toLong())
+                                            }
+                                            break
+                                        }
+                                        if (change.isConsumed) {
+                                            break
+                                        }
+                                        change.consume()
+                                        scrubFraction = (change.position.x / widthPx).coerceIn(0f, 1f)
                                     }
+                                    isScrubbing = false
                                 }
-                            }
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
+                        // Track background
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                                .fillMaxWidth()
                                 .height(5.dp)
                                 .clip(RoundedCornerShape(50))
-                                .background(Color.White)
-                        )
+                                .background(Color.White.copy(alpha = 0.16f))
+                        ) {
+                            // Active progress fill
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(activeProgress)
+                                    .height(5.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Color.White)
+                            )
+                        }
+
+                        // Scrubber thumb (visible during scrubbing/drag)
+                        if (isScrubbing) {
+                            val thumbOffset = ((width - 14.dp) * activeProgress).coerceAtLeast(0.dp)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .align(Alignment.CenterStart)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(start = thumbOffset)
+                                        .size(14.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White)
+                                )
+                            }
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    Text(text = elapsedText, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(text = activeElapsedText, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.weight(1f))
-                    Text(text = remainingText, color = MutedGrey, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Text(text = activeRemainingText, color = MutedGrey, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 }
 
                 Spacer(modifier = Modifier.height(26.dp))
@@ -418,6 +564,7 @@ class NowPlayingScreen : Screen {
                     Box(
                         modifier = Modifier
                             .size(48.dp)
+                            .clip(CircleShape)
                             .clickable { showLyrics = !showLyrics },
                         contentAlignment = Alignment.Center
                     ) {
