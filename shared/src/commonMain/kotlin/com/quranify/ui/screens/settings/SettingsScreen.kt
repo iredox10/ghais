@@ -43,9 +43,12 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,7 +63,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.quranify.player.QuranDownloads
 import com.quranify.ui.theme.QuranifyColors
+import kotlinx.coroutines.launch
 
 // -----------------------------------------------------------------------------
 // Design System Tokens: Black & White + Trending Purple Theme
@@ -101,6 +106,15 @@ object SettingsScreen : Tab {
         var dailyDhikrReminder by remember { mutableStateOf(true) }
         var fridayKahfAlert by remember { mutableStateOf(true) }
         var prayerRecitationAlert by remember { mutableStateOf(false) }
+
+        // Live offline-download storage state (QuranDownloads singleton)
+        val scope = rememberCoroutineScope()
+        val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
+        var storageSizeBytes by remember { mutableStateOf(0L) }
+        LaunchedEffect(downloadedKeys) {
+            storageSizeBytes = QuranDownloads.storageBytes()
+        }
+        val cachedSurahCount = downloadedKeys.size
 
         LazyColumn(
             modifier = Modifier
@@ -555,14 +569,14 @@ object SettingsScreen : Tab {
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
-                                        text = "14 Surahs cached offline",
+                                        text = if (cachedSurahCount == 1) "1 surah cached offline • ${formatStorageBytes(storageSizeBytes)}" else "$cachedSurahCount surahs cached offline • ${formatStorageBytes(storageSizeBytes)}",
                                         color = TextMutedSecondary,
                                         fontSize = 12.sp
                                     )
                                 }
                             }
                             Text(
-                                text = "1.2 GB of 64 GB",
+                                text = formatStorageBytes(storageSizeBytes),
                                 color = TextWhitePrimary,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
@@ -613,7 +627,12 @@ object SettingsScreen : Tab {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { /* Trigger cache cleanup */ }
+                            .clickable {
+                                scope.launch {
+                                    QuranDownloads.clearAll()
+                                    storageSizeBytes = QuranDownloads.storageBytes()
+                                }
+                            }
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -654,7 +673,7 @@ object SettingsScreen : Tab {
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = "1.2 GB",
+                                text = formatStorageBytes(storageSizeBytes),
                                 color = TextMutedSecondary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
@@ -1070,6 +1089,20 @@ private fun SettingsValueRow(
             }
         }
     }
+}
+
+// Storage size formatting: B / KB / MB with one decimal (multiplatform-safe, no String.format)
+private fun formatStorageBytes(bytes: Long): String {
+    if (bytes < 1024) return "$bytes B"
+    val kb = bytes / 1024.0
+    if (kb < 1024) return "${oneDecimal(kb)} KB"
+    val mb = kb / 1024.0
+    return "${oneDecimal(mb)} MB"
+}
+
+private fun oneDecimal(value: Double): String {
+    val tenths = kotlin.math.round(value * 10).toLong()
+    return "${tenths / 10}.${kotlin.math.abs(tenths % 10)}"
 }
 
 @Composable
