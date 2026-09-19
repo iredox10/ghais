@@ -299,7 +299,9 @@ object AudioEngine {
         PlayerBridge.setSpeed(_playbackSpeed.value)
         PlayerBridge.setVolume(_volume.value)
         PlayerBridge.setPlaybackMetadata(trackDisplayTitle(track), track.reciterName)
-        PlayerBridge.play(track.audioUrl)
+        // Prefer offline file when downloaded; a download completing mid-play
+        // does not interrupt the current stream — offline applies from next startPlayback.
+        PlayerBridge.play(QuranDownloads.localUri(track.reciterSlug, track.surahId) ?: track.audioUrl)
     }
 
     private fun stopPlayback() {
