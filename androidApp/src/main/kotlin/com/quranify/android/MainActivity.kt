@@ -26,6 +26,7 @@ class MainActivity : ComponentActivity() {
         // Any play/resume boots the foreground MediaSession service so audio
         // survives background + shows system notification controls.
         com.quranify.player.PlayerBridge.onPlayRequested = {
+            requestNotificationPermission()
             QuranPlaybackService.start(this@MainActivity)
         }
         // Do NOT warm-start the FGS here: starting a foreground service with an
@@ -39,7 +40,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT < 33) return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
         ) return
