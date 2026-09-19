@@ -24,8 +24,9 @@ class MainActivity : ComponentActivity() {
         com.quranify.player.PlayerBridge.onPlayRequested = {
             QuranPlaybackService.start(this@MainActivity)
         }
-        // Proactively warm the service (creates notification channel early).
-        QuranPlaybackService.start(this)
+        // Do NOT warm-start the FGS here: starting a foreground service with an
+        // idle player posts no notification within 10s ->
+        // ForegroundServiceDidNotStartInTimeException (app "closes by itself").
         requestNotificationPermission()
         enableEdgeToEdge()
         setContent {
