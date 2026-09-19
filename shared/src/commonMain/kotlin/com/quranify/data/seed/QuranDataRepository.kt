@@ -63,14 +63,15 @@ data class DetailedCuratedPlaylist(
  * Convert [RecitationTrack] to domain [TrackItem] for playback engine and queue manager.
  */
 fun RecitationTrack.toTrackItem(reciter: DetailedReciter): TrackItem {
+    val reciterModel = com.quranify.data.repository.QuranDataRepository.getReciterBySlug(reciter.slug)
     return TrackItem(
         reciterSlug = reciter.slug,
         reciterName = reciter.nameEn,
         surahId = surahNumber,
         surahNameEn = surahNameEn,
         surahNameAr = surahNameAr,
-        ayahNo = 1,
-        audioUrl = audioUrl,
+        ayahNo = 0,
+        audioUrl = reciterModel.getFullSurahUrl(surahNumber).ifEmpty { audioUrl },
         textUthmani = "",
         durationMs = parseDurationStringToMs(duration)
     )
@@ -80,14 +81,17 @@ fun RecitationTrack.toTrackItem(reciter: DetailedReciter): TrackItem {
  * Convert [CuratedTrack] to domain [TrackItem] for playback engine and queue manager.
  */
 fun CuratedTrack.toTrackItem(reciterSlug: String = ""): TrackItem {
+    val reciter = com.quranify.data.repository.QuranDataRepository.getReciterBySlug(
+        if (reciterSlug.isNotBlank()) reciterSlug else reciterName
+    )
     return TrackItem(
-        reciterSlug = reciterSlug,
+        reciterSlug = reciter.slug,
         reciterName = reciterName,
         surahId = surahNumber,
         surahNameEn = surahNameEn,
         surahNameAr = surahNameAr,
-        ayahNo = 1,
-        audioUrl = audioUrl,
+        ayahNo = 0,
+        audioUrl = reciter.getFullSurahUrl(surahNumber).ifEmpty { audioUrl },
         textUthmani = "",
         durationMs = parseDurationStringToMs(duration)
     )
@@ -746,7 +750,20 @@ object QuranDataRepository {
      */
     fun getCuratedTracksForPlaylist(playlistId: String): List<TrackItem> {
         val playlist = getCuratedPlaylistOrDefault(playlistId)
-        return playlist.tracks.map { it.toTrackItem() }
+        return playlist.tracks.map { track ->
+            val reciter = com.quranify.data.repository.QuranDataRepository.getReciterBySlug(track.reciterName)
+            TrackItem(
+                reciterSlug = reciter.slug,
+                reciterName = track.reciterName,
+                surahId = track.surahNumber,
+                surahNameEn = track.surahNameEn,
+                surahNameAr = track.surahNameAr,
+                ayahNo = 0,
+                audioUrl = reciter.getFullSurahUrl(track.surahNumber),
+                textUthmani = "",
+                durationMs = parseDurationStringToMs(track.duration)
+            )
+        }
     }
 
     /**

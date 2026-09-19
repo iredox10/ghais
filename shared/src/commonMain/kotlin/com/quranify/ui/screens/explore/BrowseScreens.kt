@@ -93,7 +93,7 @@ object SurahsScreen : Screen {
                                 surahId = surah.id,
                                 surahNameEn = surah.nameEn,
                                 surahNameAr = surah.nameAr,
-                                ayahNo = 1,
+                                ayahNo = 0,
                                 audioUrl = "https://server8.mp3quran.net/afs/${surah.id.toString().padStart(3, '0')}.mp3",
                                 durationMs = 300000L
                             )
@@ -320,7 +320,7 @@ object JuzBrowserScreen : Screen {
                                             surahId = if (juz.id == 30) 78 else if (juz.id == 29) 67 else 1,
                                             surahNameEn = "Juz ${juz.id}",
                                             surahNameAr = juz.nameAr,
-                                            ayahNo = 1,
+                                            ayahNo = 0,
                                             audioUrl = "https://server8.mp3quran.net/afs/${if (juz.id == 30) "078" else if (juz.id == 29) "067" else "001"}.mp3",
                                             durationMs = 300000L
                                         )

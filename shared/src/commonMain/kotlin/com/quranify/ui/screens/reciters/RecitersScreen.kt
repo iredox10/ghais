@@ -47,7 +47,8 @@ class RecitersScreen : Tab {
                         it.country.contains(searchQuery, ignoreCase = true)
                 }
                 .groupBy { it.country.ifBlank { "Other" } }
-                .toSortedMap(compareBy { NationOrder.indexOf(it).takeIf { i -> i >= 0 } ?: Int.MAX_VALUE })
+                .entries
+                .sortedBy { (nation, _) -> NationOrder.indexOf(nation).takeIf { i -> i >= 0 } ?: Int.MAX_VALUE }
         }
 
         Column(

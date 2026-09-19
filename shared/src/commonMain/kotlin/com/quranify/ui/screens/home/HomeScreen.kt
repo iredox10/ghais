@@ -71,7 +71,7 @@ object HomeScreen : Tab {
                                 surahId = s.id,
                                 surahNameEn = s.nameEn,
                                 surahNameAr = s.nameAr,
-                                ayahNo = 1,
+                                ayahNo = 0,
                                 audioUrl = reciter.getFullSurahUrl(s.id),
                                 durationMs = s.ayahsCount * 15_000L
                             )

@@ -53,18 +53,17 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
             playlist.surahIds.mapNotNull { id -> QuranData.SURAHS.firstOrNull { it.id == id } }
         }
 
-        fun buildTracks(): List<TrackItem> = surahs.flatMap { surah ->
-            (1..surah.ayahsCount).map { ayahNo ->
-                TrackItem(
-                    reciterSlug = reciter.slug,
-                    reciterName = reciter.nameEn,
-                    surahId = surah.id,
-                    surahNameEn = surah.nameEn,
-                    surahNameAr = surah.nameAr,
-                    ayahNo = ayahNo,
-                    audioUrl = reciter.getAyahAudioUrl(surah.id, ayahNo)
-                )
-            }
+        fun buildTracks(): List<TrackItem> = surahs.map { surah ->
+            TrackItem(
+                reciterSlug = reciter.slug,
+                reciterName = reciter.nameEn,
+                surahId = surah.id,
+                surahNameEn = surah.nameEn,
+                surahNameAr = surah.nameAr,
+                ayahNo = 0,
+                audioUrl = reciter.getFullSurahUrl(surah.id),
+                durationMs = surah.ayahsCount * 15_000L
+            )
         }
 
         LazyColumn(

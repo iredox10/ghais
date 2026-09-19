@@ -123,24 +123,22 @@ class SearchScreen : Screen {
                                         val reciter = AudioEngine.currentTrack.value?.let {
                                             QuranDataRepository.getReciterBySlug(it.reciterSlug)
                                         } ?: QuranDataRepository.getFallbackReciter()
-                                        val surah = QuranDataRepository.getSurahById(ayahRef.surahId)
-                                        if (surah != null) {
-                                            val ayahs = (1..surah.ayahsCount).map { ayahNo ->
-                                                TrackItem(
-                                                    reciterSlug = reciter.slug,
-                                                    reciterName = reciter.nameEn,
-                                                    surahId = surah.id,
-                                                    surahNameEn = surah.nameEn,
-                                                    surahNameAr = surah.nameAr,
-                                                    ayahNo = ayahNo,
-                                                    audioUrl = reciter.getAyahAudioUrl(surah.id, ayahNo),
-                                                    textUthmani = if (ayahNo == 1 && surah.id == 1) "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ" else "آية رقم $ayahNo من سورة ${surah.nameAr}"
-                                                )
-                                            }
-                                            val startIndex = (ayahRef.ayahNo - 1).coerceIn(0, ayahs.size - 1)
-                                            AudioEngine.playQueue(ayahs, startIndex = startIndex)
-                                            rootNavigator.push(NowPlayingScreen())
+                                        val allSurahs = QuranDataRepository.getSurahs()
+                                        val allTracks = allSurahs.map { s ->
+                                            TrackItem(
+                                                reciterSlug = reciter.slug,
+                                                reciterName = reciter.nameEn,
+                                                surahId = s.id,
+                                                surahNameEn = s.nameEn,
+                                                surahNameAr = s.nameAr,
+                                                ayahNo = 0,
+                                                audioUrl = reciter.getFullSurahUrl(s.id),
+                                                durationMs = s.ayahsCount * 15_000L
+                                            )
                                         }
+                                        val startIndex = allTracks.indexOfFirst { it.surahId == ayahRef.surahId }.coerceAtLeast(0)
+                                        AudioEngine.playQueue(allTracks, startIndex = startIndex)
+                                        rootNavigator.push(NowPlayingScreen())
                                     }
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
@@ -152,35 +150,36 @@ class SearchScreen : Screen {
                                 Text("Surahs", color = QuranifyColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
                             }
                             items(searchResults.surahs) { surah ->
+                                val playSurah = {
+                                    val reciter = AudioEngine.currentTrack.value?.let {
+                                        QuranDataRepository.getReciterBySlug(it.reciterSlug)
+                                    } ?: QuranDataRepository.getFallbackReciter()
+                                    val allSurahs = QuranDataRepository.getSurahs()
+                                    val allTracks = allSurahs.map { s ->
+                                        TrackItem(
+                                            reciterSlug = reciter.slug,
+                                            reciterName = reciter.nameEn,
+                                            surahId = s.id,
+                                            surahNameEn = s.nameEn,
+                                            surahNameAr = s.nameAr,
+                                            ayahNo = 0,
+                                            audioUrl = reciter.getFullSurahUrl(s.id),
+                                            durationMs = s.ayahsCount * 15_000L
+                                        )
+                                    }
+                                    val startIndex = allTracks.indexOfFirst { it.surahId == surah.id }.coerceAtLeast(0)
+                                    AudioEngine.playQueue(allTracks, startIndex = startIndex)
+                                    rootNavigator.push(NowPlayingScreen())
+                                }
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { navigator.push(SurahDetailScreen(surah.id)) }
+                                        .clickable { playSurah() }
                                         .padding(vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     IconButton(
-                                        onClick = {
-                                            val reciter = AudioEngine.currentTrack.value?.let {
-                                                QuranDataRepository.getReciterBySlug(it.reciterSlug)
-                                            } ?: QuranDataRepository.getFallbackReciter()
-                                            val allSurahs = QuranDataRepository.getSurahs()
-                                            val allTracks = allSurahs.map { s ->
-                                                TrackItem(
-                                                    reciterSlug = reciter.slug,
-                                                    reciterName = reciter.nameEn,
-                                                    surahId = s.id,
-                                                    surahNameEn = s.nameEn,
-                                                    surahNameAr = s.nameAr,
-                                                    ayahNo = 1,
-                                                    audioUrl = reciter.getFullSurahUrl(s.id),
-                                                    durationMs = s.ayahsCount * 15_000L
-                                                )
-                                            }
-                                            val startIndex = allTracks.indexOfFirst { it.surahId == surah.id }.coerceAtLeast(0)
-                                            AudioEngine.playQueue(allTracks, startIndex = startIndex)
-                                            rootNavigator.push(NowPlayingScreen())
-                                        },
+                                        onClick = { playSurah() },
                                         modifier = Modifier.size(36.dp)
                                     ) {
                                         Icon(
@@ -221,7 +220,7 @@ class SearchScreen : Screen {
                                                     surahId = s.id,
                                                     surahNameEn = s.nameEn,
                                                     surahNameAr = s.nameAr,
-                                                    ayahNo = 1,
+                                                    ayahNo = 0,
                                                     audioUrl = reciter.getFullSurahUrl(s.id),
                                                     durationMs = s.ayahsCount * 15_000L
                                                 )

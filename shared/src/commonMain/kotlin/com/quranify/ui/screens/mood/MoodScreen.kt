@@ -258,7 +258,7 @@ data class MoodScreen(
                                 surahId = mood.surahId,
                                 surahNameEn = mood.surahNameEn,
                                 surahNameAr = mood.surahNameAr,
-                                ayahNo = 1,
+                                ayahNo = 0,
                                 audioUrl = mood.audioUrl,
                                 durationMs = 300000L
                             )

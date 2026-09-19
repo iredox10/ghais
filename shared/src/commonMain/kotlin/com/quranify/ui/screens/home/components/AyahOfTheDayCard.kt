@@ -205,21 +205,21 @@ fun AyahOfTheDayCard(
                         )
                         .clickable {
                             val reciter = QuranDataRepository.getReciterBySlug("mishary")
-                            val surah = QuranDataRepository.getSurahById(55)
-                            val ayahs = (1..(surah?.ayahsCount ?: 78)).map { ayahNo ->
+                            val surahs = QuranDataRepository.getSurahs()
+                            val allTracks = surahs.map { s ->
                                 TrackItem(
                                     reciterSlug = reciter.slug,
                                     reciterName = reciter.nameEn,
-                                    surahId = 55,
-                                    surahNameEn = "Ar-Rahman",
-                                    surahNameAr = "الرحمن",
-                                    ayahNo = ayahNo,
-                                    audioUrl = reciter.getAyahAudioUrl(55, ayahNo),
-                                    textUthmani = if (ayahNo == 13) "فَبِأَيِّ آلَاءِ رَبِّكُمَا تُكَذِّبَانِ" else "آية رقم $ayahNo من سورة الرحمن",
-                                    durationMs = 18000L
+                                    surahId = s.id,
+                                    surahNameEn = s.nameEn,
+                                    surahNameAr = s.nameAr,
+                                    ayahNo = 0,
+                                    audioUrl = reciter.getFullSurahUrl(s.id),
+                                    durationMs = s.ayahsCount * 15_000L
                                 )
                             }
-                            AudioEngine.playQueue(ayahs, startIndex = 12)
+                            val startIndex = allTracks.indexOfFirst { it.surahId == 55 }.coerceAtLeast(0)
+                            AudioEngine.playQueue(allTracks, startIndex = startIndex)
                             rootNavigator?.push(NowPlayingScreen())
                         }
                         .padding(horizontal = 16.dp, vertical = 9.dp),
@@ -233,7 +233,7 @@ fun AyahOfTheDayCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Listen (0:18)",
+                        text = "Listen Surah",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
