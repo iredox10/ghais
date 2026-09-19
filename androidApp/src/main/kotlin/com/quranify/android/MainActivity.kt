@@ -23,6 +23,7 @@ class MainActivity : ComponentActivity() {
         com.quranify.player.AmbientPlayerBridge.init(this)
         com.quranify.player.AmbientVideoBridge.init(this)
         QuranDownloads.init(this)
+        com.quranify.data.repository.ScheduleEngine.init(this)
         // Any play/resume boots the foreground MediaSession service so audio
         // survives background + shows system notification controls.
         com.quranify.player.PlayerBridge.onPlayRequested = {
