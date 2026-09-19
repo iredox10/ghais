@@ -1,6 +1,9 @@
 package com.quranify.ui.screens.player
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,8 +16,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,12 +28,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.quranify.domain.model.TrackItem
+import com.quranify.player.AudioEngine
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +48,11 @@ fun QueueSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     
+    val queue by AudioEngine.queue.collectAsState()
+    val currentIndex by AudioEngine.currentIndex.collectAsState()
+    val currentTrack by AudioEngine.currentTrack.collectAsState()
+    val engineDurationMs by AudioEngine.durationMs.collectAsState()
+
     val surfaceColor = Color(0xFF141419)
     val cardColor = Color(0xFF1C1C24)
     val primaryColor = Color(0xFFD4A853)
@@ -59,69 +75,185 @@ fun QueueSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Up Next",
-                    color = textPrimaryColor,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                TextButton(onClick = { /* Clear Queue */ }) {
-                    Text("Clear Queue", color = primaryColor)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Up Next",
+                        color = textPrimaryColor,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (queue.isNotEmpty()) {
+                        Text(
+                            text = "(${queue.size})",
+                            color = textSecondaryColor,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
+                }
+                TextButton(
+                    onClick = { AudioEngine.clear() },
+                    enabled = queue.isNotEmpty()
+                ) {
+                    Text(
+                        text = "Clear Queue",
+                        color = if (queue.isNotEmpty()) primaryColor else textSecondaryColor.copy(alpha = 0.4f)
+                    )
                 }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            
-            val queueItems = listOf(
-                "Ayah 255 (Al-Baqarah)",
-                "Ayah 256 (Al-Baqarah)",
-                "Ayah 257 (Al-Baqarah)",
-                "Ayah 258 (Al-Baqarah)"
-            )
-            
-            LazyColumn {
-                itemsIndexed(queueItems) { index, item ->
-                    val isActive = index == 0
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+
+            if (queue.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                            contentDescription = "Empty Queue",
+                            tint = textSecondaryColor.copy(alpha = 0.5f),
+                            modifier = Modifier.size(56.dp)
+                        )
+                        Text(
+                            text = "Queue is empty",
+                            color = textPrimaryColor,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Play a surah or playlist to see the queue",
+                            color = textSecondaryColor,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    itemsIndexed(
+                        items = queue,
+                        key = { index, item -> "${item.audioUrl}_${item.surahId}_${item.ayahNo}_$index" }
+                    ) { index, item ->
+                        val isActive = index == currentIndex || (currentIndex == -1 && currentTrack?.audioUrl == item.audioUrl)
+
+                        val itemDuration = if (isActive && engineDurationMs > 0L) {
+                            engineDurationMs
+                        } else {
+                            item.durationMs
+                        }
+                        val formattedDuration = if (itemDuration > 0L) formatQueueDuration(itemDuration) else ""
+
+                        val surahTitle = when {
+                            item.ayahNo > 0 && item.surahNameEn.isNotBlank() -> "${item.surahNameEn} · Ayah ${item.ayahNo}"
+                            item.surahNameEn.isNotBlank() -> "${item.surahId}. ${item.surahNameEn}"
+                            item.ayahNo > 0 -> "Ayah ${item.ayahNo}"
+                            else -> "Surah ${item.surahId}"
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isActive) primaryColor.copy(alpha = 0.12f) else Color.Transparent)
+                                .clickable { AudioEngine.skipToIndex(index) }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Icon(
-                                imageVector = Icons.Default.List,
-                                contentDescription = "Drag Handle",
-                                tint = textSecondaryColor,
+                                imageVector = if (isActive) Icons.Default.GraphicEq else Icons.AutoMirrored.Filled.List,
+                                contentDescription = if (isActive) "Currently Playing" else "Queue Item",
+                                tint = if (isActive) primaryColor else textSecondaryColor,
                                 modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column {
-                                Text(
-                                    text = item,
-                                    color = if (isActive) primaryColor else textPrimaryColor,
-                                    fontSize = 16.sp,
-                                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
-                                )
-                                Text(
-                                    text = "Mishary Rashid Alafasy",
-                                    color = textSecondaryColor,
-                                    fontSize = 14.sp
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = surahTitle,
+                                        color = if (isActive) primaryColor else textPrimaryColor,
+                                        fontSize = 15.sp,
+                                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    )
+                                    if (item.surahNameAr.isNotBlank()) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = item.surahNameAr,
+                                            color = if (isActive) primaryColor.copy(alpha = 0.85f) else textSecondaryColor.copy(alpha = 0.8f),
+                                            fontSize = 14.sp,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = item.reciterName.ifBlank { "Quran Recitation" },
+                                        color = textSecondaryColor,
+                                        fontSize = 13.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    )
+                                    if (formattedDuration.isNotEmpty()) {
+                                        Text(
+                                            text = " • $formattedDuration",
+                                            color = if (isActive) primaryColor.copy(alpha = 0.75f) else textSecondaryColor,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                }
+                            }
+                            IconButton(
+                                onClick = { AudioEngine.removeFromQueue(index) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Remove from queue",
+                                    tint = textSecondaryColor,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
-                        }
-                        IconButton(onClick = { /* Remove */ }) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "Remove",
-                                tint = textSecondaryColor
-                            )
                         }
                     }
                 }
             }
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+}
+
+private fun formatQueueDuration(ms: Long): String {
+    val totalSeconds = (ms.coerceAtLeast(0L) / 1000).toInt()
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        "$hours:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}"
+    } else {
+        "$minutes:${seconds.toString().padStart(2, '0')}"
     }
 }
