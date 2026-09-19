@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -41,12 +43,21 @@ fun formatSpeedLabel(speed: Float): String {
     return "${label}×"
 }
 
+// Content tracks are full-surah audio files, so AYAH repeat would loop a whole
+// surah file under a confusing label — intentionally skipped in the UI cycle.
+fun nextRepeatMode(current: RepeatMode): RepeatMode = when (current) {
+    RepeatMode.OFF -> RepeatMode.SURAH
+    RepeatMode.SURAH -> RepeatMode.QUEUE
+    else -> RepeatMode.OFF
+}
+
 /**
  * Modern Quranify Player Controls:
  * - Playback speed selector (cycles through SpeedsList)
  * - Previous skip/rewind button with enabled state logic (rewinds to 0s if pos > 3s, skips prev if in queue)
  * - Prominent Play/Pause toggle button
  * - Next skip button with enabled state logic (enabled if next track exists or repeat mode active)
+ * - Repeat mode button (cycles OFF → SURAH → QUEUE)
  * - Sleep timer trigger (glowing primary tint when active timer is running)
  */
 @Composable
@@ -56,6 +67,8 @@ fun PlayerControls(
     canSkipPrevious: Boolean,
     canSkipNext: Boolean,
     isSleepTimerActive: Boolean = false,
+    repeatMode: RepeatMode = RepeatMode.OFF,
+    onRepeatClick: () -> Unit = { AudioEngine.setRepeatMode(nextRepeatMode(repeatMode)) },
     onTogglePlayPause: () -> Unit = { AudioEngine.togglePlayPause() },
     onPrevious: () -> Unit = { AudioEngine.skipPrevious() },
     onNext: () -> Unit = { AudioEngine.skipNext() },
@@ -128,6 +141,23 @@ fun PlayerControls(
             )
         }
 
+        // Repeat mode button (cycles OFF → SURAH → QUEUE)
+        IconButton(
+            onClick = onRepeatClick,
+            modifier = Modifier.size(52.dp)
+        ) {
+            Icon(
+                imageVector = if (repeatMode == RepeatMode.SURAH) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                contentDescription = when (repeatMode) {
+                    RepeatMode.SURAH -> "Repeat surah"
+                    RepeatMode.QUEUE -> "Repeat queue"
+                    else -> "Repeat off"
+                },
+                tint = if (repeatMode == RepeatMode.OFF) MutedGrey else QuranifyColors.Primary,
+                modifier = Modifier.size(27.dp)
+            )
+        }
+
         // Sleep timer button
         IconButton(
             onClick = onSleepTimerClick,
@@ -182,6 +212,8 @@ fun PlayerControls(
         canSkipPrevious = canSkipPrevious,
         canSkipNext = canSkipNext,
         isSleepTimerActive = sleepTimerState.isActive,
+        repeatMode = repeatMode,
+        onRepeatClick = { AudioEngine.setRepeatMode(nextRepeatMode(repeatMode)) },
         onTogglePlayPause = { AudioEngine.togglePlayPause() },
         onPrevious = { AudioEngine.skipPrevious() },
         onNext = { AudioEngine.skipNext() },
