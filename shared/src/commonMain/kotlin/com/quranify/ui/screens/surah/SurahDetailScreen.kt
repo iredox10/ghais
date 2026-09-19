@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.quranify.data.repository.FavoritesStore
 import com.quranify.data.seed.QuranData
 import com.quranify.domain.model.Ayah
 import com.quranify.domain.model.TrackItem
@@ -107,7 +108,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
             rootNavigator.push(NowPlayingScreen())
         }
 
-        val favoriteAyahs = remember { mutableStateListOf<Int>() }
+        val favorites by FavoritesStore.favoriteTracks.collectAsState()
 
         Scaffold(
             topBar = {
@@ -222,11 +223,10 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                             // icon reflects live play state.
                             isActive = isAyahActive(ayah.ayahNo),
                             isPlaying = isAyahPlaying(ayah.ayahNo),
-                            isFavorite = favoriteAyahs.contains(ayah.ayahNo),
+                            isFavorite = favorites.any { it.audioUrl == selectedReciter.getAyahAudioUrl(surah.id, ayah.ayahNo) },
                             onPlayClick = { onAyahToggle(ayah, index) },
                             onFavoriteClick = {
-                                if (favoriteAyahs.contains(ayah.ayahNo)) favoriteAyahs.remove(ayah.ayahNo)
-                                else favoriteAyahs.add(ayah.ayahNo)
+                                FavoritesStore.toggle(buildTracks()[index])
                             },
                             onShareClick = { /* Share */ }
                         )
