@@ -2,8 +2,8 @@ package com.quranify.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -22,6 +22,6 @@ enum class AppTab(
     Home("Home", Icons.Filled.Home, HomeScreen),
     Reciters("Reciters", Icons.Filled.RecordVoiceOver, RecitersScreen()),
     Explore("Explore", Icons.AutoMirrored.Filled.MenuBook, ExploreScreen),
-    Library("Library", Icons.Filled.LibraryMusic, LibraryScreen),
+    Playlists("Playlists", Icons.Filled.GridView, LibraryScreen),
     Settings("Settings", Icons.Filled.Settings, SettingsScreen)
 }

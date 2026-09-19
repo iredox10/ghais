@@ -31,6 +31,13 @@ import com.quranify.ui.screens.explore.components.SurahDirectoryItem
 import com.quranify.ui.screens.surah.SurahDetailScreen
 import com.quranify.ui.theme.QuranifyColors
 
+data class JuzInfo(
+    val id: Int,
+    val nameAr: String,
+    val startVerse: String,
+    val surahsSummary: String
+)
+
 object SurahsScreen : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
