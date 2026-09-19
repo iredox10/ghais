@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.quranify.data.repository.UserUsageRepository
@@ -42,60 +42,77 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.quranify.data.seed.QuranData
+import com.quranify.data.repository.FollowStore
+import com.quranify.data.seed.QuranDataRepository
 import com.quranify.data.seed.StitchAssets
 
 private val DarkCard = Color(0xFF1C1C1E)
-private val BadgeGreen = Color(0xFF30D158)
 private val MutedGrey = Color(0xFF9A9AA0)
 
 @Composable
-fun HomeNewlyAddedRow(onReciter: (String) -> Unit) {
+fun HomeFollowedRow(onReciter: (String) -> Unit) {
+    val followedSlugs by FollowStore.followedSlugs.collectAsState()
+    val resolved = remember(followedSlugs) {
+        followedSlugs.mapNotNull { slug ->
+            val verified = StitchAssets.VerifiedReciters.find { it.slug.equals(slug, ignoreCase = true) }
+            if (verified != null) {
+                Triple(slug, verified.name, verified.photoUrl)
+            } else {
+                val detailed = QuranDataRepository.getReciterBySlug(slug)
+                if (detailed != null) {
+                    Triple(slug, detailed.nameEn, detailed.photoUrl)
+                } else {
+                    null
+                }
+            }
+        }
+    }
+    if (resolved.isEmpty()) {
+        LazyRow(
+            contentPadding = PaddingValues(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                Text(
+                    text = "Follow qari from their profiles — they will appear here",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = MutedGrey,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+        }
+        return
+    }
     LazyRow(
         contentPadding = PaddingValues(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(StitchAssets.VerifiedReciters) { reciter ->
+        items(resolved) { (slug, name, photoUrl) ->
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .width(104.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .clickable { onReciter(reciter.slug) }
+                    .clickable { onReciter(slug) }
             ) {
                 Box(
                     modifier = Modifier.size(100.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     AsyncImage(
-                        model = reciter.photoUrl,
-                        contentDescription = reciter.name,
+                        model = photoUrl,
+                        contentDescription = name,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .size(100.dp)
                             .clip(CircleShape)
                             .background(DarkCard, CircleShape)
                     )
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .offset(x = (-4).dp, y = 4.dp)
-                            .clip(RoundedCornerShape(percent = 50))
-                            .background(BadgeGreen)
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "NEW",
-                            color = Color.Black,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = reciter.name,
+                    text = name,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,

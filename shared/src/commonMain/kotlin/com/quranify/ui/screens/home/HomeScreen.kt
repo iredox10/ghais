@@ -19,7 +19,7 @@ import com.quranify.ui.navigation.LocalRootNavigator
 import com.quranify.ui.screens.library.FavoritesScreen
 import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.screens.playlists.PlaylistDetailsScreen
-import com.quranify.ui.screens.reciters.RecitersScreen
+import com.quranify.ui.screens.reciters.FollowedRecitersScreen
 import com.quranify.ui.screens.reciters.ReciterProfileScreen
 import com.quranify.ui.screens.search.SearchScreen
 import com.quranify.ui.screens.profile.ProfileScreen
@@ -108,12 +108,12 @@ object HomeScreen : Tab {
                 }
                 item {
                     HomeSectionHeader(
-                        title = "Newly added",
-                        onSeeAll = { rootNavigator?.push(RecitersScreen()) }
+                        title = "Qari you follow",
+                        onSeeAll = { rootNavigator?.push(FollowedRecitersScreen) }
                     )
                 }
                 item {
-                    HomeNewlyAddedRow(onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) })
+                    HomeFollowedRow(onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) })
                 }
                 item {
                     HomeSectionHeader(
