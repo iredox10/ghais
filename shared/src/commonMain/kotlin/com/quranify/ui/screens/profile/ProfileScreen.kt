@@ -1,4 +1,4 @@
-package com.quranify.ui.screens.settings
+package com.quranify.ui.screens.profile
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -21,27 +21,36 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,6 +65,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,52 +73,99 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.quranify.data.repository.QuranDataRepository
+import com.quranify.data.repository.UserUsageRepository
 import com.quranify.player.QuranDownloads
-import com.quranify.ui.theme.QuranifyColors
+import com.russhwolf.settings.Settings
 import kotlinx.coroutines.launch
 
 // -----------------------------------------------------------------------------
-// Design System Tokens: Black & White + Trending Purple Theme
+// Design System Tokens: iOS Human Interface + Dark Minimalist Glassmorphism
 // -----------------------------------------------------------------------------
-private val PitchBlackBg = Color(0xFF0B0C0E)              // Pitch Black Canvas
-private val ObsidianGlassCard = Color(0xFF121418)         // Obsidian Glass Container
-private val TrendingPurpleAccent = Color(0xFFA855F7)      // Trending Purple Accent
-private val ElectricViolet = Color(0xFF8B5CF6)            // Electric Violet Gradient
-private val NeonLilac = Color(0xFFC084FC)                 // Neon Lilac Highlight
-private val PurpleGlowBorder = Color(0x33A855F7)          // 20% alpha purple border
-private val CardBorderSubtle = Color.White.copy(alpha = 0.08f) // 8% alpha subtle white border
-private val TextWhitePrimary = Color(0xFFFFFFFF)          // Pure White
-private val TextMutedSecondary = Color(0xFF8E989C)        // Muted Grey/White Subtitle
-private val SubtleDivider = Color.White.copy(alpha = 0.06f) // Divider hairline
+private val PitchBlackBg = Color(0xFF07080A)                  // Deep OLED Canvas
+private val ObsidianGlassCard = Color(0xFF121419)             // Translucent Glass Container
+private val ObsidianGlassInner = Color(0xFF181B22)            // Secondary Glass Inset
+private val TrendingPurpleAccent = Color(0xFFA855F7)          // Trending Purple Accent
+private val ElectricViolet = Color(0xFF8B5CF6)                // Electric Violet
+private val NeonLilac = Color(0xFFC084FC)                     // Neon Lilac Highlight
+private val EmeraldAccent = Color(0xFF10B981)                 // Islamic Emerald
+private val AmberGoldAccent = Color(0xFFF59E0B)               // Streak & Achievement Gold
+private val CyanAccent = Color(0xFF06B6D4)                    // Discovered Reciters Cyan
+private val CardBorderSubtle = Color.White.copy(alpha = 0.08f)// Apple-style Hairline Border
+private val TextWhitePrimary = Color(0xFFFFFFFF)              // Crisp White
+private val TextMutedSecondary = Color(0xFF94A3B8)            // iOS Muted Slate
+private val SubtleDivider = Color.White.copy(alpha = 0.06f)   // Hairline Separator
 
-object SettingsScreen : Tab {
+// Persistence Keys
+private const val PREF_USER_NAME = "quranify_profile_name"
+private const val PREF_USER_BIO = "quranify_profile_bio"
+private const val PREF_BITRATE = "quranify_profile_bitrate"
+private const val PREF_RECITER = "quranify_profile_reciter"
+private const val PREF_GAPLESS = "quranify_profile_gapless"
+private const val PREF_LOUDNESS = "quranify_profile_loudness"
+private const val PREF_WIFI_ONLY = "quranify_profile_wifi_only"
+private const val PREF_DHIKR_ALERT = "quranify_profile_dhikr_alert"
+private const val PREF_FRIDAY_ALERT = "quranify_profile_friday_alert"
+private const val PREF_PRAYER_ALERT = "quranify_profile_prayer_alert"
+
+object ProfileScreen : Tab {
     override val options: TabOptions
         @Composable
         get() = remember {
             TabOptions(
-                index = 3u,
-                title = "Settings",
+                index = 4u,
+                title = "Profile",
                 icon = null
             )
         }
 
     @Composable
     override fun Content() {
-        // State holders for interactive preferences
-        var selectedBitrate by remember { mutableStateOf("High (320kbps)") }
-        var selectedReciter by remember { mutableStateOf("Mishary Rashid Alafasy") }
+        val settings = remember { Settings() }
+        val scope = rememberCoroutineScope()
+
+        // Real user stats from UserUsageRepository
+        val stats by UserUsageRepository.stats.collectAsState()
+
+        // User profile editable state
+        var userName by remember {
+            mutableStateOf(settings.getString(PREF_USER_NAME, "Abdullah • Believer"))
+        }
+        var userBio by remember {
+            mutableStateOf(settings.getString(PREF_USER_BIO, "Seeking peace & closeness to Allah through the Quran"))
+        }
+        var showEditDialog by remember { mutableStateOf(false) }
+
+        // Settings toggles & selectors
+        var selectedBitrate by remember {
+            mutableStateOf(settings.getString(PREF_BITRATE, "High (320kbps)"))
+        }
+        var selectedReciter by remember {
+            mutableStateOf(settings.getString(PREF_RECITER, "Mishary Rashid Alafasy"))
+        }
         var isReciterPickerOpen by remember { mutableStateOf(false) }
 
         var darkModeEnabled by remember { mutableStateOf(true) }
-        var gaplessPlayback by remember { mutableStateOf(true) }
-        var loudnessNormalization by remember { mutableStateOf(true) }
-        var wifiOnlyDownloads by remember { mutableStateOf(true) }
-        var dailyDhikrReminder by remember { mutableStateOf(true) }
-        var fridayKahfAlert by remember { mutableStateOf(true) }
-        var prayerRecitationAlert by remember { mutableStateOf(false) }
+        var gaplessPlayback by remember {
+            mutableStateOf(settings.getBoolean(PREF_GAPLESS, true))
+        }
+        var loudnessNormalization by remember {
+            mutableStateOf(settings.getBoolean(PREF_LOUDNESS, true))
+        }
+        var wifiOnlyDownloads by remember {
+            mutableStateOf(settings.getBoolean(PREF_WIFI_ONLY, true))
+        }
+        var dailyDhikrReminder by remember {
+            mutableStateOf(settings.getBoolean(PREF_DHIKR_ALERT, true))
+        }
+        var fridayKahfAlert by remember {
+            mutableStateOf(settings.getBoolean(PREF_FRIDAY_ALERT, true))
+        }
+        var prayerRecitationAlert by remember {
+            mutableStateOf(settings.getBoolean(PREF_PRAYER_ALERT, true))
+        }
 
-        // Live offline-download storage state (QuranDownloads singleton)
-        val scope = rememberCoroutineScope()
+        // Live offline-download storage state
         val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
         var storageSizeBytes by remember { mutableStateOf(0L) }
         LaunchedEffect(downloadedKeys) {
@@ -116,13 +173,23 @@ object SettingsScreen : Tab {
         }
         val cachedSurahCount = downloadedKeys.size
 
+        // Calculate Khatmah progress (out of 114 Surahs)
+        val khatmahPercent = ((stats.uniqueSurahsCount.toFloat() / 114f) * 100).toInt().coerceIn(1, 100)
+
+        // Calculate formatted total listening time
+        val totalHours = stats.totalSecondsListened / 3600
+        val totalMinutes = (stats.totalSecondsListened % 3600) / 60
+        val formattedTotalTime = if (totalHours > 0) "${totalHours}h ${totalMinutes}m" else "${stats.minutesToday}m"
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(PitchBlackBg),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 120.dp)
         ) {
+            // -----------------------------------------------------------------
             // 1. Screen Title & Ambient Subtitle
+            // -----------------------------------------------------------------
             item {
                 Column(modifier = Modifier.padding(bottom = 20.dp, start = 4.dp)) {
                     Row(
@@ -130,7 +197,7 @@ object SettingsScreen : Tab {
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = "Settings",
+                            text = "Profile",
                             color = TextWhitePrimary,
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
@@ -154,22 +221,154 @@ object SettingsScreen : Tab {
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Customize audio engine, reciters, appearance & storage",
+                        text = "Your spiritual journey, stats & preferences",
                         color = TextMutedSecondary,
                         fontSize = 13.sp
                     )
                 }
             }
 
-            // 2. Profile / Account Header with Avatar & Purple Rim
+            // -----------------------------------------------------------------
+            // 2. Modular Profile Identity Card (Chunky / Oversized Avatar)
+            // -----------------------------------------------------------------
             item {
-                ProfileHeaderCard()
+                ProfileHeroCard(
+                    userName = userName,
+                    userBio = userBio,
+                    onEditClick = { showEditDialog = true }
+                )
+                Spacer(modifier = Modifier.height(18.dp))
             }
 
-            // 3. Section: Audio Engine & Streaming Bitrate
+            // -----------------------------------------------------------------
+            // 3. Real User Stats (Apple-style Modular 2x2 Grid)
+            // -----------------------------------------------------------------
             item {
-                SettingsSectionHeader(title = "Audio Engine & Streaming Bitrate", icon = Icons.Filled.Headphones)
-                SettingsCardContainer {
+                Text(
+                    text = "SPIRITUAL MILESTONES",
+                    color = TrendingPurpleAccent,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
+                )
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Card 1: Streak
+                        ModularStatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Filled.LocalFireDepartment,
+                            iconColor = AmberGoldAccent,
+                            iconBg = AmberGoldAccent.copy(alpha = 0.15f),
+                            value = "${stats.daysStreak} Days",
+                            label = "Daily Streak",
+                            subtext = "Spiritual consistency"
+                        )
+
+                        // Card 2: Total Time
+                        ModularStatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Filled.Timer,
+                            iconColor = TrendingPurpleAccent,
+                            iconBg = TrendingPurpleAccent.copy(alpha = 0.15f),
+                            value = formattedTotalTime,
+                            label = "Quran Time",
+                            subtext = "${stats.minutesToday}m listened today"
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Card 3: Surahs Explored
+                        ModularStatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.AutoMirrored.Filled.MenuBook,
+                            iconColor = EmeraldAccent,
+                            iconBg = EmeraldAccent.copy(alpha = 0.15f),
+                            value = "${stats.uniqueSurahsCount} / 114",
+                            label = "Surahs Explored",
+                            subtext = "Tanzil verified"
+                        )
+
+                        // Card 4: Reciters Heard
+                        ModularStatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Filled.Mic,
+                            iconColor = CyanAccent,
+                            iconBg = CyanAccent.copy(alpha = 0.15f),
+                            value = "${stats.uniqueRecitersCount} / 242",
+                            label = "Reciters Heard",
+                            subtext = "38 global nations"
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+            }
+
+            // -----------------------------------------------------------------
+            // 4. Khatmah Quran Journey Progress Card
+            // -----------------------------------------------------------------
+            item {
+                KhatmahProgressCard(
+                    surahsCompleted = stats.uniqueSurahsCount,
+                    totalSurahs = 114,
+                    percentage = khatmahPercent
+                )
+                Spacer(modifier = Modifier.height(18.dp))
+            }
+
+            // -----------------------------------------------------------------
+            // 5. My Quran Library & Saved Shortcuts
+            // -----------------------------------------------------------------
+            item {
+                ProfileSectionHeader(title = "My Quran Library", icon = Icons.Filled.Bookmark)
+                ProfileCardContainer {
+                    ProfileLinkRow(
+                        icon = Icons.Filled.Favorite,
+                        iconTint = Color(0xFFF43F5E),
+                        title = "Favorite Verses & Surahs",
+                        subtitle = "Bookmarked ayahs and cherished recitations",
+                        badge = "Saved"
+                    )
+
+                    SubtleDividerLine()
+
+                    ProfileLinkRow(
+                        icon = Icons.Filled.Storage,
+                        iconTint = EmeraldAccent,
+                        title = "Offline Recitations",
+                        subtitle = if (cachedSurahCount == 1) "1 surah cached • ${formatStorageBytes(storageSizeBytes)}" else "$cachedSurahCount surahs cached • ${formatStorageBytes(storageSizeBytes)}",
+                        badge = formatStorageBytes(storageSizeBytes)
+                    )
+
+                    SubtleDividerLine()
+
+                    ProfileLinkRow(
+                        icon = Icons.Filled.GridView,
+                        iconTint = TrendingPurpleAccent,
+                        title = "Custom Playlists",
+                        subtitle = "Morning Adhkar, Tahajjud & Tranquility mixes",
+                        badge = "3 Lists"
+                    )
+                }
+            }
+
+            // -----------------------------------------------------------------
+            // 6. Section: Audio Engine & Streaming Bitrate
+            // -----------------------------------------------------------------
+            item {
+                ProfileSectionHeader(title = "Audio Engine & Bitrate", icon = Icons.Filled.Headphones)
+                ProfileCardContainer {
                     // Bitrate Selector Chips
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -212,7 +411,10 @@ object SettingsScreen : Tab {
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(pillBg)
                                         .border(1.dp, pillBorder, RoundedCornerShape(12.dp))
-                                        .clickable { selectedBitrate = name }
+                                        .clickable {
+                                            selectedBitrate = name
+                                            settings.putString(PREF_BITRATE, name)
+                                        }
                                         .padding(vertical = 10.dp, horizontal = 4.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -239,8 +441,7 @@ object SettingsScreen : Tab {
 
                     SubtleDividerLine()
 
-                    // Audio Engine info row
-                    SettingsValueRow(
+                    ProfileValueRow(
                         icon = Icons.Filled.GraphicEq,
                         title = "Audio Engine",
                         subtitle = "Multiplatform low-latency Core Audio",
@@ -249,32 +450,38 @@ object SettingsScreen : Tab {
 
                     SubtleDividerLine()
 
-                    // Gapless Playback Toggle
-                    SettingsSwitchRow(
+                    ProfileSwitchRow(
                         icon = Icons.Filled.AutoAwesome,
-                        title = "Gapless Ayah Playback",
-                        subtitle = "Smooth zero-latency transition between verses",
+                        title = "Gapless Recitation",
+                        subtitle = "Seamless zero-latency transition between ayahs",
                         checked = gaplessPlayback,
-                        onCheckedChange = { gaplessPlayback = it }
+                        onCheckedChange = {
+                            gaplessPlayback = it
+                            settings.putBoolean(PREF_GAPLESS, it)
+                        }
                     )
 
                     SubtleDividerLine()
 
-                    // Loudness Normalization Toggle
-                    SettingsSwitchRow(
+                    ProfileSwitchRow(
                         icon = Icons.Filled.Headphones,
                         title = "Loudness Normalization",
                         subtitle = "Harmonize volume levels across different reciters",
                         checked = loudnessNormalization,
-                        onCheckedChange = { loudnessNormalization = it }
+                        onCheckedChange = {
+                            loudnessNormalization = it
+                            settings.putBoolean(PREF_LOUDNESS, it)
+                        }
                     )
                 }
             }
 
-            // 4. Section: Default Reciter Preference
+            // -----------------------------------------------------------------
+            // 7. Section: Default Reciter Preference
+            // -----------------------------------------------------------------
             item {
-                SettingsSectionHeader(title = "Reciter Preference", icon = Icons.Filled.Mic)
-                SettingsCardContainer {
+                ProfileSectionHeader(title = "Reciter Preference", icon = Icons.Filled.Mic)
+                ProfileCardContainer {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -348,14 +555,18 @@ object SettingsScreen : Tab {
                                 .background(Color(0xFF0F1115))
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                         ) {
-                            val availableReciters = listOf(
+                            val popularReciters = listOf(
                                 "Mishary Rashid Alafasy",
                                 "Abdul Basit Abdul Samad",
                                 "Mahmoud Khalil Al-Husary",
                                 "Maher Al-Muaiqly",
-                                "Abu Bakr Al-Shatri"
+                                "Ahmad bin Ali Al-Ajmi",
+                                "Abu Bakr Al-Shatri",
+                                "Saad Al-Ghamdi",
+                                "Abdul Rahman Al-Sudais",
+                                "Saud Al-Shuraim"
                             )
-                            availableReciters.forEach { reciter ->
+                            popularReciters.forEach { reciter ->
                                 val isSelected = selectedReciter == reciter
                                 Row(
                                     modifier = Modifier
@@ -363,6 +574,7 @@ object SettingsScreen : Tab {
                                         .clip(RoundedCornerShape(10.dp))
                                         .clickable {
                                             selectedReciter = reciter
+                                            settings.putString(PREF_RECITER, reciter)
                                             isReciterPickerOpen = false
                                         }
                                         .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -387,34 +599,25 @@ object SettingsScreen : Tab {
                             }
                         }
                     }
-
-                    SubtleDividerLine()
-
-                    SettingsValueRow(
-                        icon = Icons.Filled.AutoAwesome,
-                        title = "Playback Speed",
-                        subtitle = "Default ayah recitation tempo",
-                        value = "1.0x (Normal)"
-                    )
                 }
             }
 
-            // 5. Section: Appearance & Themes
+            // -----------------------------------------------------------------
+            // 8. Section: Appearance & Theme
+            // -----------------------------------------------------------------
             item {
-                SettingsSectionHeader(title = "Appearance & Theme", icon = Icons.Filled.Palette)
-                SettingsCardContainer {
-                    // Dark Obsidian Mode Toggle
-                    SettingsSwitchRow(
+                ProfileSectionHeader(title = "Appearance & Theme", icon = Icons.Filled.Palette)
+                ProfileCardContainer {
+                    ProfileSwitchRow(
                         icon = Icons.Filled.DarkMode,
                         title = "Dark Obsidian Mode",
-                        subtitle = "Pitch Black #0B0C0E OLED background",
+                        subtitle = "Pitch Black #07080A OLED theme",
                         checked = darkModeEnabled,
                         onCheckedChange = { darkModeEnabled = it }
                     )
 
                     SubtleDividerLine()
 
-                    // Trending Purple Accent Indicator Row
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -454,7 +657,6 @@ object SettingsScreen : Tab {
                             )
                         }
 
-                        // Glowing Trending Purple Color Indicator Pill
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -490,56 +692,21 @@ object SettingsScreen : Tab {
 
                     SubtleDividerLine()
 
-                    // Palette Preview Swatches
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Theme Palette",
-                            color = TextMutedSecondary,
-                            fontSize = 12.sp
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            val swatches = listOf(
-                                PitchBlackBg,
-                                ObsidianGlassCard,
-                                Color.White,
-                                TrendingPurpleAccent,
-                                ElectricViolet,
-                                NeonLilac
-                            )
-                            swatches.forEach { color ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(18.dp)
-                                        .clip(CircleShape)
-                                        .background(color)
-                                        .border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape)
-                                )
-                            }
-                        }
-                    }
-
-                    SubtleDividerLine()
-
-                    SettingsValueRow(
+                    ProfileValueRow(
                         icon = Icons.Filled.AutoAwesome,
-                        title = "Quranic Calligraphy Script",
+                        title = "Quranic Typography",
                         subtitle = "Medina Mushaf rendering typography",
                         value = "Uthmani Hafs v2"
                     )
                 }
             }
 
-            // 6. Section: Storage & Offline Downloads
+            // -----------------------------------------------------------------
+            // 9. Section: Storage & Offline Downloads
+            // -----------------------------------------------------------------
             item {
-                SettingsSectionHeader(title = "Storage & Offline Downloads", icon = Icons.Filled.Storage)
-                SettingsCardContainer {
-                    // Storage Used Info & Visual Bar
+                ProfileSectionHeader(title = "Storage & Offline Data", icon = Icons.Filled.Storage)
+                ProfileCardContainer {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -585,7 +752,6 @@ object SettingsScreen : Tab {
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Progress Bar: Obsidian Track + Trending Purple Progress Fill
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -595,15 +761,12 @@ object SettingsScreen : Tab {
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth(0.20f)
+                                    .fillMaxWidth(0.25f)
                                     .height(6.dp)
                                     .clip(RoundedCornerShape(3.dp))
                                     .background(
                                         Brush.horizontalGradient(
-                                            listOf(
-                                                TrendingPurpleAccent,
-                                                NeonLilac
-                                            )
+                                            listOf(TrendingPurpleAccent, NeonLilac)
                                         )
                                     )
                             )
@@ -612,18 +775,19 @@ object SettingsScreen : Tab {
 
                     SubtleDividerLine()
 
-                    // WiFi Only Toggle
-                    SettingsSwitchRow(
+                    ProfileSwitchRow(
                         icon = Icons.Filled.Wifi,
                         title = "Download via Wi-Fi Only",
-                        subtitle = "Prevent mobile cellular data usage for recitations",
+                        subtitle = "Prevent mobile cellular data consumption",
                         checked = wifiOnlyDownloads,
-                        onCheckedChange = { wifiOnlyDownloads = it }
+                        onCheckedChange = {
+                            wifiOnlyDownloads = it
+                            settings.putBoolean(PREF_WIFI_ONLY, it)
+                        }
                     )
 
                     SubtleDividerLine()
 
-                    // Clear Offline Cache Row
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -683,66 +847,76 @@ object SettingsScreen : Tab {
                 }
             }
 
-            // 7. Section: Notifications & Reminders
+            // -----------------------------------------------------------------
+            // 10. Section: Notifications & Spiritual Reminders
+            // -----------------------------------------------------------------
             item {
-                SettingsSectionHeader(title = "Notifications & Reminders", icon = Icons.Filled.Notifications)
-                SettingsCardContainer {
-                    // Daily Dhikr Reminder Toggle
-                    SettingsSwitchRow(
+                ProfileSectionHeader(title = "Spiritual Reminders", icon = Icons.Filled.Notifications)
+                ProfileCardContainer {
+                    ProfileSwitchRow(
                         icon = Icons.Filled.Notifications,
                         title = "Daily Dhikr Reminder",
                         subtitle = "Morning & Evening Adhkar spiritual alerts",
                         checked = dailyDhikrReminder,
-                        onCheckedChange = { dailyDhikrReminder = it }
+                        onCheckedChange = {
+                            dailyDhikrReminder = it
+                            settings.putBoolean(PREF_DHIKR_ALERT, it)
+                        }
                     )
 
                     SubtleDividerLine()
 
-                    // Friday Kahf Alert Toggle
-                    SettingsSwitchRow(
+                    ProfileSwitchRow(
                         icon = Icons.Filled.AutoAwesome,
                         title = "Friday Surah Al-Kahf Alert",
-                        subtitle = "Reminder every Friday morning at 09:00 AM",
+                        subtitle = "Gentle reminder every Friday morning",
                         checked = fridayKahfAlert,
-                        onCheckedChange = { fridayKahfAlert = it }
+                        onCheckedChange = {
+                            fridayKahfAlert = it
+                            settings.putBoolean(PREF_FRIDAY_ALERT, it)
+                        }
                     )
 
                     SubtleDividerLine()
 
-                    // Prayer Time Recitation Prompt Toggle
-                    SettingsSwitchRow(
+                    ProfileSwitchRow(
                         icon = Icons.Filled.CloudDone,
-                        title = "Prayer Recitation Suggestions",
+                        title = "Prayer Recitation Alerts",
                         subtitle = "Curated verses following Salah prayers",
                         checked = prayerRecitationAlert,
-                        onCheckedChange = { prayerRecitationAlert = it }
+                        onCheckedChange = {
+                            prayerRecitationAlert = it
+                            settings.putBoolean(PREF_PRAYER_ALERT, it)
+                        }
                     )
                 }
             }
 
-            // 8. Section: About Quranify
+            // -----------------------------------------------------------------
+            // 11. Section: About Quranify
+            // -----------------------------------------------------------------
             item {
-                SettingsSectionHeader(title = "About Quranify", icon = Icons.Filled.Info)
-                SettingsCardContainer {
-                    SettingsValueRow(
+                ProfileSectionHeader(title = "About Quranify", icon = Icons.Filled.Info)
+                ProfileCardContainer {
+                    ProfileValueRow(
                         icon = Icons.Filled.Info,
-                        title = "Version",
+                        title = "App Version",
                         subtitle = "Production release channel",
                         value = "v1.0.0 (Build 2026.1)"
                     )
 
                     SubtleDividerLine()
 
-                    SettingsValueRow(
+                    ProfileValueRow(
                         icon = Icons.Filled.AutoAwesome,
-                        title = "Attributions & Sources",
-                        subtitle = "Quran.com, EveryAyah Audio & Tanzil Project",
+                        title = "Audio Sources",
+                        subtitle = "MP3Quran (242 reciters), Tanzil & EveryAyah",
                         value = "Verified"
                     )
 
                     SubtleDividerLine()
 
-                    SettingsValueRow(
+                    ProfileValueRow(
                         icon = Icons.Filled.Favorite,
                         title = "Open Source License",
                         subtitle = "Apache 2.0 • 100% Free & Ad-Free forever",
@@ -751,9 +925,11 @@ object SettingsScreen : Tab {
                 }
             }
 
-            // 9. Spiritual Footer
+            // -----------------------------------------------------------------
+            // 12. Spiritual Footer
+            // -----------------------------------------------------------------
             item {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(28.dp))
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -769,57 +945,164 @@ object SettingsScreen : Tab {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Quranify • Modern Audio Experience",
-                        color = TrendingPurpleAccent.copy(alpha = 0.6f),
+                        color = TrendingPurpleAccent.copy(alpha = 0.7f),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
             }
         }
+
+        // ---------------------------------------------------------------------
+        // Edit Profile Dialog
+        // ---------------------------------------------------------------------
+        if (showEditDialog) {
+            var editingName by remember { mutableStateOf(userName) }
+            var editingBio by remember { mutableStateOf(userBio) }
+
+            AlertDialog(
+                onDismissRequest = { showEditDialog = false },
+                title = {
+                    Text(
+                        text = "Edit Profile",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Text(
+                            text = "Display Name",
+                            color = TextMutedSecondary,
+                            fontSize = 12.sp
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF171A21))
+                                .border(1.dp, CardBorderSubtle, RoundedCornerShape(12.dp))
+                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                        ) {
+                            BasicTextField(
+                                value = editingName,
+                                onValueChange = { editingName = it },
+                                singleLine = true,
+                                textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        Text(
+                            text = "Spiritual Bio / Intention",
+                            color = TextMutedSecondary,
+                            fontSize = 12.sp
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF171A21))
+                                .border(1.dp, CardBorderSubtle, RoundedCornerShape(12.dp))
+                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                        ) {
+                            BasicTextField(
+                                value = editingBio,
+                                onValueChange = { editingBio = it },
+                                maxLines = 3,
+                                textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            if (editingName.isNotBlank()) {
+                                userName = editingName.trim()
+                                settings.putString(PREF_USER_NAME, userName)
+                            }
+                            if (editingBio.isNotBlank()) {
+                                userBio = editingBio.trim()
+                                settings.putString(PREF_USER_BIO, userBio)
+                            }
+                            showEditDialog = false
+                        }
+                    ) {
+                        Text(
+                            text = "Save",
+                            color = TrendingPurpleAccent,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showEditDialog = false }) {
+                        Text(
+                            text = "Cancel",
+                            color = TextMutedSecondary
+                        )
+                    }
+                },
+                containerColor = Color(0xFF161920),
+                shape = RoundedCornerShape(20.dp)
+            )
+        }
     }
 }
 
 // -----------------------------------------------------------------------------
-// Component Primitives
+// Component Primitives & Modular Cards
 // -----------------------------------------------------------------------------
 
 @Composable
-private fun ProfileHeaderCard() {
+private fun ProfileHeroCard(
+    userName: String,
+    userBio: String,
+    onEditClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(26.dp))
             .background(ObsidianGlassCard)
             .border(
                 BorderStroke(
                     width = 1.dp,
                     brush = Brush.verticalGradient(
                         listOf(
-                            PurpleGlowBorder,
+                            Color(0x33A855F7),
                             CardBorderSubtle
                         )
                     )
                 ),
-                shape = RoundedCornerShape(22.dp)
+                shape = RoundedCornerShape(26.dp)
             )
-            .padding(18.dp)
+            .padding(20.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar with Glowing Trending Purple Rim
+            // Chunky / Oversized Avatar with Glowing Sweep Gradient Rim
             Box(
                 modifier = Modifier
-                    .size(62.dp)
+                    .size(80.dp)
                     .clip(CircleShape)
                     .border(
                         BorderStroke(
-                            width = 2.5.dp,
+                            width = 3.dp,
                             brush = Brush.sweepGradient(
                                 listOf(
                                     TrendingPurpleAccent,
                                     NeonLilac,
+                                    EmeraldAccent,
+                                    AmberGoldAccent,
                                     ElectricViolet,
                                     TrendingPurpleAccent
                                 )
@@ -827,7 +1110,7 @@ private fun ProfileHeaderCard() {
                         ),
                         shape = CircleShape
                     )
-                    .padding(3.dp),
+                    .padding(4.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -837,23 +1120,42 @@ private fun ProfileHeaderCard() {
                         .background(
                             Brush.radialGradient(
                                 listOf(
-                                    Color(0xFF2B1842),
-                                    Color(0xFF14111C)
+                                    Color(0xFF2C1A4A),
+                                    Color(0xFF120E1C)
                                 )
                             )
                         ),
                     contentAlignment = Alignment.Center
                 ) {
+                    Text(
+                        text = userName.firstOrNull()?.toString()?.uppercase() ?: "A",
+                        color = TrendingPurpleAccent,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+
+                // Edit badge floating at bottom right of avatar
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(TrendingPurpleAccent)
+                        .border(2.dp, PitchBlackBg, CircleShape)
+                        .clickable { onEditClick() },
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
-                        imageVector = Icons.Filled.Person,
-                        contentDescription = "User Avatar",
-                        tint = TrendingPurpleAccent,
-                        modifier = Modifier.size(30.dp)
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = "Edit Profile",
+                        tint = Color.White,
+                        modifier = Modifier.size(12.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(18.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(
@@ -861,45 +1163,331 @@ private fun ProfileHeaderCard() {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Believer Account",
+                        text = userName,
                         color = TextWhitePrimary,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    // Cloud Synced Badge
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = userBio,
+                    color = TextMutedSecondary,
+                    fontSize = 12.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 16.sp
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // Synced Badge
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(TrendingPurpleAccent.copy(alpha = 0.16f))
                             .border(0.5.dp, TrendingPurpleAccent.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 7.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "SYNCED",
+                            text = "PRO MEMBER",
                             color = TrendingPurpleAccent,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.8.sp
                         )
                     }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(EmeraldAccent.copy(alpha = 0.16f))
+                            .border(0.5.dp, EmeraldAccent.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "CLOUD SYNCED",
+                            color = EmeraldAccent,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp
+                        )
+                    }
                 }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "Personalized audio, bookmarks & Khatma",
-                    color = TextMutedSecondary,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
             }
         }
     }
 }
 
 @Composable
-private fun SettingsSectionHeader(
+private fun ModularStatCard(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    iconColor: Color,
+    iconBg: Color,
+    value: String,
+    label: String,
+    subtext: String
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(22.dp))
+            .background(ObsidianGlassCard)
+            .border(1.dp, CardBorderSubtle, RoundedCornerShape(22.dp))
+            .padding(16.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(iconBg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = value,
+                color = TextWhitePrimary,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = label,
+                color = TextWhitePrimary.copy(alpha = 0.9f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(1.dp))
+
+            Text(
+                text = subtext,
+                color = TextMutedSecondary,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun KhatmahProgressCard(
+    surahsCompleted: Int,
+    totalSurahs: Int,
+    percentage: Int
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(ObsidianGlassCard)
+            .border(1.dp, CardBorderSubtle, RoundedCornerShape(24.dp))
+            .padding(18.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(EmeraldAccent.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                            contentDescription = null,
+                            tint = EmeraldAccent,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Current Khatmah",
+                            color = TextWhitePrimary,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "$surahsCompleted of $totalSurahs Surahs listened",
+                            color = TextMutedSecondary,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(EmeraldAccent.copy(alpha = 0.15f))
+                        .border(0.5.dp, EmeraldAccent.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "$percentage%",
+                        color = EmeraldAccent,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Progress bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color(0xFF20242B))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(percentage.toFloat() / 100f)
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(TrendingPurpleAccent, EmeraldAccent)
+                            )
+                        )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "« خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ »",
+                color = EmeraldAccent.copy(alpha = 0.9f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "\"The best of you are those who learn the Quran and teach it.\"",
+                color = TextMutedSecondary,
+                fontSize = 11.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfileLinkRow(
+    icon: ImageVector,
+    iconTint: Color,
+    title: String,
+    subtitle: String,
+    badge: String = ""
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(iconTint.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(14.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = TextWhitePrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                color = TextMutedSecondary,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        if (badge.isNotEmpty()) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFF1E2128))
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = badge,
+                    color = TextMutedSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(6.dp))
+
+        Icon(
+            imageVector = Icons.Filled.ChevronRight,
+            contentDescription = null,
+            tint = TextMutedSecondary.copy(alpha = 0.6f),
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
+@Composable
+private fun ProfileSectionHeader(
     title: String,
     icon: ImageVector? = null
 ) {
@@ -929,7 +1517,7 @@ private fun SettingsSectionHeader(
 }
 
 @Composable
-private fun SettingsCardContainer(
+private fun ProfileCardContainer(
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
 ) {
     Column(
@@ -947,7 +1535,7 @@ private fun SettingsCardContainer(
 }
 
 @Composable
-private fun SettingsSwitchRow(
+private fun ProfileSwitchRow(
     icon: ImageVector,
     title: String,
     subtitle: String,
@@ -1006,7 +1594,6 @@ private fun SettingsSwitchRow(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Trending Purple switch: active track Trending Purple, thumb pure white
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
@@ -1023,7 +1610,7 @@ private fun SettingsSwitchRow(
 }
 
 @Composable
-private fun SettingsValueRow(
+private fun ProfileValueRow(
     icon: ImageVector,
     title: String,
     subtitle: String,
@@ -1091,7 +1678,7 @@ private fun SettingsValueRow(
     }
 }
 
-// Storage size formatting: B / KB / MB with one decimal (multiplatform-safe, no String.format)
+// Storage size formatting: B / KB / MB with one decimal
 private fun formatStorageBytes(bytes: Long): String {
     if (bytes < 1024) return "$bytes B"
     val kb = bytes / 1024.0

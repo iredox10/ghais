@@ -22,7 +22,7 @@ import com.quranify.ui.screens.playlists.PlaylistDetailsScreen
 import com.quranify.ui.screens.reciters.RecitersScreen
 import com.quranify.ui.screens.reciters.ReciterProfileScreen
 import com.quranify.ui.screens.search.SearchScreen
-import com.quranify.ui.screens.settings.SettingsScreen
+import com.quranify.ui.screens.profile.ProfileScreen
 
 private val PureBlack = Color(0xFF000000)
 
@@ -53,7 +53,7 @@ object HomeScreen : Tab {
             ) {
                 item {
                     HomeTopBar(
-                        onPremiumClick = { tabNavigator?.let { it.current = SettingsScreen } },
+                        onPremiumClick = { tabNavigator?.let { it.current = ProfileScreen } },
                         onStatsClick = { rootNavigator?.push(SearchScreen()) }
                     )
                 }
