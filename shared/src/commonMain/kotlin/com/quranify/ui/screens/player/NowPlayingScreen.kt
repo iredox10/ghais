@@ -63,6 +63,7 @@ import coil3.compose.AsyncImage
 import com.quranify.data.seed.StitchAssets
 import com.quranify.player.AmbientMixer
 import com.quranify.player.AudioEngine
+import com.quranify.player.displayName
 import com.quranify.player.videoKeys
 import com.quranify.ui.screens.player.components.NowPlayingLyricsCard
 import com.quranify.ui.screens.player.components.NowPlayingVolumePanel
@@ -216,25 +217,35 @@ class NowPlayingScreen : Screen {
                 Spacer(modifier = Modifier.height(18.dp))
 
                 // Background sound pill
+                val ambientButtonText = selectedAmbientType?.displayName() ?: "Background sound"
+                val isAmbientActive = selectedAmbientType != null
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(50))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(50))
+                        .background(
+                            if (isAmbientActive) Color(0xFFD4A853).copy(alpha = 0.14f)
+                            else Color.White.copy(alpha = 0.08f)
+                        )
+                        .border(
+                            1.dp,
+                            if (isAmbientActive) Color(0xFFD4A853).copy(alpha = 0.5f)
+                            else Color.White.copy(alpha = 0.14f),
+                            RoundedCornerShape(50)
+                        )
                         .clickable { showAmbient = true }
                         .padding(horizontal = 20.dp, vertical = 11.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.ExpandMore,
-                        contentDescription = "Background sound",
-                        tint = Color.White,
+                        contentDescription = ambientButtonText,
+                        tint = if (isAmbientActive) Color(0xFFD4A853) else Color.White,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Background sound",
-                        color = Color.White,
+                        text = ambientButtonText,
+                        color = if (isAmbientActive) Color(0xFFD4A853) else Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium
                     )
