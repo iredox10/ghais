@@ -74,8 +74,13 @@ class QuranPlaybackService : MediaSessionService() {
 
     private val sessionListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
-            if (isPlaying && AudioEngine.currentTrack.value == null) {
+            if (isPlaying && !AudioEngine.isPlaying.value) {
                 AudioEngine.resume()
+            } else if (!isPlaying && AudioEngine.isPlaying.value) {
+                val state = player?.playbackState
+                if (state != Player.STATE_BUFFERING) {
+                    AudioEngine.pause()
+                }
             }
         }
     }
