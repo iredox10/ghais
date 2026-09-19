@@ -35,6 +35,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.quranify.data.repository.FollowStore
 import com.quranify.data.repository.QuranDataRepository
+import com.quranify.data.repository.resolveFollowedQari
 
 private val PureBlack = Color(0xFF000000)
 private val MutedGrey = Color(0xFF9A9AA0)
@@ -49,15 +50,13 @@ object FollowedRecitersScreen : Screen {
         val followedSlugs by FollowStore.followedSlugs.collectAsState()
 
         val reciters = remember(followedSlugs) {
-            followedSlugs
-                .map { slug -> QuranDataRepository.getReciterBySlug(slug) }
-                .distinctBy { it.slug }
+            followedSlugs.mapNotNull { slug -> resolveFollowedQari(slug) }
         }
         val filtered = remember(reciters, searchQuery) {
             if (searchQuery.isBlank()) reciters
             else reciters.filter {
-                it.nameEn.contains(searchQuery, ignoreCase = true) ||
-                    it.nameAr.contains(searchQuery, ignoreCase = true)
+                it.reciter.nameEn.contains(searchQuery, ignoreCase = true) ||
+                    it.reciter.nameAr.contains(searchQuery, ignoreCase = true)
             }
         }
 
@@ -179,8 +178,9 @@ object FollowedRecitersScreen : Screen {
                     ) {
                         items(
                             items = filtered,
-                            key = { it.slug }
-                        ) { reciter ->
+                            key = { it.storedSlug }
+                        ) { qari ->
+                            val reciter = qari.reciter
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
@@ -196,7 +196,7 @@ object FollowedRecitersScreen : Screen {
                                     .clickable { navigator.push(ReciterProfileScreen(reciter.slug)) }
                                     .padding(12.dp)
                             ) {
-                                val photo = photoForSlug(reciter.slug)
+                                val photo = qari.photoUrl ?: photoForSlug(reciter.slug)
                                 if (photo != null) {
                                     AsyncImage(
                                         model = photo,
@@ -266,7 +266,7 @@ object FollowedRecitersScreen : Screen {
                                             Color.White.copy(alpha = 0.15f),
                                             CircleShape
                                         )
-                                        .clickable { FollowStore.toggle(reciter.slug) },
+                                        .clickable { FollowStore.toggle(qari.storedSlug) },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(

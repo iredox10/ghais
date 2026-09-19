@@ -43,8 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.quranify.data.repository.FollowStore
-import com.quranify.data.seed.QuranDataRepository
-import com.quranify.data.seed.StitchAssets
+import com.quranify.data.repository.resolveFollowedQari
 
 private val DarkCard = Color(0xFF1C1C1E)
 private val MutedGrey = Color(0xFF9A9AA0)
@@ -54,16 +53,8 @@ fun HomeFollowedRow(onReciter: (String) -> Unit) {
     val followedSlugs by FollowStore.followedSlugs.collectAsState()
     val resolved = remember(followedSlugs) {
         followedSlugs.mapNotNull { slug ->
-            val verified = StitchAssets.VerifiedReciters.find { it.slug.equals(slug, ignoreCase = true) }
-            if (verified != null) {
-                Triple(slug, verified.name, verified.photoUrl)
-            } else {
-                val detailed = QuranDataRepository.getReciterBySlug(slug)
-                if (detailed != null) {
-                    Triple(slug, detailed.nameEn, detailed.photoUrl)
-                } else {
-                    null
-                }
+            resolveFollowedQari(slug)?.let { qari ->
+                Triple(qari.reciter.slug, qari.reciter.nameEn, qari.photoUrl)
             }
         }
     }
