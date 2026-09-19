@@ -15,7 +15,8 @@ data class CurrentTrackInfo(
     val track: TrackItem?,
     val progressMs: Long,
     val durationMs: Long,
-    val isPlaying: Boolean
+    val isPlaying: Boolean,
+    val queueIndex: Int = -1
 )
 
 data class PlaybackSettings(

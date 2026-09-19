@@ -30,6 +30,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,6 +60,17 @@ fun QueueSheet(
     val textPrimaryColor = Color(0xFFF0EDE6)
     val textSecondaryColor = Color(0xFF8A8A96)
 
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    fun animateDismiss() {
+        coroutineScope.launch {
+            sheetState.hide()
+        }.invokeOnCompletion {
+            if (!sheetState.isVisible) {
+                onDismiss()
+            }
+        }
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -75,10 +87,7 @@ fun QueueSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                Column {
                     Text(
                         text = "Up Next",
                         color = textPrimaryColor,
@@ -86,22 +95,36 @@ fun QueueSheet(
                         fontWeight = FontWeight.Bold
                     )
                     if (queue.isNotEmpty()) {
+                        val posText = if (currentIndex in queue.indices) {
+                            "Track ${currentIndex + 1} of ${queue.size}"
+                        } else {
+                            "${queue.size} tracks"
+                        }
                         Text(
-                            text = "(${queue.size})",
-                            color = textSecondaryColor,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Normal
+                            text = posText,
+                            color = primaryColor,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
-                TextButton(
-                    onClick = { AudioEngine.clear() },
-                    enabled = queue.isNotEmpty()
-                ) {
-                    Text(
-                        text = "Clear Queue",
-                        color = if (queue.isNotEmpty()) primaryColor else textSecondaryColor.copy(alpha = 0.4f)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(
+                        onClick = { AudioEngine.clear() },
+                        enabled = queue.isNotEmpty()
+                    ) {
+                        Text(
+                            text = "Clear Queue",
+                            color = if (queue.isNotEmpty()) primaryColor else textSecondaryColor.copy(alpha = 0.4f)
+                        )
+                    }
+                    IconButton(onClick = { animateDismiss() }) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "Close",
+                            tint = textSecondaryColor
+                        )
+                    }
                 }
             }
             
@@ -171,12 +194,26 @@ fun QueueSheet(
                                 .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = if (isActive) Icons.Default.GraphicEq else Icons.AutoMirrored.Filled.List,
-                                contentDescription = if (isActive) "Currently Playing" else "Queue Item",
-                                tint = if (isActive) primaryColor else textSecondaryColor,
-                                modifier = Modifier.size(20.dp)
-                            )
+                            Box(
+                                modifier = Modifier.size(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isActive) {
+                                    Icon(
+                                        imageVector = Icons.Default.GraphicEq,
+                                        contentDescription = "Currently Playing",
+                                        tint = primaryColor,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                } else {
+                                    Text(
+                                        text = "${index + 1}",
+                                        color = textSecondaryColor,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
                             Spacer(modifier = Modifier.width(14.dp))
                             Column(
                                 modifier = Modifier.weight(1f)

@@ -51,6 +51,9 @@ object AudioEngine {
     private val _queue = MutableStateFlow<List<TrackItem>>(emptyList())
     val queue: StateFlow<List<TrackItem>> = _queue.asStateFlow()
 
+    private val _currentIndex = MutableStateFlow(-1)
+    val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
+
     init {
         PlayerBridge.setOnTrackEndListener { onBridgeTrackEnd() }
         scope.launch {
@@ -104,7 +107,7 @@ object AudioEngine {
                     val failed = _currentTrack.value
                     if (failed != null && consecutiveErrors < maxAutoSkipErrors) {
                         consecutiveErrors++
-                        val nextTrack = queueManager.playNext()
+                        val nextTrack = queueManager.playNext(forceAdvance = true)
                         if (nextTrack != null) {
                             startPlayback(nextTrack)
                         } else {
@@ -145,9 +148,38 @@ object AudioEngine {
     }
 
     fun playQueue(tracks: List<TrackItem>, startIndex: Int = 0) {
+        if (tracks.isEmpty()) {
+            clear()
+            return
+        }
         queueManager.setQueue(tracks, startIndex)
         _queue.value = queueManager.queue
-        queueManager.currentTrack?.let { startPlayback(it) }
+        val track = queueManager.currentTrack
+        if (track != null) {
+            startPlayback(track)
+        } else {
+            stopPlayback()
+        }
+    }
+
+    fun addToQueue(track: TrackItem) {
+        queueManager.addToQueue(track)
+        _queue.value = queueManager.queue
+        _currentIndex.value = queueManager.currentIndex
+        if (_currentTrack.value == null && _playbackState.value.status == PlaybackStatus.IDLE) {
+            queueManager.currentTrack?.let { startPlayback(it) }
+        }
+    }
+
+    fun addToQueue(tracks: List<TrackItem>) {
+        if (tracks.isEmpty()) return
+        val wasEmpty = queueManager.queue.isEmpty()
+        queueManager.addAllToQueue(tracks)
+        _queue.value = queueManager.queue
+        _currentIndex.value = queueManager.currentIndex
+        if (wasEmpty && _currentTrack.value == null && _playbackState.value.status == PlaybackStatus.IDLE) {
+            queueManager.currentTrack?.let { startPlayback(it) }
+        }
     }
 
     fun togglePlayPause() {
@@ -232,13 +264,14 @@ object AudioEngine {
     fun toggleShuffle() {
         queueManager.toggleShuffle()
         _queue.value = queueManager.queue
+        _currentIndex.value = queueManager.currentIndex
         _playbackState.update { state ->
             state.copy(settings = state.settings.copy(shuffle = queueManager.isShuffle))
         }
     }
 
     fun next() {
-        val nextTrack = queueManager.playNext()
+        val nextTrack = queueManager.playNext(forceAdvance = true)
         if (nextTrack != null) {
             startPlayback(nextTrack)
         } else {
@@ -256,11 +289,11 @@ object AudioEngine {
             seekTo(0L)
             return
         }
-        val prevTrack = queueManager.playPrevious()
+        val prevTrack = queueManager.playPrevious(forceAdvance = true)
         if (prevTrack != null) {
             startPlayback(prevTrack)
         } else {
-            stopPlayback()
+            seekTo(0L)
         }
     }
 
@@ -269,31 +302,34 @@ object AudioEngine {
     fun skipPrevious() = previous()
 
     fun skipToIndex(index: Int) {
-        val tracks = queueManager.queue
-        if (index in tracks.indices) {
-            playQueue(tracks, startIndex = index)
+        val track = queueManager.skipToIndex(index)
+        if (track != null) {
+            startPlayback(track)
         }
     }
 
     fun removeFromQueue(index: Int) {
-        val tracks = queueManager.queue.toMutableList()
-        if (index in tracks.indices) {
-            val removingCurrent = (index == queueManager.currentIndex)
-            tracks.removeAt(index)
-            if (tracks.isEmpty()) {
-                clear()
-            } else if (removingCurrent) {
-                val nextIndex = index.coerceAtMost(tracks.size - 1)
-                playQueue(tracks, startIndex = nextIndex)
+        if (index !in queueManager.queue.indices) return
+        val wasCurrent = (index == queueManager.currentIndex)
+        val nextTrack = queueManager.removeAt(index)
+        _queue.value = queueManager.queue
+        _currentIndex.value = queueManager.currentIndex
+
+        if (queueManager.queue.isEmpty()) {
+            clear()
+        } else if (wasCurrent) {
+            if (nextTrack != null) {
+                startPlayback(nextTrack)
             } else {
-                val newCurrentIndex = if (index < queueManager.currentIndex) {
-                    queueManager.currentIndex - 1
-                } else {
-                    queueManager.currentIndex
-                }
-                queueManager.setQueue(tracks, startIndex = newCurrentIndex)
-                _queue.value = queueManager.queue
+                stopPlayback()
             }
+        }
+    }
+
+    fun moveInQueue(fromIndex: Int, toIndex: Int) {
+        if (queueManager.move(fromIndex, toIndex)) {
+            _queue.value = queueManager.queue
+            _currentIndex.value = queueManager.currentIndex
         }
     }
 
@@ -301,6 +337,7 @@ object AudioEngine {
         stopPlayback()
         queueManager.clear()
         _queue.value = emptyList()
+        _currentIndex.value = -1
     }
 
     fun stop() {
@@ -310,6 +347,7 @@ object AudioEngine {
     private fun startPlayback(track: TrackItem) {
         progressJob?.cancel()
         _currentTrack.value = track
+        _currentIndex.value = queueManager.currentIndex
         _isPlaying.value = true
         _currentPositionMs.value = 0L
         _progress.value = 0f
@@ -322,7 +360,8 @@ object AudioEngine {
                     track = track,
                     progressMs = 0L,
                     durationMs = initialDuration,
-                    isPlaying = true
+                    isPlaying = true,
+                    queueIndex = queueManager.currentIndex
                 ),
                 settings = state.settings.copy(
                     repeatMode = queueManager.repeatMode,
@@ -342,6 +381,7 @@ object AudioEngine {
         PlayerBridge.stop()
         progressJob?.cancel()
         _currentTrack.value = null
+        _currentIndex.value = -1
         _isPlaying.value = false
         _currentPositionMs.value = 0L
         _progress.value = 0f
@@ -349,7 +389,13 @@ object AudioEngine {
         _playbackState.update { state ->
             state.copy(
                 status = PlaybackStatus.IDLE,
-                currentTrackInfo = state.currentTrackInfo.copy(track = null, progressMs = 0L, durationMs = 0L, isPlaying = false)
+                currentTrackInfo = state.currentTrackInfo.copy(
+                    track = null,
+                    progressMs = 0L,
+                    durationMs = 0L,
+                    isPlaying = false,
+                    queueIndex = -1
+                )
             )
         }
     }
@@ -363,7 +409,7 @@ object AudioEngine {
         consecutiveErrors = 0
         SleepTimer.onAyahEnded()
         val current = _currentTrack.value
-        val nextTrack = queueManager.playNext()
+        val nextTrack = queueManager.playNext(forceAdvance = false)
         if (nextTrack != null) {
             if (current != null && nextTrack.surahId != current.surahId) SleepTimer.onSurahEnded()
             startPlayback(nextTrack)
