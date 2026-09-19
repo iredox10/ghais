@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -53,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -541,16 +543,31 @@ private fun ProfileHeroCard(
                 ),
                 shape = RoundedCornerShape(26.dp)
             )
-            .padding(20.dp)
+            .padding(vertical = 26.dp, horizontal = 20.dp)
     ) {
-        Row(
+        // Soft top glow for the glassmorphic feel
+        Box(
+            modifier = Modifier
+                .size(240.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = (-120).dp)
+                .background(
+                    Brush.radialGradient(
+                        listOf(
+                            LinkBlue.copy(alpha = 0.22f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Chunky / Oversized Avatar with Glowing Sweep Gradient Rim
             Box(
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(112.dp)
                     .clip(CircleShape)
                     .border(
                         BorderStroke(
@@ -588,98 +605,101 @@ private fun ProfileHeroCard(
                     Text(
                         text = userName.firstOrNull()?.toString()?.uppercase() ?: "A",
                         color = LinkBlue,
-                        fontSize = 32.sp,
+                        fontSize = 44.sp,
                         fontWeight = FontWeight.ExtraBold
-                    )
-                }
-
-                // Edit badge floating at bottom right of avatar
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(LinkBlue)
-                        .border(2.dp, PureBlackBg, CircleShape)
-                        .clickable { onEditClick() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Edit,
-                        contentDescription = "Edit Profile",
-                        tint = Color.White,
-                        modifier = Modifier.size(12.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(18.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Text(
+                text = userName,
+                color = TextWhitePrimary,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = userBio,
+                color = TextMuted,
+                fontSize = 13.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 17.sp,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Synced Badge
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(LinkBlue.copy(alpha = 0.16f))
+                        .border(0.5.dp, LinkBlue.copy(alpha = 0.35f), RoundedCornerShape(50.dp))
+                        .padding(horizontal = 7.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = userName,
-                        color = TextWhitePrimary,
-                        fontSize = 18.sp,
+                        text = "PRO MEMBER",
+                        color = LinkBlue,
+                        fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        letterSpacing = 0.8.sp
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = userBio,
-                    color = TextMuted,
-                    fontSize = 12.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 16.sp
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(Emerald.copy(alpha = 0.16f))
+                        .border(0.5.dp, Emerald.copy(alpha = 0.35f), RoundedCornerShape(50.dp))
+                        .padding(horizontal = 7.dp, vertical = 2.dp)
                 ) {
-                    // Synced Badge
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50.dp))
-                            .background(LinkBlue.copy(alpha = 0.16f))
-                            .border(0.5.dp, LinkBlue.copy(alpha = 0.35f), RoundedCornerShape(50.dp))
-                            .padding(horizontal = 7.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "PRO MEMBER",
-                            color = LinkBlue,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.8.sp
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50.dp))
-                            .background(Emerald.copy(alpha = 0.16f))
-                            .border(0.5.dp, Emerald.copy(alpha = 0.35f), RoundedCornerShape(50.dp))
-                            .padding(horizontal = 7.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "CLOUD SYNCED",
-                            color = Emerald,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.8.sp
-                        )
-                    }
+                    Text(
+                        text = "CLOUD SYNCED",
+                        color = Emerald,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp
+                    )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Edit Profile pill (reference-style action button)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(LinkBlue)
+                    .clickable { onEditClick() }
+                    .padding(horizontal = 26.dp, vertical = 12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Edit,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "Edit Profile",
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
