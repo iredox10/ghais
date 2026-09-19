@@ -32,10 +32,12 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
-import com.quranify.data.repository.PlayHistoryStore
+import com.quranify.data.repository.UserUsageRepository
 import com.quranify.data.repository.resolveFollowedQari
 import com.quranify.ui.screens.reciters.ReciterProfileScreen
 import kotlin.time.Clock
+
+private const val HISTORY_WINDOW_MS = 30L * 24 * 60 * 60 * 1000
 
 private val PureBlack = Color(0xFF000000)
 private val MutedGrey = Color(0xFF9A9AA0)
@@ -51,6 +53,7 @@ private data class HistoryQariGroup(
 )
 
 private fun relativeTime(timestampMs: Long): String {
+    if (timestampMs <= 0L) return "recently"
     val nowMs = Clock.System.now().toEpochMilliseconds()
     val diffMs = (nowMs - timestampMs).coerceAtLeast(0L)
     val minutes = diffMs / 60_000L
@@ -67,19 +70,23 @@ object HistoryScreen : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         var searchQuery by remember { mutableStateOf("") }
-        val entries by PlayHistoryStore.entries.collectAsState()
+        val history by UserUsageRepository.history.collectAsState()
 
-        val groups = remember(entries) {
-            entries.groupBy { it.reciterSlug }
+        val groups = remember(history) {
+            val cutoff = Clock.System.now().toEpochMilliseconds() - HISTORY_WINDOW_MS
+            history.filter { it.lastPlayedTimestampMs == 0L || it.lastPlayedTimestampMs >= cutoff }
+                .groupBy { it.reciterSlug }
                 .mapNotNull { (_, perReciter) ->
                     if (perReciter.isEmpty()) return@mapNotNull null
-                    val latest = perReciter.maxByOrNull { it.timestampMs } ?: return@mapNotNull null
+                    val latest = perReciter.maxByOrNull { it.lastPlayedTimestampMs } ?: return@mapNotNull null
+                    val resolvedName = resolveFollowedQari(latest.reciterSlug)?.reciter?.nameEn
                     HistoryQariGroup(
                         slug = latest.reciterSlug,
-                        displayName = latest.reciterName,
-                        lastPlayedMs = perReciter.maxOf { it.timestampMs },
+                        displayName = resolvedName
+                            ?: latest.subtitle.substringBefore("•").trim().ifEmpty { latest.reciterSlug },
+                        lastPlayedMs = perReciter.maxOf { it.lastPlayedTimestampMs },
                         playsCount = perReciter.size,
-                        lastSurahName = latest.surahNameEn,
+                        lastSurahName = latest.title,
                     )
                 }
                 .sortedByDescending { it.lastPlayedMs }

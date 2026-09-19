@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -39,9 +40,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.quranify.data.repository.HistoryEntry
-import com.quranify.data.repository.PlayHistoryStore
-import com.quranify.data.repository.resolveFollowedQari
+import com.quranify.data.repository.UserUsageRepository
+import com.quranify.data.seed.JumpBackInItem
 import com.quranify.player.AudioEngine
 import com.quranify.ui.theme.QuranifyColors
 
@@ -49,16 +49,12 @@ private val DarkCard = Color(0xFF141418)
 private val MutedGrey = Color(0xFF9A9AA0)
 
 @Composable
-fun HomeContinueListeningRow(onPlay: (HistoryEntry) -> Unit) {
-    val entries by PlayHistoryStore.entries.collectAsState()
+fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
+    val history by UserUsageRepository.history.collectAsState()
     val currentTrack by AudioEngine.currentTrack.collectAsState()
     val isEnginePlaying by AudioEngine.isPlaying.collectAsState()
 
-    val recent = remember(entries) {
-        entries.sortedByDescending { it.timestampMs }
-            .distinctBy { it.reciterSlug.trim().lowercase() + "|" + it.surahId }
-            .take(6)
-    }
+    val recent = remember(history) { history.take(6) }
 
     if (recent.isEmpty()) {
         Box(
@@ -90,10 +86,10 @@ fun HomeContinueListeningRow(onPlay: (HistoryEntry) -> Unit) {
         items(
             items = recent,
             key = { "${it.reciterSlug}-${it.surahId}" }
-        ) { entry ->
+        ) { item ->
             val isCurrent = currentTrack != null &&
-                currentTrack?.surahId == entry.surahId &&
-                currentTrack?.reciterSlug == entry.reciterSlug
+                currentTrack?.surahId == item.surahId &&
+                currentTrack?.reciterSlug == item.reciterSlug
             val activelyPlaying = isCurrent && isEnginePlaying
 
             val borderColor by animateColorAsState(
@@ -102,8 +98,6 @@ fun HomeContinueListeningRow(onPlay: (HistoryEntry) -> Unit) {
                 animationSpec = tween(300)
             )
 
-            val photoUrl = resolveFollowedQari(entry.reciterSlug)?.photoUrl
-
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -111,10 +105,10 @@ fun HomeContinueListeningRow(onPlay: (HistoryEntry) -> Unit) {
                     .clip(RoundedCornerShape(22.dp))
                     .background(DarkCard)
                     .border(1.dp, borderColor, RoundedCornerShape(22.dp))
-                    .clickable { onPlay(entry) }
+                    .clickable { onPlay(item) }
                     .padding(12.dp)
             ) {
-                // Cover Artwork: resolved qari photo, else initial-letter fallback box.
+                // Cover Artwork
                 Box(
                     modifier = Modifier
                         .size(76.dp)
@@ -122,16 +116,16 @@ fun HomeContinueListeningRow(onPlay: (HistoryEntry) -> Unit) {
                         .background(Color(0xFF1E2325)),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (photoUrl != null) {
+                    if (item.coverUrl.isNotBlank()) {
                         AsyncImage(
-                            model = photoUrl,
-                            contentDescription = entry.surahNameEn,
+                            model = item.coverUrl,
+                            contentDescription = item.title,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxWidth().height(76.dp)
                         )
                     } else {
                         Text(
-                            text = entry.surahNameEn.firstOrNull()?.uppercase() ?: "Q",
+                            text = item.title.firstOrNull()?.uppercase() ?: "Q",
                             color = Color.White,
                             fontSize = 28.sp,
                             fontWeight = FontWeight.ExtraBold
@@ -141,10 +135,10 @@ fun HomeContinueListeningRow(onPlay: (HistoryEntry) -> Unit) {
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Title & Subtitle Info (no progress bar: history carries no progress).
+                // Title, subtitle + progress
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = entry.surahNameEn,
+                        text = item.title,
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
@@ -153,13 +147,28 @@ fun HomeContinueListeningRow(onPlay: (HistoryEntry) -> Unit) {
                     )
                     Spacer(modifier = Modifier.height(3.dp))
                     Text(
-                        text = entry.reciterName,
+                        text = item.subtitle,
                         color = if (activelyPlaying) QuranifyColors.Primary else MutedGrey,
                         fontSize = 12.sp,
                         fontWeight = if (activelyPlaying) FontWeight.SemiBold else FontWeight.Normal,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color.White.copy(alpha = 0.14f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(item.progress.coerceIn(0f, 1f))
+                                .fillMaxHeight()
+                                .background(QuranifyColors.Primary, RoundedCornerShape(50))
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(10.dp))
