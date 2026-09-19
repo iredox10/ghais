@@ -42,6 +42,7 @@ class QuranPlaybackService : MediaSessionService() {
 
     companion object {
         const val CHANNEL_ID = "quran_playback"
+        private const val PLACEHOLDER_NOTIFICATION_ID = 1001
 
         const val ACTION_TOGGLE = "com.quranify.android.action.TOGGLE"
         const val ACTION_PLAY = "com.quranify.android.action.PLAY"
@@ -115,6 +116,10 @@ class QuranPlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, exo)
             .setCallback(QuranSessionCallback())
             .build()
+        // Guarantee FGS promotion within the 10s rule even if the Media3
+        // notification update is delayed (blank metadata, slow network).
+        // Media3 replaces this placeholder with the real media notification.
+        startForegroundWithPlaceholder()
         observeEngine()
     }
 
@@ -220,8 +225,19 @@ class QuranPlaybackService : MediaSessionService() {
         }
     }
 
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+    private fun startForegroundWithPlaceholder() {
+        try {
+            val placeholder = android.app.Notification.Builder(this, CHANNEL_ID)
+                .setContentTitle("Quranify")
+                .setContentText("Preparing recitation…")
+                .setSmallIcon(R.drawable.ic_notification)
+                .setOngoing(true)
+                .build()
+            startForeground(PLACEHOLDER_NOTIFICATION_ID, placeholder)
+        } catch (_: Exception) { }
+    }
+
+    private fun createNotificationChannel() {        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = getSystemService(NotificationManager::class.java) ?: return
         if (manager.getNotificationChannel(CHANNEL_ID) != null) return
         val channel = NotificationChannel(
