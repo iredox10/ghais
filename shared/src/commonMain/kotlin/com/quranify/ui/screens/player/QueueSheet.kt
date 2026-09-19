@@ -167,7 +167,7 @@ fun QueueSheet(
                 ) {
                     itemsIndexed(
                         items = queue,
-                        key = { index, item -> "${item.audioUrl}_${item.surahId}_${item.ayahNo}_$index" }
+                        key = { index, item -> "${item.audioUrl}_${item.surahId}_$index" }
                     ) { index, item ->
                         val isActive = index == currentIndex || (currentIndex == -1 && currentTrack?.audioUrl == item.audioUrl)
 
@@ -179,10 +179,10 @@ fun QueueSheet(
                         val formattedDuration = if (itemDuration > 0L) formatQueueDuration(itemDuration) else ""
 
                         val surahTitle = when {
-                            item.ayahNo > 0 && item.surahNameEn.isNotBlank() -> "${item.surahNameEn} · Ayah ${item.ayahNo}"
-                            item.surahNameEn.isNotBlank() -> "${item.surahId}. ${item.surahNameEn}"
-                            item.ayahNo > 0 -> "Ayah ${item.ayahNo}"
-                            else -> "Surah ${item.surahId}"
+                            item.surahId > 0 && item.surahNameEn.isNotBlank() -> "${item.surahId}. ${item.surahNameEn}"
+                            item.surahNameEn.isNotBlank() -> item.surahNameEn
+                            item.surahId > 0 -> "Surah ${item.surahId}"
+                            else -> "Unknown Surah"
                         }
 
                         Row(
