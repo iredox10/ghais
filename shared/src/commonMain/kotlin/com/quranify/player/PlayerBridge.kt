@@ -24,6 +24,8 @@ expect object PlayerBridge {
     val errorMessage: StateFlow<String?>
 
     fun play(url: String)
+    /** Hint for lockscreen/notification title; consumed atomically by the next play() (no race). */
+    fun setPlaybackMetadata(title: String?, artist: String?)
     fun pause()
     fun resume()
     fun stop()

@@ -298,6 +298,7 @@ object AudioEngine {
         }
         PlayerBridge.setSpeed(_playbackSpeed.value)
         PlayerBridge.setVolume(_volume.value)
+        PlayerBridge.setPlaybackMetadata(trackDisplayTitle(track), track.reciterName)
         PlayerBridge.play(track.audioUrl)
     }
 
@@ -347,6 +348,10 @@ object AudioEngine {
         knownMs > 0L -> knownMs
         else -> 0L
     }
+
+    private fun trackDisplayTitle(track: TrackItem): String =
+        if (track.surahNameEn.isBlank()) "Quranify"
+        else "${track.surahNameEn} - Ayah ${track.ayahNo}"
 
     private fun currentTimeMs(): Long =
         try { platformTimeMs() } catch (_: Exception) { lastEndAtMs + 2000L }

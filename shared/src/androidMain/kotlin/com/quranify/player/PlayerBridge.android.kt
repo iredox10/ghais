@@ -165,6 +165,10 @@ actual object PlayerBridge {
         try {
             val p = exoPlayer ?: return
             if (p.mediaItemCount == 0) return
+            // Never replace the item mid-playback: it resets the timeline and
+            // kills the current ayah (surah stops after ~1 ayah). The item
+            // already carries correct metadata from play() time.
+            if (p.isPlaying) return
             val index = p.currentMediaItemIndex.coerceIn(0, p.mediaItemCount - 1)
             val current = p.getMediaItemAt(index)
             if (current.mediaMetadata.title?.toString() == title) return
@@ -177,7 +181,12 @@ actual object PlayerBridge {
     }
 
     actual fun play(url: String) {
-        playWithMetadata(url, null, null)
+        playWithMetadata(url, pendingTitle, pendingArtist)
+    }
+
+    actual fun setPlaybackMetadata(title: String?, artist: String?) {
+        if (!title.isNullOrBlank()) pendingTitle = title
+        if (!artist.isNullOrBlank()) pendingArtist = artist
     }
 
     /** Android-only: start playback with lockscreen/notification metadata set atomically. */
