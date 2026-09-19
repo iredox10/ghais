@@ -1,6 +1,7 @@
 package com.quranify.ui.screens.explore
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -83,7 +84,8 @@ object ExploreScreen : Tab {
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White.copy(alpha = 0.10f))
+                    .background(Color.White.copy(alpha = 0.06f))
+                    .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(12.dp))
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 Icon(
@@ -138,44 +140,99 @@ private fun BentoCard(playlist: MoodPlaylist, onClick: () -> Unit) {
                 else Modifier.aspectRatio(0.80f)
             )
             .clip(RoundedCornerShape(18.dp))
+            .background(Color.White.copy(alpha = 0.03f))
+            .border(
+                width = 1.dp,
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.45f),
+                        Color.White.copy(alpha = 0.10f)
+                    )
+                ),
+                shape = RoundedCornerShape(18.dp)
+            )
             .clickable(onClick = onClick)
     ) {
         PlaylistCover(art = playlist.art, modifier = Modifier.fillMaxSize())
+        // Strong diagonal glass sheen over the artwork
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    androidx.compose.ui.graphics.Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.16f),
+                            Color.Transparent,
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.07f)
+                        )
+                    )
+                )
+        )
+        // Top specular hairline inside the card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .padding(horizontal = 20.dp)
+                .offset(y = 8.dp)
+                .background(Color.White.copy(alpha = 0.35f))
+                .align(Alignment.TopCenter)
+        )
+        // Frosted glass title panel
         if (wide) {
-            // Wide banner: title + one-line description side by side
             Row(
-                verticalAlignment = Alignment.Bottom,
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
+                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(14.dp)
+                    .padding(10.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color.Black.copy(alpha = 0.28f))
+                    .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(14.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Text(
                     text = playlist.title,
                     color = Color.White,
-                    fontSize = 20.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "${playlist.surahIds.size} surahs",
-                    color = Color.White.copy(alpha = 0.75f),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.18f))
+                        .border(0.5.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(50))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "${playlist.surahIds.size} surahs",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         } else {
-            Text(
-                text = playlist.title,
-                color = Color.White,
-                fontSize = 19.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 23.sp,
+            Box(
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(14.dp)
-            )
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(10.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color.Black.copy(alpha = 0.28f))
+                    .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(14.dp))
+                    .padding(horizontal = 12.dp, vertical = 9.dp)
+            ) {
+                Text(
+                    text = playlist.title,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 20.sp
+                )
+            }
         }
     }
 }

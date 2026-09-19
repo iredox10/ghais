@@ -3,8 +3,10 @@ package com.quranify.ui.screens.player
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,19 +16,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.RecordVoiceOver
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.SlowMotionVideo
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Cast
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -39,22 +44,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import coil3.compose.AsyncImage
 import com.quranify.data.seed.StitchAssets
+import com.quranify.player.AmbientMixer
 import com.quranify.player.AudioEngine
-import com.quranify.ui.screens.player.components.NowPlayingControlsBar
 import com.quranify.ui.screens.player.components.NowPlayingLyricsCard
-import com.quranify.ui.screens.player.components.NowPlayingMetadata
-import com.quranify.ui.screens.player.components.NowPlayingScrubber
-import com.quranify.ui.screens.player.components.NowPlayingTopBar
-import com.quranify.ui.screens.player.components.NowPlayingVinylDisc
-import com.quranify.ui.theme.QuranifyColors
+
+private val MutedGrey = Color(0xFF9A9AA0)
+private val Speeds = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 0.75f)
 
 class NowPlayingScreen : Screen {
     @Composable
@@ -64,347 +69,335 @@ class NowPlayingScreen : Screen {
         val isPlaying by AudioEngine.isPlaying.collectAsState()
         val progress by AudioEngine.progress.collectAsState()
         val currentPositionMs by AudioEngine.currentPositionMs.collectAsState()
+        val durationMs by AudioEngine.durationMs.collectAsState()
         val speed by AudioEngine.playbackSpeed.collectAsState()
+        val volume by AudioEngine.volume.collectAsState()
 
         var showSleepTimer by remember { mutableStateOf(false) }
         var showQueue by remember { mutableStateOf(false) }
-        var showReciters by remember { mutableStateOf(false) }
-        var isShuffle by remember { mutableStateOf(false) }
-        var isRepeat by remember { mutableStateOf(true) }
+        var showAmbient by remember { mutableStateOf(false) }
+        var showLyrics by remember { mutableStateOf(false) }
+        val mixer = remember { AmbientMixer() }
 
-        val trackTitle = currentTrack?.surahNameEn ?: "Surah Ar-Rahman"
-        val reciterName = currentTrack?.reciterName ?: "Sheikh Mishary Rashid Alafasy"
-        val subtitle = currentTrack?.surahId?.let { "Surah $it • Juz 27" } ?: "The Most Merciful • 55:13"
+        val track = currentTrack
+        val title = track?.surahNameEn ?: "Ar-Rahman"
+        val reciterName = track?.reciterName ?: "Mishary Rashid Alafasy"
+        var isFav by remember(track?.audioUrl) { mutableStateOf(false) }
 
-        // Format times
-        val elapsedSec = (currentPositionMs / 1000).toInt()
-        val durationMs = currentTrack?.durationMs ?: 480_000L
-        val totalSec = (durationMs / 1000).toInt()
-        val remainingSec = (totalSec - elapsedSec).coerceAtLeast(0)
-        val elapsedText = "${(elapsedSec / 60).toString().padStart(2, '0')}:${(elapsedSec % 60).toString().padStart(2, '0')}"
-        val remainingText = "-${(remainingSec / 60).toString().padStart(2, '0')}:${(remainingSec % 60).toString().padStart(2, '0')}"
+        val totalMs = if (durationMs > 0L) durationMs
+            else (track?.durationMs?.takeIf { it > 0L } ?: 0L)
+        val elapsedText = formatMs(currentPositionMs)
+        val remainingText = if (totalMs > 0L) "-${formatMs((totalMs - currentPositionMs).coerceAtLeast(0L))}" else "--:--"
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(QuranifyColors.Background)
+                .background(Color(0xFF05050C))
         ) {
-            // 1. Multi-layered Apple-style ambient dynamic liquid glow backdrop
+            // Deep blue glow rising from the bottom (reference look)
             Box(
                 modifier = Modifier
-                    .size(420.dp)
-                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(340.dp)
+                    .align(Alignment.BottomCenter)
                     .background(
-                        brush = Brush.radialGradient(
+                        Brush.radialGradient(
                             colors = listOf(
-                                QuranifyColors.Primary.copy(alpha = 0.18f),
-                                QuranifyColors.PrimaryContainer.copy(alpha = 0.08f),
+                                Color(0xFF1E4FD8).copy(alpha = 0.38f),
+                                Color(0xFF1E4FD8).copy(alpha = 0.10f),
                                 Color.Transparent
-                            )
-                        )
-                    )
-            )
-            Box(
-                modifier = Modifier
-                    .size(320.dp)
-                    .align(Alignment.CenterStart)
-                    .background(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                Color(0xFF10B981).copy(alpha = 0.08f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
-            Box(
-                modifier = Modifier
-                    .size(300.dp)
-                    .align(Alignment.CenterEnd)
-                    .background(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                QuranifyColors.Secondary.copy(alpha = 0.06f),
-                                Color.Transparent
-                            )
+                            ),
+                            center = androidx.compose.ui.geometry.Offset(200f, 900f),
+                            radius = 700f
                         )
                     )
             )
 
-            // Main Scrollable Content
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(bottom = 36.dp),
+                    .padding(horizontal = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Top Bar Context Panel
-                NowPlayingTopBar(
-                    onMinimizeClick = { navigator?.pop() },
-                    playlistTitle = "Heart Soothing Recitations",
-                    onMoreOptionsClick = { showQueue = true },
-                    onPlaylistDropdownClick = { /* Playlist Dropdown */ }
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // 2. Rotating Vinyl Disc with Sacred Geometry Mandala & Floating Tajweed Ribbon
-                NowPlayingVinylDisc(
-                    imageUrl = StitchAssets.NowPlayingVinylArtUrl,
-                    riwayahText = "Hafs 'an 'Asim",
-                    modifier = Modifier.padding(vertical = 10.dp)
-                )
-
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // 3. Track Metadata, Reciter & Badges
-                NowPlayingMetadata(
-                    title = trackTitle,
-                    subtitle = subtitle,
-                    reciterName = reciterName,
-                    juzText = "Juz 27",
-                    ayahCountText = "Ayah 13 of 78",
-                    onTafsirClick = { /* Open Tafsir */ }
-                )
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                // 4. Synchronized Ayah Lyrics Card (Liquid Glass with grand Arabic typography & preview)
-                NowPlayingLyricsCard()
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                // 5. High Fidelity Glowing Emerald Progress Scrubber
-                NowPlayingScrubber(
-                    progress = progress,
-                    elapsedText = elapsedText,
-                    totalText = remainingText,
-                    onSeek = { newProgress ->
-                        val duration = currentTrack?.durationMs ?: 480_000L
-                        AudioEngine.seekTo((newProgress * duration).toLong())
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // 6. Primary Emerald Playback Controls
-                NowPlayingControlsBar(
-                    isPlaying = isPlaying,
-                    isShuffle = isShuffle,
-                    isRepeat = isRepeat,
-                    onPlayPause = { AudioEngine.togglePlayPause() },
-                    onPrevious = { AudioEngine.skipPrevious() },
-                    onNext = { AudioEngine.skipNext() },
-                    onShuffleToggle = { isShuffle = !isShuffle },
-                    onRepeatToggle = { isRepeat = !isRepeat }
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // 7. Bottom Audio Utility Dock (Floating frosted glass capsule toolbar)
-                Row(
+                // Drag handle
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(Color(0xCC181D1A))
-                        .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(24.dp))
-                        .padding(vertical = 6.dp, horizontal = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                        .width(44.dp)
+                        .height(5.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.28f))
+                        .clickable { navigator?.pop() }
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Background sound pill
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(50))
+                        .clickable { showAmbient = true }
+                        .padding(horizontal = 20.dp, vertical = 11.dp)
                 ) {
-                    // Reciters Switcher
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                    Icon(
+                        imageVector = Icons.Filled.ExpandMore,
+                        contentDescription = "Background sound",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Background sound",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                // Open middle (lyrics appear here when toggled)
+                if (showLyrics && track != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    NowPlayingLyricsCard(
+                        arabicVerse = track.textUthmani.ifBlank { "فَبِأَيِّ آلَاءِ رَبِّكُمَا تُكَذِّبَانِ" },
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                } else {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+
+                // Track row: photo + title/reciter + star
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    AsyncImage(
+                        model = track?.let { photoForSlug(it.reciterSlug) }
+                            ?: StitchAssets.LogoUrl,
+                        contentDescription = reciterName,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable { showReciters = true }
-                            .padding(vertical = 6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.RecordVoiceOver,
-                            contentDescription = "Reciters",
-                            tint = Color.White.copy(alpha = 0.8f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
+                            .size(62.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF1C1C1E))
+                    )
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Reciters",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.White.copy(alpha = 0.8f)
+                            text = title,
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = reciterName,
+                            color = MutedGrey,
+                            fontSize = 17.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-
-                    // Speed Control
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                    Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable {
-                                val nextSpeed = when (speed) {
-                                    1.0f -> 1.25f
-                                    1.25f -> 1.5f
-                                    1.5f -> 0.75f
-                                    else -> 1.0f
-                                }
-                                AudioEngine.setPlaybackSpeed(nextSpeed)
-                            }
-                            .padding(vertical = 6.dp)
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.07f))
+                            .clickable { isFav = !isFav },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.SlowMotionVideo,
-                            contentDescription = "Playback Speed",
-                            tint = Color.White.copy(alpha = 0.8f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "${speed}x",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = QuranifyColors.Primary
-                        )
-                    }
-
-                    // Sleep Bedtime Timer
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable { showSleepTimer = true }
-                            .padding(vertical = 6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Bedtime,
-                            contentDescription = "Sleep Timer",
-                            tint = Color.White.copy(alpha = 0.8f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "30m",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = QuranifyColors.Secondary
-                        )
-                    }
-
-                    // Share Ayah
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable { /* Share verse action */ }
-                            .padding(vertical = 6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share Ayah",
-                            tint = Color.White.copy(alpha = 0.8f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Share Ayah",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.White.copy(alpha = 0.8f)
+                            imageVector = Icons.Filled.Star,
+                            contentDescription = "Favorite",
+                            tint = if (isFav) Color.White else Color.White.copy(alpha = 0.45f),
+                            modifier = Modifier.size(27.dp)
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(22.dp))
+
+                // Controls: speed | prev | play | next | sleep
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(52.dp)
+                            .clickable {
+                                val idx = Speeds.indexOf(speed).takeIf { it >= 0 } ?: 0
+                                AudioEngine.setPlaybackSpeed(Speeds[(idx + 1) % Speeds.size])
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = formatSpeed(speed),
+                            color = MutedGrey,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    IconButton(onClick = { AudioEngine.skipPrevious() }, modifier = Modifier.size(56.dp)) {
+                        Icon(
+                            imageVector = Icons.Filled.FastRewind,
+                            contentDescription = "Previous",
+                            tint = Color.White,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                    IconButton(onClick = { AudioEngine.togglePlayPause() }, modifier = Modifier.size(72.dp)) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            tint = Color.White,
+                            modifier = Modifier.size(62.dp)
+                        )
+                    }
+                    IconButton(onClick = { AudioEngine.skipNext() }, modifier = Modifier.size(56.dp)) {
+                        Icon(
+                            imageVector = Icons.Filled.FastForward,
+                            contentDescription = "Next",
+                            tint = Color.White,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                    IconButton(onClick = { showSleepTimer = true }, modifier = Modifier.size(52.dp)) {
+                        Icon(
+                            imageVector = Icons.Filled.Bedtime,
+                            contentDescription = "Sleep timer",
+                            tint = MutedGrey,
+                            modifier = Modifier.size(27.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Progress bar (tap to seek)
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val width = maxWidth
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color.White.copy(alpha = 0.16f))
+                            .pointerInput(totalMs) {
+                                detectTapGestures { offset ->
+                                    if (totalMs > 0L) {
+                                        val fraction = (offset.x / width.toPx()).coerceIn(0f, 1f)
+                                        AudioEngine.seekTo((fraction * totalMs).toLong())
+                                    }
+                                }
+                            }
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                                .height(5.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(Color.White)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(text = elapsedText, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(text = remainingText, color = MutedGrey, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                }
+
+                Spacer(modifier = Modifier.height(26.dp))
+
+                // Bottom utility row
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp)
+                ) {
+                    IconButton(
+                        onClick = { AudioEngine.setVolume(if (volume > 0f) 0f else 1f) },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (volume > 0f) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
+                            contentDescription = "Volume",
+                            tint = MutedGrey,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clickable { showLyrics = !showLyrics },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "ق",
+                            color = if (showLyrics) Color.White else MutedGrey.copy(alpha = 0.55f),
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    IconButton(onClick = { showAmbient = true }, modifier = Modifier.size(48.dp)) {
+                        Icon(
+                            imageVector = Icons.Filled.Cast,
+                            contentDescription = "Soundscapes",
+                            tint = MutedGrey,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                    IconButton(onClick = { showQueue = true }, modifier = Modifier.size(48.dp)) {
+                        Icon(
+                            imageVector = Icons.Filled.QueueMusic,
+                            contentDescription = "Queue",
+                            tint = MutedGrey,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
             }
 
-            // Sheets
-            if (showSleepTimer) {
-                SleepTimerSheet(onDismiss = { showSleepTimer = false })
-            }
-            if (showQueue) {
-                QueueSheet(onDismiss = { showQueue = false })
-            }
-            if (showReciters) {
-                ReciterPickerSheet(
-                    onDismiss = { showReciters = false },
-                    onSelectReciter = { _ ->
-                        /* Reciter selected */
-                    }
-                )
-            }
+            if (showSleepTimer) SleepTimerSheet(onDismiss = { showSleepTimer = false })
+            if (showQueue) QueueSheet(onDismiss = { showQueue = false })
+            if (showAmbient) AmbientMixerSheet(mixer = mixer, onDismissRequest = { showAmbient = false })
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ReciterPickerSheet(
-    onDismiss: () -> Unit,
-    onSelectReciter: (String) -> Unit
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = QuranifyColors.SurfaceLow,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-        ) {
-            Text(
-                text = "Select Reciter",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(14.dp))
-            StitchAssets.VerifiedReciters.forEach { reciter ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable {
-                            onSelectReciter(reciter.name)
-                            onDismiss()
-                        }
-                        .padding(vertical = 8.dp, horizontal = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AsyncImage(
-                        model = reciter.photoUrl,
-                        contentDescription = reciter.name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = reciter.name,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-                        Text(
-                            text = reciter.fans,
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.6f)
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = QuranifyColors.Primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-        }
+private fun formatMs(ms: Long): String {
+    val s = (ms.coerceAtLeast(0L) / 1000).toInt()
+    return "${(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}"
+}
+
+private fun formatSpeed(speed: Float): String {
+    val label = if (speed % 1f == 0f) speed.toInt().toString() else speed.toString()
+    return "${label}×"
+}
+
+private fun photoForSlug(slug: String): String {
+    val photos = StitchAssets.VerifiedReciters
+    val match = when (slug) {
+        "alafasy" -> photos.firstOrNull { it.slug == "mishary" }
+        "sudais" -> photos.firstOrNull { it.slug == "al-sudais" }
+        "muaiqly" -> photos.firstOrNull { it.slug == "al-muaiqly" }
+        "dossari" -> photos.firstOrNull { it.slug == "al-dossari" }
+        "abdulbaset_murattal", "abdulbaset_mujawwad" ->
+            photos.firstOrNull { it.slug == "abdul-basit" }
+        else -> photos.firstOrNull { it.slug == slug }
     }
+    return match?.photoUrl ?: StitchAssets.LogoUrl
 }
