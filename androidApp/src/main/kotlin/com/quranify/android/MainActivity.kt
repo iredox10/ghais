@@ -10,6 +10,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.quranify.App
+import com.quranify.player.QuranDownloads
 
 class MainActivity : ComponentActivity() {
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -21,6 +22,7 @@ class MainActivity : ComponentActivity() {
         com.quranify.player.PlayerBridge.init(this)
         com.quranify.player.AmbientPlayerBridge.init(this)
         com.quranify.player.AmbientVideoBridge.init(this)
+        QuranDownloads.init(this)
         // Any play/resume boots the foreground MediaSession service so audio
         // survives background + shows system notification controls.
         com.quranify.player.PlayerBridge.onPlayRequested = {
