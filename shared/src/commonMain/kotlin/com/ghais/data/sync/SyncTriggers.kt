@@ -47,9 +47,21 @@ object SyncTriggers {
         started = true
 
         // Owner binding + pull-restore shortly after login.
+        var lastSessionId: String? = null
         scope.launch {
             AuthRepository.session.collect { session ->
                 val owner = session?.userId ?: "local"
+                // Fresh login from signed-out state: snapshot the local ("local"
+                // namespace) choices — e.g. qari followed during onboarding —
+                // so they can be adopted into the new account below. Never
+                // snapshot when switching directly between accounts.
+                val comingFromSignedOut = session != null && lastSessionId == null
+                val localFavs = if (comingFromSignedOut) FavoritesStore.favoriteTracks.value else emptyList()
+                val localFollows = if (comingFromSignedOut) FollowStore.followedSlugs.value else emptySet()
+                val localRoutines = if (comingFromSignedOut) CustomRoutinesStore.routines.value else emptyList()
+                val localSchedules = if (comingFromSignedOut) SchedulesStore.schedules.value else emptyList()
+                val localGoal = if (comingFromSignedOut) OnboardingStore.goal.value else null
+                val localMinutes = if (comingFromSignedOut) OnboardingStore.dailyGoalMinutes.value else 15
                 UserUsageRepository.setOwner(owner)
                 FavoritesStore.setOwner(owner)
                 FollowStore.setOwner(owner)
@@ -57,6 +69,31 @@ object SyncTriggers {
                 SchedulesStore.setOwner(owner)
                 OnboardingStore.setOwner(owner)
                 QuranDownloads.setOwner(owner)
+                if (comingFromSignedOut) {
+                    // Adopt pre-auth choices into the new account, but only
+                    // where it is still empty — never overwrite existing data.
+                    if (FavoritesStore.favoriteTracks.value.isEmpty()) {
+                        localFavs.forEach { FavoritesStore.add(it) }
+                    }
+                    if (FollowStore.followedSlugs.value.isEmpty()) {
+                        localFollows.forEach { FollowStore.follow(it) }
+                    }
+                    if (CustomRoutinesStore.routines.value.isEmpty()) {
+                        localRoutines.forEach {
+                            CustomRoutinesStore.create(it.title, it.description, it.items, it.isPublic)
+                        }
+                    }
+                    if (SchedulesStore.schedules.value.isEmpty()) {
+                        localSchedules.forEach { SchedulesStore.add(it) }
+                    }
+                    if (localGoal != null && OnboardingStore.goal.value == null) {
+                        OnboardingStore.setGoal(localGoal)
+                    }
+                    if (localMinutes != 15 && OnboardingStore.dailyGoalMinutes.value == 15) {
+                        OnboardingStore.setDailyGoalMinutes(localMinutes)
+                    }
+                }
+                lastSessionId = session?.userId
                 if (session != null) {
                     delay(2000)
                     if (AuthRepository.session.value != null && NetworkMonitor.isOnline.value) {
