@@ -172,11 +172,17 @@ actual object PlayerBridge {
             val index = p.currentMediaItemIndex.coerceIn(0, p.mediaItemCount - 1)
             val current = p.getMediaItemAt(index)
             if (current.mediaMetadata.title?.toString() == title) return
+            // Replacing the item resets the timeline — preserve position so a
+            // resume seek applied just before us isn't wiped out.
+            val resumePos = p.currentPosition.coerceAtLeast(0L)
             val meta = current.mediaMetadata.buildUpon()
                 .setTitle(title)
                 .apply { artist?.let { setArtist(it) } }
                 .build()
             p.replaceMediaItem(index, current.buildUpon().setMediaMetadata(meta).build())
+            if (resumePos > 1_000L) {
+                try { p.seekTo(resumePos) } catch (_: Exception) { }
+            }
         } catch (_: Exception) { }
     }
 

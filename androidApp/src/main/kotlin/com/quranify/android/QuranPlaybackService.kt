@@ -17,6 +17,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.quranify.domain.model.isFullSurah
 import com.quranify.player.AudioEngine
 import com.quranify.player.PlayerBridge
 import kotlinx.coroutines.CoroutineScope
@@ -63,13 +64,16 @@ class QuranPlaybackService : MediaSessionService() {
             }
         }
 
-        fun displayTitle(surahNameEn: String, ayahNo: Int = 0): String {
+        fun displayTitle(surahNameEn: String, ayahNo: Int = 0, isFullSurah: Boolean = true): String {
             val name = surahNameEn.trim()
             if (name.isBlank()) return "Quranify"
-            return if (name.startsWith("Surah ", ignoreCase = true) || name.startsWith("Juz ", ignoreCase = true)) {
+            // Must match AudioEngine.trackDisplayTitle exactly: updateMetadata()
+            // early-returns on equal titles, and any replaceMediaItem call made
+            // while buffering resets the timeline (wipes resume seeks).
+            return if (ayahNo <= 0 || isFullSurah) {
                 name
             } else {
-                "Surah $name"
+                "$name - Ayah $ayahNo"
             }
         }
     }
@@ -257,7 +261,7 @@ class QuranPlaybackService : MediaSessionService() {
                 )
             }
             AudioEngine.resume()
-            val title = displayTitle(track.surahNameEn, track.ayahNo)
+            val title = displayTitle(track.surahNameEn, track.ayahNo, track.isFullSurah)
             val artist = track.reciterName.ifBlank { "Quranify" }
             val item = MediaItem.Builder()
                 .setMediaId(track.audioUrl)
@@ -279,7 +283,7 @@ class QuranPlaybackService : MediaSessionService() {
         serviceScope.launch {
             AudioEngine.currentTrack.collect { track ->
                 if (track == null) return@collect
-                val title = displayTitle(track.surahNameEn, track.ayahNo)
+                val title = displayTitle(track.surahNameEn, track.ayahNo, track.isFullSurah)
                 val artist = track.reciterName.ifBlank { "Quranify" }
                 PlayerBridge.updateMetadata(
                     title,
@@ -303,7 +307,7 @@ class QuranPlaybackService : MediaSessionService() {
     private fun startForegroundWithPlaceholder() {
         try {
             val track = AudioEngine.currentTrack.value
-            val initialTitle = track?.let { displayTitle(it.surahNameEn, it.ayahNo) } ?: "Quranify"
+            val initialTitle = track?.let { displayTitle(it.surahNameEn, it.ayahNo, it.isFullSurah) } ?: "Quranify"
             val initialSubtitle = track?.reciterName?.takeIf { it.isNotBlank() } ?: "Preparing recitation…"
             val placeholder = android.app.Notification.Builder(this, CHANNEL_ID)
                 .setContentTitle(initialTitle)

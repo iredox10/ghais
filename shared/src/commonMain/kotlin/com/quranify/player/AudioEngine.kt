@@ -61,8 +61,17 @@ object AudioEngine {
             PlayerBridge.positionMs.collect { pos ->
                 val pending = pendingSeekMs
                 if (pending > 0L && PlayerBridge.durationMs.value > 0L) {
-                    pendingSeekMs = 0L
-                    seekTo(pending)
+                    if (pos >= pending - 3_000L) {
+                        // Landed (or overtook) the resume point — done.
+                        pendingSeekMs = 0L
+                        pendingSeekTries = 0
+                    } else if (pendingSeekTries > 0) {
+                        pendingSeekTries--
+                        if (pendingSeekTries == 0) pendingSeekMs = 0L
+                        seekToInternal(pending)
+                    } else {
+                        pendingSeekMs = 0L
+                    }
                 }
                 _currentPositionMs.value = pos
                 val duration = effectiveDuration()
@@ -140,6 +149,8 @@ object AudioEngine {
 
     /** One-shot resume offset applied once the bridge reports a known duration. */
     private var pendingSeekMs: Long = 0L
+    /** Retries left for landing [pendingSeekMs] (early seeks can be dropped while buffering). */
+    private var pendingSeekTries: Int = 0
 
     // Single-flight / de-dupe for STATE_ENDED re-emission + manual/auto race.
     private var lastEndUrl: String? = null
@@ -154,6 +165,7 @@ object AudioEngine {
         queueManager.addToQueue(track)
         _queue.value = queueManager.queue
         pendingSeekMs = startPositionMs.coerceAtLeast(0L)
+        pendingSeekTries = if (pendingSeekMs > 0L) 40 else 0
         startPlayback(track)
     }
 
@@ -167,6 +179,7 @@ object AudioEngine {
         val track = queueManager.currentTrack
         if (track != null) {
             pendingSeekMs = startPositionMs.coerceAtLeast(0L)
+            pendingSeekTries = if (pendingSeekMs > 0L) 40 else 0
             startPlayback(track)
         } else {
             stopPlayback()
@@ -239,6 +252,11 @@ object AudioEngine {
 
     fun seekTo(positionMs: Long) {
         pendingSeekMs = 0L
+        pendingSeekTries = 0
+        seekToInternal(positionMs)
+    }
+
+    private fun seekToInternal(positionMs: Long) {
         val duration = effectiveDuration()
         val clamped = positionMs.coerceIn(0L, if (duration > 0L) duration else Long.MAX_VALUE)
         PlayerBridge.seekTo(clamped)
@@ -410,6 +428,7 @@ object AudioEngine {
         PlayerBridge.stop()
         progressJob?.cancel()
         pendingSeekMs = 0L
+        pendingSeekTries = 0
         _currentTrack.value = null
         _currentIndex.value = -1
         _isPlaying.value = false

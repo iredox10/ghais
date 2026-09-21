@@ -120,7 +120,13 @@ object HistoryScreen : Screen {
         val groups = remember(history) {
             val cutoff = Clock.System.now().toEpochMilliseconds() - HISTORY_WINDOW_MS
             history.filter { it.lastPlayedTimestampMs == 0L || it.lastPlayedTimestampMs >= cutoff }
-                .groupBy { "${it.surahId}|${it.reciterSlug.trim().lowercase()}" }
+                .groupBy {
+                    // Canonicalize the reciter so slug variants ("mishary" vs "alafasy")
+                    // collapse into one entry instead of duplicates.
+                    val canonical = resolveFollowedQari(it.reciterSlug)?.reciter?.slug
+                        ?: it.reciterSlug.trim().lowercase().replace("_", "-")
+                    "${it.surahId}|$canonical"
+                }
                 .mapNotNull { (key, perSurah) ->
                     if (perSurah.isEmpty()) return@mapNotNull null
                     val latest = perSurah.maxByOrNull { it.lastPlayedTimestampMs } ?: return@mapNotNull null

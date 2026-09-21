@@ -436,7 +436,9 @@ class NowPlayingScreen : Screen {
                         val idx = Speeds.indexOf(currentSpd).takeIf { it >= 0 } ?: 0
                         AudioEngine.setPlaybackSpeed(Speeds[(idx + 1) % Speeds.size])
                     },
-                    onSleepTimerClick = { showSleepTimer = true }
+                    onSleepTimerClick = { showSleepTimer = true },
+                    repeatMode = repeatMode,
+                    onRepeatClick = { AudioEngine.setRepeatMode(nextRepeatMode(repeatMode)) }
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
