@@ -72,11 +72,15 @@ object StatsScreen : Screen {
         val downloaded by QuranDownloads.downloadedKeys.collectAsState()
 
         val totalHoursText = remember(stats.totalSecondsListened) {
-            val hours = stats.totalSecondsListened / 3600.0
-            if (hours < 0.1 && stats.totalSecondsListened > 0L) {
-                "${stats.totalSecondsListened / 60L}m"
-            } else {
-                "${((hours * 10).toInt() / 10.0)}h"
+            val total = stats.totalSecondsListened
+            when {
+                total <= 0L -> "0s"
+                total < 60L -> "${total}s"
+                total < 3600L -> "${total / 60L}m"
+                else -> {
+                    val hours = total / 3600.0
+                    "${((hours * 10).toInt() / 10.0)}h"
+                }
             }
         }
 

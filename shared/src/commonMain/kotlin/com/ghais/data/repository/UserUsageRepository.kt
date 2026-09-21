@@ -94,52 +94,10 @@ object UserUsageRepository {
                     _history.value = parsed.map { it.toJumpBackInItem() }
                     return
                 }
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
-
-        // Initial default starter items for a clean fresh experience
-        _history.value = listOf(
-            JumpBackInItem(
-                title = "Al-Kahf",
-                subtitle = "Mishary Rashid Alafasy • Ready to play",
-                progress = 0.0f,
-                coverUrl = StitchAssets.LibraryMorningCover,
-                surahId = 18,
-                reciterSlug = "mishary",
-                positionMs = 0L,
-                durationMs = 33 * 60 * 1000L
-            ),
-            JumpBackInItem(
-                title = "Ar-Rahman",
-                subtitle = "Mishary Rashid Alafasy • Ready to play",
-                progress = 0.0f,
-                coverUrl = StitchAssets.LibraryTahajjudCover,
-                surahId = 55,
-                reciterSlug = "mishary",
-                positionMs = 0L,
-                durationMs = 19 * 60 * 1000L
-            ),
-            JumpBackInItem(
-                title = "Al-Mulk",
-                subtitle = "Mishary Rashid Alafasy • Ready to play",
-                progress = 0.0f,
-                coverUrl = StitchAssets.AllCuratedPlaylists.firstOrNull()?.coverUrl ?: StitchAssets.LibraryMorningCover,
-                surahId = 67,
-                reciterSlug = "mishary",
-                positionMs = 0L,
-                durationMs = 7 * 60 * 1000L
-            ),
-            JumpBackInItem(
-                title = "Ya-Sin",
-                subtitle = "Mishary Rashid Alafasy • Ready to play",
-                progress = 0.0f,
-                coverUrl = StitchAssets.AllCuratedPlaylists.getOrNull(1)?.coverUrl ?: StitchAssets.LibraryTahajjudCover,
-                surahId = 36,
-                reciterSlug = "mishary",
-                positionMs = 0L,
-                durationMs = 15 * 60 * 1000L
-            )
-        )
+        // No mock data: empty history renders honest empty states downstream.
     }
 
     private fun loadStats() {
