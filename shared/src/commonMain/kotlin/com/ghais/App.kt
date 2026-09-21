@@ -32,6 +32,7 @@ import cafe.adriel.voyager.core.stack.StackEvent
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.ScreenTransition
 import com.ghais.data.auth.AuthRepository
+import com.ghais.data.sync.SyncTriggers
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.MiniPlayer
 import com.ghais.ui.navigation.LocalRootNavigator
@@ -47,6 +48,7 @@ fun App() {
         val session by AuthRepository.session.collectAsState()
         var guestSkipped by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { AuthRepository.refreshSession() }
+        LaunchedEffect(Unit) { SyncTriggers.start(this) }
         // Reset guest bypass whenever a real session appears, so a later
         // logout (session -> null) brings the gate back automatically.
         LaunchedEffect(session) {

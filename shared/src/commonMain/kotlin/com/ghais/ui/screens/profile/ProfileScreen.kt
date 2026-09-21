@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -78,6 +79,8 @@ import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.RecitationSchedule
 import com.ghais.data.repository.SchedulesStore
+import com.ghais.data.sync.SyncEngine
+import com.ghais.data.sync.SyncStatus
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.settings.AppSettingsScreen
@@ -133,6 +136,20 @@ object ProfileScreen : Tab {
 
         // Auth session (null = guest)
         val session by AuthRepository.session.collectAsState()
+
+        // Cloud-sync status (manual Sync row below)
+        val syncStatus by SyncEngine.status.collectAsState()
+        val syncLastAt by SyncEngine.lastSyncedAt.collectAsState()
+        val syncError by SyncEngine.lastError.collectAsState()
+        val syncSubtitle = when {
+            session == null -> "Sign in to sync"
+            syncStatus == SyncStatus.SYNCING -> "Syncing…"
+            syncStatus == SyncStatus.ERROR ->
+                syncError?.takeIf { it.isNotBlank() }?.let { "Sync failed • $it" } ?: "Sync failed"
+            else -> syncLastAt?.let {
+                "Last synced ${formatSyncRelative(Clock.System.now().toEpochMilliseconds(), it)}"
+            } ?: "Tap to sync now"
+        }
 
         // User profile editable state
         var userName by remember {
@@ -415,6 +432,16 @@ object ProfileScreen : Tab {
                         title = "Your stats",
                         subtitle = "Streaks, listening time & Khatmah journey",
                         onClick = { rootNavigator?.push(StatsScreen) }
+                    )
+
+                    SubtleDividerLine()
+
+                    ProfileLinkRow(
+                        icon = Icons.Filled.Sync,
+                        iconTint = Emerald,
+                        title = "Sync",
+                        subtitle = syncSubtitle,
+                        onClick = { scope.launch { SyncEngine.syncNow() } }
                     )
                 }
             }
@@ -1076,6 +1103,18 @@ private fun formatStorageBytes(bytes: Long): String {
 private fun oneDecimal(value: Double): String {
     val tenths = kotlin.math.round(value * 10).toLong()
     return "${tenths / 10}.${kotlin.math.abs(tenths % 10)}"
+}
+
+// Relative sync timestamp: "just now" / "Xs ago" / "Xm ago" / "Xh ago" / "Xd ago"
+private fun formatSyncRelative(nowMs: Long, atMs: Long): String {
+    val seconds = ((nowMs - atMs).coerceAtLeast(0L)) / 1000L
+    return when {
+        seconds < 10 -> "just now"
+        seconds < 60 -> "${seconds}s ago"
+        seconds < 3600 -> "${seconds / 60}m ago"
+        seconds < 86400 -> "${seconds / 3600}h ago"
+        else -> "${seconds / 86400}d ago"
+    }
 }
 
 @Composable
