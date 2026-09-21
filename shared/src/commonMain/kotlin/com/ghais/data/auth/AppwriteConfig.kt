@@ -22,7 +22,7 @@ object AppwriteConfig {
      * the Android client ID — the native client ID goes in the Appwrite
      * Console (Auth > Google > Native client IDs) instead.
      */
-    const val GOOGLE_WEB_CLIENT_ID = "PASTE-GOOGLE-WEB-CLIENT-ID"
+    const val GOOGLE_WEB_CLIENT_ID = "674819710970-0daleci989c7jfgoppplppm29i8md1of.apps.googleusercontent.com"
 
     /**
      * Deep-link scheme the app uses for the OAuth2 redirect back from the
