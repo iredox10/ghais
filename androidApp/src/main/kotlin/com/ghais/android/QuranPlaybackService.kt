@@ -708,15 +708,15 @@ private class ShadeBitmapLoader(
     private val resources = appContext.resources
     private val packageName = appContext.packageName
 
-    override fun supportsMimeType(mimeType: String?): Boolean {
+    override fun supportsMimeType(mimeType: String): Boolean {
         return try {
-            mimeType?.startsWith("image/") == true
+            mimeType.startsWith("image/")
         } catch (_: Exception) {
             false
         }
     }
 
-    override fun decodeBitmap(data: ByteArray?): ListenableFuture<Bitmap> {
+    override fun decodeBitmap(data: ByteArray): ListenableFuture<Bitmap> {
         return try {
             Futures.immediateFuture(decodeOrFallback(data))
         } catch (_: Exception) {
@@ -724,14 +724,12 @@ private class ShadeBitmapLoader(
         }
     }
 
-    override fun loadBitmap(uri: Uri?): ListenableFuture<Bitmap> {
+    override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> {
         return try {
             var bitmap: Bitmap? = null
             try {
-                if (uri != null) {
-                    resolver.openInputStream(uri)?.use { stream ->
-                        bitmap = BitmapFactory.decodeStream(stream)
-                    }
+                resolver.openInputStream(uri)?.use { stream ->
+                    bitmap = BitmapFactory.decodeStream(stream)
                 }
             } catch (_: Exception) {
                 bitmap = null
