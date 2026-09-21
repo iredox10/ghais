@@ -73,6 +73,8 @@ object UserUsageRepository {
     val stats: StateFlow<UserListeningStats> = _stats.asStateFlow()
 
     private var lastRecordedTimeMs: Long = 0L
+    /** Sub-second leftover: position polls arrive ~4x/sec, so plain ms/1000 truncation would drop everything. */
+    private var unaccountedMs: Long = 0L
     private var lastSavedTimestampMs: Long = 0L
 
     init {
@@ -195,8 +197,10 @@ object UserUsageRepository {
     }
 
     private fun recordListeningTime(deltaMs: Long) {
-        val deltaSeconds = deltaMs / 1000L
+        unaccountedMs += deltaMs.coerceAtLeast(0L)
+        val deltaSeconds = unaccountedMs / 1000L
         if (deltaSeconds <= 0L) return
+        unaccountedMs %= 1000L
 
         val today = currentEpochDay()
         val savedDay = settings.getLong(KEY_LAST_DAY, 0L)
