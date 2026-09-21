@@ -45,15 +45,12 @@ import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.domain.model.Reciter
 import com.ghais.player.AudioEngine
-import com.ghais.ui.theme.GhaisColors
 
 private val DarkCard = Color(0xFF1C1C1E)
 private val MutedGrey = Color(0xFF9A9AA0)
-private val LinkBlue = Color(0xFF4C8DFF)
 
 private val CardShape = RoundedCornerShape(28.dp)
 private val AvatarShape = RoundedCornerShape(24.dp)
-private val Emerald = Color(0xFF30D158)
 
 @Composable
 fun NationReelBlock(
@@ -83,8 +80,8 @@ fun NationReelBlock(
             )
             Text(
                 text = "See all",
-                color = LinkBlue,
-                fontSize = 14.sp,
+                color = MutedGrey,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.clickable(onClick = onSeeAll)
             )
@@ -133,7 +130,7 @@ fun ReciterReelCard(
             .background(Color.White.copy(alpha = 0.05f))
             .border(
                 1.dp,
-                if (activelyPlaying) GhaisColors.Primary.copy(alpha = 0.60f)
+                if (activelyPlaying) Color.White.copy(alpha = 0.25f)
                 else Color.White.copy(alpha = 0.08f),
                 CardShape
             )
@@ -198,12 +195,22 @@ fun ReciterReelCard(
                         .size(36.dp)
                         .clip(CircleShape)
                         .background(
-                            if (activelyPlaying) GhaisColors.Primary
-                            else Color.Black.copy(alpha = 0.70f)
+                            if (activelyPlaying) Brush.linearGradient(
+                                colors = listOf(
+                                    Color.White,
+                                    Color(0xFFF5F5F7)
+                                )
+                            )
+                            else Brush.linearGradient(
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.70f),
+                                    Color.Black.copy(alpha = 0.70f)
+                                )
+                            )
                         )
                         .border(
                             1.dp,
-                            if (activelyPlaying) GhaisColors.Primary
+                            if (activelyPlaying) Color(0xFFF5F5F7)
                             else Color.White.copy(alpha = 0.25f),
                             CircleShape
                         )
@@ -221,7 +228,7 @@ fun ReciterReelCard(
                     Icon(
                         imageVector = if (activelyPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         contentDescription = if (activelyPlaying) "Pause" else "Play",
-                        tint = if (activelyPlaying) Color.Black else Color.White,
+                        tint = if (activelyPlaying) Color(0xFF0B0C0E) else Color.White,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -244,7 +251,7 @@ fun ReciterReelCard(
                     Icon(
                         imageVector = if (isFollowing) Icons.Filled.Check else Icons.Filled.PersonAdd,
                         contentDescription = if (isFollowing) "Following" else "Follow",
-                        tint = if (isFollowing) Emerald else Color.White,
+                        tint = Color.White,
                         modifier = Modifier.size(16.dp)
                     )
                 }

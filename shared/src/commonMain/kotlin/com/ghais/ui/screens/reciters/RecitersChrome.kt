@@ -17,7 +17,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val LinkBlue = Color(0xFF4C8DFF)
 private val MutedGrey = Color(0xFF9A9AA0)
 
 @Composable
@@ -25,12 +24,12 @@ fun RegionCountBadge(count: Int) {
     Box(
         modifier = Modifier
             .background(
-                color = LinkBlue.copy(alpha = 0.25f),
+                color = Color.White.copy(alpha = 0.12f),
                 shape = RoundedCornerShape(14.dp)
             )
             .border(
                 width = 1.dp,
-                color = LinkBlue.copy(alpha = 0.4f),
+                color = Color.White.copy(alpha = 0.2f),
                 shape = RoundedCornerShape(14.dp)
             )
             .padding(horizontal = 10.dp, vertical = 5.dp)
