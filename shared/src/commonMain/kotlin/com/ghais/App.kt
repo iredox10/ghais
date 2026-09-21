@@ -41,6 +41,7 @@ import com.ghais.ui.navigation.MainScreen
 import com.ghais.ui.screens.auth.AuthScreen
 import com.ghais.ui.screens.onboarding.OnboardingScreen
 import com.ghais.ui.screens.player.NowPlayingScreen
+import com.ghais.ui.screens.splash.SplashScreen
 import com.ghais.ui.theme.GhaisTheme
 import kotlinx.coroutines.delay
 
@@ -48,20 +49,32 @@ import kotlinx.coroutines.delay
 fun App() {
     GhaisTheme {
         val session by AuthRepository.session.collectAsState()
-        val onboardingSeen by OnboardingStore.seen.collectAsState()
+        val checked by AuthRepository.authChecked.collectAsState()
+        val doneForUser by OnboardingStore.isDoneForCurrentUser.collectAsState()
+        var forceOnboarding by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { AuthRepository.refreshSession() }
         LaunchedEffect(Unit) { SyncTriggers.start(this) }
-        if (!onboardingSeen) {
-            OnboardingScreen.Content()
+        // OnboardingScreen exposes plain Screen.Content() with no onFinish/onComplete
+        // callback (completion lands in OnboardingStore internally); clearing the
+        // replay latch is therefore observed via doneForUser.
+        LaunchedEffect(doneForUser) { if (doneForUser) forceOnboarding = false }
+        if (!checked) {
+            SplashScreen.Content()
         } else if (session == null) {
             // Full-screen gate above everything; MiniPlayer stays under the gate.
-            // Auth is mandatory — no guest mode. onAuthenticated needs no action:
-            // the session flow flips automatically and dismisses the gate.
+            // Auth is mandatory — no guest mode. Logged-out never sees onboarding;
+            // returning here (e.g. sign-out) also clears any pending replay.
+            if (forceOnboarding) forceOnboarding = false
             AuthScreen(
                 onAuthenticated = { isNewAccount ->
-                    if (isNewAccount) OnboardingStore.restartForNewUser()
+                    if (isNewAccount) {
+                        OnboardingStore.restartForNewUser()
+                        forceOnboarding = true
+                    }
                 },
             ).Content()
+        } else if (forceOnboarding || !doneForUser) {
+            OnboardingScreen.Content()
         } else {
             Navigator(MainScreen) { navigator ->
             val currentTrack by AudioEngine.currentTrack.collectAsState()
