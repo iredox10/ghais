@@ -17,6 +17,11 @@ import kotlinx.serialization.json.Json
 object FollowStore {
     private const val KEY_FOLLOWED_QARI = "quranify_followed_qari"
 
+    private var ownerId: String = "local"
+
+    private fun key(base: String): String =
+        if (ownerId == "local") base else "$ownerId::$base"
+
     private val settings: Settings by lazy { Settings() }
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -24,6 +29,12 @@ object FollowStore {
     val followedSlugs: StateFlow<Set<String>> = _followedSlugs.asStateFlow()
 
     init {
+        load()
+    }
+
+    fun setOwner(ownerId: String) {
+        if (ownerId == this.ownerId) return
+        this.ownerId = ownerId
         load()
     }
 
@@ -63,7 +74,7 @@ object FollowStore {
 
     private fun load() {
         try {
-            val raw = settings.getString(KEY_FOLLOWED_QARI, "")
+            val raw = settings.getString(key(KEY_FOLLOWED_QARI), "")
             if (raw.isBlank()) {
                 _followedSlugs.value = emptySet()
                 return
@@ -76,7 +87,7 @@ object FollowStore {
 
     private fun save() {
         try {
-            settings.putString(KEY_FOLLOWED_QARI, json.encodeToString(_followedSlugs.value.toList()))
+            settings.putString(key(KEY_FOLLOWED_QARI), json.encodeToString(_followedSlugs.value.toList()))
         } catch (_: Exception) {
         }
     }

@@ -46,6 +46,11 @@ data class RecitationSchedule(
 object SchedulesStore {
     private const val KEY_SCHEDULES = "quranify_recitation_schedules"
 
+    private var ownerId: String = "local"
+
+    private fun key(base: String): String =
+        if (ownerId == "local") base else "$ownerId::$base"
+
     private val settings: Settings by lazy { Settings() }
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -54,6 +59,16 @@ object SchedulesStore {
 
     init {
         load()
+    }
+
+    fun setOwner(ownerId: String) {
+        if (ownerId == this.ownerId) return
+        this.ownerId = ownerId
+        load()
+        try {
+            ScheduleEngine.refresh(_schedules.value)
+        } catch (_: Exception) {
+        }
     }
 
     /**
@@ -128,7 +143,7 @@ object SchedulesStore {
 
     private fun load() {
         try {
-            val raw = settings.getString(KEY_SCHEDULES, "")
+            val raw = settings.getString(key(KEY_SCHEDULES), "")
             if (raw.isBlank()) {
                 _schedules.value = emptyList()
                 return
@@ -143,7 +158,7 @@ object SchedulesStore {
 
     private fun saveAndRefresh(sorted: List<RecitationSchedule>) {
         try {
-            settings.putString(KEY_SCHEDULES, json.encodeToString(sorted))
+            settings.putString(key(KEY_SCHEDULES), json.encodeToString(sorted))
         } catch (_: Exception) {
         }
         try {

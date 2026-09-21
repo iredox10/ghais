@@ -20,6 +20,11 @@ object OnboardingStore {
 
     private const val DEFAULT_DAILY_GOAL_MINUTES = 15
 
+    private var ownerId: String = "local"
+
+    private fun key(base: String): String =
+        if (ownerId == "local") base else "$ownerId::$base"
+
     private val settings: Settings by lazy { Settings() }
 
     private val _seen = MutableStateFlow(false)
@@ -38,6 +43,12 @@ object OnboardingStore {
         load()
     }
 
+    fun setOwner(ownerId: String) {
+        if (ownerId == this.ownerId) return
+        this.ownerId = ownerId
+        loadPersonal()
+    }
+
     fun setStep(index: Int) {
         val coerced = index.coerceAtLeast(0)
         _step.value = coerced
@@ -50,7 +61,7 @@ object OnboardingStore {
     fun setGoal(goalId: String) {
         _goal.value = goalId
         try {
-            settings.putString(KEY_GOAL, goalId)
+            settings.putString(key(KEY_GOAL), goalId)
         } catch (_: Exception) {
         }
     }
@@ -59,7 +70,7 @@ object OnboardingStore {
         val coerced = minutes.coerceIn(5, 180)
         _dailyGoalMinutes.value = coerced
         try {
-            settings.putInt(KEY_DAILY_GOAL_MINUTES, coerced)
+            settings.putInt(key(KEY_DAILY_GOAL_MINUTES), coerced)
         } catch (_: Exception) {
         }
     }
@@ -104,14 +115,29 @@ object OnboardingStore {
             _step.value = 0
         }
         try {
-            val rawGoal = settings.getString(KEY_GOAL, "")
+            val rawGoal = settings.getString(key(KEY_GOAL), "")
             _goal.value = rawGoal.ifBlank { null }
         } catch (_: Exception) {
             _goal.value = null
         }
         try {
             _dailyGoalMinutes.value =
-                settings.getInt(KEY_DAILY_GOAL_MINUTES, DEFAULT_DAILY_GOAL_MINUTES).coerceIn(5, 180)
+                settings.getInt(key(KEY_DAILY_GOAL_MINUTES), DEFAULT_DAILY_GOAL_MINUTES).coerceIn(5, 180)
+        } catch (_: Exception) {
+            _dailyGoalMinutes.value = DEFAULT_DAILY_GOAL_MINUTES
+        }
+    }
+
+    private fun loadPersonal() {
+        try {
+            val rawGoal = settings.getString(key(KEY_GOAL), "")
+            _goal.value = rawGoal.ifBlank { null }
+        } catch (_: Exception) {
+            _goal.value = null
+        }
+        try {
+            _dailyGoalMinutes.value =
+                settings.getInt(key(KEY_DAILY_GOAL_MINUTES), DEFAULT_DAILY_GOAL_MINUTES).coerceIn(5, 180)
         } catch (_: Exception) {
             _dailyGoalMinutes.value = DEFAULT_DAILY_GOAL_MINUTES
         }

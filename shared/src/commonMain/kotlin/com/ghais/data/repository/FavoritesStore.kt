@@ -19,6 +19,11 @@ import kotlinx.serialization.json.Json
 object FavoritesStore {
     private const val KEY_FAVORITES = "quranify_favorite_tracks"
 
+    private var ownerId: String = "local"
+
+    private fun key(base: String): String =
+        if (ownerId == "local") base else "$ownerId::$base"
+
     private val settings: Settings by lazy { Settings() }
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -26,6 +31,12 @@ object FavoritesStore {
     val favoriteTracks: StateFlow<List<TrackItem>> = _favoriteTracks.asStateFlow()
 
     init {
+        load()
+    }
+
+    fun setOwner(ownerId: String) {
+        if (ownerId == this.ownerId) return
+        this.ownerId = ownerId
         load()
     }
 
@@ -65,7 +76,7 @@ object FavoritesStore {
 
     private fun load() {
         try {
-            val raw = settings.getString(KEY_FAVORITES, "")
+            val raw = settings.getString(key(KEY_FAVORITES), "")
             if (raw.isBlank()) {
                 _favoriteTracks.value = emptyList()
                 return
@@ -78,7 +89,7 @@ object FavoritesStore {
 
     private fun save() {
         try {
-            settings.putString(KEY_FAVORITES, json.encodeToString(_favoriteTracks.value))
+            settings.putString(key(KEY_FAVORITES), json.encodeToString(_favoriteTracks.value))
         } catch (_: Exception) {
         }
     }

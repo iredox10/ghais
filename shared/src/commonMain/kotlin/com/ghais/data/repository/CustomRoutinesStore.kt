@@ -37,6 +37,11 @@ data class CustomRoutine(
 object CustomRoutinesStore {
     private const val KEY_ROUTINES = "quranify_custom_routines"
 
+    private var ownerId: String = "local"
+
+    private fun key(base: String): String =
+        if (ownerId == "local") base else "$ownerId::$base"
+
     private val settings: Settings by lazy { Settings() }
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -44,6 +49,12 @@ object CustomRoutinesStore {
     val routines: StateFlow<List<CustomRoutine>> = _routines.asStateFlow()
 
     init {
+        load()
+    }
+
+    fun setOwner(ownerId: String) {
+        if (ownerId == this.ownerId) return
+        this.ownerId = ownerId
         load()
     }
 
@@ -100,7 +111,7 @@ object CustomRoutinesStore {
 
     private fun load() {
         try {
-            val raw = settings.getString(KEY_ROUTINES, "")
+            val raw = settings.getString(key(KEY_ROUTINES), "")
             if (raw.isBlank()) {
                 _routines.value = emptyList()
                 return
@@ -113,7 +124,7 @@ object CustomRoutinesStore {
 
     private fun save() {
         try {
-            settings.putString(KEY_ROUTINES, json.encodeToString(_routines.value))
+            settings.putString(key(KEY_ROUTINES), json.encodeToString(_routines.value))
         } catch (_: Exception) {
         }
     }
