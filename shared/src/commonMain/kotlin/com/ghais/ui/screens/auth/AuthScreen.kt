@@ -67,6 +67,7 @@ private val AuthErrorRed = Color(0xFFFF6B6B)
  * @param onAuthenticated called on successful sign-in / sign-up (host pops/dismisses the gate).
  * `true` when a brand-new account was just created (host replays onboarding);
  * `false` for returning logins (host goes straight home).
+ * Google sign-in always reports false (returning login); only email signup reports true.
  * @param onGuest legacy no-op kept for backward compatibility; no guest affordance is rendered.
  */
 class AuthScreen(
