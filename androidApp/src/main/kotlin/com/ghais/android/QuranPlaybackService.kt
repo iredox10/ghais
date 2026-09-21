@@ -307,12 +307,13 @@ class QuranPlaybackService : MediaSessionService() {
     private fun startForegroundWithPlaceholder() {
         try {
             val track = AudioEngine.currentTrack.value
-            val initialTitle = track?.let { displayTitle(it.surahNameEn, it.ayahNo, it.isFullSurah) } ?: "Quranify"
+            val initialTitle = track?.let { displayTitle(it.surahNameEn, it.ayahNo, it.isFullSurah) } ?: "Ghais"
             val initialSubtitle = track?.reciterName?.takeIf { it.isNotBlank() } ?: "Preparing recitation…"
             val placeholder = android.app.Notification.Builder(this, CHANNEL_ID)
                 .setContentTitle(initialTitle)
                 .setContentText(initialSubtitle)
                 .setSmallIcon(R.drawable.ic_notification)
+                .setLargeIcon(android.graphics.BitmapFactory.decodeResource(resources, R.drawable.ghais_logo))
                 .setOngoing(true)
                 .build()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

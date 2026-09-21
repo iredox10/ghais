@@ -4,5 +4,8 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowBackground">#FF0A0A0F</item>
+        <!-- Android 12+ splash (ignored on older versions) -->
+        <item name="android:windowSplashScreenBackground">#FF0A0A0F</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ghais_launcher</item>
     </style>
 </resources>
