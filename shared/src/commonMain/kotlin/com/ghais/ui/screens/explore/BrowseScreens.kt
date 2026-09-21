@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -54,7 +55,7 @@ object SurahsScreen : Screen {
                     title = {
                         Text(
                             "All Surahs",
-                            color = GhaisColors.TextPrimary,
+                            color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
                         )
@@ -64,14 +65,14 @@ object SurahsScreen : Screen {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
-                                tint = GhaisColors.TextPrimary
+                                tint = Color.White
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = GhaisColors.Background)
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF000000))
                 )
             },
-            containerColor = GhaisColors.Background
+            containerColor = Color(0xFF000000)
         ) { padding ->
             LazyColumn(
                 modifier = Modifier
@@ -160,7 +161,7 @@ object JuzBrowserScreen : Screen {
                     title = {
                         Text(
                             "Juz Index",
-                            color = GhaisColors.TextPrimary,
+                            color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
                         )
@@ -170,14 +171,14 @@ object JuzBrowserScreen : Screen {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
-                                tint = GhaisColors.TextPrimary
+                                tint = Color.White
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = GhaisColors.Background)
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF000000))
                 )
             },
-            containerColor = GhaisColors.Background
+            containerColor = Color(0xFF000000)
         ) { padding ->
             LazyColumn(
                 modifier = Modifier
@@ -192,11 +193,18 @@ object JuzBrowserScreen : Screen {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(GhaisColors.SurfaceLow.copy(alpha = 0.7f))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.06f),
+                                        Color.White.copy(alpha = 0.03f)
+                                    )
+                                )
+                            )
                             .border(
                                 1.dp,
-                                if (isProminent) GhaisColors.Primary.copy(alpha = 0.25f)
-                                else Color.White.copy(alpha = 0.06f),
+                                if (isProminent) Color.White.copy(alpha = 0.12f)
+                                else Color.White.copy(alpha = 0.08f),
                                 RoundedCornerShape(16.dp)
                             )
                             .clickable {
@@ -247,32 +255,19 @@ object JuzBrowserScreen : Screen {
                                 modifier = Modifier
                                     .size(40.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .then(
-                                        if (isProminent) {
-                                            Modifier
-                                                .background(Color(0xFF10B981).copy(alpha = 0.15f))
-                                                .border(
-                                                    1.dp,
-                                                    GhaisColors.Primary.copy(alpha = 0.35f),
-                                                    RoundedCornerShape(12.dp)
-                                                )
-                                        } else {
-                                            Modifier
-                                                .background(GhaisColors.SurfaceHigh.copy(alpha = 0.7f))
-                                                .border(
-                                                    1.dp,
-                                                    Color.White.copy(alpha = 0.06f),
-                                                    RoundedCornerShape(12.dp)
-                                                )
-                                        }
+                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .border(
+                                        1.dp,
+                                        Color.White.copy(alpha = 0.06f),
+                                        RoundedCornerShape(12.dp)
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = juz.id.toString().padStart(2, '0'),
                                     fontSize = 13.sp,
-                                    fontWeight = if (isProminent) FontWeight.Bold else FontWeight.SemiBold,
-                                    color = if (isProminent) GhaisColors.Primary else GhaisColors.TextPrimary
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
                                 )
                             }
 
@@ -303,7 +298,7 @@ object JuzBrowserScreen : Screen {
                                 text = juz.nameAr,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isProminent) GhaisColors.Primary else GhaisColors.TextPrimary.copy(alpha = 0.9f),
+                                color = Color.White,
                                 textAlign = TextAlign.Right
                             )
 
@@ -311,7 +306,7 @@ object JuzBrowserScreen : Screen {
                                 modifier = Modifier
                                     .size(34.dp)
                                     .clip(CircleShape)
-                                    .background(GhaisColors.SurfaceHigh.copy(alpha = 0.8f))
+                                    .background(Color.White.copy(alpha = 0.08f))
                                     .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape)
                                     .clickable {
                                         val track = TrackItem(
@@ -332,7 +327,7 @@ object JuzBrowserScreen : Screen {
                                 Icon(
                                     imageVector = Icons.Default.PlayArrow,
                                     contentDescription = "Play Juz ${juz.id}",
-                                    tint = GhaisColors.TextPrimary,
+                                    tint = Color.White,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
