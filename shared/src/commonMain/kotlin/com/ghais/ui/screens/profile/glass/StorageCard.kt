@@ -16,8 +16,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,22 +30,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val GlassWhite = Color.White
-private val GlassMuted = Color(0xFF9A9AA0)
-private val GlassBlue = Color(0xFF4C8DFF)
-private val GlassEmerald = Color(0xFF4EDEA3)
-private val GlassRed = Color(0xFFFF5A6E)
+private val HealthWhite = Color.White
+private val HealthMuted = Color(0xFF9AA0A6)
+private val HealthRed = Color(0xFFFF6B7A)
 
 @Composable
-fun StorageGlassCard(
-    storageLabel: String,
-    cachedSummary: String,
-    progressFraction: Float,
-    cacheBadge: String,
-    onClearClick: () -> Unit
-) {
-    val fraction = progressFraction.coerceIn(0.02f, 1f)
+fun StorageHealthCard(usedLabel: String, summary: String, progress: Float, onClear: () -> Unit) {
+    val fraction = progress.coerceIn(0.03f, 1f)
     val cardShape = RoundedCornerShape(24.dp)
+    val barShape = RoundedCornerShape(50)
+    val pillShape = RoundedCornerShape(50)
 
     Box(
         modifier = Modifier
@@ -54,115 +48,30 @@ fun StorageGlassCard(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        GlassWhite.copy(alpha = 0.08f),
-                        GlassWhite.copy(alpha = 0.03f)
+                        HealthWhite.copy(alpha = 0.08f),
+                        HealthWhite.copy(alpha = 0.03f)
                     )
                 )
             )
-            .border(1.dp, GlassWhite.copy(alpha = 0.10f), cardShape)
+            .border(1.dp, HealthWhite.copy(alpha = 0.10f), cardShape)
+            .padding(16.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(GlassBlue.copy(alpha = 0.14f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Storage,
-                        contentDescription = null,
-                        tint = GlassBlue,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 12.dp)
-                ) {
-                    Text(
-                        text = "Storage Used",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = GlassWhite
-                    )
-                    Text(
-                        text = cachedSummary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = GlassMuted
-                    )
-                }
-                Text(
-                    text = storageLabel,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = GlassWhite
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(GlassWhite.copy(alpha = 0.10f))
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(fraction)
-                        .fillMaxHeight()
-                        .clip(RoundedCornerShape(50))
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(GlassEmerald, GlassBlue)
-                            )
-                        )
-                )
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(GlassWhite.copy(alpha = 0.15f))
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(GlassWhite.copy(alpha = 0.06f))
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onClearClick)
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(GlassRed.copy(alpha = 0.14f)),
+                        .background(HealthWhite.copy(alpha = 0.08f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.DeleteOutline,
+                        imageVector = Icons.Filled.DownloadDone,
                         contentDescription = null,
-                        tint = GlassRed,
+                        tint = HealthWhite,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -172,33 +81,84 @@ fun StorageGlassCard(
                         .padding(start = 12.dp)
                 ) {
                     Text(
-                        text = "Clear Audio Cache",
+                        text = "Offline downloads",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = GlassWhite
+                        color = HealthWhite
                     )
                     Text(
-                        text = "Frees temporary streaming buffer",
+                        text = summary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Normal,
-                        color = GlassMuted
+                        color = HealthMuted
                     )
                 }
+                Text(
+                    text = usedLabel,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = HealthWhite
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(barShape)
+                    .background(HealthWhite.copy(alpha = 0.12f))
+            ) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(GlassWhite.copy(alpha = 0.10f))
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                        .fillMaxWidth(fraction)
+                        .fillMaxHeight()
+                        .clip(barShape)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    HealthWhite.copy(alpha = 0.95f),
+                                    HealthWhite.copy(alpha = 0.55f)
+                                )
+                            )
+                        )
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(HealthWhite.copy(alpha = 0.35f))
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .clip(pillShape)
+                    .background(HealthRed.copy(alpha = 0.12f))
+                    .clickable(onClick = onClear),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = null,
+                        tint = HealthRed,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = cacheBadge,
-                        fontSize = 11.sp,
+                        text = "Clear cache",
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = GlassWhite
+                        color = HealthRed
                     )
                 }
-                Spacer(modifier = Modifier.width(4.dp))
             }
         }
     }

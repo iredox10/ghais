@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 private val GlassCard = Color(0xFF1C1C1E)
-private val GlassBlue = Color(0xFF4C8DFF)
 private val GlassMuted = Color(0xFF9A9AA0)
 
 @Composable
@@ -85,7 +84,7 @@ fun EditProfileDialogGlass(
             TextButton(onClick = { onSave(editingName.trim(), editingBio.trim()) }) {
                 Text(
                     text = "Save",
-                    color = GlassBlue,
+                    color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
             }

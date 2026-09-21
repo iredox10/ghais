@@ -44,7 +44,7 @@ fun BoxScope.AuroraBackdrop() {
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFF4EDEA3).copy(alpha = 0.14f),
+                            Color(0xFF4EDEA3).copy(alpha = 0.10f),
                             Color.Transparent
                         )
                     )
