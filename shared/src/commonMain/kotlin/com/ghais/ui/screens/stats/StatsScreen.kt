@@ -125,7 +125,8 @@ object StatsScreen : Screen {
             }
         }
 
-        val ringProgress = (stats.minutesToday / DAILY_GOAL_MINUTES).coerceIn(0f, 1f)
+        val goalMin by com.ghais.data.repository.OnboardingStore.dailyGoalMinutes.collectAsState()
+        val ringProgress = (stats.minutesToday / goalMin.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
 
         Box(
             modifier = Modifier
