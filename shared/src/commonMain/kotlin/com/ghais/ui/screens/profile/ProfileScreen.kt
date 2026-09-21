@@ -1,48 +1,22 @@
 package com.ghais.ui.screens.profile
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
-import androidx.compose.ui.window.Dialog
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,59 +25,35 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.data.auth.AuthRepository
 import com.ghais.data.repository.FavoritesStore
-import com.ghais.data.repository.QuranDataRepository
-import com.ghais.data.repository.RecitationSchedule
-import com.ghais.data.repository.SchedulesStore
 import com.ghais.data.sync.SyncEngine
 import com.ghais.data.sync.SyncStatus
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.profile.glass.AuroraBackdrop
 import com.ghais.ui.screens.profile.glass.EditProfileDialogGlass
+import com.ghais.ui.screens.profile.glass.FeatureCard
 import com.ghais.ui.screens.profile.glass.GlassCardContainer
 import com.ghais.ui.screens.profile.glass.GlassDivider
-import com.ghais.ui.screens.profile.glass.GlassLinkRow
-import com.ghais.ui.screens.profile.glass.GlassSectionHeader
-import com.ghais.ui.screens.profile.glass.GlassSwitchRow
-import com.ghais.ui.screens.profile.glass.GlassValueRow
-import com.ghais.ui.screens.profile.glass.ProfileHeroGlass
-import com.ghais.ui.screens.profile.glass.StorageGlassCard
+import com.ghais.ui.screens.profile.glass.GlassSectionLabel
+import com.ghais.ui.screens.profile.glass.ProfileIdentityPill
+import com.ghais.ui.screens.profile.glass.ProtonRow
+import com.ghais.ui.screens.profile.glass.ProtonSwitchRow
+import com.ghais.ui.screens.profile.glass.ProtonValueRow
+import com.ghais.ui.screens.profile.glass.SchedulesProtonSection
+import com.ghais.ui.screens.profile.glass.StorageHealthCard
 import com.ghais.ui.screens.settings.AppSettingsScreen
 import com.ghais.ui.screens.stats.StatsScreen
 import com.russhwolf.settings.Settings
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
-
-// -----------------------------------------------------------------------------
-// Design System Tokens: Black-Glass (Pure Black + Glass Cards + Link Blue)
-// -----------------------------------------------------------------------------
-private val PureBlackBg = Color(0xFF000000)                    // Pure Black page bg
-private val DarkCard = Color(0xFF1C1C1E)                       // Dark card base (dialogs)
-private val GlassCard = Color.White.copy(alpha = 0.05f)        // Glass card fill
-private val LinkBlue = Color(0xFF4C8DFF)                       // Primary accent (blue)
-private val HeroBlue = Color(0xFF2E7CF6)                       // Hero gradient start
-private val HeroIndigo = Color(0xFF0A1F44)                     // Hero gradient end
-private val Emerald = Color(0xFF30D158)                        // Success / following green
-private val HeartRed = Color(0xFFFF5A6E)                       // Favorites / heart red
-private val StreakGold = Color(0xFFFFC94D)                     // Warm gold — streak flame ONLY (unused on this screen)
-private val CardBorderSubtle = Color.White.copy(alpha = 0.08f)// Glass hairline border
-private val TextWhitePrimary = Color(0xFFFFFFFF)              // Crisp White
-private val TextMuted = Color(0xFF9A9AA0)                      // Muted grey
-private val SubtleDivider = Color.White.copy(alpha = 0.06f)   // Hairline Separator
 
 // Persistence Keys
 private const val PREF_USER_NAME = "ghais_profile_name"
@@ -239,180 +189,188 @@ object ProfileScreen : Tab {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(PureBlackBg)
+                .background(Color.Black)
         ) {
             AuroraBackdrop()
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(PureBlackBg),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 120.dp)
             ) {
-            // -----------------------------------------------------------------
-            // 1. Screen Title & Ambient Subtitle
-            // -----------------------------------------------------------------
-            item {
-                Column(modifier = Modifier.padding(bottom = 20.dp, start = 4.dp)) {
-                    Text(
-                        text = "Your Journey,",
-                        color = TextWhitePrimary,
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-0.5).sp
-                    )
-                    Text(
-                        text = "Safely Kept",
-                        color = TextMuted,
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-0.5).sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Stats, downloads & preferences",
-                        color = TextMuted,
-                        fontSize = 13.sp
-                    )
+                // -----------------------------------------------------------------
+                // 1. Cloud Sync feature card
+                // -----------------------------------------------------------------
+                item {
+                    FeatureCard(
+                        title = "Cloud Sync",
+                        body = "Keep favorites, playlists and progress safe across devices.",
+                        buttonText = "Sync now"
+                    ) { scope.launch { SyncEngine.syncNow() } }
+                    Spacer(modifier = Modifier.height(18.dp))
                 }
-            }
 
-            // -----------------------------------------------------------------
-            // 2. Modular Profile Identity Card (Chunky / Oversized Avatar)
-            // -----------------------------------------------------------------
-            item {
-                ProfileHeroGlass(
-                    userName = userName,
-                    userBio = userBio,
-                    onEditClick = { showEditDialog = true },
-                    sessionName = session?.name,
-                    sessionEmail = session?.email,
-                    isGuest = session == null,
-                    onLogoutClick = { scope.launch { AuthRepository.signOut() } }
-                )
-                Spacer(modifier = Modifier.height(18.dp))
-            }
-
-            // -----------------------------------------------------------------
-            // Favorites row (live count — kept)
-            // -----------------------------------------------------------------
-            item {
-                GlassCardContainer {
-                    GlassLinkRow(
-                        icon = Icons.Filled.Favorite,
-                        iconTint = HeartRed,
-                        title = "Favorite Verses & Surahs",
-                        subtitle = "Bookmarked ayahs and cherished recitations",
-                        badge = "$favoriteCount items"
+                // -----------------------------------------------------------------
+                // 2. Identity pill (tap to edit profile)
+                // -----------------------------------------------------------------
+                item {
+                    ProfileIdentityPill(
+                        displayName = session?.name?.ifBlank { null } ?: userName,
+                        email = session?.email,
+                        isGuest = session == null,
+                        onClick = { showEditDialog = true }
                     )
+                    Spacer(modifier = Modifier.height(18.dp))
                 }
-                Spacer(modifier = Modifier.height(18.dp))
-            }
 
-            // -----------------------------------------------------------------
-            // 9. Section: Storage & Offline Downloads
-            // -----------------------------------------------------------------
-            item {
-                GlassSectionHeader(title = "Storage & Offline Data", icon = Icons.Filled.Storage)
-                val progressFraction = (storageSizeBytes / (512 * 1024 * 1024f)).coerceIn(0.02f, 1f)
-                val cachedSummary = if (cachedSurahCount == 1) "1 surah cached offline" else "$cachedSurahCount surahs cached offline"
-                StorageGlassCard(
-                    storageLabel = formatStorageBytes(storageSizeBytes),
-                    cachedSummary = cachedSummary,
-                    progressFraction = progressFraction,
-                    cacheBadge = formatStorageBytes(storageSizeBytes),
-                    onClearClick = {
-                        scope.launch {
-                            QuranDownloads.clearAll()
-                            storageSizeBytes = QuranDownloads.storageBytes()
-                        }
+                // -----------------------------------------------------------------
+                // 3. Storage Health
+                // -----------------------------------------------------------------
+                item {
+                    GlassSectionLabel("Storage Health")
+                    val cachedSummary = if (cachedSurahCount == 1) {
+                        "1 surah cached offline"
+                    } else {
+                        "$cachedSurahCount surahs cached offline"
                     }
-                )
-            }
-
-            // -----------------------------------------------------------------
-            // Recitation schedules (multiple daily alarms)
-            // -----------------------------------------------------------------
-            item {
-                RecitationSchedulesSection()
-            }
-
-            // -----------------------------------------------------------------
-            // Spiritual Reminders (single summary row + toggle)
-            // -----------------------------------------------------------------
-            item {
-                GlassSectionHeader(title = "Spiritual Reminders", icon = Icons.Filled.Notifications)
-                GlassCardContainer {
-                    GlassSwitchRow(
-                        icon = Icons.Filled.Notifications,
-                        title = "Daily Dhikr Reminder",
-                        subtitle = "Morning & Evening Adhkar spiritual alerts",
-                        checked = dailyDhikrReminder,
-                        onCheckedChange = {
-                            dailyDhikrReminder = it
-                            settings.putBoolean(PREF_DHIKR_ALERT, it)
+                    StorageHealthCard(
+                        usedLabel = formatStorageBytes(storageSizeBytes),
+                        summary = cachedSummary,
+                        progress = (storageSizeBytes / (512 * 1024 * 1024f)).coerceIn(0.03f, 1f),
+                        onClear = {
+                            scope.launch {
+                                QuranDownloads.clearAll()
+                                storageSizeBytes = QuranDownloads.storageBytes()
+                            }
                         }
                     )
+                    Spacer(modifier = Modifier.height(18.dp))
                 }
-            }
 
-            // -----------------------------------------------------------------
-            // Settings & Stats link rows
-            // -----------------------------------------------------------------
-            item {
-                GlassCardContainer {
-                    GlassLinkRow(
-                        icon = Icons.Filled.Settings,
-                        iconTint = LinkBlue,
-                        title = "Settings",
-                        subtitle = "Audio, reciter, appearance & downloads",
-                        onClick = { rootNavigator?.push(AppSettingsScreen) }
-                    )
+                // -----------------------------------------------------------------
+                // 4. Library (badge rows)
+                // -----------------------------------------------------------------
+                item {
+                    GlassSectionLabel("Library")
+                    GlassCardContainer {
+                        ProtonRow(
+                            icon = Icons.Filled.MusicNote,
+                            title = "Favorite Verses & Surahs",
+                            subtitle = "Bookmarked ayahs and cherished recitations",
+                            countBadge = favoriteCount
+                        )
 
-                    GlassDivider()
+                        GlassDivider()
 
-                    GlassLinkRow(
-                        icon = Icons.Filled.BarChart,
-                        iconTint = Emerald,
-                        title = "Your stats",
-                        subtitle = "Streaks, listening time & Khatmah journey",
-                        onClick = { rootNavigator?.push(StatsScreen) }
-                    )
-
-                    GlassDivider()
-
-                    GlassLinkRow(
-                        icon = Icons.Filled.Sync,
-                        iconTint = Emerald,
-                        title = "Sync",
-                        subtitle = syncSubtitle,
-                        onClick = { scope.launch { SyncEngine.syncNow() } }
-                    )
+                        ProtonRow(
+                            icon = Icons.Filled.DownloadDone,
+                            title = "Offline downloads",
+                            subtitle = "$cachedSurahCount surahs cached • " + formatStorageBytes(storageSizeBytes),
+                            countBadge = cachedSurahCount
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(18.dp))
                 }
-            }
 
-            // -----------------------------------------------------------------
-            // About Ghais (trimmed)
-            // -----------------------------------------------------------------
-            item {
-                GlassSectionHeader(title = "About Ghais", icon = Icons.Filled.Info)
-                GlassCardContainer {
-                    GlassValueRow(
-                        icon = Icons.Filled.Info,
-                        title = "App Version",
-                        subtitle = "Production release channel",
-                        value = "v1.0.0 (Build 2026.1)"
-                    )
-
-                    GlassDivider()
-
-                    GlassValueRow(
-                        icon = Icons.Filled.Favorite,
-                        title = "Audio Sources",
-                        subtitle = "MP3Quran (242 reciters), Tanzil & EveryAyah",
-                        value = "Verified"
-                    )
+                // -----------------------------------------------------------------
+                // 5. Recitation schedules
+                // -----------------------------------------------------------------
+                item {
+                    SchedulesProtonSection()
+                    Spacer(modifier = Modifier.height(18.dp))
                 }
-            }
+
+                // -----------------------------------------------------------------
+                // 6. Preferences
+                // -----------------------------------------------------------------
+                item {
+                    GlassSectionLabel("Preferences")
+                    GlassCardContainer {
+                        ProtonSwitchRow(
+                            icon = Icons.Filled.NotificationsActive,
+                            title = "Daily Dhikr Reminder",
+                            subtitle = "Morning & Evening Adhkar alerts",
+                            checked = dailyDhikrReminder,
+                            onCheckedChange = {
+                                dailyDhikrReminder = it
+                                settings.putBoolean(PREF_DHIKR_ALERT, it)
+                            }
+                        )
+
+                        GlassDivider()
+
+                        ProtonRow(
+                            icon = Icons.Filled.Tune,
+                            title = "Settings",
+                            subtitle = "Audio, reciter, appearance & downloads",
+                            onClick = { rootNavigator?.push(AppSettingsScreen) }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(18.dp))
+                }
+
+                // -----------------------------------------------------------------
+                // 7. Journey
+                // -----------------------------------------------------------------
+                item {
+                    GlassSectionLabel("Journey")
+                    GlassCardContainer {
+                        ProtonRow(
+                            icon = Icons.Filled.Insights,
+                            title = "Your stats",
+                            subtitle = "Streaks, listening time & Khatmah journey",
+                            onClick = { rootNavigator?.push(StatsScreen) }
+                        )
+
+                        GlassDivider()
+
+                        ProtonRow(
+                            icon = Icons.Filled.CloudDone,
+                            title = "Sync",
+                            subtitle = syncSubtitle,
+                            onClick = { scope.launch { SyncEngine.syncNow() } }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(18.dp))
+                }
+
+                // -----------------------------------------------------------------
+                // 8. About
+                // -----------------------------------------------------------------
+                item {
+                    GlassSectionLabel("About")
+                    GlassCardContainer {
+                        ProtonValueRow(
+                            icon = Icons.Filled.Language,
+                            title = "App Version",
+                            subtitle = "Production release channel",
+                            value = "v1.0.0 (Build 2026.1)"
+                        )
+
+                        GlassDivider()
+
+                        ProtonValueRow(
+                            icon = Icons.Filled.VerifiedUser,
+                            title = "Audio Sources",
+                            subtitle = "MP3Quran (242 reciters), Tanzil & EveryAyah",
+                            value = "Verified"
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(18.dp))
+                }
+
+                // -----------------------------------------------------------------
+                // 9. Log out (always visible — auth is mandatory)
+                // -----------------------------------------------------------------
+                item {
+                    GlassCardContainer {
+                        ProtonRow(
+                            icon = Icons.Filled.Logout,
+                            title = "Log out",
+                            subtitle = session?.email ?: "Signed in",
+                            destructive = true,
+                            onClick = { scope.launch { AuthRepository.signOut() } }
+                        )
+                    }
+                }
             }
         }
 
@@ -440,8 +398,6 @@ object ProfileScreen : Tab {
     }
 }
 
-// Glass primitives live in com.ghais.ui.screens.profile.glass (see imports above).
-
 // Storage size formatting: B / KB / MB with one decimal
 private fun formatStorageBytes(bytes: Long): String {
     if (bytes < 1024) return "$bytes B"
@@ -466,592 +422,4 @@ private fun formatSyncRelative(nowMs: Long, atMs: Long): String {
         seconds < 86400 -> "${seconds / 3600}h ago"
         else -> "${seconds / 86400}d ago"
     }
-}
-
-// -----------------------------------------------------------------------------
-// Section: Recitation Schedules (multiple daily alarms: time + reciter +
-// surah range + optional play-for-minutes)
-// -----------------------------------------------------------------------------
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun RecitationSchedulesSection() {
-    val schedules by SchedulesStore.schedules.collectAsState()
-    val reciters = remember { QuranDataRepository.getReciters() }
-    val surahs = remember { QuranDataRepository.getSurahs() }
-
-    var showSheet by remember { mutableStateOf(false) }
-    var editingId by remember { mutableStateOf<String?>(null) }
-    var hour by remember { mutableStateOf(5) }
-    var minute by remember { mutableStateOf(30) }
-    var reciterSlug by remember { mutableStateOf(reciters.firstOrNull()?.slug ?: "") }
-    var fromSurah by remember { mutableStateOf(1) }
-    var toSurah by remember { mutableStateOf(114) }
-    var useMinutes by remember { mutableStateOf(false) }
-    var minutes by remember { mutableStateOf(30) }
-    var reciterExpanded by remember { mutableStateOf(false) }
-
-    fun surahName(id: Int): String = surahs.find { it.id == id }?.nameEn ?: "Surah $id"
-    fun reciterName(slug: String): String = reciters.find { it.slug == slug }?.nameEn ?: slug
-
-    fun openAdd() {
-        editingId = null
-        hour = 5
-        minute = 30
-        reciterSlug = reciters.firstOrNull()?.slug ?: ""
-        fromSurah = 1
-        toSurah = 114
-        useMinutes = false
-        minutes = 30
-        reciterExpanded = false
-        showSheet = true
-    }
-
-    fun openEdit(schedule: RecitationSchedule) {
-        editingId = schedule.id
-        hour = schedule.hour
-        minute = schedule.minute
-        reciterSlug = schedule.reciterSlug
-        fromSurah = schedule.fromSurah
-        toSurah = schedule.toSurah
-        useMinutes = schedule.durationMin != null
-        minutes = schedule.durationMin ?: 30
-        reciterExpanded = false
-        showSheet = true
-    }
-
-    fun saveSchedule() {
-        val safeReciter = reciterSlug.ifBlank { reciters.firstOrNull()?.slug ?: "" }
-        if (safeReciter.isBlank()) return
-        val safeHour = hour.coerceIn(0, 23)
-        val safeMinute = minute.coerceIn(0, 59)
-        val safeFrom = fromSurah.coerceIn(1, 114)
-        val preservedEnabled = editingId?.let { id -> schedules.find { it.id == id }?.enabled } ?: true
-        val schedule = if (useMinutes) {
-            RecitationSchedule(
-                id = editingId ?: ("sch-" + Clock.System.now().toEpochMilliseconds()),
-                hour = safeHour,
-                minute = safeMinute,
-                reciterSlug = safeReciter,
-                fromSurah = safeFrom,
-                toSurah = 114,
-                durationMin = minutes.coerceIn(5, 180),
-                enabled = preservedEnabled
-            )
-        } else {
-            RecitationSchedule(
-                id = editingId ?: ("sch-" + Clock.System.now().toEpochMilliseconds()),
-                hour = safeHour,
-                minute = safeMinute,
-                reciterSlug = safeReciter,
-                fromSurah = safeFrom,
-                toSurah = toSurah.coerceIn(safeFrom, 114),
-                durationMin = null,
-                enabled = preservedEnabled
-            )
-        }
-        if (editingId == null) SchedulesStore.add(schedule) else SchedulesStore.update(schedule)
-        showSheet = false
-    }
-
-    GlassSectionHeader(title = "Recitation schedules", icon = Icons.Filled.Schedule)
-    Text(
-        text = "Play Quran automatically at your times",
-        color = TextMuted,
-        fontSize = 13.sp,
-        modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
-    )
-
-    if (schedules.isEmpty()) {
-        GlassCardContainer {
-            Text(
-                text = "No schedules — add one to wake up to Quran",
-                color = TextMuted,
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp)
-            )
-        }
-    } else {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            schedules.forEach { schedule ->
-                val rangeCore = if (schedule.fromSurah == schedule.toSurah) {
-                    surahName(schedule.fromSurah)
-                } else {
-                    "${surahName(schedule.fromSurah)} → ${surahName(schedule.toSurah)}"
-                }
-                val rangeText = if (schedule.durationMin != null) {
-                    "$rangeCore • ${schedule.durationMin} min"
-                } else {
-                    "$rangeCore • full range"
-                }
-                ScheduleCard(
-                    schedule = schedule,
-                    timeText = formatScheduleTime(schedule.hour, schedule.minute),
-                    reciterText = reciterName(schedule.reciterSlug),
-                    rangeText = rangeText,
-                    onEdit = { openEdit(schedule) },
-                    onToggle = { SchedulesStore.setEnabled(schedule.id, it) },
-                    onDelete = { SchedulesStore.remove(schedule.id) }
-                )
-            }
-        }
-    }
-
-    Spacer(modifier = Modifier.height(12.dp))
-
-    // Full-width "Add schedule" pill (mirrors the Edit Profile pill)
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(50.dp))
-            .background(LinkBlue)
-            .clickable { openAdd() }
-            .padding(vertical = 14.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Filled.Add,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(18.dp)
-        )
-        Text(
-            text = "Add schedule",
-            color = Color.White,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
-
-    if (showSheet) {
-        AlertDialog(
-            onDismissRequest = { showSheet = false },
-            title = {
-                Text(
-                    text = if (editingId == null) "Add schedule" else "Edit schedule",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    // Clock time picker (tap the time to open the clock dial)
-                    var showClock by remember { mutableStateOf(false) }
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "Starts at",
-                            color = TextMuted,
-                            fontSize = 12.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(Color.White.copy(alpha = 0.06f))
-                                .border(1.dp, LinkBlue.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
-                                .clickable { showClock = true }
-                                .padding(horizontal = 28.dp, vertical = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = formatScheduleTime(hour, minute),
-                                color = Color.White,
-                                fontSize = 44.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = (-0.5).sp
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Tap to set time",
-                            color = LinkBlue,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clickable { showClock = true }
-                        )
-                    }
-
-                    if (showClock) {
-                        val clockState = rememberTimePickerState(
-                            initialHour = hour,
-                            initialMinute = minute,
-                            is24Hour = true
-                        )
-                        Dialog(onDismissRequest = { showClock = false }) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(28.dp))
-                                    .background(DarkCard)
-                                    .padding(20.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    TimePicker(state = clockState)
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .clip(RoundedCornerShape(50.dp))
-                                                .background(Color.White.copy(alpha = 0.08f))
-                                                .clickable { showClock = false }
-                                                .padding(vertical = 12.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text("Cancel", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                                        }
-                                        Box(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .clip(RoundedCornerShape(50.dp))
-                                                .background(LinkBlue)
-                                                .clickable {
-                                                    hour = clockState.hour
-                                                    minute = clockState.minute
-                                                    showClock = false
-                                                }
-                                                .padding(vertical = 12.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text("Set time", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Reciter picker (inline expandable list)
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = "Reciter",
-                            color = TextMuted,
-                            fontSize = 12.sp
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.White.copy(alpha = 0.06f))
-                                .border(1.dp, CardBorderSubtle, RoundedCornerShape(12.dp))
-                                .clickable { reciterExpanded = !reciterExpanded }
-                                .padding(horizontal = 14.dp, vertical = 12.dp)
-                        ) {
-                            Text(
-                                text = reciterName(reciterSlug).ifBlank { "Choose reciter" },
-                                color = TextWhitePrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        if (reciterExpanded) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(max = 200.dp)
-                                    .verticalScroll(rememberScrollState())
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.White.copy(alpha = 0.04f))
-                                    .border(1.dp, CardBorderSubtle, RoundedCornerShape(12.dp))
-                            ) {
-                                reciters.forEach { reciter ->
-                                    val selected = reciter.slug == reciterSlug
-                                    Text(
-                                        text = reciter.nameEn,
-                                        color = if (selected) LinkBlue else TextWhitePrimary,
-                                        fontSize = 14.sp,
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                reciterSlug = reciter.slug
-                                                reciterExpanded = false
-                                            }
-                                            .padding(horizontal = 14.dp, vertical = 10.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Mode toggle: surah range vs play-for-minutes
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ScheduleModePill(
-                            text = "Surah range",
-                            selected = !useMinutes,
-                            onClick = { useMinutes = false },
-                            modifier = Modifier.weight(1f)
-                        )
-                        ScheduleModePill(
-                            text = "Play for",
-                            selected = useMinutes,
-                            onClick = { useMinutes = true },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    if (!useMinutes) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            ScheduleStepper(
-                                label = "From: ${surahName(fromSurah)}",
-                                valueText = fromSurah.toString(),
-                                onMinus = { fromSurah = (fromSurah - 1).coerceAtLeast(1) },
-                                onPlus = { fromSurah = (fromSurah + 1).coerceAtMost(114) }
-                            )
-                            ScheduleStepper(
-                                label = "To: ${surahName(toSurah.coerceIn(fromSurah, 114))}",
-                                valueText = toSurah.coerceIn(fromSurah, 114).toString(),
-                                onMinus = { toSurah = (toSurah - 1).coerceIn(fromSurah, 114) },
-                                onPlus = { toSurah = (toSurah + 1).coerceIn(fromSurah, 114) }
-                            )
-                        }
-                    } else {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            ScheduleStepper(
-                                label = "Start: ${surahName(fromSurah)}",
-                                valueText = fromSurah.toString(),
-                                onMinus = { fromSurah = (fromSurah - 1).coerceAtLeast(1) },
-                                onPlus = { fromSurah = (fromSurah + 1).coerceAtMost(114) }
-                            )
-                            ScheduleStepper(
-                                label = "Minutes",
-                                valueText = "$minutes min",
-                                onMinus = { minutes = (minutes - 5).coerceAtLeast(5) },
-                                onPlus = { minutes = (minutes + 5).coerceAtMost(180) }
-                            )
-                            Text(
-                                text = "Plays from ${surahName(fromSurah)} onward",
-                                color = TextMuted,
-                                fontSize = 12.sp,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { saveSchedule() }) {
-                    Text(
-                        text = "Save",
-                        color = LinkBlue,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSheet = false }) {
-                    Text(
-                        text = "Cancel",
-                        color = TextMuted
-                    )
-                }
-            },
-            containerColor = DarkCard,
-            shape = RoundedCornerShape(20.dp)
-        )
-    }
-}
-
-@Composable
-private fun ScheduleCard(
-    schedule: RecitationSchedule,
-    timeText: String,
-    reciterText: String,
-    rangeText: String,
-    onEdit: () -> Unit,
-    onToggle: (Boolean) -> Unit,
-    onDelete: () -> Unit
-) {
-    GlassCardContainer {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(LinkBlue.copy(alpha = 0.14f))
-                    .border(0.5.dp, LinkBlue.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = timeText,
-                    color = LinkBlue,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onEdit() }
-            ) {
-                Text(
-                    text = reciterText,
-                    color = TextWhitePrimary,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = rangeText,
-                    color = TextMuted,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Switch(
-                checked = schedule.enabled,
-                onCheckedChange = onToggle,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = LinkBlue,
-                    checkedBorderColor = Color.Transparent,
-                    uncheckedThumbColor = Color(0xFF8E989C),
-                    uncheckedTrackColor = Color.White.copy(alpha = 0.12f),
-                    uncheckedBorderColor = Color.White.copy(alpha = 0.12f)
-                )
-            )
-
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Filled.Delete,
-                    contentDescription = "Delete schedule",
-                    tint = HeartRed,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ScheduleStepper(
-    label: String,
-    valueText: String,
-    onMinus: () -> Unit,
-    onPlus: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Text(
-            text = label,
-            color = TextMuted,
-            fontSize = 12.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            ScheduleStepperButton(text = "−", onClick = onMinus)
-            Text(
-                text = valueText,
-                color = TextWhitePrimary,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
-            ScheduleStepperButton(text = "+", onClick = onPlus)
-        }
-    }
-}
-
-@Composable
-private fun ScheduleStepperButton(
-    text: String,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.08f))
-            .border(1.dp, CardBorderSubtle, CircleShape)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = LinkBlue,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-private fun ScheduleModePill(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(50.dp))
-            .background(if (selected) LinkBlue else Color.White.copy(alpha = 0.08f))
-            .border(
-                0.5.dp,
-                if (selected) LinkBlue else CardBorderSubtle,
-                RoundedCornerShape(50.dp)
-            )
-            .clickable { onClick() }
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = if (selected) Color.White else TextMuted,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-// 24h "HH:MM" formatting for schedule times
-private fun formatScheduleTime(hour: Int, minute: Int): String {
-    return hour.toString().padStart(2, '0') + ":" + minute.toString().padStart(2, '0')
 }
