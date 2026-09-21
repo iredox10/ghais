@@ -21,14 +21,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.ghais.data.seed.StitchAssets
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.data.seed.GhaisAssets
+import com.ghais.ui.theme.GhaisColors
 
 @Composable
 fun JumpBackInSection(
     onCardClick: (String) -> Unit = {}
 ) {
-    val items = StitchAssets.JumpBackInItems
+    val items = GhaisAssets.JumpBackInItems
 
     Column(
         modifier = Modifier
@@ -69,14 +69,14 @@ fun JumpBackInSection(
                     modifier = Modifier
                         .size(6.dp)
                         .alpha(alpha)
-                        .background(QuranifyColors.TrendingPurple, CircleShape)
+                        .background(GhaisColors.TrendingPurple, CircleShape)
                 )
             }
             
             Text(
                 text = "History",
                 fontSize = 12.sp,
-                color = QuranifyColors.TextSecondary,
+                color = GhaisColors.TextSecondary,
                 modifier = Modifier.clickable { /* Handle click */ }
             )
         }
@@ -99,7 +99,7 @@ fun JumpBackInSection(
                     modifier = Modifier.weight(1f),
                     title = item0?.title ?: "Al-Mulk",
                     subtitle = item0?.subtitle ?: "Ayah 14 • 4:12 left",
-                    subtitleColor = QuranifyColors.TextSecondary,
+                    subtitleColor = GhaisColors.TextSecondary,
                     progress = item0?.progress ?: 0.67f,
                     coverUrl = item0?.coverUrl ?: "",
                     onClick = { onCardClick("Al-Mulk") }
@@ -109,7 +109,7 @@ fun JumpBackInSection(
                     modifier = Modifier.weight(1f),
                     title = item1?.title ?: "Al-Kahf",
                     subtitle = item1?.subtitle ?: "Friday Sunnah",
-                    subtitleColor = QuranifyColors.NeonLilac,
+                    subtitleColor = GhaisColors.NeonLilac,
                     progress = item1?.progress ?: 0.25f,
                     coverUrl = item1?.coverUrl ?: "",
                     onClick = { onCardClick("Al-Kahf") }
@@ -124,7 +124,7 @@ fun JumpBackInSection(
                     modifier = Modifier.weight(1f),
                     title = item2?.title ?: "Surah Yaseen",
                     subtitle = item2?.subtitle ?: "Mishary Alafasy",
-                    subtitleColor = QuranifyColors.TextSecondary,
+                    subtitleColor = GhaisColors.TextSecondary,
                     progress = item2?.progress ?: 0.80f,
                     coverUrl = item2?.coverUrl ?: "",
                     onClick = { onCardClick("Yaseen") }
@@ -134,7 +134,7 @@ fun JumpBackInSection(
                     modifier = Modifier.weight(1f),
                     title = item3?.title ?: "Tahajjud Peace",
                     subtitle = item3?.subtitle ?: "Heart Softeners",
-                    subtitleColor = QuranifyColors.TextSecondary,
+                    subtitleColor = GhaisColors.TextSecondary,
                     progress = item3?.progress ?: 0.50f,
                     coverUrl = item3?.coverUrl ?: "",
                     onClick = { onCardClick("Tahajjud") }
@@ -149,10 +149,10 @@ fun JumpBackInCard(
     modifier: Modifier = Modifier,
     title: String,
     subtitle: String,
-    subtitleColor: Color = QuranifyColors.TextSecondary,
+    subtitleColor: Color = GhaisColors.TextSecondary,
     progress: Float,
     progressBrush: Brush = Brush.horizontalGradient(
-        listOf(QuranifyColors.ElectricViolet, QuranifyColors.TrendingPurple)
+        listOf(GhaisColors.ElectricViolet, GhaisColors.TrendingPurple)
     ),
     coverUrl: String,
     onClick: () -> Unit
@@ -160,7 +160,7 @@ fun JumpBackInCard(
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(QuranifyColors.ObsidianCard)
+            .background(GhaisColors.ObsidianCard)
             .border(
                 width = 1.dp,
                 color = Color.White.copy(alpha = 0.08f),
@@ -175,7 +175,7 @@ fun JumpBackInCard(
             modifier = Modifier
                 .size(48.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(QuranifyColors.SurfaceHigh)
+                .background(GhaisColors.SurfaceHigh)
                 .border(
                     width = 1.dp,
                     color = Color.White.copy(alpha = 0.12f),
@@ -193,7 +193,7 @@ fun JumpBackInCard(
             } else {
                 Text(
                     text = title.firstOrNull()?.toString() ?: "",
-                    color = QuranifyColors.TrendingPurple,
+                    color = GhaisColors.TrendingPurple,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )

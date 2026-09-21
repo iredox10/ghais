@@ -55,14 +55,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ghais.data.seed.QuranDataRepository
-import com.ghais.data.seed.StitchAssets
+import com.ghais.data.seed.GhaisAssets
 import com.ghais.data.seed.toTrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 /**
  * 2-column Quick Cards row matching Stitch specs:
@@ -90,13 +90,13 @@ fun LibraryQuickGridSection(
                 .weight(1f)
                 .height(124.dp)
                 .clip(RoundedCornerShape(18.dp))
-                .background(QuranifyColors.SurfaceContainer)
+                .background(GhaisColors.SurfaceContainer)
                 .drawBehind {
                     // Subtle amber glow in bottom right
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                QuranifyColors.Secondary.copy(alpha = 0.14f),
+                                GhaisColors.Secondary.copy(alpha = 0.14f),
                                 Color.Transparent
                             ),
                             center = Offset(size.width, size.height),
@@ -120,20 +120,20 @@ fun LibraryQuickGridSection(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(QuranifyColors.Secondary.copy(alpha = 0.18f)),
+                            .background(GhaisColors.Secondary.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Favorite,
                             contentDescription = "Favorite",
-                            tint = QuranifyColors.Secondary,
+                            tint = GhaisColors.Secondary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
                     Icon(
                         imageVector = Icons.Default.PushPin,
                         contentDescription = "Pinned",
-                        tint = QuranifyColors.TextSecondary,
+                        tint = GhaisColors.TextSecondary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -143,7 +143,7 @@ fun LibraryQuickGridSection(
                         text = "Liked Verses & Duas",
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = QuranifyColors.TextPrimary,
+                        color = GhaisColors.TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -155,13 +155,13 @@ fun LibraryQuickGridSection(
                         Box(
                             modifier = Modifier
                                 .size(5.dp)
-                                .background(QuranifyColors.Secondary, CircleShape)
+                                .background(GhaisColors.Secondary, CircleShape)
                         )
                         Text(
                             text = "142 verses saved",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = QuranifyColors.Secondary
+                            color = GhaisColors.Secondary
                         )
                     }
                 }
@@ -174,13 +174,13 @@ fun LibraryQuickGridSection(
                 .weight(1f)
                 .height(124.dp)
                 .clip(RoundedCornerShape(18.dp))
-                .background(QuranifyColors.SurfaceContainer)
+                .background(GhaisColors.SurfaceContainer)
                 .drawBehind {
                     // Subtle emerald glow in bottom right
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                QuranifyColors.Primary.copy(alpha = 0.14f),
+                                GhaisColors.Primary.copy(alpha = 0.14f),
                                 Color.Transparent
                             ),
                             center = Offset(size.width, size.height),
@@ -204,20 +204,20 @@ fun LibraryQuickGridSection(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(QuranifyColors.Primary.copy(alpha = 0.18f)),
+                            .background(GhaisColors.Primary.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.CloudDownload,
                             contentDescription = "Downloaded",
-                            tint = QuranifyColors.Primary,
+                            tint = GhaisColors.Primary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
                     Icon(
                         imageVector = Icons.Default.PushPin,
                         contentDescription = "Pinned",
-                        tint = QuranifyColors.TextSecondary,
+                        tint = GhaisColors.TextSecondary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -227,7 +227,7 @@ fun LibraryQuickGridSection(
                         text = "Offline Surahs",
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = QuranifyColors.TextPrimary,
+                        color = GhaisColors.TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -239,14 +239,14 @@ fun LibraryQuickGridSection(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Downloaded",
-                            tint = QuranifyColors.Primary,
+                            tint = GhaisColors.Primary,
                             modifier = Modifier.size(12.dp)
                         )
                         Text(
                             text = "$offlineCount surahs offline",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = QuranifyColors.Primary
+                            color = GhaisColors.Primary
                         )
                     }
                 }
@@ -273,7 +273,7 @@ fun HifzGoalCard(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(QuranifyColors.SurfaceLow)
+            .background(GhaisColors.SurfaceLow)
             .clickable { onReviewClick() }
             .padding(14.dp)
     ) {
@@ -291,7 +291,7 @@ fun HifzGoalCard(
                     modifier = Modifier
                         .size(46.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(QuranifyColors.SurfaceContainer),
+                        .background(GhaisColors.SurfaceContainer),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -299,7 +299,7 @@ fun HifzGoalCard(
                             text = "$surahNumber",
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
-                            color = QuranifyColors.Secondary,
+                            color = GhaisColors.Secondary,
                             lineHeight = 18.sp
                         )
                         Text(
@@ -307,7 +307,7 @@ fun HifzGoalCard(
                             fontSize = 8.5.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp,
-                            color = QuranifyColors.TextSecondary
+                            color = GhaisColors.TextSecondary
                         )
                     }
                 }
@@ -323,12 +323,12 @@ fun HifzGoalCard(
                             text = surahName,
                             fontSize = 14.5.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = QuranifyColors.TextPrimary
+                            color = GhaisColors.TextPrimary
                         )
                         Box(
                             modifier = Modifier
                                 .background(
-                                    QuranifyColors.Secondary.copy(alpha = 0.15f),
+                                    GhaisColors.Secondary.copy(alpha = 0.15f),
                                     RoundedCornerShape(4.dp)
                                 )
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
@@ -337,14 +337,14 @@ fun HifzGoalCard(
                                 text = "Hifz Goal",
                                 fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = QuranifyColors.Secondary
+                                color = GhaisColors.Secondary
                             )
                         }
                     }
                     Text(
                         text = "$memorizedAyahs of $totalAyahs Ayahs memorized • Review today",
                         fontSize = 11.5.sp,
-                        color = QuranifyColors.TextSecondary,
+                        color = GhaisColors.TextSecondary,
                         modifier = Modifier.padding(top = 2.dp),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -357,12 +357,12 @@ fun HifzGoalCard(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(QuranifyColors.SurfaceHigh)
+                    .background(GhaisColors.SurfaceHigh)
             ) {
                 Icon(
                     imageVector = Icons.Default.Mic,
                     contentDescription = "Review",
-                    tint = QuranifyColors.TextPrimary,
+                    tint = GhaisColors.TextPrimary,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -441,7 +441,7 @@ fun LibraryPlaylistsSection(
                 trackCount = 18,
                 type = "Playlist",
                 extra = "Updated yesterday",
-                coverUrl = StitchAssets.LibraryTahajjudCover,
+                coverUrl = GhaisAssets.LibraryTahajjudCover,
                 categories = listOf("All", "Playlists")
             ),
             LibraryPlaylistItem(
@@ -451,7 +451,7 @@ fun LibraryPlaylistsSection(
                 trackCount = 12,
                 type = "Playlist",
                 isDownloaded = true,
-                coverUrl = StitchAssets.LibraryMorningCover,
+                coverUrl = GhaisAssets.LibraryMorningCover,
                 categories = listOf("All", "Playlists", "Downloaded")
             ),
             LibraryPlaylistItem(
@@ -462,7 +462,7 @@ fun LibraryPlaylistsSection(
                 badge = "Following",
                 isReciter = true,
                 verified = true,
-                coverUrl = StitchAssets.LibraryMisharyAvatar,
+                coverUrl = GhaisAssets.LibraryMisharyAvatar,
                 categories = listOf("All", "Reciters")
             ),
             LibraryPlaylistItem(
@@ -473,7 +473,7 @@ fun LibraryPlaylistsSection(
                 type = "Playlist",
                 extra = "Word-by-word active",
                 iconVector = Icons.Default.School,
-                iconColor = QuranifyColors.Primary,
+                iconColor = GhaisColors.Primary,
                 categories = listOf("All", "Playlists")
             ),
             LibraryPlaylistItem(
@@ -484,7 +484,7 @@ fun LibraryPlaylistsSection(
                 type = "Playlist",
                 isDownloaded = true,
                 iconVector = Icons.Default.Bedtime,
-                iconColor = QuranifyColors.Secondary,
+                iconColor = GhaisColors.Secondary,
                 categories = listOf("All", "Playlists", "Downloaded")
             )
         )
@@ -528,14 +528,14 @@ fun LibraryPlaylistsSection(
                 Icon(
                     imageVector = Icons.Default.SwapVert,
                     contentDescription = "Sort",
-                    tint = QuranifyColors.Primary,
+                    tint = GhaisColors.Primary,
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
                     text = "Recents",
                     fontSize = 13.5.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = QuranifyColors.TextPrimary
+                    color = GhaisColors.TextPrimary
                 )
             }
 
@@ -546,7 +546,7 @@ fun LibraryPlaylistsSection(
                 Icon(
                     imageVector = Icons.Default.GridView,
                     contentDescription = "Grid View",
-                    tint = QuranifyColors.TextSecondary,
+                    tint = GhaisColors.TextSecondary,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -566,7 +566,7 @@ fun LibraryPlaylistsSection(
                     Icon(
                         imageVector = Icons.Default.CloudDownload,
                         contentDescription = null,
-                        tint = QuranifyColors.TextTertiary,
+                        tint = GhaisColors.TextTertiary,
                         modifier = Modifier.size(28.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -574,7 +574,7 @@ fun LibraryPlaylistsSection(
                         text = "No downloads yet — open a reciter and tap Download",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
-                        color = QuranifyColors.TextSecondary,
+                        color = GhaisColors.TextSecondary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -615,7 +615,7 @@ fun LibraryPlaylistsSection(
                                 modifier = Modifier
                                     .size(52.dp)
                                     .clip(CircleShape)
-                                    .background(QuranifyColors.SurfaceHigh),
+                                    .background(GhaisColors.SurfaceHigh),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (item.coverUrl != null) {
@@ -633,7 +633,7 @@ fun LibraryPlaylistsSection(
                                         .size(16.dp)
                                         .align(Alignment.BottomEnd)
                                         .clip(CircleShape)
-                                        .background(QuranifyColors.Secondary),
+                                        .background(GhaisColors.Secondary),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -650,7 +650,7 @@ fun LibraryPlaylistsSection(
                                 modifier = Modifier
                                     .size(52.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(QuranifyColors.SurfaceContainer),
+                                    .background(GhaisColors.SurfaceContainer),
                                 contentAlignment = Alignment.Center
                             ) {
                                 AsyncImage(
@@ -666,14 +666,14 @@ fun LibraryPlaylistsSection(
                                 modifier = Modifier
                                     .size(52.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(QuranifyColors.SurfaceContainer),
+                                    .background(GhaisColors.SurfaceContainer),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (item.iconVector != null) {
                                     Icon(
                                         imageVector = item.iconVector,
                                         contentDescription = item.title,
-                                        tint = item.iconColor ?: QuranifyColors.Primary,
+                                        tint = item.iconColor ?: GhaisColors.Primary,
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
@@ -689,7 +689,7 @@ fun LibraryPlaylistsSection(
                             text = item.title,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = QuranifyColors.TextPrimary,
+                            color = GhaisColors.TextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -702,7 +702,7 @@ fun LibraryPlaylistsSection(
                                 Box(
                                     modifier = Modifier
                                         .background(
-                                            QuranifyColors.SurfaceHighest,
+                                            GhaisColors.SurfaceHighest,
                                             RoundedCornerShape(4.dp)
                                         )
                                         .padding(horizontal = 5.dp, vertical = 1.dp)
@@ -711,19 +711,19 @@ fun LibraryPlaylistsSection(
                                         text = item.badge,
                                         fontSize = 9.5.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = QuranifyColors.Primary
+                                        color = GhaisColors.Primary
                                     )
                                 }
                                 Text(
                                     text = "•",
                                     fontSize = 11.sp,
-                                    color = QuranifyColors.TextTertiary
+                                    color = GhaisColors.TextTertiary
                                 )
                             } else {
                                 Box(
                                     modifier = Modifier
                                         .background(
-                                            QuranifyColors.SurfaceHighest,
+                                            GhaisColors.SurfaceHighest,
                                             RoundedCornerShape(4.dp)
                                         )
                                         .padding(horizontal = 5.dp, vertical = 1.dp)
@@ -732,32 +732,32 @@ fun LibraryPlaylistsSection(
                                         text = item.type,
                                         fontSize = 9.5.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = QuranifyColors.TextSecondary
+                                        color = GhaisColors.TextSecondary
                                     )
                                 }
                                 Text(
                                     text = "•",
                                     fontSize = 11.sp,
-                                    color = QuranifyColors.TextTertiary
+                                    color = GhaisColors.TextTertiary
                                 )
                             }
 
                             Text(
                                 text = item.subtitle,
                                 fontSize = 11.5.sp,
-                                color = QuranifyColors.TextSecondary
+                                color = GhaisColors.TextSecondary
                             )
 
                             if (item.extra != null) {
                                 Text(
                                     text = "•",
                                     fontSize = 11.sp,
-                                    color = QuranifyColors.TextTertiary
+                                    color = GhaisColors.TextTertiary
                                 )
                                 Text(
                                     text = item.extra,
                                     fontSize = 11.5.sp,
-                                    color = QuranifyColors.Primary,
+                                    color = GhaisColors.Primary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -767,12 +767,12 @@ fun LibraryPlaylistsSection(
                                 Text(
                                     text = "•",
                                     fontSize = 11.sp,
-                                    color = QuranifyColors.TextTertiary
+                                    color = GhaisColors.TextTertiary
                                 )
                                 Icon(
                                     imageVector = Icons.Default.DownloadDone,
                                     contentDescription = "Downloaded",
-                                    tint = QuranifyColors.Primary,
+                                    tint = GhaisColors.Primary,
                                     modifier = Modifier.size(12.dp)
                                 )
                             }
@@ -787,7 +787,7 @@ fun LibraryPlaylistsSection(
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "More Options",
-                        tint = QuranifyColors.TextSecondary,
+                        tint = GhaisColors.TextSecondary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -836,14 +836,14 @@ private fun DownloadedSurahRow(
                 modifier = Modifier
                     .size(52.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(QuranifyColors.SurfaceContainer),
+                    .background(GhaisColors.SurfaceContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "${item.surahNumber ?: "–"}",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
-                    color = QuranifyColors.Primary
+                    color = GhaisColors.Primary
                 )
             }
 
@@ -855,7 +855,7 @@ private fun DownloadedSurahRow(
                     text = item.title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = QuranifyColors.TextPrimary,
+                    color = GhaisColors.TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -867,7 +867,7 @@ private fun DownloadedSurahRow(
                     Box(
                         modifier = Modifier
                             .background(
-                                QuranifyColors.SurfaceHighest,
+                                GhaisColors.SurfaceHighest,
                                 RoundedCornerShape(4.dp)
                             )
                             .padding(horizontal = 5.dp, vertical = 1.dp)
@@ -876,30 +876,30 @@ private fun DownloadedSurahRow(
                             text = item.type,
                             fontSize = 9.5.sp,
                             fontWeight = FontWeight.Medium,
-                            color = QuranifyColors.TextSecondary
+                            color = GhaisColors.TextSecondary
                         )
                     }
                     Text(
                         text = "•",
                         fontSize = 11.sp,
-                        color = QuranifyColors.TextTertiary
+                        color = GhaisColors.TextTertiary
                     )
                     Text(
                         text = item.subtitle,
                         fontSize = 11.5.sp,
-                        color = QuranifyColors.TextSecondary,
+                        color = GhaisColors.TextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = "•",
                         fontSize = 11.sp,
-                        color = QuranifyColors.TextTertiary
+                        color = GhaisColors.TextTertiary
                     )
                     Icon(
                         imageVector = Icons.Default.DownloadDone,
                         contentDescription = "Downloaded",
-                        tint = QuranifyColors.Primary,
+                        tint = GhaisColors.Primary,
                         modifier = Modifier.size(12.dp)
                     )
                 }
@@ -917,7 +917,7 @@ private fun DownloadedSurahRow(
             Icon(
                 imageVector = Icons.Default.Delete,
                 contentDescription = "Delete download",
-                tint = QuranifyColors.TextSecondary,
+                tint = GhaisColors.TextSecondary,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -942,7 +942,7 @@ fun LibraryHadithFooter(
         Icon(
             imageVector = Icons.Default.Spa,
             contentDescription = null,
-            tint = QuranifyColors.Primary,
+            tint = GhaisColors.Primary,
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.height(6.dp))
@@ -950,14 +950,14 @@ fun LibraryHadithFooter(
             text = "\"The best of you are those who learn the Quran and teach it.\"",
             fontSize = 12.5.sp,
             fontStyle = FontStyle.Italic,
-            color = QuranifyColors.TextSecondary,
+            color = GhaisColors.TextSecondary,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = "Sahih al-Bukhari 5027",
             fontSize = 10.5.sp,
-            color = QuranifyColors.TextTertiary
+            color = GhaisColors.TextTertiary
         )
     }
 }

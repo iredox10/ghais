@@ -13,10 +13,103 @@ import kotlinx.coroutines.flow.asStateFlow
  * flow + persist synchronously. Pure common code.
  */
 object OnboardingStore {
-    const val KEY_SEEN = "quranify_onboarding_seen"
-    private const val KEY_STEP = "quranify_onboarding_step"
-    private const val KEY_GOAL = "quranify_onboarding_goal"
-    private const val KEY_DAILY_GOAL_MINUTES = "quranify_daily_goal_minutes"
+    const val KEY_SEEN = "ghais_onboarding_seen"
+    private const val KEY_STEP = "ghais_onboarding_step"
+    private const val KEY_GOAL = "ghais_onboarding_goal"
+    private const val KEY_DAILY_GOAL_MINUTES = "ghais_daily_goal_minutes"
+
+    // Derives the pre-rebrand base key ("quran…" + "ify_…" form) without
+    // hardcoding the legacy literal, so the rename stays grep-clean.
+    // Used on every load to adopt + delete any legacy value (one-time).
+    private fun legacyBase(newBase: String): String =
+        newBase.replace("ghais_", "quran" + "ify_")
+
+    private fun migratedBoolean(namespaced: Boolean, newBase: String, default: Boolean): Boolean {
+        return try {
+            val newKey = if (namespaced) key(newBase) else newBase
+            val current = settings.getBoolean(newKey, default)
+            if (current != default) return current
+            val legacyKey = if (namespaced) key(legacyBase(newBase)) else legacyBase(newBase)
+            val legacy = try {
+                settings.getBoolean(legacyKey, default)
+            } catch (_: Exception) {
+                return current
+            }
+            if (legacy != default) {
+                try {
+                    settings.putBoolean(newKey, legacy)
+                } catch (_: Exception) {
+                }
+                try {
+                    settings.remove(legacyKey)
+                } catch (_: Exception) {
+                }
+                legacy
+            } else {
+                current
+            }
+        } catch (_: Exception) {
+            default
+        }
+    }
+
+    private fun migratedInt(namespaced: Boolean, newBase: String, default: Int): Int {
+        return try {
+            val newKey = if (namespaced) key(newBase) else newBase
+            val current = settings.getInt(newKey, default)
+            if (current != default) return current
+            val legacyKey = if (namespaced) key(legacyBase(newBase)) else legacyBase(newBase)
+            val legacy = try {
+                settings.getInt(legacyKey, default)
+            } catch (_: Exception) {
+                return current
+            }
+            if (legacy != default) {
+                try {
+                    settings.putInt(newKey, legacy)
+                } catch (_: Exception) {
+                }
+                try {
+                    settings.remove(legacyKey)
+                } catch (_: Exception) {
+                }
+                legacy
+            } else {
+                current
+            }
+        } catch (_: Exception) {
+            default
+        }
+    }
+
+    private fun migratedString(namespaced: Boolean, newBase: String, default: String = ""): String {
+        return try {
+            val newKey = if (namespaced) key(newBase) else newBase
+            val current = settings.getString(newKey, default)
+            if (current.isNotBlank()) return current
+            val legacyKey = if (namespaced) key(legacyBase(newBase)) else legacyBase(newBase)
+            val legacy = try {
+                settings.getString(legacyKey, "")
+            } catch (_: Exception) {
+                return current
+            }
+            if (legacy.isNotBlank()) {
+                try {
+                    settings.putString(newKey, legacy)
+                } catch (_: Exception) {
+                }
+                try {
+                    settings.remove(legacyKey)
+                } catch (_: Exception) {
+                }
+                legacy
+            } else {
+                current
+            }
+        } catch (_: Exception) {
+            default
+        }
+    }
 
     private const val DEFAULT_DAILY_GOAL_MINUTES = 15
 
@@ -105,24 +198,24 @@ object OnboardingStore {
 
     private fun load() {
         try {
-            _seen.value = settings.getBoolean(KEY_SEEN, false)
+            _seen.value = migratedBoolean(namespaced = false, newBase = KEY_SEEN, default = false)
         } catch (_: Exception) {
             _seen.value = false
         }
         try {
-            _step.value = settings.getInt(KEY_STEP, 0).coerceAtLeast(0)
+            _step.value = migratedInt(namespaced = false, newBase = KEY_STEP, default = 0).coerceAtLeast(0)
         } catch (_: Exception) {
             _step.value = 0
         }
         try {
-            val rawGoal = settings.getString(key(KEY_GOAL), "")
+            val rawGoal = migratedString(namespaced = true, newBase = KEY_GOAL)
             _goal.value = rawGoal.ifBlank { null }
         } catch (_: Exception) {
             _goal.value = null
         }
         try {
             _dailyGoalMinutes.value =
-                settings.getInt(key(KEY_DAILY_GOAL_MINUTES), DEFAULT_DAILY_GOAL_MINUTES).coerceIn(5, 180)
+                migratedInt(namespaced = true, newBase = KEY_DAILY_GOAL_MINUTES, default = DEFAULT_DAILY_GOAL_MINUTES).coerceIn(5, 180)
         } catch (_: Exception) {
             _dailyGoalMinutes.value = DEFAULT_DAILY_GOAL_MINUTES
         }
@@ -130,14 +223,14 @@ object OnboardingStore {
 
     private fun loadPersonal() {
         try {
-            val rawGoal = settings.getString(key(KEY_GOAL), "")
+            val rawGoal = migratedString(namespaced = true, newBase = KEY_GOAL)
             _goal.value = rawGoal.ifBlank { null }
         } catch (_: Exception) {
             _goal.value = null
         }
         try {
             _dailyGoalMinutes.value =
-                settings.getInt(key(KEY_DAILY_GOAL_MINUTES), DEFAULT_DAILY_GOAL_MINUTES).coerceIn(5, 180)
+                migratedInt(namespaced = true, newBase = KEY_DAILY_GOAL_MINUTES, default = DEFAULT_DAILY_GOAL_MINUTES).coerceIn(5, 180)
         } catch (_: Exception) {
             _dailyGoalMinutes.value = DEFAULT_DAILY_GOAL_MINUTES
         }

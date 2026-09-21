@@ -16,7 +16,7 @@ enum class SyncStatus {
 }
 
 /** Appwrite Cloud database ID shared by all sync collections. */
-const val DB_ID = "quranify"
+const val DB_ID = "ghais"
 
 /** Cloud collection holding one document per liked ayah. */
 const val LIKES = "likes"

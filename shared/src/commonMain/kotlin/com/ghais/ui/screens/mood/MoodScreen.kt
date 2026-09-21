@@ -58,8 +58,8 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
-import com.ghais.ui.theme.QuranifyColors
-import com.ghais.ui.theme.QuranifyTypography
+import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.theme.GhaisTypography
 
 // Obsidian-Emerald Glassmorphic Palette
 private val SheetContainer = Color(0xFF181E20)       // Obsidian container
@@ -232,7 +232,7 @@ data class MoodScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Recitation by Mood",
-                        style = QuranifyTypography.titleMedium.copy(
+                        style = GhaisTypography.titleMedium.copy(
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
@@ -310,7 +310,7 @@ fun MoodModalContent(
         ) {
             Text(
                 text = "Recitation by Mood",
-                style = QuranifyTypography.titleMedium.copy(
+                style = GhaisTypography.titleMedium.copy(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -319,7 +319,7 @@ fun MoodModalContent(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Curated recitations tailored to your spiritual state",
-                style = QuranifyTypography.bodyMedium.copy(
+                style = GhaisTypography.bodyMedium.copy(
                     fontSize = 13.sp,
                     color = TextSecondary
                 )
@@ -361,7 +361,7 @@ fun MoodModalContent(
                 ) {
                     Text(
                         text = category,
-                        style = QuranifyTypography.bodyMedium.copy(
+                        style = GhaisTypography.bodyMedium.copy(
                             fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             color = pillText
@@ -415,7 +415,7 @@ fun MoodModalContent(
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "Start ${selectedMood.title}",
-                style = QuranifyTypography.titleMedium.copy(
+                style = GhaisTypography.titleMedium.copy(
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF003824)
@@ -483,7 +483,7 @@ private fun MoodOptionCard(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = mood.title,
-                style = QuranifyTypography.titleMedium.copy(
+                style = GhaisTypography.titleMedium.copy(
                     fontSize = 15.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                     color = TextPrimary
@@ -494,7 +494,7 @@ private fun MoodOptionCard(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = mood.subtitle,
-                style = QuranifyTypography.bodyMedium.copy(
+                style = GhaisTypography.bodyMedium.copy(
                     fontSize = 12.sp,
                     color = TextSecondary
                 ),

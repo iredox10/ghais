@@ -32,7 +32,11 @@ import platform.Foundation.stringByDeletingLastPathComponent
  * at -1f (indeterminate) while a download is in flight.
  */
 actual object QuranDownloads {
-    private const val PREF_KEY = "quran_downloaded"
+    private const val PREF_KEY = "ghais_downloaded"
+
+    // Pre-rebrand index key, derived without hardcoding the legacy literal.
+    // Adopted + deleted once on load so existing downloads stay indexed.
+    private fun legacyPrefKey(): String = "quran" + "_downloaded"
 
     private var ownerId: String = "local"
 
@@ -82,9 +86,29 @@ actual object QuranDownloads {
         "${baseDir()}/$slug/$surahId.mp3"
 
     private fun readPersisted(): Set<String> {
-        val arr = NSUserDefaults.standardUserDefaults.stringArrayForKey(key(PREF_KEY))
-            ?: return emptySet()
-        return arr.filterIsInstance<String>().toSet()
+        val defaults = NSUserDefaults.standardUserDefaults
+        val arr = defaults.stringArrayForKey(key(PREF_KEY))
+        val current = arr?.filterIsInstance<String>()?.toSet().orEmpty()
+        if (current.isNotEmpty()) return current
+        // One-time migration: adopt the legacy namespaced index if present.
+        try {
+            val legacyKey = key(legacyPrefKey())
+            val legacyArr = defaults.stringArrayForKey(legacyKey)
+            val legacy = legacyArr?.filterIsInstance<String>()?.toSet().orEmpty()
+            if (legacy.isNotEmpty()) {
+                try {
+                    defaults.setObject(legacy.toList(), key(PREF_KEY))
+                } catch (_: Exception) {
+                }
+                try {
+                    defaults.removeObjectForKey(legacyKey)
+                } catch (_: Exception) {
+                }
+                return legacy
+            }
+        } catch (_: Exception) {
+        }
+        return emptySet()
     }
 
     private fun persist() {

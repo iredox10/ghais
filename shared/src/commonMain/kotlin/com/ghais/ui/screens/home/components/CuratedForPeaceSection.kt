@@ -44,7 +44,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import coil3.compose.AsyncImage
 import com.ghais.data.seed.CuratedPlaylist
 import com.ghais.data.seed.QuranDataRepository
-import com.ghais.data.seed.StitchAssets
+import com.ghais.data.seed.GhaisAssets
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.ui.navigation.LocalRootNavigator
@@ -59,7 +59,7 @@ private val MutedGreyText = Color(0xFF9CA3AF)
 @Composable
 fun CuratedForPeaceSection(
     modifier: Modifier = Modifier,
-    playlists: List<CuratedPlaylist> = StitchAssets.CuratedForPeace,
+    playlists: List<CuratedPlaylist> = GhaisAssets.CuratedForPeace,
     onSeeAllClick: (() -> Unit)? = null,
     onPlaylistClick: ((String) -> Unit)? = null,
     onPlayClick: ((String) -> Unit)? = null

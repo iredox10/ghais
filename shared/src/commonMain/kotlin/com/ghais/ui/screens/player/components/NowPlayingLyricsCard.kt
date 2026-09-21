@@ -53,7 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 /**
  * Synchronized Ayah Lyrics Card adhering to the Stitch Apple Glassmorphism design:
@@ -89,7 +89,7 @@ fun NowPlayingLyricsCard(
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            QuranifyColors.Primary.copy(alpha = 0.12f),
+                            GhaisColors.Primary.copy(alpha = 0.12f),
                             Color.Transparent
                         )
                     )
@@ -120,7 +120,7 @@ fun NowPlayingLyricsCard(
                     Icon(
                         imageVector = Icons.Default.Subtitles,
                         contentDescription = "Subtitles",
-                        tint = QuranifyColors.Primary,
+                        tint = GhaisColors.Primary,
                         modifier = Modifier.size(17.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -129,7 +129,7 @@ fun NowPlayingLyricsCard(
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.3.sp,
-                        color = QuranifyColors.Primary
+                        color = GhaisColors.Primary
                     )
                 }
 
@@ -146,7 +146,7 @@ fun NowPlayingLyricsCard(
                         modifier = Modifier
                             .size(6.dp)
                             .clip(CircleShape)
-                            .background(QuranifyColors.Primary)
+                            .background(GhaisColors.Primary)
                     )
                     Spacer(modifier = Modifier.width(5.dp))
                     Text(
@@ -166,7 +166,7 @@ fun NowPlayingLyricsCard(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color(0x0AFFFFFF))
-                    .border(1.dp, QuranifyColors.Primary.copy(alpha = 0.22f), RoundedCornerShape(16.dp))
+                    .border(1.dp, GhaisColors.Primary.copy(alpha = 0.22f), RoundedCornerShape(16.dp))
                     .padding(14.dp)
             ) {
                 // Left emerald glow indicator bar
@@ -180,7 +180,7 @@ fun NowPlayingLyricsCard(
                             brush = Brush.verticalGradient(
                                 listOf(
                                     Color(0xFF6FFBBE),
-                                    QuranifyColors.Primary,
+                                    GhaisColors.Primary,
                                     Color(0xFF10B981)
                                 )
                             )
@@ -197,7 +197,7 @@ fun NowPlayingLyricsCard(
                         text = arabicVerse,
                         fontSize = 26.sp,
                         fontWeight = FontWeight.Bold,
-                        color = QuranifyColors.Primary,
+                        color = GhaisColors.Primary,
                         textAlign = TextAlign.End,
                         lineHeight = 44.sp,
                         modifier = Modifier.fillMaxWidth()
@@ -341,7 +341,7 @@ fun NowPlayingScrubber(
                                 .height(26.dp)
                                 .clip(CircleShape)
                                 .background(Color.White)
-                                .border(1.dp, QuranifyColors.Primary, CircleShape)
+                                .border(1.dp, GhaisColors.Primary, CircleShape)
                         )
                     } else {
                         // Standard waveform bar
@@ -351,7 +351,7 @@ fun NowPlayingScrubber(
                                 .height(ampDp.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    if (isPlayed) QuranifyColors.Primary
+                                    if (isPlayed) GhaisColors.Primary
                                     else Color.White.copy(alpha = 0.18f)
                                 )
                         )
@@ -378,8 +378,8 @@ fun NowPlayingScrubber(
                     .background(
                         brush = Brush.horizontalGradient(
                             listOf(
-                                QuranifyColors.PrimaryContainer,
-                                QuranifyColors.Primary
+                                GhaisColors.PrimaryContainer,
+                                GhaisColors.Primary
                             )
                         )
                     )
@@ -408,7 +408,7 @@ fun NowPlayingScrubber(
                 Icon(
                     imageVector = Icons.Default.GraphicEq,
                     contentDescription = "Audio Playing",
-                    tint = QuranifyColors.Primary,
+                    tint = GhaisColors.Primary,
                     modifier = Modifier.size(13.dp)
                 )
                 Text(
@@ -460,7 +460,7 @@ fun NowPlayingControlsBar(
             Icon(
                 imageVector = Icons.Default.Shuffle,
                 contentDescription = "Shuffle Recitation Mode",
-                tint = if (isShuffle) QuranifyColors.Primary else Color.White.copy(alpha = 0.65f),
+                tint = if (isShuffle) GhaisColors.Primary else Color.White.copy(alpha = 0.65f),
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -500,15 +500,15 @@ fun NowPlayingControlsBar(
                 .shadow(
                     elevation = 16.dp,
                     shape = CircleShape,
-                    ambientColor = QuranifyColors.Primary,
-                    spotColor = QuranifyColors.Primary
+                    ambientColor = GhaisColors.Primary,
+                    spotColor = GhaisColors.Primary
                 )
                 .clip(CircleShape)
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
                             Color(0xFF6FFBBE),
-                            QuranifyColors.Primary,
+                            GhaisColors.Primary,
                             Color(0xFF10B981)
                         )
                     )
@@ -556,7 +556,7 @@ fun NowPlayingControlsBar(
             Icon(
                 imageVector = if (isRepeat) Icons.Default.RepeatOne else Icons.Default.Repeat,
                 contentDescription = "Repeat Mode",
-                tint = if (isRepeat) QuranifyColors.Primary else Color.White.copy(alpha = 0.65f),
+                tint = if (isRepeat) GhaisColors.Primary else Color.White.copy(alpha = 0.65f),
                 modifier = Modifier.size(20.dp)
             )
             if (isRepeat) {
@@ -564,7 +564,7 @@ fun NowPlayingControlsBar(
                     text = "∞",
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
-                    color = QuranifyColors.Primary,
+                    color = GhaisColors.Primary,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(end = 6.dp, bottom = 4.dp)

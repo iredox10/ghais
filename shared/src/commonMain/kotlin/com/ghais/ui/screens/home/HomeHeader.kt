@@ -28,7 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.ghais.data.seed.StitchAssets
+import com.ghais.data.seed.GhaisAssets
 
 private val DarkCard = Color(0xFF1C1C1E)
 private val GlassBg = Color.White.copy(alpha = 0.09f)
@@ -90,7 +90,7 @@ fun HomeTopBar(onPremiumClick: () -> Unit, onStatsClick: () -> Unit) {
 
 @Composable
 fun HomeFeaturedHero(onClick: () -> Unit) {
-    val hero = StitchAssets.VerifiedReciters.first()
+    val hero = GhaisAssets.VerifiedReciters.first()
     Column(
         modifier = Modifier
             .fillMaxWidth()

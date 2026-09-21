@@ -23,7 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.domain.model.Ayah
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -39,7 +39,7 @@ fun AyahRow(
     /** True when this ayah is the current track (highlight stays even while paused). Defaults to [isPlaying] for backward compat. */
     isActive: Boolean = isPlaying
 ) {
-    val backgroundColor = if (isActive) QuranifyColors.Primary.copy(alpha = 0.15f) else Color.Transparent
+    val backgroundColor = if (isActive) GhaisColors.Primary.copy(alpha = 0.15f) else Color.Transparent
 
     Row(
         modifier = Modifier
@@ -61,7 +61,7 @@ fun AyahRow(
         ) {
             Text(
                 text = ayah.textUthmani,
-                color = QuranifyColors.TextPrimary,
+                color = GhaisColors.TextPrimary,
                 fontSize = 22.sp,
                 lineHeight = 36.sp,
                 textAlign = TextAlign.Right,
@@ -81,14 +81,14 @@ fun AyahRow(
                         Icon(
                             imageVector = Icons.Filled.Share,
                             contentDescription = "Share Ayah",
-                            tint = QuranifyColors.TextSecondary
+                            tint = GhaisColors.TextSecondary
                         )
                     }
                     IconButton(onClick = onFavoriteClick) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                             contentDescription = "Favorite Ayah",
-                            tint = if (isFavorite) QuranifyColors.Error else QuranifyColors.TextSecondary
+                            tint = if (isFavorite) GhaisColors.Error else GhaisColors.TextSecondary
                         )
                     }
                 }
@@ -97,7 +97,7 @@ fun AyahRow(
                     Icon(
                         imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         contentDescription = if (isPlaying) "Pause Ayah" else "Play Ayah",
-                        tint = QuranifyColors.Primary,
+                        tint = GhaisColors.Primary,
                         modifier = Modifier.size(32.dp)
                     )
                 }
@@ -112,7 +112,7 @@ fun AyahBadge(number: Int) {
         contentAlignment = Alignment.Center,
         modifier = Modifier.size(40.dp)
     ) {
-        val primaryColor = QuranifyColors.Primary
+        val primaryColor = GhaisColors.Primary
         Canvas(modifier = Modifier.fillMaxSize()) {
             val radius = size.minDimension / 2f
             val c = center
@@ -138,7 +138,7 @@ fun AyahBadge(number: Int) {
         }
         Text(
             text = number.toString(),
-            color = QuranifyColors.Primary,
+            color = GhaisColors.Primary,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold
         )

@@ -41,14 +41,14 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.QuranData
-import com.ghais.data.seed.StitchAssets
+import com.ghais.data.seed.GhaisAssets
 import com.ghais.domain.model.Surah
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 enum class SurahSortType(val label: String, val icon: ImageVector) {
     MUSHAF("Standard Mushaf Order", Icons.Default.FormatListNumbered),
@@ -115,12 +115,12 @@ fun ExploreDirectorySection(
                     text = "Surah Directory",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = QuranifyColors.TextPrimary
+                    color = GhaisColors.TextPrimary
                 )
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(QuranifyColors.SurfaceHigh.copy(alpha = 0.8f))
+                        .background(GhaisColors.SurfaceHigh.copy(alpha = 0.8f))
                         .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
                         .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
@@ -128,7 +128,7 @@ fun ExploreDirectorySection(
                         text = "${surahs.size}",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = QuranifyColors.Primary
+                        color = GhaisColors.Primary
                     )
                 }
             }
@@ -137,7 +137,7 @@ fun ExploreDirectorySection(
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(QuranifyColors.SurfaceLow.copy(alpha = 0.85f))
+                    .background(GhaisColors.SurfaceLow.copy(alpha = 0.85f))
                     .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
                     .clickable { showSortModal = true }
                     .padding(horizontal = 10.dp, vertical = 5.dp),
@@ -153,12 +153,12 @@ fun ExploreDirectorySection(
                     },
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
-                    color = QuranifyColors.TextSecondary
+                    color = GhaisColors.TextSecondary
                 )
                 Icon(
                     imageVector = Icons.Default.ExpandMore,
                     contentDescription = "Sort Options",
-                    tint = QuranifyColors.Primary,
+                    tint = GhaisColors.Primary,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -215,7 +215,7 @@ fun ExploreDirectorySection(
         ModalBottomSheet(
             onDismissRequest = { showSortModal = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = QuranifyColors.SurfaceContainer,
+            containerColor = GhaisColors.SurfaceContainer,
             dragHandle = null
         ) {
             Column(
@@ -237,14 +237,14 @@ fun ExploreDirectorySection(
                         Icon(
                             imageVector = Icons.Default.FormatListNumbered,
                             contentDescription = null,
-                            tint = QuranifyColors.Primary,
+                            tint = GhaisColors.Primary,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = "Sort Surahs",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = QuranifyColors.TextPrimary
+                            color = GhaisColors.TextPrimary
                         )
                     }
 
@@ -253,12 +253,12 @@ fun ExploreDirectorySection(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(CircleShape)
-                            .background(QuranifyColors.SurfaceHigh)
+                            .background(GhaisColors.SurfaceHigh)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = QuranifyColors.TextSecondary,
+                            tint = GhaisColors.TextSecondary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -273,12 +273,12 @@ fun ExploreDirectorySection(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(
-                                    if (isSelected) QuranifyColors.SurfaceHighest
+                                    if (isSelected) GhaisColors.SurfaceHighest
                                     else Color.Transparent
                                 )
                                 .border(
                                     1.dp,
-                                    if (isSelected) QuranifyColors.Primary.copy(alpha = 0.35f)
+                                    if (isSelected) GhaisColors.Primary.copy(alpha = 0.35f)
                                     else Color.White.copy(alpha = 0.05f),
                                     RoundedCornerShape(12.dp)
                                 )
@@ -297,14 +297,14 @@ fun ExploreDirectorySection(
                                 Icon(
                                     imageVector = option.icon,
                                     contentDescription = null,
-                                    tint = if (isSelected) QuranifyColors.Primary else QuranifyColors.TextSecondary,
+                                    tint = if (isSelected) GhaisColors.Primary else GhaisColors.TextSecondary,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
                                     text = option.label,
                                     fontSize = 13.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) QuranifyColors.Primary else QuranifyColors.TextPrimary
+                                    color = if (isSelected) GhaisColors.Primary else GhaisColors.TextPrimary
                                 )
                             }
 
@@ -312,7 +312,7 @@ fun ExploreDirectorySection(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Selected",
-                                    tint = QuranifyColors.Primary,
+                                    tint = GhaisColors.Primary,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -341,10 +341,10 @@ fun SurahDirectoryItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(QuranifyColors.SurfaceLow.copy(alpha = 0.7f))
+            .background(GhaisColors.SurfaceLow.copy(alpha = 0.7f))
             .border(
                 1.dp,
-                if (isFirst) QuranifyColors.Primary.copy(alpha = 0.25f)
+                if (isFirst) GhaisColors.Primary.copy(alpha = 0.25f)
                 else Color.White.copy(alpha = 0.06f),
                 RoundedCornerShape(16.dp)
             )
@@ -367,10 +367,10 @@ fun SurahDirectoryItem(
                         if (isFirst) {
                             Modifier
                                 .background(Color(0xFF10B981).copy(alpha = 0.15f))
-                                .border(1.dp, QuranifyColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                                .border(1.dp, GhaisColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
                         } else {
                             Modifier
-                                .background(QuranifyColors.SurfaceHigh.copy(alpha = 0.7f))
+                                .background(GhaisColors.SurfaceHigh.copy(alpha = 0.7f))
                                 .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(12.dp))
                         }
                     ),
@@ -382,7 +382,7 @@ fun SurahDirectoryItem(
                         .size(22.dp)
                         .rotate(45f)
                         .background(
-                            if (isFirst) QuranifyColors.Primary.copy(alpha = 0.1f)
+                            if (isFirst) GhaisColors.Primary.copy(alpha = 0.1f)
                             else Color.White.copy(alpha = 0.03f)
                         )
                 )
@@ -391,7 +391,7 @@ fun SurahDirectoryItem(
                     text = surah.id.toString().padStart(2, '0'),
                     fontSize = 12.sp,
                     fontWeight = if (isFirst) FontWeight.Bold else FontWeight.SemiBold,
-                    color = if (isFirst) QuranifyColors.Primary else QuranifyColors.TextPrimary
+                    color = if (isFirst) GhaisColors.Primary else GhaisColors.TextPrimary
                 )
             }
 
@@ -407,7 +407,7 @@ fun SurahDirectoryItem(
                         text = surah.nameEn,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = QuranifyColors.TextPrimary
+                        color = GhaisColors.TextPrimary
                     )
 
                     // Revelation Badge (Makki = Emerald, Madani = Amber)
@@ -420,8 +420,8 @@ fun SurahDirectoryItem(
                             )
                             .border(
                                 1.dp,
-                                if (isMeccan) QuranifyColors.Primary.copy(alpha = 0.3f)
-                                else QuranifyColors.Secondary.copy(alpha = 0.3f),
+                                if (isMeccan) GhaisColors.Primary.copy(alpha = 0.3f)
+                                else GhaisColors.Secondary.copy(alpha = 0.3f),
                                 RoundedCornerShape(6.dp)
                             )
                             .padding(horizontal = 6.dp, vertical = 2.dp)
@@ -430,7 +430,7 @@ fun SurahDirectoryItem(
                             text = if (isMeccan) "Makki" else "Madani",
                             fontSize = 9.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (isMeccan) QuranifyColors.Primary else QuranifyColors.Secondary
+                            color = if (isMeccan) GhaisColors.Primary else GhaisColors.Secondary
                         )
                     }
                 }
@@ -438,7 +438,7 @@ fun SurahDirectoryItem(
                 Text(
                     text = "${surah.meaning} • ${surah.ayahsCount} Verses",
                     fontSize = 12.sp,
-                    color = QuranifyColors.TextSecondary,
+                    color = GhaisColors.TextSecondary,
                     modifier = Modifier.padding(top = 2.dp),
                     maxLines = 1
                 )
@@ -454,7 +454,7 @@ fun SurahDirectoryItem(
                 text = surah.nameAr,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isFirst) QuranifyColors.Primary else QuranifyColors.TextPrimary.copy(alpha = 0.95f),
+                color = if (isFirst) GhaisColors.Primary else GhaisColors.TextPrimary.copy(alpha = 0.95f),
                 textAlign = TextAlign.Right,
                 modifier = Modifier.padding(end = 4.dp)
             )
@@ -464,7 +464,7 @@ fun SurahDirectoryItem(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(QuranifyColors.SurfaceHigh.copy(alpha = 0.8f))
+                    .background(GhaisColors.SurfaceHigh.copy(alpha = 0.8f))
                     .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape)
                     .clickable { onPlayClick() },
                 contentAlignment = Alignment.Center
@@ -472,7 +472,7 @@ fun SurahDirectoryItem(
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Play Surah ${surah.nameEn}",
-                    tint = QuranifyColors.TextPrimary,
+                    tint = GhaisColors.TextPrimary,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -483,12 +483,12 @@ fun SurahDirectoryItem(
                     .size(34.dp)
                     .clip(CircleShape)
                     .background(
-                        if (isBookmarked) QuranifyColors.Secondary.copy(alpha = 0.12f)
+                        if (isBookmarked) GhaisColors.Secondary.copy(alpha = 0.12f)
                         else Color.Transparent
                     )
                     .border(
                         1.dp,
-                        if (isBookmarked) QuranifyColors.Secondary.copy(alpha = 0.3f)
+                        if (isBookmarked) GhaisColors.Secondary.copy(alpha = 0.3f)
                         else Color.White.copy(alpha = 0.06f),
                         CircleShape
                     )
@@ -498,7 +498,7 @@ fun SurahDirectoryItem(
                 Icon(
                     imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                     contentDescription = "Bookmark",
-                    tint = if (isBookmarked) QuranifyColors.Secondary else QuranifyColors.TextTertiary,
+                    tint = if (isBookmarked) GhaisColors.Secondary else GhaisColors.TextTertiary,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -510,7 +510,7 @@ fun SurahDirectoryItem(
 fun PopularQarisStrip(
     onReciterClick: (String) -> Unit = {}
 ) {
-    val qaris = StitchAssets.VerifiedReciters
+    val qaris = GhaisAssets.VerifiedReciters
 
     Column(
         modifier = Modifier
@@ -530,12 +530,12 @@ fun PopularQarisStrip(
                     text = "Popular Qaris",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = QuranifyColors.TextPrimary
+                    color = GhaisColors.TextPrimary
                 )
                 Text(
                     text = "World-renowned Quranic voices",
                     fontSize = 12.sp,
-                    color = QuranifyColors.TextSecondary
+                    color = GhaisColors.TextSecondary
                 )
             }
 
@@ -543,7 +543,7 @@ fun PopularQarisStrip(
                 text = "Explore",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = QuranifyColors.Primary,
+                color = GhaisColors.Primary,
                 modifier = Modifier.clickable { onReciterClick("explore") }
             )
         }
@@ -577,10 +577,10 @@ fun PopularQarisStrip(
                                             2.dp,
                                             Brush.sweepGradient(
                                                 listOf(
-                                                    QuranifyColors.Primary,
+                                                    GhaisColors.Primary,
                                                     Color(0xFF68DBA9),
                                                     Color.White.copy(alpha = 0.4f),
-                                                    QuranifyColors.Primary
+                                                    GhaisColors.Primary
                                                 )
                                             ),
                                             CircleShape
@@ -593,7 +593,7 @@ fun PopularQarisStrip(
                                         )
                                     }
                                 )
-                                .background(QuranifyColors.SurfaceHigh)
+                                .background(GhaisColors.SurfaceHigh)
                         )
 
                         // Verified checkmark badge
@@ -602,13 +602,13 @@ fun PopularQarisStrip(
                                 .size(16.dp)
                                 .align(Alignment.BottomEnd)
                                 .clip(CircleShape)
-                                .background(QuranifyColors.Primary),
+                                .background(GhaisColors.Primary),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Verified",
-                                tint = QuranifyColors.OnPrimary,
+                                tint = GhaisColors.OnPrimary,
                                 modifier = Modifier.size(10.dp)
                             )
                         }
@@ -620,7 +620,7 @@ fun PopularQarisStrip(
                         text = qari.name,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = QuranifyColors.TextPrimary,
+                        color = GhaisColors.TextPrimary,
                         maxLines = 1
                     )
                 }

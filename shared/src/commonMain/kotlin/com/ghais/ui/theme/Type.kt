@@ -7,7 +7,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 
 /**
- * Quranify Typography Tokens.
+ * Ghais Typography Tokens.
  *
  * Aligned with Stitch Specifications (Plus Jakarta Sans & Traditional Naskh Arabic):
  * - display-lg: 40sp / 48sp lineHeight, -0.03em letterSpacing
@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.sp
  * - label-sm: 11sp / 14sp lineHeight, 0.03em letterSpacing
  * - Arabic Ayah & Surah text: 1.8x line-height ratio to prevent tashkeel clipping
  */
-object QuranifyTypography {
+object GhaisTypography {
     // -------------------------------------------------------------------------
     // Display styles (Plus Jakarta Sans)
     // -------------------------------------------------------------------------
@@ -32,21 +32,21 @@ object QuranifyTypography {
         fontSize = 40.sp,
         lineHeight = 48.sp,
         letterSpacing = (-0.03).em,
-        color = QuranifyColors.TextPureWhite
+        color = GhaisColors.TextPureWhite
     )
     val displayMedium = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 36.sp,
         lineHeight = 44.sp,
         letterSpacing = (-0.025).em,
-        color = QuranifyColors.TextPureWhite
+        color = GhaisColors.TextPureWhite
     )
     val displaySmall = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 32.sp,
         lineHeight = 40.sp,
         letterSpacing = (-0.02).em,
-        color = QuranifyColors.TextPureWhite
+        color = GhaisColors.TextPureWhite
     )
 
     // -------------------------------------------------------------------------
@@ -57,21 +57,21 @@ object QuranifyTypography {
         fontSize = 28.sp,
         lineHeight = 36.sp,
         letterSpacing = (-0.02).em,
-        color = QuranifyColors.TextPrimary
+        color = GhaisColors.TextPrimary
     )
     val headlineMedium = TextStyle(
         fontWeight = FontWeight.SemiBold,
         fontSize = 22.sp,
         lineHeight = 28.sp,
         letterSpacing = (-0.015).em,
-        color = QuranifyColors.TextPrimary
+        color = GhaisColors.TextPrimary
     )
     val headlineSmall = TextStyle(
         fontWeight = FontWeight.SemiBold,
         fontSize = 18.sp,
         lineHeight = 24.sp,
         letterSpacing = (-0.01).em,
-        color = QuranifyColors.TextPrimary
+        color = GhaisColors.TextPrimary
     )
 
     // -------------------------------------------------------------------------
@@ -81,19 +81,19 @@ object QuranifyTypography {
         fontWeight = FontWeight.SemiBold,
         fontSize = 22.sp,
         lineHeight = 28.sp,
-        color = QuranifyColors.TextPrimary
+        color = GhaisColors.TextPrimary
     )
     val titleMedium = TextStyle(
         fontWeight = FontWeight.SemiBold,
         fontSize = 18.sp,
         lineHeight = 24.sp,
-        color = QuranifyColors.TextPrimary
+        color = GhaisColors.TextPrimary
     )
     val titleSmall = TextStyle(
         fontWeight = FontWeight.Medium,
         fontSize = 16.sp,
         lineHeight = 22.sp,
-        color = QuranifyColors.TextPrimary
+        color = GhaisColors.TextPrimary
     )
 
     // -------------------------------------------------------------------------
@@ -104,19 +104,19 @@ object QuranifyTypography {
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = (-0.005).em,
-        color = QuranifyColors.TextPrimary
+        color = GhaisColors.TextPrimary
     )
     val bodyMedium = TextStyle(
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
-        color = QuranifyColors.TextSecondary
+        color = GhaisColors.TextSecondary
     )
     val bodySmall = TextStyle(
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        color = QuranifyColors.TextSecondary
+        color = GhaisColors.TextSecondary
     )
 
     // -------------------------------------------------------------------------
@@ -127,21 +127,21 @@ object QuranifyTypography {
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.01.em,
-        color = QuranifyColors.TextPrimary
+        color = GhaisColors.TextPrimary
     )
     val labelMedium = TextStyle(
         fontWeight = FontWeight.SemiBold,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.02.em,
-        color = QuranifyColors.TextSecondary
+        color = GhaisColors.TextSecondary
     )
     val labelSmall = TextStyle(
         fontWeight = FontWeight.SemiBold,
         fontSize = 11.sp,
         lineHeight = 14.sp,
         letterSpacing = 0.03.em,
-        color = QuranifyColors.TextSecondary
+        color = GhaisColors.TextSecondary
     )
 
     // -------------------------------------------------------------------------
@@ -151,19 +151,19 @@ object QuranifyTypography {
         fontWeight = FontWeight.Normal,
         fontSize = 32.sp,
         lineHeight = 56.sp,
-        color = QuranifyColors.TextPrimary
+        color = GhaisColors.TextPrimary
     )
     val arabicBody = TextStyle(
         fontWeight = FontWeight.Normal,
         fontSize = 24.sp,
         lineHeight = 43.sp,
-        color = QuranifyColors.TextPrimary
+        color = GhaisColors.TextPrimary
     )
     val arabicSmall = TextStyle(
         fontWeight = FontWeight.Normal,
         fontSize = 18.sp,
         lineHeight = 32.sp,
-        color = QuranifyColors.TextPrimary
+        color = GhaisColors.TextPrimary
     )
 
     // -------------------------------------------------------------------------

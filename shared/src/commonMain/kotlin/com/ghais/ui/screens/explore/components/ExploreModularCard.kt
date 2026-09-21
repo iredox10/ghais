@@ -36,7 +36,7 @@ import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.CuratedPlaylist
 import com.ghais.data.seed.DetailedCuratedPlaylist
 import com.ghais.data.seed.DetailedReciter
-import com.ghais.data.seed.StitchAssets
+import com.ghais.data.seed.GhaisAssets
 import com.ghais.data.seed.toTrackItem
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
@@ -797,17 +797,17 @@ fun MoodPlaylist.toExploreCardItem(): ExploreCardItem {
     }
 
     val avatarUrl = when (id) {
-        "study-focus" -> StitchAssets.AllCuratedPlaylists.find { it.id == "mindful-hifz" }?.coverUrl ?: StitchAssets.LibraryMorningCover
-        "focus-work" -> StitchAssets.AllCuratedPlaylists.firstOrNull()?.coverUrl ?: StitchAssets.LibraryMorningCover
-        "sleep-mode" -> StitchAssets.AllCuratedPlaylists.find { it.id == "tahajjud-night-qiyam" }?.coverUrl ?: StitchAssets.LibraryTahajjudCover
-        "heart-soothing" -> StitchAssets.AllCuratedPlaylists.find { it.id == "anxiety-relief-inshirah" }?.coverUrl ?: StitchAssets.LibraryMorningCover
-        "duaa-ruqia" -> StitchAssets.AllCuratedPlaylists.find { it.id == "ayat-ash-shifa" }?.coverUrl ?: StitchAssets.LibraryTahajjudCover
-        "tahajjud" -> StitchAssets.AllCuratedPlaylists.find { it.id == "tahajjud-night-qiyam" }?.coverUrl ?: StitchAssets.LibraryTahajjudCover
-        "sunrise-barakah" -> StitchAssets.AllCuratedPlaylists.find { it.id == "sunrise-barakah" }?.coverUrl ?: StitchAssets.LibraryMorningCover
-        "emotional" -> StitchAssets.AllCuratedPlaylists.getOrNull(1)?.coverUrl ?: StitchAssets.LibraryMorningCover
-        "most-beautiful" -> StitchAssets.AllCuratedPlaylists.find { it.id == "garden-of-tranquility" }?.coverUrl ?: StitchAssets.NowPlayingVinylArtUrl
-        "favourites" -> StitchAssets.ProfileAvatarUrl
-        else -> StitchAssets.LibraryMorningCover
+        "study-focus" -> GhaisAssets.AllCuratedPlaylists.find { it.id == "mindful-hifz" }?.coverUrl ?: GhaisAssets.LibraryMorningCover
+        "focus-work" -> GhaisAssets.AllCuratedPlaylists.firstOrNull()?.coverUrl ?: GhaisAssets.LibraryMorningCover
+        "sleep-mode" -> GhaisAssets.AllCuratedPlaylists.find { it.id == "tahajjud-night-qiyam" }?.coverUrl ?: GhaisAssets.LibraryTahajjudCover
+        "heart-soothing" -> GhaisAssets.AllCuratedPlaylists.find { it.id == "anxiety-relief-inshirah" }?.coverUrl ?: GhaisAssets.LibraryMorningCover
+        "duaa-ruqia" -> GhaisAssets.AllCuratedPlaylists.find { it.id == "ayat-ash-shifa" }?.coverUrl ?: GhaisAssets.LibraryTahajjudCover
+        "tahajjud" -> GhaisAssets.AllCuratedPlaylists.find { it.id == "tahajjud-night-qiyam" }?.coverUrl ?: GhaisAssets.LibraryTahajjudCover
+        "sunrise-barakah" -> GhaisAssets.AllCuratedPlaylists.find { it.id == "sunrise-barakah" }?.coverUrl ?: GhaisAssets.LibraryMorningCover
+        "emotional" -> GhaisAssets.AllCuratedPlaylists.getOrNull(1)?.coverUrl ?: GhaisAssets.LibraryMorningCover
+        "most-beautiful" -> GhaisAssets.AllCuratedPlaylists.find { it.id == "garden-of-tranquility" }?.coverUrl ?: GhaisAssets.NowPlayingVinylArtUrl
+        "favourites" -> GhaisAssets.ProfileAvatarUrl
+        else -> GhaisAssets.LibraryMorningCover
     }
 
     val style = when (id) {

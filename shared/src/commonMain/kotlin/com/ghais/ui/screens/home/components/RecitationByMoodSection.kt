@@ -32,7 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 // Trending Purple & Monochrome Palette Tokens
 private val ObsidianCardBg = Color(0xFF121418)
@@ -184,7 +184,7 @@ private fun MoodTile(
             Text(
                 text = subtitle,
                 fontSize = 11.sp,
-                color = QuranifyColors.TextSecondary,
+                color = GhaisColors.TextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

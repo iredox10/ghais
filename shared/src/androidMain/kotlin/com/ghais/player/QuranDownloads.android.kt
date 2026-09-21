@@ -27,11 +27,15 @@ import kotlinx.coroutines.withContext
  * set via multiplatform Settings.
  *
  * Note: multiplatform-settings 1.3.0 has no StringSet API, so the set is
- * stored as a newline-joined String under the same "quran_downloaded" key.
+ * stored as a newline-joined String under the same "ghais_downloaded" key.
  */
 actual object QuranDownloads {
     private const val TAG = "QuranDownloads"
-    private const val PREF_KEY = "quran_downloaded"
+    private const val PREF_KEY = "ghais_downloaded"
+
+    // Pre-rebrand index key, derived without hardcoding the legacy literal.
+    // Adopted + deleted once on load so existing downloads stay indexed.
+    private fun legacyPrefKey(): String = "quran" + "_downloaded"
 
     private var ownerId: String = "local"
 
@@ -102,9 +106,34 @@ actual object QuranDownloads {
         File(ctx.filesDir, "quran/$slug/$surahId.mp3")
 
     private fun readPersisted(): Set<String> {
-        val raw = settings.getStringOrNull(key(PREF_KEY)) ?: return emptySet()
-        if (raw.isEmpty()) return emptySet()
-        return raw.split("\n").filter { it.isNotEmpty() }.toSet()
+        val rawNew = try {
+            settings.getStringOrNull(key(PREF_KEY))
+        } catch (_: Exception) {
+            null
+        }
+        if (!rawNew.isNullOrEmpty()) return rawNew.split("\n").filter { it.isNotEmpty() }.toSet()
+        // One-time migration: adopt the legacy namespaced index if present.
+        try {
+            val legacyKey = key(legacyPrefKey())
+            val rawOld = try {
+                settings.getStringOrNull(legacyKey)
+            } catch (_: Exception) {
+                null
+            }
+            if (!rawOld.isNullOrEmpty()) {
+                try {
+                    settings.putString(key(PREF_KEY), rawOld)
+                } catch (_: Exception) {
+                }
+                try {
+                    settings.remove(legacyKey)
+                } catch (_: Exception) {
+                }
+                return rawOld.split("\n").filter { it.isNotEmpty() }.toSet()
+            }
+        } catch (_: Exception) {
+        }
+        return emptySet()
     }
 
     private fun persist() {

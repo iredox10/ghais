@@ -2,7 +2,7 @@ package com.ghais.data.repository
 
 import com.ghais.data.seed.ALL_MP3QURAN_RECITERS
 import com.ghais.data.seed.QuranData
-import com.ghais.data.seed.StitchAssets
+import com.ghais.data.seed.GhaisAssets
 import com.ghais.data.seed.QuranDataRepository as SeedRepository
 import com.ghais.domain.model.Reciter
 
@@ -30,7 +30,7 @@ fun resolveFollowedQari(rawSlug: String): ResolvedQari? {
     val normalized = rawSlug.trim().lowercase()
     if (normalized.isEmpty()) return null
 
-    val verified = StitchAssets.VerifiedReciters.find {
+    val verified = GhaisAssets.VerifiedReciters.find {
         it.slug.equals(rawSlug, ignoreCase = true)
     }
     val detailed = SeedRepository.getReciterBySlug(rawSlug)

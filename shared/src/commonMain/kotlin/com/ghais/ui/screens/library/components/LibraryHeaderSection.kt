@@ -53,8 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.ghais.data.seed.StitchAssets
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.data.seed.GhaisAssets
+import com.ghais.ui.theme.GhaisColors
 import org.jetbrains.compose.resources.painterResource
 import ghais.shared.generated.resources.Res
 import ghais.shared.generated.resources.ghais_mark
@@ -62,7 +62,7 @@ import kotlin.math.roundToInt
 
 /**
  * Top App Header matching Stitch design specs:
- * Quranify logo, "Assalamu Alaikum", "Library" title, Search button & Profile avatar.
+ * Ghais logo, "Assalamu Alaikum", "Library" title, Search button & Profile avatar.
  */
 @Composable
 fun LibraryAppHeader(
@@ -93,14 +93,14 @@ fun LibraryAppHeader(
             Column {
                 Text(
                     text = "ASSALAMU ALAIKUM",
-                    color = QuranifyColors.Primary,
+                    color = GhaisColors.Primary,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
                 Text(
                     text = "Library",
-                    color = QuranifyColors.TextPrimary,
+                    color = GhaisColors.TextPrimary,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -116,23 +116,23 @@ fun LibraryAppHeader(
                 modifier = Modifier
                     .size(38.dp)
                     .clip(CircleShape)
-                    .background(QuranifyColors.SurfaceContainer)
+                    .background(GhaisColors.SurfaceContainer)
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search Quran",
-                    tint = QuranifyColors.TextSecondary,
+                    tint = GhaisColors.TextSecondary,
                     modifier = Modifier.size(18.dp)
                 )
             }
             AsyncImage(
-                model = StitchAssets.ProfileAvatarUrl,
+                model = GhaisAssets.ProfileAvatarUrl,
                 contentDescription = "Profile",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(QuranifyColors.SurfaceHigh)
+                    .background(GhaisColors.SurfaceHigh)
                     .clickable { onProfileClick() }
             )
         }
@@ -191,7 +191,7 @@ fun LibraryTopBar(
         ) {
             Text(
                 text = "Your Library",
-                color = QuranifyColors.TextPrimary,
+                color = GhaisColors.TextPrimary,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = (-0.5).sp
@@ -227,14 +227,14 @@ fun LibraryTopBar(
                     modifier = Modifier
                         .size(12.dp)
                         .graphicsLayer(scaleX = scale, scaleY = scale, alpha = alpha * 0.4f)
-                        .background(QuranifyColors.Primary, CircleShape)
+                        .background(GhaisColors.Primary, CircleShape)
                 )
                 // Center dot
                 Box(
                     modifier = Modifier
                         .size(8.dp)
                         .graphicsLayer(alpha = alpha)
-                        .background(QuranifyColors.Primary, CircleShape)
+                        .background(GhaisColors.Primary, CircleShape)
                 )
             }
         }
@@ -248,12 +248,12 @@ fun LibraryTopBar(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(QuranifyColors.SurfaceContainer)
+                    .background(GhaisColors.SurfaceContainer)
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search Library",
-                    tint = QuranifyColors.TextSecondary,
+                    tint = GhaisColors.TextSecondary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -262,12 +262,12 @@ fun LibraryTopBar(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(QuranifyColors.SurfaceContainer)
+                    .background(GhaisColors.SurfaceContainer)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Add Playlist or Bookmark",
-                    tint = QuranifyColors.Primary,
+                    tint = GhaisColors.Primary,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -297,7 +297,7 @@ fun LibraryFilterChips(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
                     .background(
-                        if (isSelected) QuranifyColors.Primary else QuranifyColors.SurfaceContainer
+                        if (isSelected) GhaisColors.Primary else GhaisColors.SurfaceContainer
                     )
                     .clickable { onSelectFilter(filter) }
                     .padding(horizontal = 14.dp, vertical = 7.dp)
@@ -310,7 +310,7 @@ fun LibraryFilterChips(
                         Icon(
                             imageVector = Icons.Default.DownloadDone,
                             contentDescription = null,
-                            tint = if (isSelected) QuranifyColors.OnPrimary else QuranifyColors.Primary,
+                            tint = if (isSelected) GhaisColors.OnPrimary else GhaisColors.Primary,
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -318,7 +318,7 @@ fun LibraryFilterChips(
                         text = filter,
                         fontSize = 12.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) QuranifyColors.OnPrimary else QuranifyColors.TextSecondary
+                        color = if (isSelected) GhaisColors.OnPrimary else GhaisColors.TextSecondary
                     )
                 }
             }
@@ -344,13 +344,13 @@ fun RamadanKhatmCard(
         .fillMaxWidth()
         .padding(horizontal = 16.dp, vertical = 8.dp)
         .clip(RoundedCornerShape(20.dp))
-        .background(QuranifyColors.SurfaceContainer)
+        .background(GhaisColors.SurfaceContainer)
         .drawBehind {
             // Subtle top-right emerald radial glow matching Stitch design
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        QuranifyColors.Primary.copy(alpha = 0.12f),
+                        GhaisColors.Primary.copy(alpha = 0.12f),
                         Color.Transparent
                     ),
                     center = Offset(size.width, 0f),
@@ -378,7 +378,7 @@ fun RamadanKhatmCard(
                     Box(
                         modifier = Modifier
                             .background(
-                                QuranifyColors.Secondary.copy(alpha = 0.18f),
+                                GhaisColors.Secondary.copy(alpha = 0.18f),
                                 RoundedCornerShape(8.dp)
                             )
                             .padding(horizontal = 8.dp, vertical = 3.dp)
@@ -387,13 +387,13 @@ fun RamadanKhatmCard(
                             text = "Ramadan Goal",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = QuranifyColors.Secondary
+                            color = GhaisColors.Secondary
                         )
                     }
                     Text(
                         text = "$daysLeft days left",
                         fontSize = 11.sp,
-                        color = QuranifyColors.TextSecondary
+                        color = GhaisColors.TextSecondary
                     )
                 }
 
@@ -403,12 +403,12 @@ fun RamadanKhatmCard(
                     text = "Ramadan Khatm Tracker",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = QuranifyColors.TextPrimary
+                    color = GhaisColors.TextPrimary
                 )
                 Text(
                     text = "Juz $currentJuz of $totalJuz • On track today",
                     fontSize = 12.sp,
-                    color = QuranifyColors.TextSecondary,
+                    color = GhaisColors.TextSecondary,
                     modifier = Modifier.padding(top = 2.dp)
                 )
 
@@ -418,7 +418,7 @@ fun RamadanKhatmCard(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
-                            .background(QuranifyColors.Primary)
+                            .background(GhaisColors.Primary)
                             .clickable { onResumeClick() }
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
@@ -426,7 +426,7 @@ fun RamadanKhatmCard(
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
                                 contentDescription = "Resume",
-                                tint = QuranifyColors.OnPrimary,
+                                tint = GhaisColors.OnPrimary,
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -434,7 +434,7 @@ fun RamadanKhatmCard(
                                 text = "Resume Juz $currentJuz",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = QuranifyColors.OnPrimary
+                                color = GhaisColors.OnPrimary
                             )
                         }
                     }
@@ -445,7 +445,7 @@ fun RamadanKhatmCard(
                         Icon(
                             imageVector = Icons.Default.TrendingUp,
                             contentDescription = "Trending",
-                            tint = QuranifyColors.Primary,
+                            tint = GhaisColors.Primary,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(3.dp))
@@ -453,7 +453,7 @@ fun RamadanKhatmCard(
                             text = "+18m daily avg",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = QuranifyColors.Primary
+                            color = GhaisColors.Primary
                         )
                     }
                 }
@@ -476,13 +476,13 @@ fun RamadanKhatmCard(
 
                     // Track circle
                     drawCircle(
-                        color = QuranifyColors.SurfaceHighest,
+                        color = GhaisColors.SurfaceHighest,
                         radius = diameter / 2f,
                         style = Stroke(width = strokeWidth)
                     )
                     // Active arc: 42% = 151.2 degrees
                     drawArc(
-                        color = QuranifyColors.Primary,
+                        color = GhaisColors.Primary,
                         startAngle = -90f,
                         sweepAngle = 360f * progress,
                         useCenter = false,
@@ -496,14 +496,14 @@ fun RamadanKhatmCard(
                         text = "${(progress * 100).roundToInt()}%",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = QuranifyColors.TextPrimary
+                        color = GhaisColors.TextPrimary
                     )
                     Text(
                         text = "KHATM",
                         fontSize = 8.5.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp,
-                        color = QuranifyColors.TextSecondary
+                        color = GhaisColors.TextSecondary
                     )
                 }
             }

@@ -31,7 +31,7 @@ import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.explore.components.SurahDirectoryItem
 import com.ghais.ui.screens.surah.SurahDetailScreen
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 data class JuzInfo(
     val id: Int,
@@ -54,7 +54,7 @@ object SurahsScreen : Screen {
                     title = {
                         Text(
                             "All Surahs",
-                            color = QuranifyColors.TextPrimary,
+                            color = GhaisColors.TextPrimary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
                         )
@@ -64,14 +64,14 @@ object SurahsScreen : Screen {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
-                                tint = QuranifyColors.TextPrimary
+                                tint = GhaisColors.TextPrimary
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = QuranifyColors.Background)
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = GhaisColors.Background)
                 )
             },
-            containerColor = QuranifyColors.Background
+            containerColor = GhaisColors.Background
         ) { padding ->
             LazyColumn(
                 modifier = Modifier
@@ -160,7 +160,7 @@ object JuzBrowserScreen : Screen {
                     title = {
                         Text(
                             "Juz Index",
-                            color = QuranifyColors.TextPrimary,
+                            color = GhaisColors.TextPrimary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
                         )
@@ -170,14 +170,14 @@ object JuzBrowserScreen : Screen {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
-                                tint = QuranifyColors.TextPrimary
+                                tint = GhaisColors.TextPrimary
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = QuranifyColors.Background)
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = GhaisColors.Background)
                 )
             },
-            containerColor = QuranifyColors.Background
+            containerColor = GhaisColors.Background
         ) { padding ->
             LazyColumn(
                 modifier = Modifier
@@ -192,10 +192,10 @@ object JuzBrowserScreen : Screen {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(QuranifyColors.SurfaceLow.copy(alpha = 0.7f))
+                            .background(GhaisColors.SurfaceLow.copy(alpha = 0.7f))
                             .border(
                                 1.dp,
-                                if (isProminent) QuranifyColors.Primary.copy(alpha = 0.25f)
+                                if (isProminent) GhaisColors.Primary.copy(alpha = 0.25f)
                                 else Color.White.copy(alpha = 0.06f),
                                 RoundedCornerShape(16.dp)
                             )
@@ -253,12 +253,12 @@ object JuzBrowserScreen : Screen {
                                                 .background(Color(0xFF10B981).copy(alpha = 0.15f))
                                                 .border(
                                                     1.dp,
-                                                    QuranifyColors.Primary.copy(alpha = 0.35f),
+                                                    GhaisColors.Primary.copy(alpha = 0.35f),
                                                     RoundedCornerShape(12.dp)
                                                 )
                                         } else {
                                             Modifier
-                                                .background(QuranifyColors.SurfaceHigh.copy(alpha = 0.7f))
+                                                .background(GhaisColors.SurfaceHigh.copy(alpha = 0.7f))
                                                 .border(
                                                     1.dp,
                                                     Color.White.copy(alpha = 0.06f),
@@ -272,7 +272,7 @@ object JuzBrowserScreen : Screen {
                                     text = juz.id.toString().padStart(2, '0'),
                                     fontSize = 13.sp,
                                     fontWeight = if (isProminent) FontWeight.Bold else FontWeight.SemiBold,
-                                    color = if (isProminent) QuranifyColors.Primary else QuranifyColors.TextPrimary
+                                    color = if (isProminent) GhaisColors.Primary else GhaisColors.TextPrimary
                                 )
                             }
 
@@ -283,12 +283,12 @@ object JuzBrowserScreen : Screen {
                                     text = "Juz ${juz.id}",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = QuranifyColors.TextPrimary
+                                    color = GhaisColors.TextPrimary
                                 )
                                 Text(
                                     text = juz.startVerse,
                                     fontSize = 12.sp,
-                                    color = QuranifyColors.TextSecondary,
+                                    color = GhaisColors.TextSecondary,
                                     modifier = Modifier.padding(top = 2.dp),
                                     maxLines = 1
                                 )
@@ -303,7 +303,7 @@ object JuzBrowserScreen : Screen {
                                 text = juz.nameAr,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isProminent) QuranifyColors.Primary else QuranifyColors.TextPrimary.copy(alpha = 0.9f),
+                                color = if (isProminent) GhaisColors.Primary else GhaisColors.TextPrimary.copy(alpha = 0.9f),
                                 textAlign = TextAlign.Right
                             )
 
@@ -311,7 +311,7 @@ object JuzBrowserScreen : Screen {
                                 modifier = Modifier
                                     .size(34.dp)
                                     .clip(CircleShape)
-                                    .background(QuranifyColors.SurfaceHigh.copy(alpha = 0.8f))
+                                    .background(GhaisColors.SurfaceHigh.copy(alpha = 0.8f))
                                     .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape)
                                     .clickable {
                                         val track = TrackItem(
@@ -332,7 +332,7 @@ object JuzBrowserScreen : Screen {
                                 Icon(
                                     imageVector = Icons.Default.PlayArrow,
                                     contentDescription = "Play Juz ${juz.id}",
-                                    tint = QuranifyColors.TextPrimary,
+                                    tint = GhaisColors.TextPrimary,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }

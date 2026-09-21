@@ -47,8 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.player.SleepTimer
 import com.ghais.player.StopCondition
-import com.ghais.ui.theme.QuranifyColors
-import com.ghais.ui.theme.QuranifyTypography
+import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.theme.GhaisTypography
 
 // Obsidian-Emerald Glassmorphic Palette
 private val SheetContainer = Color(0xFF181E20)       // Obsidian container
@@ -100,7 +100,7 @@ fun SleepTimerSheet(
             // Header
             Text(
                 text = "Sleep Timer",
-                style = QuranifyTypography.titleMedium.copy(
+                style = GhaisTypography.titleMedium.copy(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -109,7 +109,7 @@ fun SleepTimerSheet(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = if (state.isActive) "Playback will automatically stop" else "Set audio to automatically stop when you rest",
-                style = QuranifyTypography.bodyMedium.copy(
+                style = GhaisTypography.bodyMedium.copy(
                     fontSize = 13.sp,
                     color = TextSecondary
                 )
@@ -165,7 +165,7 @@ private fun ActiveTimerView(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = timeString,
-                        style = QuranifyTypography.titleMedium.copy(
+                        style = GhaisTypography.titleMedium.copy(
                             fontSize = 26.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
@@ -181,7 +181,7 @@ private fun ActiveTimerView(
                     ) {
                         Text(
                             text = "Remaining",
-                            style = QuranifyTypography.bodyMedium.copy(
+                            style = GhaisTypography.bodyMedium.copy(
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = LiquidEmerald
@@ -229,7 +229,7 @@ private fun ActiveTimerView(
                     Column {
                         Text(
                             text = "ACTIVE BOUNDARY",
-                            style = QuranifyTypography.bodyMedium.copy(
+                            style = GhaisTypography.bodyMedium.copy(
                                 fontSize = 11.sp,
                                 color = LiquidEmerald,
                                 fontWeight = FontWeight.Bold,
@@ -239,7 +239,7 @@ private fun ActiveTimerView(
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = statusText,
-                            style = QuranifyTypography.titleMedium.copy(
+                            style = GhaisTypography.titleMedium.copy(
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = TextPrimary
@@ -274,7 +274,7 @@ private fun ActiveTimerView(
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "Turn Off Timer",
-                style = QuranifyTypography.bodyMedium.copy(
+                style = GhaisTypography.bodyMedium.copy(
                     fontWeight = FontWeight.SemiBold,
                     color = ErrorColor
                 )
@@ -306,7 +306,7 @@ private fun TimerSetupView() {
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "DURATION",
-                style = QuranifyTypography.bodyMedium.copy(
+                style = GhaisTypography.bodyMedium.copy(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp,
@@ -356,7 +356,7 @@ private fun TimerSetupView() {
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "SMART BOUNDARIES",
-                style = QuranifyTypography.bodyMedium.copy(
+                style = GhaisTypography.bodyMedium.copy(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp,
@@ -414,7 +414,7 @@ private fun TimerSetupView() {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Gentle Fade-out",
-                    style = QuranifyTypography.bodyMedium.copy(
+                    style = GhaisTypography.bodyMedium.copy(
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary
@@ -423,7 +423,7 @@ private fun TimerSetupView() {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "Slowly lower volume over the last 30 seconds",
-                    style = QuranifyTypography.bodyMedium.copy(
+                    style = GhaisTypography.bodyMedium.copy(
                         fontSize = 12.sp,
                         color = TextSecondary
                     )
@@ -478,7 +478,7 @@ private fun PresetChip(
     ) {
         Text(
             text = text,
-            style = QuranifyTypography.bodyMedium.copy(
+            style = GhaisTypography.bodyMedium.copy(
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 color = textColor,
                 fontSize = 14.sp
@@ -518,7 +518,7 @@ private fun BoundaryOption(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = QuranifyTypography.bodyMedium.copy(
+                style = GhaisTypography.bodyMedium.copy(
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary
@@ -527,7 +527,7 @@ private fun BoundaryOption(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                style = QuranifyTypography.bodyMedium.copy(
+                style = GhaisTypography.bodyMedium.copy(
                     fontSize = 12.sp,
                     color = TextSecondary
                 )

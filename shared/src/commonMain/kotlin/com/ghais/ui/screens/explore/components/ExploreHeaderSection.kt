@@ -30,11 +30,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.ghais.data.seed.StitchAssets
+import com.ghais.data.seed.GhaisAssets
 import org.jetbrains.compose.resources.painterResource
 import ghais.shared.generated.resources.Res
 import ghais.shared.generated.resources.ghais_mark
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 @Composable
 fun ExploreTopBar(
@@ -76,7 +76,7 @@ fun ExploreTopBar(
             Column {
                 Text(
                     text = "ASSALAMU ALAIKUM",
-                    color = QuranifyColors.Primary,
+                    color = GhaisColors.Primary,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 1.2.sp
@@ -130,7 +130,7 @@ fun ExploreTopBar(
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
-                    model = StitchAssets.ProfileAvatarUrl,
+                    model = GhaisAssets.ProfileAvatarUrl,
                     contentDescription = "Profile",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -153,8 +153,8 @@ fun ExploreSearchBar(
 ) {
     val activeBorder = Brush.verticalGradient(
         listOf(
-            QuranifyColors.Primary.copy(alpha = 0.45f),
-            QuranifyColors.Primary.copy(alpha = 0.15f)
+            GhaisColors.Primary.copy(alpha = 0.45f),
+            GhaisColors.Primary.copy(alpha = 0.15f)
         )
     )
 
@@ -181,7 +181,7 @@ fun ExploreSearchBar(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "Search",
-                tint = if (query.isNotEmpty()) QuranifyColors.Primary else SystemGrey,
+                tint = if (query.isNotEmpty()) GhaisColors.Primary else SystemGrey,
                 modifier = Modifier.size(18.dp)
             )
 
@@ -210,7 +210,7 @@ fun ExploreSearchBar(
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Normal
                     ),
-                    cursorBrush = SolidColor(QuranifyColors.Primary),
+                    cursorBrush = SolidColor(GhaisColors.Primary),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -279,12 +279,12 @@ fun ExploreFilterPills(
                                     .background(
                                         Brush.horizontalGradient(
                                             listOf(
-                                                QuranifyColors.Primary.copy(alpha = 0.28f),
-                                                QuranifyColors.PrimaryContainer.copy(alpha = 0.18f)
+                                                GhaisColors.Primary.copy(alpha = 0.28f),
+                                                GhaisColors.PrimaryContainer.copy(alpha = 0.18f)
                                             )
                                         )
                                     )
-                                    .border(0.5.dp, QuranifyColors.Primary.copy(alpha = 0.50f), RoundedCornerShape(17.dp))
+                                    .border(0.5.dp, GhaisColors.Primary.copy(alpha = 0.50f), RoundedCornerShape(17.dp))
                             } else {
                                 Modifier
                                     .background(Color.White.copy(alpha = 0.07f))

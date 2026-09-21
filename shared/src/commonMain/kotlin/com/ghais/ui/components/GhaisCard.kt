@@ -9,19 +9,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import com.ghais.ui.theme.QuranifyColors
-import com.ghais.ui.theme.QuranifyShapes
-import com.ghais.ui.theme.QuranifySpacing
+import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.theme.GhaisSpacing
 
 @Composable
-fun QuranifyCard(
+fun GhaisCard(
     modifier: Modifier = Modifier,
-    backgroundColor: Color = QuranifyColors.Card,
+    backgroundColor: Color = GhaisColors.Card,
     onClick: (() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit
 ) {
     var cardModifier = modifier
-        .clip(QuranifyShapes.card)
+        .clip(GhaisShapes.card)
         .background(backgroundColor)
         
     if (onClick != null) {
@@ -29,7 +29,7 @@ fun QuranifyCard(
     }
     
     Box(
-        modifier = cardModifier.padding(QuranifySpacing.lg),
+        modifier = cardModifier.padding(GhaisSpacing.lg),
         content = content
     )
 }

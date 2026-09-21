@@ -34,7 +34,7 @@ import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -178,12 +178,12 @@ object MushafScreen : Tab {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(QuranifyColors.Background)
+                .background(GhaisColors.Background)
         ) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(QuranifyColors.Background),
+                    .background(GhaisColors.Background),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 120.dp)
             ) {
                 // 1. Top Floating Mushaf Control Capsule
@@ -320,14 +320,14 @@ private fun MushafControlCapsule(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(32.dp))
-            .background(QuranifyColors.SurfaceHigh.copy(alpha = 0.92f))
+            .background(GhaisColors.SurfaceHigh.copy(alpha = 0.92f))
             .border(
                 1.dp,
                 Brush.horizontalGradient(
                     listOf(
-                        QuranifyColors.OutlineVariant.copy(alpha = 0.6f),
-                        QuranifyColors.Primary.copy(alpha = 0.2f),
-                        QuranifyColors.OutlineVariant.copy(alpha = 0.6f)
+                        GhaisColors.OutlineVariant.copy(alpha = 0.6f),
+                        GhaisColors.Primary.copy(alpha = 0.2f),
+                        GhaisColors.OutlineVariant.copy(alpha = 0.6f)
                     )
                 ),
                 RoundedCornerShape(32.dp)
@@ -345,14 +345,14 @@ private fun MushafControlCapsule(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(QuranifyColors.SurfaceContainer)
+                        .background(GhaisColors.SurfaceContainer)
                         .clickable { onToggleSurahMenu() }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.AutoStories,
                         contentDescription = "Surah Selector",
-                        tint = QuranifyColors.Primary,
+                        tint = GhaisColors.Primary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -360,13 +360,13 @@ private fun MushafControlCapsule(
                         text = selectedSurah,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = QuranifyColors.TextPrimary
+                        color = GhaisColors.TextPrimary
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Icon(
                         imageVector = Icons.Default.ExpandMore,
                         contentDescription = "Dropdown",
-                        tint = QuranifyColors.TextSecondary,
+                        tint = GhaisColors.TextSecondary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -374,7 +374,7 @@ private fun MushafControlCapsule(
                 DropdownMenu(
                     expanded = isSurahMenuOpen,
                     onDismissRequest = onToggleSurahMenu,
-                    modifier = Modifier.background(QuranifyColors.SurfaceHigh)
+                    modifier = Modifier.background(GhaisColors.SurfaceHigh)
                 ) {
                     val surahList = listOf(
                         "Al-Fatihah (1)",
@@ -389,7 +389,7 @@ private fun MushafControlCapsule(
                             text = {
                                 Text(
                                     text = surah,
-                                    color = if (surah == selectedSurah) QuranifyColors.Primary else QuranifyColors.TextPrimary,
+                                    color = if (surah == selectedSurah) GhaisColors.Primary else GhaisColors.TextPrimary,
                                     fontWeight = if (surah == selectedSurah) FontWeight.Bold else FontWeight.Normal
                                 )
                             },
@@ -403,7 +403,7 @@ private fun MushafControlCapsule(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(14.dp))
-                    .background(QuranifyColors.Background.copy(alpha = 0.75f))
+                    .background(GhaisColors.Background.copy(alpha = 0.75f))
                     .padding(horizontal = 8.dp, vertical = 5.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -411,31 +411,31 @@ private fun MushafControlCapsule(
                         text = "JUZ",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
-                        color = QuranifyColors.TextSecondary
+                        color = GhaisColors.TextSecondary
                     )
                     Spacer(modifier = Modifier.width(3.dp))
                     Text(
                         text = "15",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = QuranifyColors.TextPrimary
+                        color = GhaisColors.TextPrimary
                     )
                     Text(
                         text = " • ",
                         fontSize = 10.sp,
-                        color = QuranifyColors.Primary
+                        color = GhaisColors.Primary
                     )
                     Text(
                         text = "P.",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
-                        color = QuranifyColors.TextSecondary
+                        color = GhaisColors.TextSecondary
                     )
                     Text(
                         text = "293",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = QuranifyColors.TextPrimary
+                        color = GhaisColors.TextPrimary
                     )
                 }
             }
@@ -450,7 +450,7 @@ private fun MushafControlCapsule(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(QuranifyColors.SurfaceContainer)
+                        .background(GhaisColors.SurfaceContainer)
                         .clickable { onCycleFontSize() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -458,14 +458,14 @@ private fun MushafControlCapsule(
                         Icon(
                             imageVector = Icons.Default.FormatSize,
                             contentDescription = "Font size: $arabicFontSize",
-                            tint = QuranifyColors.Primary,
+                            tint = GhaisColors.Primary,
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
                             text = "${arabicFontSize}pt",
                             fontSize = 8.sp,
                             fontWeight = FontWeight.Bold,
-                            color = QuranifyColors.TextSecondary,
+                            color = GhaisColors.TextSecondary,
                             lineHeight = 9.sp
                         )
                     }
@@ -477,8 +477,8 @@ private fun MushafControlCapsule(
                         .size(36.dp)
                         .clip(CircleShape)
                         .background(
-                            if (showTranslation) QuranifyColors.Primary.copy(alpha = 0.18f)
-                            else QuranifyColors.SurfaceContainer
+                            if (showTranslation) GhaisColors.Primary.copy(alpha = 0.18f)
+                            else GhaisColors.SurfaceContainer
                         )
                         .clickable { onToggleTranslation() },
                     contentAlignment = Alignment.Center
@@ -486,7 +486,7 @@ private fun MushafControlCapsule(
                     Icon(
                         imageVector = Icons.Default.Translate,
                         contentDescription = "Toggle Translation",
-                        tint = if (showTranslation) QuranifyColors.Primary else QuranifyColors.TextSecondary,
+                        tint = if (showTranslation) GhaisColors.Primary else GhaisColors.TextSecondary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -497,8 +497,8 @@ private fun MushafControlCapsule(
                         .height(36.dp)
                         .clip(RoundedCornerShape(18.dp))
                         .background(
-                            if (isTajweed) QuranifyColors.Primary.copy(alpha = 0.18f)
-                            else QuranifyColors.SurfaceContainer
+                            if (isTajweed) GhaisColors.Primary.copy(alpha = 0.18f)
+                            else GhaisColors.SurfaceContainer
                         )
                         .clickable { onToggleTajweed() }
                         .padding(horizontal = 8.dp),
@@ -508,7 +508,7 @@ private fun MushafControlCapsule(
                         Icon(
                             imageVector = Icons.Default.Palette,
                             contentDescription = "Tajweed",
-                            tint = if (isTajweed) QuranifyColors.Primary else QuranifyColors.TextSecondary,
+                            tint = if (isTajweed) GhaisColors.Primary else GhaisColors.TextSecondary,
                             modifier = Modifier.size(15.dp)
                         )
                         Spacer(modifier = Modifier.width(3.dp))
@@ -516,7 +516,7 @@ private fun MushafControlCapsule(
                             text = "Tajweed",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isTajweed) QuranifyColors.Primary else QuranifyColors.TextSecondary
+                            color = if (isTajweed) GhaisColors.Primary else GhaisColors.TextSecondary
                         )
                     }
                 }
@@ -527,8 +527,8 @@ private fun MushafControlCapsule(
                         .size(36.dp)
                         .clip(CircleShape)
                         .background(
-                            if (isAudioPlaying) QuranifyColors.Primary
-                            else QuranifyColors.SurfaceContainer
+                            if (isAudioPlaying) GhaisColors.Primary
+                            else GhaisColors.SurfaceContainer
                         )
                         .clickable { onToggleAudio() },
                     contentAlignment = Alignment.Center
@@ -536,7 +536,7 @@ private fun MushafControlCapsule(
                     Icon(
                         imageVector = if (isAudioPlaying) Icons.Default.GraphicEq else Icons.Default.PlayArrow,
                         contentDescription = if (isAudioPlaying) "Pause Recitation" else "Play Recitation",
-                        tint = if (isAudioPlaying) QuranifyColors.OnPrimary else QuranifyColors.Primary,
+                        tint = if (isAudioPlaying) GhaisColors.OnPrimary else GhaisColors.Primary,
                         modifier = Modifier.size(17.dp)
                     )
                 }
@@ -559,13 +559,13 @@ private fun SurahHeaderBanner() {
             .background(
                 brush = Brush.verticalGradient(
                     listOf(
-                        QuranifyColors.SurfaceHigh.copy(alpha = 0.95f),
-                        QuranifyColors.SurfaceContainer.copy(alpha = 0.85f),
-                        QuranifyColors.Background.copy(alpha = 0.92f)
+                        GhaisColors.SurfaceHigh.copy(alpha = 0.95f),
+                        GhaisColors.SurfaceContainer.copy(alpha = 0.85f),
+                        GhaisColors.Background.copy(alpha = 0.92f)
                     )
                 )
             )
-            .border(1.dp, QuranifyColors.OutlineVariant.copy(alpha = 0.45f), RoundedCornerShape(22.dp))
+            .border(1.dp, GhaisColors.OutlineVariant.copy(alpha = 0.45f), RoundedCornerShape(22.dp))
             .padding(18.dp)
     ) {
         // Sacred Geometry Arabesque Motif Backdrop
@@ -577,13 +577,13 @@ private fun SurahHeaderBanner() {
 
             // Concentric geometric circles
             drawCircle(
-                color = QuranifyColors.Primary.copy(alpha = 0.08f),
+                color = GhaisColors.Primary.copy(alpha = 0.08f),
                 radius = r1,
                 center = center,
                 style = Stroke(width = 1.5f)
             )
             drawCircle(
-                color = QuranifyColors.Primary.copy(alpha = 0.06f),
+                color = GhaisColors.Primary.copy(alpha = 0.06f),
                 radius = r2,
                 center = center,
                 style = Stroke(
@@ -607,7 +607,7 @@ private fun SurahHeaderBanner() {
             path.close()
             drawPath(
                 path = path,
-                color = QuranifyColors.Primary.copy(alpha = 0.05f),
+                color = GhaisColors.Primary.copy(alpha = 0.05f),
                 style = Stroke(width = 1.5f)
             )
         }
@@ -626,7 +626,7 @@ private fun SurahHeaderBanner() {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(QuranifyColors.SurfaceHighest.copy(alpha = 0.5f))
+                        .background(GhaisColors.SurfaceHighest.copy(alpha = 0.5f))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Icon(
@@ -649,13 +649,13 @@ private fun SurahHeaderBanner() {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(QuranifyColors.SurfaceHighest.copy(alpha = 0.5f))
+                        .background(GhaisColors.SurfaceHighest.copy(alpha = 0.5f))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.FilterList,
                         contentDescription = "Verses",
-                        tint = QuranifyColors.TextSecondary,
+                        tint = GhaisColors.TextSecondary,
                         modifier = Modifier.size(13.dp)
                     )
                     Spacer(modifier = Modifier.width(3.dp))
@@ -663,7 +663,7 @@ private fun SurahHeaderBanner() {
                         text = "110 Verses",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
-                        color = QuranifyColors.TextSecondary
+                        color = GhaisColors.TextSecondary
                     )
                 }
 
@@ -672,13 +672,13 @@ private fun SurahHeaderBanner() {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(QuranifyColors.SecondaryContainer.copy(alpha = 0.2f))
+                        .background(GhaisColors.SecondaryContainer.copy(alpha = 0.2f))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = "Friday Sunnah",
-                        tint = QuranifyColors.Secondary,
+                        tint = GhaisColors.Secondary,
                         modifier = Modifier.size(13.dp)
                     )
                     Spacer(modifier = Modifier.width(3.dp))
@@ -686,7 +686,7 @@ private fun SurahHeaderBanner() {
                         text = "Friday Sunnah",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = QuranifyColors.Secondary
+                        color = GhaisColors.Secondary
                     )
                 }
             }
@@ -706,8 +706,8 @@ private fun SurahHeaderBanner() {
                             Brush.horizontalGradient(
                                 listOf(
                                     Color.Transparent,
-                                    QuranifyColors.OutlineVariant.copy(alpha = 0.5f),
-                                    QuranifyColors.Primary.copy(alpha = 0.4f)
+                                    GhaisColors.OutlineVariant.copy(alpha = 0.5f),
+                                    GhaisColors.Primary.copy(alpha = 0.4f)
                                 )
                             )
                         )
@@ -715,8 +715,8 @@ private fun SurahHeaderBanner() {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(24.dp))
-                        .background(QuranifyColors.Background.copy(alpha = 0.85f))
-                        .border(1.dp, QuranifyColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(24.dp))
+                        .background(GhaisColors.Background.copy(alpha = 0.85f))
+                        .border(1.dp, GhaisColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(24.dp))
                         .padding(horizontal = 22.dp, vertical = 8.dp)
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -724,14 +724,14 @@ private fun SurahHeaderBanner() {
                             text = "سُورَةُ الكَهْفِ",
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
-                            color = QuranifyColors.Primary
+                            color = GhaisColors.Primary
                         )
                         Text(
                             text = "THE CAVE",
                             fontSize = 10.sp,
                             letterSpacing = 2.5.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = QuranifyColors.TextSecondary
+                            color = GhaisColors.TextSecondary
                         )
                     }
                 }
@@ -742,8 +742,8 @@ private fun SurahHeaderBanner() {
                         .background(
                             Brush.horizontalGradient(
                                 listOf(
-                                    QuranifyColors.Primary.copy(alpha = 0.4f),
-                                    QuranifyColors.OutlineVariant.copy(alpha = 0.5f),
+                                    GhaisColors.Primary.copy(alpha = 0.4f),
+                                    GhaisColors.OutlineVariant.copy(alpha = 0.5f),
                                     Color.Transparent
                                 )
                             )
@@ -758,7 +758,7 @@ private fun SurahHeaderBanner() {
                 text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
                 fontSize = 26.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = QuranifyColors.Primary,
+                color = GhaisColors.Primary,
                 lineHeight = 44.sp,
                 textAlign = TextAlign.Center
             )
@@ -766,7 +766,7 @@ private fun SurahHeaderBanner() {
                 text = "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
                 fontSize = 12.sp,
                 fontStyle = FontStyle.Italic,
-                color = QuranifyColors.TextSecondary,
+                color = GhaisColors.TextSecondary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 4.dp)
             )
@@ -799,13 +799,13 @@ private fun AyahBlock(
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(
-                if (isActive) QuranifyColors.SurfaceHigh.copy(alpha = 0.95f)
-                else QuranifyColors.SurfaceContainer.copy(alpha = 0.65f)
+                if (isActive) GhaisColors.SurfaceHigh.copy(alpha = 0.95f)
+                else GhaisColors.SurfaceContainer.copy(alpha = 0.65f)
             )
             .border(
                 1.dp,
-                if (isActive) QuranifyColors.Primary.copy(alpha = 0.45f)
-                else QuranifyColors.OutlineVariant.copy(alpha = 0.35f),
+                if (isActive) GhaisColors.Primary.copy(alpha = 0.45f)
+                else GhaisColors.OutlineVariant.copy(alpha = 0.35f),
                 RoundedCornerShape(18.dp)
             )
             .clickable { onCardClick() }
@@ -824,9 +824,9 @@ private fun AyahBlock(
                         .background(
                             Brush.verticalGradient(
                                 listOf(
-                                    QuranifyColors.Primary,
-                                    QuranifyColors.Secondary,
-                                    QuranifyColors.PrimaryContainer
+                                    GhaisColors.Primary,
+                                    GhaisColors.Secondary,
+                                    GhaisColors.PrimaryContainer
                                 )
                             )
                         )
@@ -855,8 +855,8 @@ private fun AyahBlock(
                             .size(32.dp)
                             .clip(CircleShape)
                             .background(
-                                if (isActive) QuranifyColors.Primary.copy(alpha = 0.2f)
-                                else QuranifyColors.SurfaceHighest.copy(alpha = 0.6f)
+                                if (isActive) GhaisColors.Primary.copy(alpha = 0.2f)
+                                else GhaisColors.SurfaceHighest.copy(alpha = 0.6f)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -864,7 +864,7 @@ private fun AyahBlock(
                             text = ayah.ayahNumber.toString(),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isActive) QuranifyColors.Primary else QuranifyColors.TextSecondary
+                            color = if (isActive) GhaisColors.Primary else GhaisColors.TextSecondary
                         )
                     }
 
@@ -872,7 +872,7 @@ private fun AyahBlock(
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(QuranifyColors.Primary.copy(alpha = 0.12f))
+                                .background(GhaisColors.Primary.copy(alpha = 0.12f))
                                 .padding(horizontal = 8.dp, vertical = 3.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -880,14 +880,14 @@ private fun AyahBlock(
                             Icon(
                                 imageVector = Icons.Default.GraphicEq,
                                 contentDescription = "Waveform",
-                                tint = QuranifyColors.Primary,
+                                tint = GhaisColors.Primary,
                                 modifier = Modifier.size(15.dp)
                             )
                             Text(
                                 text = "RECITING NOW",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = QuranifyColors.Primary,
+                                color = GhaisColors.Primary,
                                 letterSpacing = 0.8.sp
                             )
                         }
@@ -905,8 +905,8 @@ private fun AyahBlock(
                             .size(34.dp)
                             .clip(CircleShape)
                             .background(
-                                if (isActive) QuranifyColors.Primary
-                                else QuranifyColors.SurfaceHighest.copy(alpha = 0.5f)
+                                if (isActive) GhaisColors.Primary
+                                else GhaisColors.SurfaceHighest.copy(alpha = 0.5f)
                             )
                             .clickable { onPlayClick() },
                         contentAlignment = Alignment.Center
@@ -914,7 +914,7 @@ private fun AyahBlock(
                         Icon(
                             imageVector = if (isActive) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (isActive) "Pause verse audio" else "Play verse audio",
-                            tint = if (isActive) QuranifyColors.OnPrimary else QuranifyColors.TextSecondary,
+                            tint = if (isActive) GhaisColors.OnPrimary else GhaisColors.TextSecondary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -924,14 +924,14 @@ private fun AyahBlock(
                         modifier = Modifier
                             .size(34.dp)
                             .clip(CircleShape)
-                            .background(QuranifyColors.SurfaceHighest.copy(alpha = 0.5f))
+                            .background(GhaisColors.SurfaceHighest.copy(alpha = 0.5f))
                             .clickable { onBookmarkClick() },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                             contentDescription = "Bookmark ayah",
-                            tint = if (isBookmarked) QuranifyColors.Primary else QuranifyColors.TextSecondary,
+                            tint = if (isBookmarked) GhaisColors.Primary else GhaisColors.TextSecondary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -941,14 +941,14 @@ private fun AyahBlock(
                         modifier = Modifier
                             .size(34.dp)
                             .clip(CircleShape)
-                            .background(QuranifyColors.SurfaceHighest.copy(alpha = 0.5f))
+                            .background(GhaisColors.SurfaceHighest.copy(alpha = 0.5f))
                             .clickable { onTafsirClick() },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.MenuBook,
                             contentDescription = "Tafsir for verse ${ayah.ayahNumber}",
-                            tint = QuranifyColors.TextSecondary,
+                            tint = GhaisColors.TextSecondary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -958,14 +958,14 @@ private fun AyahBlock(
                         modifier = Modifier
                             .size(34.dp)
                             .clip(CircleShape)
-                            .background(QuranifyColors.SurfaceHighest.copy(alpha = 0.5f))
+                            .background(GhaisColors.SurfaceHighest.copy(alpha = 0.5f))
                             .clickable { onShareClick() },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
                             contentDescription = "Share ayah",
-                            tint = QuranifyColors.TextSecondary,
+                            tint = GhaisColors.TextSecondary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -976,13 +976,13 @@ private fun AyahBlock(
 
             // Arabic Ayah Text with Tajweed Coloring and Rosette
             val arabicAnnotated = buildAnnotatedString {
-                val baseColor = QuranifyColors.TextPrimary
+                val baseColor = GhaisColors.TextPrimary
                 val tajweedColor = Color(0xFF95D3BA) // tertiary fixed dim / emerald
                 val ayahRosette = " ۝${toArabicDigits(ayah.ayahNumber)} "
 
                 if (isTajweed && ayah.tajweedPart != null) {
                     if (ayah.tajweedPrefix) {
-                        withStyle(SpanStyle(color = QuranifyColors.Primary, fontWeight = FontWeight.SemiBold)) {
+                        withStyle(SpanStyle(color = GhaisColors.Primary, fontWeight = FontWeight.SemiBold)) {
                             append(ayah.tajweedPart)
                         }
                         withStyle(SpanStyle(color = baseColor)) {
@@ -1006,7 +1006,7 @@ private fun AyahBlock(
                 }
 
                 // Decorative Ayah End Rosette
-                withStyle(SpanStyle(color = QuranifyColors.Primary, fontWeight = FontWeight.Bold, fontSize = (arabicFontSize * 0.75f).sp)) {
+                withStyle(SpanStyle(color = GhaisColors.Primary, fontWeight = FontWeight.Bold, fontSize = (arabicFontSize * 0.75f).sp)) {
                     append(ayahRosette)
                 }
             }
@@ -1026,7 +1026,7 @@ private fun AyahBlock(
                 Text(
                     text = ayah.translation,
                     fontSize = 14.sp,
-                    color = if (isActive) QuranifyColors.TextPrimary else QuranifyColors.TextSecondary,
+                    color = if (isActive) GhaisColors.TextPrimary else GhaisColors.TextSecondary,
                     lineHeight = 22.sp
                 )
 
@@ -1035,7 +1035,7 @@ private fun AyahBlock(
                     Text(
                         text = ayah.footnote,
                         fontSize = 11.sp,
-                        color = QuranifyColors.TextTertiary,
+                        color = GhaisColors.TextTertiary,
                         lineHeight = 15.sp
                     )
                 }
@@ -1063,8 +1063,8 @@ private fun MushafBottomToolsCapsule(
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(32.dp))
-                .background(QuranifyColors.SurfaceHigh.copy(alpha = 0.92f))
-                .border(1.dp, QuranifyColors.OutlineVariant.copy(alpha = 0.5f), RoundedCornerShape(32.dp))
+                .background(GhaisColors.SurfaceHigh.copy(alpha = 0.92f))
+                .border(1.dp, GhaisColors.OutlineVariant.copy(alpha = 0.5f), RoundedCornerShape(32.dp))
                 .padding(6.dp)
         ) {
             Row(
@@ -1078,8 +1078,8 @@ private fun MushafBottomToolsCapsule(
                         .height(38.dp)
                         .clip(RoundedCornerShape(20.dp))
                         .background(
-                            if (repeatLabel.contains("Off")) QuranifyColors.SurfaceContainer
-                            else QuranifyColors.Primary.copy(alpha = 0.15f)
+                            if (repeatLabel.contains("Off")) GhaisColors.SurfaceContainer
+                            else GhaisColors.Primary.copy(alpha = 0.15f)
                         )
                         .clickable { onCycleRepeat() }
                         .padding(horizontal = 12.dp)
@@ -1087,7 +1087,7 @@ private fun MushafBottomToolsCapsule(
                     Icon(
                         imageVector = Icons.Default.Repeat,
                         contentDescription = "Audio Repeat Loop",
-                        tint = if (repeatLabel.contains("Off")) QuranifyColors.TextSecondary else QuranifyColors.Primary,
+                        tint = if (repeatLabel.contains("Off")) GhaisColors.TextSecondary else GhaisColors.Primary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -1095,7 +1095,7 @@ private fun MushafBottomToolsCapsule(
                         text = repeatLabel,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (repeatLabel.contains("Off")) QuranifyColors.TextSecondary else QuranifyColors.TextPrimary
+                        color = if (repeatLabel.contains("Off")) GhaisColors.TextSecondary else GhaisColors.TextPrimary
                     )
                 }
 
@@ -1105,7 +1105,7 @@ private fun MushafBottomToolsCapsule(
                     modifier = Modifier
                         .height(38.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(QuranifyColors.SurfaceContainer)
+                        .background(GhaisColors.SurfaceContainer)
                         .clickable { onOpenTafsir() }
                         .padding(horizontal = 12.dp)
                 ) {
@@ -1120,7 +1120,7 @@ private fun MushafBottomToolsCapsule(
                         text = "Tafsir",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = QuranifyColors.TextPrimary
+                        color = GhaisColors.TextPrimary
                     )
                 }
 
@@ -1129,14 +1129,14 @@ private fun MushafBottomToolsCapsule(
                     modifier = Modifier
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(QuranifyColors.Primary)
+                        .background(GhaisColors.Primary)
                         .clickable { onTogglePageView() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (isPageView) Icons.Default.ViewAgenda else Icons.Default.Layers,
                         contentDescription = if (isPageView) "Switch to Ayah stream" else "Switch to Mushaf page",
-                        tint = QuranifyColors.OnPrimary,
+                        tint = GhaisColors.OnPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -1160,8 +1160,8 @@ private fun MushafPageViewCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(QuranifyColors.SurfaceHigh.copy(alpha = 0.9f))
-            .border(2.dp, QuranifyColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+            .background(GhaisColors.SurfaceHigh.copy(alpha = 0.9f))
+            .border(2.dp, GhaisColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
             .padding(14.dp)
     ) {
         Column(
@@ -1180,23 +1180,23 @@ private fun MushafPageViewCard(
                     text = "جُزْء ١٥",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = QuranifyColors.TextSecondary
+                    color = GhaisColors.TextSecondary
                 )
                 Text(
                     text = "سُورَةُ الكَهْفِ",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = QuranifyColors.Primary
+                    color = GhaisColors.Primary
                 )
                 Text(
                     text = "صَفْحَة ٢٩٣",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = QuranifyColors.TextSecondary
+                    color = GhaisColors.TextSecondary
                 )
             }
 
-            HorizontalDivider(color = QuranifyColors.OutlineVariant.copy(alpha = 0.5f), thickness = 1.dp)
+            HorizontalDivider(color = GhaisColors.OutlineVariant.copy(alpha = 0.5f), thickness = 1.dp)
 
             Spacer(modifier = Modifier.height(14.dp))
 
@@ -1204,7 +1204,7 @@ private fun MushafPageViewCard(
             val pageText = buildAnnotatedString {
                 ayahs.forEach { ayah ->
                     val isSelected = ayah.ayahNumber == activeAyah
-                    val color = if (isSelected) QuranifyColors.Primary else QuranifyColors.TextPrimary
+                    val color = if (isSelected) GhaisColors.Primary else GhaisColors.TextPrimary
 
                     if (isTajweed && ayah.tajweedPart != null) {
                         if (ayah.tajweedPrefix) {
@@ -1231,7 +1231,7 @@ private fun MushafPageViewCard(
                         }
                     }
 
-                    withStyle(SpanStyle(color = QuranifyColors.Primary, fontWeight = FontWeight.Bold)) {
+                    withStyle(SpanStyle(color = GhaisColors.Primary, fontWeight = FontWeight.Bold)) {
                         append(" ۝${toArabicDigits(ayah.ayahNumber)} ")
                     }
                 }
@@ -1247,13 +1247,13 @@ private fun MushafPageViewCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            HorizontalDivider(color = QuranifyColors.OutlineVariant.copy(alpha = 0.5f), thickness = 1.dp)
+            HorizontalDivider(color = GhaisColors.OutlineVariant.copy(alpha = 0.5f), thickness = 1.dp)
 
             // Page Footer
             Text(
                 text = "— ٢٩٣ —",
                 fontSize = 12.sp,
-                color = QuranifyColors.TextTertiary,
+                color = GhaisColors.TextTertiary,
                 modifier = Modifier.padding(top = 8.dp)
             )
         }
@@ -1280,13 +1280,13 @@ private fun TafsirDialog(
                     text = "Tafsir Ibn Kathir",
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
-                    color = QuranifyColors.Primary
+                    color = GhaisColors.Primary
                 )
                 Text(
                     text = "Ayah ${ayah.ayahNumber}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = QuranifyColors.TextSecondary
+                    color = GhaisColors.TextSecondary
                 )
             }
         },
@@ -1296,28 +1296,28 @@ private fun TafsirDialog(
                     text = ayah.textUthmani + (ayah.tajweedPart ?: "") + " ۝${toArabicDigits(ayah.ayahNumber)}",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = QuranifyColors.TextPrimary,
+                    color = GhaisColors.TextPrimary,
                     textAlign = TextAlign.End,
                     lineHeight = 32.sp,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                HorizontalDivider(color = QuranifyColors.OutlineVariant.copy(alpha = 0.4f))
+                HorizontalDivider(color = GhaisColors.OutlineVariant.copy(alpha = 0.4f))
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = ayah.tafsirSnippet,
                     fontSize = 14.sp,
-                    color = QuranifyColors.TextSecondary,
+                    color = GhaisColors.TextSecondary,
                     lineHeight = 21.sp
                 )
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close", color = QuranifyColors.Primary, fontWeight = FontWeight.Bold)
+                Text("Close", color = GhaisColors.Primary, fontWeight = FontWeight.Bold)
             }
         },
-        containerColor = QuranifyColors.SurfaceHigh,
+        containerColor = GhaisColors.SurfaceHigh,
         shape = RoundedCornerShape(20.dp)
     )
 }

@@ -54,8 +54,8 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ghais.player.AudioEngine
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.theme.QuranifyColors
-import com.ghais.ui.theme.QuranifyShapes
+import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.theme.GhaisShapes
 
 /**
  * Modern Black & White + Trending Purple Glassmorphic Mini Player
@@ -119,7 +119,7 @@ fun MiniPlayer(
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = 520.dp),
-            shape = QuranifyShapes.playerBar,
+            shape = GhaisShapes.playerBar,
             color = Color.Transparent,
             border = glassBorder,
             shadowElevation = 10.dp,
@@ -129,7 +129,7 @@ fun MiniPlayer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(glassGradient)
-                    .clip(QuranifyShapes.playerBar)
+                    .clip(GhaisShapes.playerBar)
                     .clickable {
                         if (onOpenNowPlaying != null) {
                             onOpenNowPlaying()
@@ -283,7 +283,7 @@ fun MiniPlayer(
  * Falls back to the app logo when no photo exists.
  */
 private fun miniPlayerPhotoFor(reciterSlug: String): String {
-    val photos = com.ghais.data.seed.StitchAssets.VerifiedReciters
+    val photos = com.ghais.data.seed.GhaisAssets.VerifiedReciters
     val match = when (reciterSlug) {
         "alafasy" -> photos.firstOrNull { it.slug == "mishary" }
         "sudais" -> photos.firstOrNull { it.slug == "al-sudais" }
@@ -293,7 +293,7 @@ private fun miniPlayerPhotoFor(reciterSlug: String): String {
             photos.firstOrNull { it.slug == "abdul-basit" }
         else -> photos.firstOrNull { it.slug == reciterSlug }
     }
-    return match?.photoUrl ?: com.ghais.data.seed.StitchAssets.LogoUrl
+    return match?.photoUrl ?: com.ghais.data.seed.GhaisAssets.LogoUrl
 }
 
 /**

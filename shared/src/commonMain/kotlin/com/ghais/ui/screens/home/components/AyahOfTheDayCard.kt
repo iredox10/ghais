@@ -42,7 +42,7 @@ import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 @Composable
 fun AyahOfTheDayCard(
@@ -81,7 +81,7 @@ fun AyahOfTheDayCard(
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            QuranifyColors.Primary.copy(alpha = 0.20f),
+                            GhaisColors.Primary.copy(alpha = 0.20f),
                             Color.Transparent
                         )
                     ),
@@ -112,7 +112,7 @@ fun AyahOfTheDayCard(
                     Icon(
                         imageVector = Icons.Filled.AutoAwesome,
                         contentDescription = null,
-                        tint = QuranifyColors.Primary,
+                        tint = GhaisColors.Primary,
                         modifier = Modifier.size(13.dp)
                     )
                     Spacer(modifier = Modifier.width(5.dp))
@@ -120,7 +120,7 @@ fun AyahOfTheDayCard(
                         text = "AYAH OF THE DAY",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = QuranifyColors.Primary,
+                        color = GhaisColors.Primary,
                         letterSpacing = 1.2.sp
                     )
                 }
@@ -141,13 +141,13 @@ fun AyahOfTheDayCard(
                     Text(
                         text = "Surah Ar-Rahman",
                         fontSize = 11.sp,
-                        color = QuranifyColors.Primary,
+                        color = GhaisColors.Primary,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
                         text = " • 55:13",
                         fontSize = 11.sp,
-                        color = QuranifyColors.TextTertiary,
+                        color = GhaisColors.TextTertiary,
                         fontWeight = FontWeight.Normal
                     )
                 }
@@ -173,7 +173,7 @@ fun AyahOfTheDayCard(
                 text = "“Which of the favors of your Lord will you deny?”",
                 fontSize = 14.sp,
                 fontStyle = FontStyle.Italic,
-                color = QuranifyColors.TextSecondary,
+                color = GhaisColors.TextSecondary,
                 lineHeight = 22.sp,
                 modifier = Modifier.fillMaxWidth()
             )

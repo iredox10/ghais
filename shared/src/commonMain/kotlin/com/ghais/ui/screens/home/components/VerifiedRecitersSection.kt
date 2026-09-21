@@ -32,7 +32,7 @@ import com.ghais.data.seed.Reciter
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.reciters.AllRecitersScreen
 import com.ghais.ui.screens.reciters.ReciterProfileScreen
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 /**
  * Verified Reciters horizontal section for the Home screen.
@@ -164,7 +164,7 @@ fun ReciterAvatarItem(
                     .fillMaxSize()
                     .clip(CircleShape)
                     .then(borderModifier)
-                    .background(QuranifyColors.Surface, CircleShape)
+                    .background(GhaisColors.Surface, CircleShape)
             )
 
             // Trending Purple verified checkmark badge
@@ -174,7 +174,7 @@ fun ReciterAvatarItem(
                     .align(Alignment.BottomEnd)
                     .clip(CircleShape)
                     .background(Color(0xFFA855F7))
-                    .border(1.5.dp, QuranifyColors.Background, CircleShape),
+                    .border(1.5.dp, GhaisColors.Background, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

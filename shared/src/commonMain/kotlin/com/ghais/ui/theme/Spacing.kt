@@ -14,6 +14,6 @@ data class Spacing(
     val xxxl: Dp = 48.dp
 )
 
-val QuranifySpacing = Spacing()
+val GhaisSpacing = Spacing()
 
-val LocalSpacing = compositionLocalOf { QuranifySpacing }
+val LocalSpacing = compositionLocalOf { GhaisSpacing }

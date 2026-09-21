@@ -1,6 +1,6 @@
 package com.ghais.ui.screens.reciters
 
-import com.ghais.data.seed.StitchAssets
+import com.ghais.data.seed.GhaisAssets
 
 fun photoForSlug(slug: String): String? {
     val clean = slug.lowercase()
@@ -16,7 +16,7 @@ fun photoForSlug(slug: String): String? {
     }
     if (verified != null) return verified.photoUrl
 
-    val photos = StitchAssets.VerifiedReciters
+    val photos = GhaisAssets.VerifiedReciters
     return when (clean) {
         "alafasy", "mishary" -> photos.firstOrNull { it.slug == "mishary" }?.photoUrl
         "sudais", "al-sudais" -> photos.firstOrNull { it.slug == "al-sudais" }?.photoUrl

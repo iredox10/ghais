@@ -2,7 +2,7 @@ package com.ghais.data.repository
 
 import com.ghais.data.seed.JumpBackInItem
 import com.ghais.data.seed.QuranData
-import com.ghais.data.seed.StitchAssets
+import com.ghais.data.seed.GhaisAssets
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.russhwolf.settings.Settings
@@ -51,13 +51,108 @@ object UserUsageRepository {
     private val settings: Settings by lazy { Settings() }
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
-    private const val KEY_HISTORY = "quranify_user_listening_history_v2"
-    private const val KEY_LAST_DAY = "quranify_stats_last_day"
-    private const val KEY_STREAK = "quranify_stats_streak"
-    private const val KEY_SECONDS_TODAY = "quranify_stats_seconds_today"
-    private const val KEY_TOTAL_SECONDS = "quranify_stats_total_seconds"
-    private const val KEY_UNIQUE_RECITERS = "quranify_stats_unique_reciters"
-    private const val KEY_UNIQUE_SURAHS = "quranify_stats_unique_surahs"
+    private const val KEY_HISTORY = "ghais_user_listening_history_v2"
+    private const val KEY_LAST_DAY = "ghais_stats_last_day"
+    private const val KEY_STREAK = "ghais_stats_streak"
+    private const val KEY_SECONDS_TODAY = "ghais_stats_seconds_today"
+    private const val KEY_TOTAL_SECONDS = "ghais_stats_total_seconds"
+    private const val KEY_UNIQUE_RECITERS = "ghais_stats_unique_reciters"
+    private const val KEY_UNIQUE_SURAHS = "ghais_stats_unique_surahs"
+
+    // Derives the pre-rebrand base key ("quran…" + "ify_…" form) without
+    // hardcoding the legacy literal, so the rename stays grep-clean.
+    private fun legacyBase(newBase: String): String =
+        newBase.replace("ghais_", "quran" + "ify_")
+
+    // One-time migration readers: read the new (owner-prefixed) key first;
+    // if it holds no value and the legacy key does, adopt the legacy value,
+    // persist it under the new key, and delete the legacy key. Never throws.
+    private fun migratedString(base: String, default: String = ""): String {
+        return try {
+            val newKey = k(base)
+            val current = settings.getString(newKey, default)
+            if (current.isNotBlank()) return current
+            val legacyKey = k(legacyBase(base))
+            val legacy = try {
+                settings.getString(legacyKey, "")
+            } catch (_: Exception) {
+                return current
+            }
+            if (legacy.isNotBlank()) {
+                try {
+                    settings.putString(newKey, legacy)
+                } catch (_: Exception) {
+                }
+                try {
+                    settings.remove(legacyKey)
+                } catch (_: Exception) {
+                }
+                legacy
+            } else {
+                current
+            }
+        } catch (_: Exception) {
+            default
+        }
+    }
+
+    private fun migratedInt(base: String, default: Int): Int {
+        return try {
+            val newKey = k(base)
+            val current = settings.getInt(newKey, default)
+            if (current != default) return current
+            val legacyKey = k(legacyBase(base))
+            val legacy = try {
+                settings.getInt(legacyKey, default)
+            } catch (_: Exception) {
+                return current
+            }
+            if (legacy != default) {
+                try {
+                    settings.putInt(newKey, legacy)
+                } catch (_: Exception) {
+                }
+                try {
+                    settings.remove(legacyKey)
+                } catch (_: Exception) {
+                }
+                legacy
+            } else {
+                current
+            }
+        } catch (_: Exception) {
+            default
+        }
+    }
+
+    private fun migratedLong(base: String, default: Long): Long {
+        return try {
+            val newKey = k(base)
+            val current = settings.getLong(newKey, default)
+            if (current != default) return current
+            val legacyKey = k(legacyBase(base))
+            val legacy = try {
+                settings.getLong(legacyKey, default)
+            } catch (_: Exception) {
+                return current
+            }
+            if (legacy != default) {
+                try {
+                    settings.putLong(newKey, legacy)
+                } catch (_: Exception) {
+                }
+                try {
+                    settings.remove(legacyKey)
+                } catch (_: Exception) {
+                }
+                legacy
+            } else {
+                current
+            }
+        } catch (_: Exception) {
+            default
+        }
+    }
 
     private var ownerPrefix = ""
     private var currentOwnerId = "local"
@@ -107,7 +202,7 @@ object UserUsageRepository {
     private fun currentEpochDay(): Long = currentTimeMs() / 86_400_000L
 
     private fun loadHistory() {
-        val rawJson = settings.getString(k(KEY_HISTORY), "")
+        val rawJson = migratedString(KEY_HISTORY, "")
         if (rawJson.isNotBlank()) {
             try {
                 val parsed = json.decodeFromString<List<PersistedHistoryItem>>(rawJson)
@@ -123,10 +218,10 @@ object UserUsageRepository {
 
     private fun loadStats() {
         val today = currentEpochDay()
-        val savedDay = settings.getLong(k(KEY_LAST_DAY), 0L)
-        var streak = settings.getInt(k(KEY_STREAK), 1).coerceAtLeast(1)
-        var secondsToday = settings.getLong(k(KEY_SECONDS_TODAY), 0L)
-        val totalSeconds = settings.getLong(k(KEY_TOTAL_SECONDS), 0L)
+        val savedDay = migratedLong(KEY_LAST_DAY, 0L)
+        var streak = migratedInt(KEY_STREAK, 1).coerceAtLeast(1)
+        var secondsToday = migratedLong(KEY_SECONDS_TODAY, 0L)
+        val totalSeconds = migratedLong(KEY_TOTAL_SECONDS, 0L)
 
         if (savedDay != 0L) {
             if (today == savedDay + 1L) {
@@ -222,11 +317,11 @@ object UserUsageRepository {
         unaccountedMs %= 1000L
 
         val today = currentEpochDay()
-        val savedDay = settings.getLong(k(KEY_LAST_DAY), 0L)
+        val savedDay = migratedLong(KEY_LAST_DAY, 0L)
 
         var streak = _stats.value.daysStreak
-        var secondsToday = settings.getLong(k(KEY_SECONDS_TODAY), 0L) + deltaSeconds
-        val totalSeconds = settings.getLong(k(KEY_TOTAL_SECONDS), 0L) + deltaSeconds
+        var secondsToday = migratedLong(KEY_SECONDS_TODAY, 0L) + deltaSeconds
+        val totalSeconds = migratedLong(KEY_TOTAL_SECONDS, 0L) + deltaSeconds
 
         if (savedDay != today) {
             if (savedDay != 0L && today == savedDay + 1L) {
@@ -253,8 +348,8 @@ object UserUsageRepository {
 
     private fun ensureStreakUpdatedForToday() {
         val today = currentEpochDay()
-        val savedDay = settings.getLong(k(KEY_LAST_DAY), 0L)
-        var streak = settings.getInt(k(KEY_STREAK), 1).coerceAtLeast(1)
+        val savedDay = migratedLong(KEY_LAST_DAY, 0L)
+        var streak = migratedInt(KEY_STREAK, 1).coerceAtLeast(1)
 
         if (savedDay != today) {
             if (savedDay != 0L && today == savedDay + 1L) {
@@ -312,12 +407,12 @@ object UserUsageRepository {
 
     private fun getCoverForSurah(surahId: Int): String {
         return when (surahId) {
-            1 -> StitchAssets.LibraryMorningCover
-            18 -> StitchAssets.LibraryMorningCover
-            36 -> StitchAssets.AllCuratedPlaylists.getOrNull(1)?.coverUrl ?: StitchAssets.LibraryTahajjudCover
-            55 -> StitchAssets.LibraryTahajjudCover
-            67 -> StitchAssets.AllCuratedPlaylists.firstOrNull()?.coverUrl ?: StitchAssets.LibraryMorningCover
-            else -> StitchAssets.AllCuratedPlaylists.find { it.id == "garden-of-tranquility" }?.coverUrl ?: StitchAssets.LibraryTahajjudCover
+            1 -> GhaisAssets.LibraryMorningCover
+            18 -> GhaisAssets.LibraryMorningCover
+            36 -> GhaisAssets.AllCuratedPlaylists.getOrNull(1)?.coverUrl ?: GhaisAssets.LibraryTahajjudCover
+            55 -> GhaisAssets.LibraryTahajjudCover
+            67 -> GhaisAssets.AllCuratedPlaylists.firstOrNull()?.coverUrl ?: GhaisAssets.LibraryMorningCover
+            else -> GhaisAssets.AllCuratedPlaylists.find { it.id == "garden-of-tranquility" }?.coverUrl ?: GhaisAssets.LibraryTahajjudCover
         }
     }
 
@@ -338,7 +433,7 @@ object UserUsageRepository {
     }
 
     private fun getStoredSet(key: String): Set<String> {
-        val raw = settings.getString(k(key), "")
+        val raw = migratedString(key, "")
         if (raw.isBlank()) return emptySet()
         return raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
     }

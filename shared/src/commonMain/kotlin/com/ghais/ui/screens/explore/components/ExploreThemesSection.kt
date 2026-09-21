@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 @Composable
 fun ExploreSegmentedSwitcher(
@@ -114,7 +114,7 @@ fun CuratedThemesGrid(
                     modifier = Modifier
                         .size(6.dp)
                         .clip(CircleShape)
-                        .background(QuranifyColors.Primary)
+                        .background(GhaisColors.Primary)
                 )
             }
 
@@ -138,7 +138,7 @@ fun CuratedThemesGrid(
                         text = "View All",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = QuranifyColors.Primary
+                        color = GhaisColors.Primary
                     )
                 }
             }
@@ -157,7 +157,7 @@ fun CuratedThemesGrid(
                     title = "Meccan",
                     subtitle = "86 Surahs • Faith & Soul",
                     badgeText = "Origins",
-                    badgeColor = QuranifyColors.Primary,
+                    badgeColor = GhaisColors.Primary,
                     watermarkIcon = Icons.Default.Mosque,
                     gradientColors = listOf(
                         Color(0xFF0D2E22),
@@ -172,7 +172,7 @@ fun CuratedThemesGrid(
                     title = "Medinan",
                     subtitle = "28 Surahs • Society & Laws",
                     badgeText = "Guidance",
-                    badgeColor = QuranifyColors.Secondary,
+                    badgeColor = GhaisColors.Secondary,
                     watermarkIcon = Icons.Default.Balance,
                     gradientColors = listOf(
                         Color(0xFF2E220D),

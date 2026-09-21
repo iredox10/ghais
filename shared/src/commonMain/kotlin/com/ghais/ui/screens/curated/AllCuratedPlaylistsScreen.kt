@@ -42,12 +42,12 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.ghais.data.seed.CuratedPlaylist
 import com.ghais.data.seed.QuranDataRepository
-import com.ghais.data.seed.StitchAssets
+import com.ghais.data.seed.GhaisAssets
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 /**
  * All Curated Playlists Screen.
@@ -69,7 +69,7 @@ class AllCuratedPlaylistsScreen : Screen {
         }
 
         val allPlaylists = remember {
-            StitchAssets.AllCuratedPlaylists
+            GhaisAssets.AllCuratedPlaylists
         }
 
         val filteredPlaylists = remember(searchQuery, selectedCategory, allPlaylists) {
@@ -125,13 +125,13 @@ class AllCuratedPlaylistsScreen : Screen {
         }
 
         Scaffold(
-            containerColor = QuranifyColors.PitchBlack
+            containerColor = GhaisColors.PitchBlack
         ) { paddingValues ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = paddingValues.calculateTopPadding())
-                    .background(QuranifyColors.PitchBlack)
+                    .background(GhaisColors.PitchBlack)
             ) {
                 // Ambient Top Aura: Electric Violet fading into deep Pitch Black
                 Box(
@@ -141,9 +141,9 @@ class AllCuratedPlaylistsScreen : Screen {
                         .background(
                             brush = Brush.radialGradient(
                                 colors = listOf(
-                                    QuranifyColors.TrendingPurple.copy(alpha = 0.20f),
-                                    QuranifyColors.ElectricViolet.copy(alpha = 0.08f),
-                                    QuranifyColors.PitchBlack.copy(alpha = 0.0f)
+                                    GhaisColors.TrendingPurple.copy(alpha = 0.20f),
+                                    GhaisColors.ElectricViolet.copy(alpha = 0.08f),
+                                    GhaisColors.PitchBlack.copy(alpha = 0.0f)
                                 ),
                                 center = Offset(250f, -40f),
                                 radius = 480f
@@ -274,15 +274,15 @@ private fun CuratedCollectionsTopBar(
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
-                .background(QuranifyColors.TrendingPurple.copy(alpha = 0.16f))
-                .border(1.dp, QuranifyColors.TrendingPurple.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                .background(GhaisColors.TrendingPurple.copy(alpha = 0.16f))
+                .border(1.dp, GhaisColors.TrendingPurple.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
                 .padding(horizontal = 9.dp, vertical = 3.dp)
         ) {
             Text(
                 text = "$totalCount",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = QuranifyColors.TrendingPurple
+                color = GhaisColors.TrendingPurple
             )
         }
     }
@@ -307,9 +307,9 @@ private fun CuratedSearchBar(
                 width = 1.dp,
                 brush = Brush.linearGradient(
                     listOf(
-                        QuranifyColors.TrendingPurple.copy(alpha = 0.45f),
+                        GhaisColors.TrendingPurple.copy(alpha = 0.45f),
                         Color.White.copy(alpha = 0.15f),
-                        QuranifyColors.TrendingPurple.copy(alpha = 0.30f)
+                        GhaisColors.TrendingPurple.copy(alpha = 0.30f)
                     )
                 ),
                 shape = RoundedCornerShape(16.dp)
@@ -323,7 +323,7 @@ private fun CuratedSearchBar(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "Search",
-                tint = if (query.isNotEmpty()) QuranifyColors.TrendingPurple else Color(0xFF9CA3AF),
+                tint = if (query.isNotEmpty()) GhaisColors.TrendingPurple else Color(0xFF9CA3AF),
                 modifier = Modifier.size(20.dp)
             )
 
@@ -345,7 +345,7 @@ private fun CuratedSearchBar(
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Medium
                     ),
-                    cursorBrush = SolidColor(QuranifyColors.TrendingPurple),
+                    cursorBrush = SolidColor(GhaisColors.TrendingPurple),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -395,8 +395,8 @@ private fun CategoryChipsRow(
                         if (isSelected) {
                             Brush.horizontalGradient(
                                 listOf(
-                                    QuranifyColors.ElectricViolet,
-                                    QuranifyColors.TrendingPurple
+                                    GhaisColors.ElectricViolet,
+                                    GhaisColors.TrendingPurple
                                 )
                             )
                         } else {
@@ -451,7 +451,7 @@ private fun CuratedPlaylistCard(
                 brush = Brush.linearGradient(
                     listOf(
                         Color.White.copy(alpha = 0.10f),
-                        QuranifyColors.TrendingPurple.copy(alpha = 0.15f),
+                        GhaisColors.TrendingPurple.copy(alpha = 0.15f),
                         Color.White.copy(alpha = 0.05f)
                     )
                 ),
@@ -472,7 +472,7 @@ private fun CuratedPlaylistCard(
                     brush = Brush.linearGradient(
                         listOf(
                             Color.White.copy(alpha = 0.20f),
-                            QuranifyColors.TrendingPurple.copy(alpha = 0.35f),
+                            GhaisColors.TrendingPurple.copy(alpha = 0.35f),
                             Color.White.copy(alpha = 0.08f)
                         )
                     ),
@@ -511,7 +511,7 @@ private fun CuratedPlaylistCard(
                         width = 1.dp,
                         brush = Brush.horizontalGradient(
                             listOf(
-                                QuranifyColors.TrendingPurple.copy(alpha = 0.75f),
+                                GhaisColors.TrendingPurple.copy(alpha = 0.75f),
                                 Color.White.copy(alpha = 0.35f)
                             )
                         ),
@@ -537,8 +537,8 @@ private fun CuratedPlaylistCard(
                     .background(
                         brush = Brush.linearGradient(
                             listOf(
-                                QuranifyColors.ElectricViolet,
-                                QuranifyColors.TrendingPurple
+                                GhaisColors.ElectricViolet,
+                                GhaisColors.TrendingPurple
                             )
                         )
                     )
@@ -630,7 +630,7 @@ private fun EmptyCuratedPlaylistsState(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = null,
-                tint = QuranifyColors.TrendingPurple,
+                tint = GhaisColors.TrendingPurple,
                 modifier = Modifier.size(32.dp)
             )
         }
@@ -659,8 +659,8 @@ private fun EmptyCuratedPlaylistsState(
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
-                .background(QuranifyColors.TrendingPurple.copy(alpha = 0.16f))
-                .border(1.dp, QuranifyColors.TrendingPurple.copy(alpha = 0.40f), RoundedCornerShape(20.dp))
+                .background(GhaisColors.TrendingPurple.copy(alpha = 0.16f))
+                .border(1.dp, GhaisColors.TrendingPurple.copy(alpha = 0.40f), RoundedCornerShape(20.dp))
                 .clickable { onResetFilters() }
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {

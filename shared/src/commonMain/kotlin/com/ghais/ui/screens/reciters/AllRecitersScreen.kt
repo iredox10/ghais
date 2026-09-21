@@ -40,7 +40,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.ghais.ui.navigation.LocalRootNavigator
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 /**
  * Data representation for verified reciters shown in [AllRecitersScreen].
@@ -191,13 +191,13 @@ class AllRecitersScreen : Screen {
         }
 
         Scaffold(
-            containerColor = QuranifyColors.PitchBlack
+            containerColor = GhaisColors.PitchBlack
         ) { paddingValues ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = paddingValues.calculateTopPadding())
-                    .background(QuranifyColors.PitchBlack)
+                    .background(GhaisColors.PitchBlack)
             ) {
                 // Top Bar
                 AllRecitersTopBar(
@@ -310,15 +310,15 @@ private fun AllRecitersTopBar(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .background(QuranifyColors.TrendingPurple.copy(alpha = 0.16f))
-                    .border(1.dp, QuranifyColors.TrendingPurple.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                    .background(GhaisColors.TrendingPurple.copy(alpha = 0.16f))
+                    .border(1.dp, GhaisColors.TrendingPurple.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
                     .padding(horizontal = 9.dp, vertical = 3.dp)
             ) {
                 Text(
                     text = "$totalCount Reciters",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = QuranifyColors.TrendingPurple
+                    color = GhaisColors.TrendingPurple
                 )
             }
         }
@@ -344,9 +344,9 @@ private fun ReciterSearchBar(
                 width = 1.dp,
                 brush = Brush.linearGradient(
                     listOf(
-                        QuranifyColors.TrendingPurple.copy(alpha = 0.45f),
+                        GhaisColors.TrendingPurple.copy(alpha = 0.45f),
                         Color.White.copy(alpha = 0.15f),
-                        QuranifyColors.TrendingPurple.copy(alpha = 0.30f)
+                        GhaisColors.TrendingPurple.copy(alpha = 0.30f)
                     )
                 ),
                 shape = RoundedCornerShape(16.dp)
@@ -360,7 +360,7 @@ private fun ReciterSearchBar(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "Search",
-                tint = if (query.isNotEmpty()) QuranifyColors.TrendingPurple else Color(0xFF9CA3AF),
+                tint = if (query.isNotEmpty()) GhaisColors.TrendingPurple else Color(0xFF9CA3AF),
                 modifier = Modifier.size(20.dp)
             )
 
@@ -382,7 +382,7 @@ private fun ReciterSearchBar(
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Medium
                     ),
-                    cursorBrush = SolidColor(QuranifyColors.TrendingPurple),
+                    cursorBrush = SolidColor(GhaisColors.TrendingPurple),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -429,11 +429,11 @@ private fun ReciterFilterChipsRow(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
                     .background(
-                        if (isSelected) QuranifyColors.TrendingPurple else Color(0xFF14161F)
+                        if (isSelected) GhaisColors.TrendingPurple else Color(0xFF14161F)
                     )
                     .border(
                         width = 1.dp,
-                        color = if (isSelected) QuranifyColors.TrendingPurple else Color.White.copy(alpha = 0.10f),
+                        color = if (isSelected) GhaisColors.TrendingPurple else Color.White.copy(alpha = 0.10f),
                         shape = RoundedCornerShape(20.dp)
                     )
                     .clickable { onFilterSelected(filter) }
@@ -472,7 +472,7 @@ private fun ReciterGridCard(
                 width = 1.dp,
                 brush = Brush.linearGradient(
                     listOf(
-                        QuranifyColors.TrendingPurple.copy(alpha = 0.22f),
+                        GhaisColors.TrendingPurple.copy(alpha = 0.22f),
                         Color.White.copy(alpha = 0.08f),
                         Color.Transparent
                     )
@@ -500,9 +500,9 @@ private fun ReciterGridCard(
                             width = 2.dp,
                             brush = Brush.linearGradient(
                                 listOf(
-                                    QuranifyColors.ElectricViolet,
-                                    QuranifyColors.TrendingPurple,
-                                    QuranifyColors.NeonLilac,
+                                    GhaisColors.ElectricViolet,
+                                    GhaisColors.TrendingPurple,
+                                    GhaisColors.NeonLilac,
                                     Color.White.copy(alpha = 0.35f)
                                 )
                             ),
@@ -526,7 +526,7 @@ private fun ReciterGridCard(
                         .size(22.dp)
                         .align(Alignment.BottomEnd)
                         .clip(CircleShape)
-                        .background(QuranifyColors.TrendingPurple)
+                        .background(GhaisColors.TrendingPurple)
                         .border(2.dp, Color(0xFF12141C), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -582,10 +582,10 @@ private fun ReciterGridCard(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .background(QuranifyColors.TrendingPurple.copy(alpha = 0.16f))
+                    .background(GhaisColors.TrendingPurple.copy(alpha = 0.16f))
                     .border(
                         width = 0.8.dp,
-                        color = QuranifyColors.TrendingPurple.copy(alpha = 0.40f),
+                        color = GhaisColors.TrendingPurple.copy(alpha = 0.40f),
                         shape = RoundedCornerShape(12.dp)
                     )
                     .padding(horizontal = 9.dp, vertical = 3.dp)

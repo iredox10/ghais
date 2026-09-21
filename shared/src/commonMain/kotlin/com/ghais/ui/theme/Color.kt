@@ -3,7 +3,7 @@ package com.ghais.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Quranify Design System Color Tokens.
+ * Ghais Design System Color Tokens.
  *
  * Fully audited and aligned with the Stitch Design Specifications:
  * - Liquid Emerald Frosted Audio
@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.Color
  * - Text Hierarchy: Pure White `#FFFFFF`, High-contrast `#E1E3E4`, Muted Subtitle `#8E989C`
  * - Borders: Vivid Liquid Emerald 12% alpha (`#4EDEA3` @ 0.12f) / Pure White 8% alpha (`#FFFFFF` @ 0.08f)
  */
-object QuranifyColors {
+object GhaisColors {
     // -------------------------------------------------------------------------
     // Trending Purple & Obsidian Monochrome Design Tokens
     // -------------------------------------------------------------------------

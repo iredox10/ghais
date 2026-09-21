@@ -36,7 +36,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 /**
  * Now Playing Metadata: Track title, English subtitle, reciter info with verified badge,
@@ -103,7 +103,7 @@ fun NowPlayingMetadata(
                         modifier = Modifier
                             .size(16.dp)
                             .clip(CircleShape)
-                            .background(QuranifyColors.Primary),
+                            .background(GhaisColors.Primary),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -132,7 +132,7 @@ fun NowPlayingMetadata(
                 Icon(
                     imageVector = if (isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = "Favorite Surah",
-                    tint = if (isFav) QuranifyColors.Secondary else Color.White.copy(alpha = 0.5f),
+                    tint = if (isFav) GhaisColors.Secondary else Color.White.copy(alpha = 0.5f),
                     modifier = Modifier
                         .size(24.dp)
                         .graphicsLayer {
@@ -172,15 +172,15 @@ fun NowPlayingMetadata(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(50))
-                        .background(QuranifyColors.Primary.copy(alpha = 0.15f))
-                        .border(1.dp, QuranifyColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(50))
+                        .background(GhaisColors.Primary.copy(alpha = 0.15f))
+                        .border(1.dp, GhaisColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(50))
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = ayahCountText,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = QuranifyColors.Primary
+                        color = GhaisColors.Primary
                     )
                 }
             }

@@ -9,9 +9,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.ghais.ui.theme.QuranifyColors
-import com.ghais.ui.theme.QuranifySpacing
-import com.ghais.ui.theme.QuranifyTypography
+import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.theme.GhaisSpacing
+import com.ghais.ui.theme.GhaisTypography
 
 @Composable
 fun SectionHeader(
@@ -22,13 +22,13 @@ fun SectionHeader(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = QuranifySpacing.sm),
+            .padding(vertical = GhaisSpacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = title,
-            style = QuranifyTypography.titleLarge,
-            color = QuranifyColors.Primary
+            style = GhaisTypography.titleLarge,
+            color = GhaisColors.Primary
         )
         
         Spacer(modifier = Modifier.weight(1f))
@@ -36,11 +36,11 @@ fun SectionHeader(
         if (onSeeAll != null) {
             Text(
                 text = "See All",
-                style = QuranifyTypography.labelLarge,
-                color = QuranifyColors.Secondary,
+                style = GhaisTypography.labelLarge,
+                color = GhaisColors.Secondary,
                 modifier = Modifier
                     .clickable(onClick = onSeeAll)
-                    .padding(QuranifySpacing.xs)
+                    .padding(GhaisSpacing.xs)
             )
         }
     }

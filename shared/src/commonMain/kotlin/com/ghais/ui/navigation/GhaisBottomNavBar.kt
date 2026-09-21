@@ -39,8 +39,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
-import com.ghais.ui.theme.QuranifyColors
-import com.ghais.ui.theme.QuranifyShapes
+import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.theme.GhaisShapes
 
 // Floating Dock Tokens: transparent black glass + white (reference design)
 private val GlassTop = Color(0x8C141416) // ~55% black — content ghosts through
@@ -60,7 +60,7 @@ private val InactiveGrey = Color(0xFF8E8E93)
  * - Inactive tabs: iOS-style system grey
  */
 @Composable
-fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
+fun GhaisBottomNavBar(modifier: Modifier = Modifier) {
     val tabNavigator = LocalTabNavigator.current
 
     Box(
@@ -74,7 +74,7 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
                 .fillMaxWidth()
                 .widthIn(max = 520.dp)
                 .height(66.dp),
-            shape = QuranifyShapes.navDock,
+            shape = GhaisShapes.navDock,
             color = Color.Transparent,
             border = BorderStroke(
                 width = 1.dp,
@@ -93,9 +93,9 @@ fun QuranifyBottomNavBar(modifier: Modifier = Modifier) {
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(listOf(GlassTop, GlassBottom)),
-                        QuranifyShapes.navDock
+                        GhaisShapes.navDock
                     )
-                    .clip(QuranifyShapes.navDock)
+                    .clip(GhaisShapes.navDock)
             ) {
                 // Diagonal glass sheen
                 Box(

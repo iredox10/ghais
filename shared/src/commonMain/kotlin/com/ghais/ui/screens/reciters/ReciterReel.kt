@@ -45,7 +45,7 @@ import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.domain.model.Reciter
 import com.ghais.player.AudioEngine
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 private val DarkCard = Color(0xFF1C1C1E)
 private val MutedGrey = Color(0xFF9A9AA0)
@@ -133,7 +133,7 @@ fun ReciterReelCard(
             .background(Color.White.copy(alpha = 0.05f))
             .border(
                 1.dp,
-                if (activelyPlaying) QuranifyColors.Primary.copy(alpha = 0.60f)
+                if (activelyPlaying) GhaisColors.Primary.copy(alpha = 0.60f)
                 else Color.White.copy(alpha = 0.08f),
                 CardShape
             )
@@ -198,12 +198,12 @@ fun ReciterReelCard(
                         .size(36.dp)
                         .clip(CircleShape)
                         .background(
-                            if (activelyPlaying) QuranifyColors.Primary
+                            if (activelyPlaying) GhaisColors.Primary
                             else Color.Black.copy(alpha = 0.70f)
                         )
                         .border(
                             1.dp,
-                            if (activelyPlaying) QuranifyColors.Primary
+                            if (activelyPlaying) GhaisColors.Primary
                             else Color.White.copy(alpha = 0.25f),
                             CircleShape
                         )

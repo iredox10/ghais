@@ -127,7 +127,7 @@ object QuranDataRepository {
             style = "Murattal",
             tempo = "Medium",
             fans = "4.8M fans",
-            photoUrl = StitchAssets.VerifiedReciters[0].photoUrl,
+            photoUrl = GhaisAssets.VerifiedReciters[0].photoUrl,
             recitations = listOf(
                 RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:52", "https://server8.mp3quran.net/afs/001.mp3"),
                 RecitationTrack(18, "Al-Kahf", "الكهف", 110, "26:45", "https://server8.mp3quran.net/afs/018.mp3"),
@@ -151,7 +151,7 @@ object QuranDataRepository {
             style = "Taraweeh",
             tempo = "Fast",
             fans = "3.9M fans",
-            photoUrl = StitchAssets.VerifiedReciters[1].photoUrl,
+            photoUrl = GhaisAssets.VerifiedReciters[1].photoUrl,
             recitations = listOf(
                 RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:48", "https://server11.mp3quran.net/sds/001.mp3"),
                 RecitationTrack(2, "Al-Baqarah", "البقرة", 286, "1:52:10", "https://server11.mp3quran.net/sds/002.mp3"),
@@ -175,7 +175,7 @@ object QuranDataRepository {
             style = "Murattal",
             tempo = "Medium",
             fans = "3.2M fans",
-            photoUrl = StitchAssets.VerifiedReciters[2].photoUrl,
+            photoUrl = GhaisAssets.VerifiedReciters[2].photoUrl,
             recitations = listOf(
                 RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:50", "https://server12.mp3quran.net/maher/001.mp3"),
                 RecitationTrack(12, "Yusuf", "يوسف", 111, "28:30", "https://server12.mp3quran.net/maher/012.mp3"),
@@ -199,7 +199,7 @@ object QuranDataRepository {
             style = "Taraweeh",
             tempo = "Medium",
             fans = "2.7M fans",
-            photoUrl = StitchAssets.VerifiedReciters[3].photoUrl,
+            photoUrl = GhaisAssets.VerifiedReciters[3].photoUrl,
             recitations = listOf(
                 RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:55", "https://server11.mp3quran.net/yasser/001.mp3"),
                 RecitationTrack(18, "Al-Kahf", "الكهف", 110, "24:10", "https://server11.mp3quran.net/yasser/018.mp3"),
@@ -222,7 +222,7 @@ object QuranDataRepository {
             style = "Murattal",
             tempo = "Slow",
             fans = "2.1M fans",
-            photoUrl = StitchAssets.VerifiedReciters[4].photoUrl,
+            photoUrl = GhaisAssets.VerifiedReciters[4].photoUrl,
             recitations = listOf(
                 RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "1:05", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/001.mp3"),
                 RecitationTrack(18, "Al-Kahf", "الكهف", 110, "29:10", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/018.mp3"),
@@ -245,7 +245,7 @@ object QuranDataRepository {
             style = "Murattal",
             tempo = "Slow",
             fans = "1.5M fans",
-            photoUrl = StitchAssets.VerifiedReciters[5].photoUrl,
+            photoUrl = GhaisAssets.VerifiedReciters[5].photoUrl,
             recitations = listOf(
                 RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "1:02", "https://archive.org/download/Omar-Hisham/001.mp3"),
                 RecitationTrack(18, "Al-Kahf", "الكهف", 110, "28:50", "https://archive.org/download/Omar-Hisham/018.mp3"),
@@ -268,7 +268,7 @@ object QuranDataRepository {
             style = "Mujawwad",
             tempo = "Slow",
             fans = "5.1M fans",
-            photoUrl = StitchAssets.VerifiedReciters[6].photoUrl,
+            photoUrl = GhaisAssets.VerifiedReciters[6].photoUrl,
             recitations = listOf(
                 RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "1:15", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/001.mp3"),
                 RecitationTrack(12, "Yusuf", "يوسف", 111, "42:00", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/012.mp3"),
@@ -411,7 +411,7 @@ object QuranDataRepository {
             description = "Carefully calibrated, slow-tempo Tartil recitations designed to cultivate a state of stillness, flow, and deep intellectual focus during reading, study, and contemplation.",
             curator = "Ghais Editorial",
             totalDuration = "52 mins",
-            coverUrl = StitchAssets.CuratedForPeace[0].coverUrl,
+            coverUrl = GhaisAssets.CuratedForPeace[0].coverUrl,
             tracks = listOf(
                 CuratedTrack(67, "Al-Mulk", "الملك", "Mahmoud Khalil Al-Husary", "7:25", "https://server13.mp3quran.net/husr/067.mp3"),
                 CuratedTrack(36, "Ya-Sin", "يس", "Mohamed Siddiq Al-Minshawi", "15:20", "https://server10.mp3quran.net/minsh/036.mp3"),
@@ -429,7 +429,7 @@ object QuranDataRepository {
             description = "Verses highlighting Allah's boundless mercy, forgiveness, and unconditional love, recited by masters of emotional expression to bring comfort to weary hearts.",
             curator = "Ghais Peace Team",
             totalDuration = "48 mins",
-            coverUrl = StitchAssets.CuratedForPeace[1].coverUrl,
+            coverUrl = GhaisAssets.CuratedForPeace[1].coverUrl,
             tracks = listOf(
                 CuratedTrack(12, "Yusuf", "يوسف", "Maher Al-Muaiqly", "28:30", "https://server12.mp3quran.net/maher/012.mp3"),
                 CuratedTrack(55, "Ar-Rahman", "الرحمن", "Mishary Rashid Alafasy", "11:20", "https://server8.mp3quran.net/afs/055.mp3"),
@@ -447,7 +447,7 @@ object QuranDataRepository {
             description = "Morning protection Surahs and invocations to begin your day under the shade of Divine guidance, tranquility, and abundant blessing.",
             curator = "Imams of Haramain",
             totalDuration = "35 mins",
-            coverUrl = StitchAssets.CuratedForPeace[2].coverUrl,
+            coverUrl = GhaisAssets.CuratedForPeace[2].coverUrl,
             tracks = listOf(
                 CuratedTrack(1, "Al-Fatihah", "الفاتحة", "Mishary Rashid Alafasy", "0:52", "https://server8.mp3quran.net/afs/001.mp3"),
                 CuratedTrack(36, "Ya-Sin", "يس", "Mishary Rashid Alafasy", "14:12", "https://server8.mp3quran.net/afs/036.mp3"),
@@ -466,7 +466,7 @@ object QuranDataRepository {
             description = "Soft, tranquil recitations curated specifically to ease your mind into peaceful slumber under the protection of the Word of Allah.",
             curator = "Ghais Editorial",
             totalDuration = "42 mins",
-            coverUrl = StitchAssets.CuratedForPeace[3].coverUrl,
+            coverUrl = GhaisAssets.CuratedForPeace[3].coverUrl,
             tracks = listOf(
                 CuratedTrack(67, "Al-Mulk", "الملك", "Mishary Rashid Alafasy", "6:48", "https://server8.mp3quran.net/afs/067.mp3"),
                 CuratedTrack(32, "As-Sajdah", "السجدة", "Yasser Al-Dossari", "7:15", "https://server11.mp3quran.net/yasser/032.mp3"),
@@ -484,7 +484,7 @@ object QuranDataRepository {
             description = "Deeply moving recitations from the depths of the night when prayers are answered and hearts connect intimately with their Creator.",
             curator = "Mishary Alafasy & Friends",
             totalDuration = "1 hr 15 mins",
-            coverUrl = StitchAssets.JumpBackInItems[3].coverUrl,
+            coverUrl = GhaisAssets.JumpBackInItems[3].coverUrl,
             tracks = listOf(
                 CuratedTrack(50, "Qaf", "ق", "Yasser Al-Dossari", "8:40", "https://server11.mp3quran.net/yasser/050.mp3"),
                 CuratedTrack(19, "Maryam", "مريم", "Maher Al-Muaiqly", "19:40", "https://server12.mp3quran.net/maher/019.mp3"),
@@ -502,7 +502,7 @@ object QuranDataRepository {
             description = "Surah Al-Kahf and Friday blessings recited by renowned Imams to illuminate your week with spiritual light from one Jumu'ah to the next.",
             curator = "Masjid Al-Haram Circle",
             totalDuration = "1 hr 30 mins",
-            coverUrl = StitchAssets.JumpBackInItems[1].coverUrl,
+            coverUrl = GhaisAssets.JumpBackInItems[1].coverUrl,
             tracks = listOf(
                 CuratedTrack(18, "Al-Kahf", "الكهف", "Mishary Rashid Alafasy", "26:45", "https://server8.mp3quran.net/afs/018.mp3"),
                 CuratedTrack(18, "Al-Kahf", "الكهف", "Abdur-Rahman As-Sudais", "22:15", "https://server11.mp3quran.net/sds/018.mp3"),
@@ -520,7 +520,7 @@ object QuranDataRepository {
             description = "A therapeutic selection of soothing verses reminding us that with every hardship comes ease, alleviating grief, anxiety, and distress.",
             curator = "Ghais Wellness",
             totalDuration = "46 mins",
-            coverUrl = StitchAssets.JumpBackInItems[0].coverUrl,
+            coverUrl = GhaisAssets.JumpBackInItems[0].coverUrl,
             tracks = listOf(
                 CuratedTrack(94, "Ash-Sharh", "الشرح", "Maher Al-Muaiqly", "0:45", "https://server12.mp3quran.net/maher/094.mp3"),
                 CuratedTrack(93, "Ad-Duha", "الضحى", "Abdul Basit Abdul Samad", "2:40", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/093.mp3"),
@@ -539,7 +539,7 @@ object QuranDataRepository {
             description = "Paced, articulated, and repetitive-friendly recitations by foundational teachers designed to assist Huffaz in mastering pronunciation and retention.",
             curator = "Al-Azhar Quranic Institute",
             totalDuration = "1 hr 10 mins",
-            coverUrl = StitchAssets.JumpBackInItems[2].coverUrl,
+            coverUrl = GhaisAssets.JumpBackInItems[2].coverUrl,
             tracks = listOf(
                 CuratedTrack(1, "Al-Fatihah", "الفاتحة", "Mahmoud Khalil Al-Husary", "1:00", "https://server13.mp3quran.net/husr/001.mp3"),
                 CuratedTrack(36, "Ya-Sin", "يس", "Mahmoud Khalil Al-Husary", "15:40", "https://server13.mp3quran.net/husr/036.mp3"),
@@ -558,7 +558,7 @@ object QuranDataRepository {
             description = "Selected healing Surahs and ruqyah recitations bringing comfort, tranquility, and divine shifa to the soul and physical body.",
             curator = "Ghais Wellness",
             totalDuration = "36 mins",
-            coverUrl = StitchAssets.LibraryTahajjudCover,
+            coverUrl = GhaisAssets.LibraryTahajjudCover,
             tracks = listOf(
                 CuratedTrack(1, "Al-Fatihah", "الفاتحة", "Mishary Rashid Alafasy", "0:52", "https://server8.mp3quran.net/afs/001.mp3"),
                 CuratedTrack(94, "Ash-Sharh", "الشرح", "Maher Al-Muaiqly", "0:45", "https://server12.mp3quran.net/maher/094.mp3"),
@@ -579,7 +579,7 @@ object QuranDataRepository {
             description = "Clear, articulate, and rhythmic Tartil recitations designed to anchor verses in memory through repetitive focused listening.",
             curator = "Al-Azhar Quranic Institute",
             totalDuration = "1 hr 10 mins",
-            coverUrl = StitchAssets.JumpBackInItems[2].coverUrl,
+            coverUrl = GhaisAssets.JumpBackInItems[2].coverUrl,
             tracks = listOf(
                 CuratedTrack(1, "Al-Fatihah", "الفاتحة", "Mahmoud Khalil Al-Husary", "1:00", "https://server13.mp3quran.net/husr/001.mp3"),
                 CuratedTrack(87, "Al-A'la", "الأعلى", "Omar Hisham Al Arabi", "1:55", "https://archive.org/download/Omar-Hisham/087.mp3"),
@@ -598,7 +598,7 @@ object QuranDataRepository {
             description = "Deeply moving recitations from late-night Qiyam prayers by Imams of Makkah and Medina, fostering intimate devotion.",
             curator = "Mishary Alafasy & Friends",
             totalDuration = "50 mins",
-            coverUrl = StitchAssets.JumpBackInItems[3].coverUrl,
+            coverUrl = GhaisAssets.JumpBackInItems[3].coverUrl,
             tracks = listOf(
                 CuratedTrack(50, "Qaf", "ق", "Yasser Al-Dossari", "8:40", "https://server11.mp3quran.net/yasser/050.mp3"),
                 CuratedTrack(19, "Maryam", "مريم", "Maher Al-Muaiqly", "19:40", "https://server12.mp3quran.net/maher/019.mp3"),
@@ -616,7 +616,7 @@ object QuranDataRepository {
             description = "A therapeutic selection of soothing verses reminding us that with every hardship comes ease, alleviating grief, anxiety, and distress.",
             curator = "Ghais Wellness",
             totalDuration = "32 mins",
-            coverUrl = StitchAssets.JumpBackInItems[0].coverUrl,
+            coverUrl = GhaisAssets.JumpBackInItems[0].coverUrl,
             tracks = listOf(
                 CuratedTrack(94, "Ash-Sharh", "الشرح", "Maher Al-Muaiqly", "0:45", "https://server12.mp3quran.net/maher/094.mp3"),
                 CuratedTrack(93, "Ad-Duha", "الضحى", "Abdul Basit Abdul Samad", "2:40", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/093.mp3"),
@@ -634,7 +634,7 @@ object QuranDataRepository {
             description = "Uplifting dawn recitations celebrating Allah's creation, boundless blessings, and opening the gates of sustenance and barakah.",
             curator = "Ghais Editorial",
             totalDuration = "40 mins",
-            coverUrl = StitchAssets.LibraryMorningCover,
+            coverUrl = GhaisAssets.LibraryMorningCover,
             tracks = listOf(
                 CuratedTrack(55, "Ar-Rahman", "الرحمن", "Yasser Al-Dossari", "11:05", "https://server11.mp3quran.net/yasser/055.mp3"),
                 CuratedTrack(56, "Al-Waqi'ah", "الواقعة", "Saad Al-Ghamdi", "8:45", "https://server7.mp3quran.net/s_gmd/056.mp3"),
@@ -652,7 +652,7 @@ object QuranDataRepository {
             description = "Gentle, heart-settling recitations echoing the tranquility of Paradise, perfect for peaceful evening contemplation and relaxation.",
             curator = "Ghais Peace Team",
             totalDuration = "46 mins",
-            coverUrl = StitchAssets.CuratedForPeace[1].coverUrl,
+            coverUrl = GhaisAssets.CuratedForPeace[1].coverUrl,
             tracks = listOf(
                 CuratedTrack(19, "Maryam", "مريم", "Maher Al-Muaiqly", "19:40", "https://server12.mp3quran.net/maher/019.mp3"),
                 CuratedTrack(12, "Yusuf", "يوسف", "Mohamed Siddiq Al-Minshawi", "28:30", "https://server10.mp3quran.net/minsh/012.mp3"),

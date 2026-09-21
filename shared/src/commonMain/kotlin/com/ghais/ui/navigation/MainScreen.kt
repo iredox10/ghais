@@ -26,7 +26,7 @@ import com.ghais.player.AudioEngine
 import com.ghais.ui.components.MiniPlayer
 import com.ghais.ui.screens.home.HomeScreen
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 val LocalRootNavigator = compositionLocalOf<Navigator?> { null }
 
@@ -39,7 +39,7 @@ object MainScreen : Screen {
                 val currentTrack by AudioEngine.currentTrack.collectAsState()
             
             Scaffold(
-                containerColor = QuranifyColors.Background
+                containerColor = GhaisColors.Background
             ) { innerPadding ->
                 Box(
                     modifier = Modifier
@@ -65,7 +65,7 @@ object MainScreen : Screen {
                                 }
                             )
                         }
-                        QuranifyBottomNavBar()
+                        GhaisBottomNavBar()
                     }
                 }
             }

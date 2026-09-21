@@ -37,9 +37,9 @@ data class LibraryPlaylistItem(
     val coverUrl: String
 )
 
-object StitchAssets {
+object GhaisAssets {
     // Local Android / Compose Drawable Resource Names
-    const val DrawableLogoName = "quranify_logo"
+    const val DrawableLogoName = "ghais_logo"
     const val DrawableAvatarName = "user_avatar"
 
     val LogoUrl = "https://lh3.googleusercontent.com/aida/AEtjO1VSY3aPP_KJwBw8Z5b4fXNcpOg9Zslxkd6o3i7gPVIaruUyts9p6lNZewsVKJiK1RYWHf96fYxOm9PD4ojF1LGgA6cx-SlbkR6hRY-H6JeXh6k7RTCBDvVGH6qxu3cc9IpeI52x1d7HMcn6edFe6005jaVSsnmLZGqrvkdCacHCQ2KnupCjp2Lp5pvB0if1X3Tub7lcbfTSOHFEC__1EVSohZFe-S45_T6QSbELa71kWZHJJ0qIalmLxwrS"

@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 object KhatmaScreen : Screen {
     @Composable
@@ -34,7 +34,7 @@ object KhatmaScreen : Screen {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(QuranifyColors.Background)
+                .background(GhaisColors.Background)
                 .verticalScroll(rememberScrollState())
         ) {
             // Header
@@ -48,13 +48,13 @@ object KhatmaScreen : Screen {
                     Icon(
                         imageVector = Icons.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = QuranifyColors.TextPrimary
+                        tint = GhaisColors.TextPrimary
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Khatma Plan",
-                    color = QuranifyColors.TextPrimary,
+                    color = GhaisColors.TextPrimary,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -75,14 +75,14 @@ object KhatmaScreen : Screen {
                     val progress = 0.35f
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         drawArc(
-                            color = QuranifyColors.Card,
+                            color = GhaisColors.Card,
                             startAngle = -90f,
                             sweepAngle = 360f,
                             useCenter = false,
                             style = Stroke(width = 16.dp.toPx(), cap = StrokeCap.Round)
                         )
                         drawArc(
-                            color = QuranifyColors.Primary,
+                            color = GhaisColors.Primary,
                             startAngle = -90f,
                             sweepAngle = 360f * progress,
                             useCenter = false,
@@ -92,13 +92,13 @@ object KhatmaScreen : Screen {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "${(progress * 100).toInt()}%",
-                            color = QuranifyColors.TextPrimary,
+                            color = GhaisColors.TextPrimary,
                             fontSize = 36.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Completed",
-                            color = QuranifyColors.TextSecondary,
+                            color = GhaisColors.TextSecondary,
                             fontSize = 14.sp
                         )
                     }
@@ -111,9 +111,9 @@ object KhatmaScreen : Screen {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    StatBox("Streak", "12 Days", Icons.Filled.LocalFireDepartment, QuranifyColors.Primary)
-                    StatBox("Remaining", "18 Days", null, QuranifyColors.TextPrimary)
-                    StatBox("Est. Finish", "Oct 15", null, QuranifyColors.TextPrimary)
+                    StatBox("Streak", "12 Days", Icons.Filled.LocalFireDepartment, GhaisColors.Primary)
+                    StatBox("Remaining", "18 Days", null, GhaisColors.TextPrimary)
+                    StatBox("Est. Finish", "Oct 15", null, GhaisColors.TextPrimary)
                 }
             }
 
@@ -123,24 +123,24 @@ object KhatmaScreen : Screen {
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(QuranifyColors.Card)
+                    .background(GhaisColors.Card)
                     .padding(24.dp)
             ) {
                 Text(
                     text = "Today's Target",
-                    color = QuranifyColors.TextSecondary,
+                    color = GhaisColors.TextSecondary,
                     fontSize = 14.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Surah Al-Baqarah",
-                    color = QuranifyColors.TextPrimary,
+                    color = GhaisColors.TextPrimary,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Ayahs 1-141",
-                    color = QuranifyColors.Primary,
+                    color = GhaisColors.Primary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -150,7 +150,7 @@ object KhatmaScreen : Screen {
                 Button(
                     onClick = { },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = QuranifyColors.Primary)
+                    colors = ButtonDefaults.buttonColors(containerColor = GhaisColors.Primary)
                 ) {
                     Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = "Play", tint = Color.White)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -174,13 +174,13 @@ fun StatBox(label: String, value: String, icon: androidx.compose.ui.graphics.vec
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = value,
-            color = QuranifyColors.TextPrimary,
+            color = GhaisColors.TextPrimary,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold
         )
         Text(
             text = label,
-            color = QuranifyColors.TextSecondary,
+            color = GhaisColors.TextSecondary,
             fontSize = 12.sp
         )
     }

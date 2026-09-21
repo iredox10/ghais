@@ -27,7 +27,7 @@ import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 data class SurahDetailScreen(val surahId: Int) : Screen {
 
@@ -117,34 +117,34 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                         Column {
                             Text(
                                 text = surah.nameEn,
-                                color = QuranifyColors.TextPrimary,
+                                color = GhaisColors.TextPrimary,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "${surah.revelationType} • ${surah.ayahsCount} Ayahs",
-                                color = QuranifyColors.TextSecondary,
+                                color = GhaisColors.TextSecondary,
                                 fontSize = 12.sp
                             )
                         }
                     },
                     navigationIcon = {
                         IconButton(onClick = { navigator.pop() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = QuranifyColors.TextPrimary)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = GhaisColors.TextPrimary)
                         }
                     },
                     actions = {
                         Text(
                             text = surah.nameAr,
-                            color = QuranifyColors.Primary,
+                            color = GhaisColors.Primary,
                             fontSize = 22.sp,
                             modifier = Modifier.padding(end = 16.dp)
                         )
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = QuranifyColors.Background)
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = GhaisColors.Background)
                 )
             },
-            containerColor = QuranifyColors.Background
+            containerColor = GhaisColors.Background
         ) { paddingValues ->
             Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
                 // Actions Header
@@ -157,18 +157,18 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                     Box {
                         AssistChip(
                             onClick = { expandedReciterMenu = true },
-                            label = { Text(selectedReciter.nameEn.split(" ").take(2).joinToString(" "), color = QuranifyColors.TextPrimary) },
-                            colors = AssistChipDefaults.assistChipColors(containerColor = QuranifyColors.Surface),
-                            border = BorderStroke(1.dp, QuranifyColors.Primary)
+                            label = { Text(selectedReciter.nameEn.split(" ").take(2).joinToString(" "), color = GhaisColors.TextPrimary) },
+                            colors = AssistChipDefaults.assistChipColors(containerColor = GhaisColors.Surface),
+                            border = BorderStroke(1.dp, GhaisColors.Primary)
                         )
                         DropdownMenu(
                             expanded = expandedReciterMenu,
                             onDismissRequest = { expandedReciterMenu = false },
-                            modifier = Modifier.background(QuranifyColors.Surface)
+                            modifier = Modifier.background(GhaisColors.Surface)
                         ) {
                             QuranData.RECITERS.forEach { reciter ->
                                 DropdownMenuItem(
-                                    text = { Text(reciter.nameEn, color = QuranifyColors.TextPrimary) },
+                                    text = { Text(reciter.nameEn, color = GhaisColors.TextPrimary) },
                                     onClick = {
                                         selectedReciter = reciter
                                         expandedReciterMenu = false
@@ -180,17 +180,17 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
 
                     Row {
                         IconButton(onClick = { /* Add to Playlist */ }) {
-                            Icon(Icons.Filled.Add, contentDescription = "Add to Playlist", tint = QuranifyColors.Primary)
+                            Icon(Icons.Filled.Add, contentDescription = "Add to Playlist", tint = GhaisColors.Primary)
                         }
                         Button(
                             onClick = {
                                 AudioEngine.playQueue(buildTracks(), 0)
                                 rootNavigator.push(NowPlayingScreen())
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = QuranifyColors.Primary),
+                            colors = ButtonDefaults.buttonColors(containerColor = GhaisColors.Primary),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("Play All", color = QuranifyColors.Background, fontWeight = FontWeight.Bold)
+                            Text("Play All", color = GhaisColors.Background, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -208,7 +208,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                             ) {
                                 Text(
                                     text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
-                                    color = QuranifyColors.TextPrimary,
+                                    color = GhaisColors.TextPrimary,
                                     fontSize = 26.sp,
                                     textAlign = TextAlign.Center
                                 )
@@ -230,7 +230,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                             },
                             onShareClick = { /* Share */ }
                         )
-                        HorizontalDivider(color = QuranifyColors.Surface, thickness = 1.dp)
+                        HorizontalDivider(color = GhaisColors.Surface, thickness = 1.dp)
                     }
                 }
             }

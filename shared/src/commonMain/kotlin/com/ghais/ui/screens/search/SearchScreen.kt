@@ -30,7 +30,7 @@ import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.reciters.ReciterProfileScreen
 import com.ghais.ui.screens.surah.SurahDetailScreen
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 class SearchScreen : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -52,25 +52,25 @@ class SearchScreen : Screen {
                             value = query,
                             onValueChange = { query = it },
                             modifier = Modifier.fillMaxWidth().height(50.dp),
-                            placeholder = { Text("Search...", color = QuranifyColors.TextSecondary) },
+                            placeholder = { Text("Search...", color = GhaisColors.TextSecondary) },
                             trailingIcon = {
                                 if (query.isNotEmpty()) {
                                     IconButton(onClick = { query = "" }) {
-                                        Icon(Icons.Default.Clear, contentDescription = "Clear", tint = QuranifyColors.TextSecondary)
+                                        Icon(Icons.Default.Clear, contentDescription = "Clear", tint = GhaisColors.TextSecondary)
                                     }
                                 } else {
                                     IconButton(onClick = { /* Mic action */ }) {
-                                        Icon(Icons.Default.Mic, contentDescription = "Mic", tint = QuranifyColors.TextSecondary)
+                                        Icon(Icons.Default.Mic, contentDescription = "Mic", tint = GhaisColors.TextSecondary)
                                     }
                                 }
                             },
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = QuranifyColors.Primary,
-                                unfocusedBorderColor = QuranifyColors.Card,
-                                focusedContainerColor = QuranifyColors.Card,
-                                unfocusedContainerColor = QuranifyColors.Card,
-                                focusedTextColor = QuranifyColors.TextPrimary,
-                                unfocusedTextColor = QuranifyColors.TextPrimary
+                                focusedBorderColor = GhaisColors.Primary,
+                                unfocusedBorderColor = GhaisColors.Card,
+                                focusedContainerColor = GhaisColors.Card,
+                                unfocusedContainerColor = GhaisColors.Card,
+                                focusedTextColor = GhaisColors.TextPrimary,
+                                unfocusedTextColor = GhaisColors.TextPrimary
                             ),
                             shape = RoundedCornerShape(25.dp),
                             singleLine = true
@@ -78,13 +78,13 @@ class SearchScreen : Screen {
                     },
                     navigationIcon = {
                         IconButton(onClick = { navigator.pop() }) {
-                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = QuranifyColors.TextPrimary)
+                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = GhaisColors.TextPrimary)
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = QuranifyColors.Background)
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = GhaisColors.Background)
                 )
             },
-            containerColor = QuranifyColors.Background
+            containerColor = GhaisColors.Background
         ) { padding ->
             Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -94,10 +94,10 @@ class SearchScreen : Screen {
                             onClick = { selectedFilter = filter },
                             label = { Text(filter) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = QuranifyColors.Primary,
-                                selectedLabelColor = QuranifyColors.Background,
-                                containerColor = QuranifyColors.Card,
-                                labelColor = QuranifyColors.TextPrimary
+                                selectedContainerColor = GhaisColors.Primary,
+                                selectedLabelColor = GhaisColors.Background,
+                                containerColor = GhaisColors.Card,
+                                labelColor = GhaisColors.TextPrimary
                             ),
                             border = null,
                             shape = RoundedCornerShape(16.dp)
@@ -108,9 +108,9 @@ class SearchScreen : Screen {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 if (query.isEmpty()) {
-                    Text("Recent Searches", color = QuranifyColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Recent Searches", color = GhaisColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("No recent searches.", color = QuranifyColors.TextSecondary)
+                    Text("No recent searches.", color = GhaisColors.TextSecondary)
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         val ayahRef = searchResults.ayahReference
@@ -147,7 +147,7 @@ class SearchScreen : Screen {
 
                         if (searchResults.surahs.isNotEmpty() && (selectedFilter == "All" || selectedFilter == "Surahs")) {
                             item {
-                                Text("Surahs", color = QuranifyColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
+                                Text("Surahs", color = GhaisColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
                             }
                             items(searchResults.surahs) { surah ->
                                 val playSurah = {
@@ -185,22 +185,22 @@ class SearchScreen : Screen {
                                         Icon(
                                             Icons.Filled.PlayArrow,
                                             contentDescription = "Play Surah ${surah.nameEn}",
-                                            tint = QuranifyColors.Primary
+                                            tint = GhaisColors.Primary
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(surah.nameEn, color = QuranifyColors.TextPrimary, fontWeight = FontWeight.SemiBold)
-                                        Text("Surah ${surah.id} • ${surah.ayahsCount} Ayahs", color = QuranifyColors.TextSecondary, fontSize = 12.sp)
+                                        Text(surah.nameEn, color = GhaisColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+                                        Text("Surah ${surah.id} • ${surah.ayahsCount} Ayahs", color = GhaisColors.TextSecondary, fontSize = 12.sp)
                                     }
-                                    Text(surah.nameAr, color = QuranifyColors.Primary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    Text(surah.nameAr, color = GhaisColors.Primary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
 
                         if (searchResults.reciters.isNotEmpty() && (selectedFilter == "All" || selectedFilter == "Reciters")) {
                             item {
-                                Text("Reciters", color = QuranifyColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
+                                Text("Reciters", color = GhaisColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
                             }
                             items(searchResults.reciters) { reciter ->
                                 Row(
@@ -233,13 +233,13 @@ class SearchScreen : Screen {
                                         Icon(
                                             Icons.Filled.PlayArrow,
                                             contentDescription = "Play reciter ${reciter.nameEn}",
-                                            tint = QuranifyColors.Primary
+                                            tint = GhaisColors.Primary
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(reciter.nameEn, color = QuranifyColors.TextPrimary, fontWeight = FontWeight.SemiBold)
-                                        Text(reciter.style.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }, color = QuranifyColors.TextSecondary, fontSize = 12.sp)
+                                        Text(reciter.nameEn, color = GhaisColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+                                        Text(reciter.style.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }, color = GhaisColors.TextSecondary, fontSize = 12.sp)
                                     }
                                 }
                             }
@@ -262,7 +262,7 @@ fun AyahQuickPlayCard(
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = QuranifyColors.Card),
+        colors = CardDefaults.cardColors(containerColor = GhaisColors.Card),
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(
@@ -271,17 +271,17 @@ fun AyahQuickPlayCard(
         ) {
             val surah = QuranData.SURAHS.find { it.id == ayahRef.surahId }
             Column(modifier = Modifier.weight(1f)) {
-                Text("Ayah Reference Found", color = QuranifyColors.Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Ayah Reference Found", color = GhaisColors.Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
-                Text("${surah?.nameEn} - Ayah ${ayahRef.ayahNo}", color = QuranifyColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("${surah?.nameEn} - Ayah ${ayahRef.ayahNo}", color = GhaisColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
             IconButton(
                 onClick = onPlay,
                 modifier = Modifier
-                    .background(QuranifyColors.Primary, shape = RoundedCornerShape(24.dp))
+                    .background(GhaisColors.Primary, shape = RoundedCornerShape(24.dp))
                     .size(48.dp)
             ) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = "Play Ayah", tint = QuranifyColors.Background)
+                Icon(Icons.Filled.PlayArrow, contentDescription = "Play Ayah", tint = GhaisColors.Background)
             }
         }
     }

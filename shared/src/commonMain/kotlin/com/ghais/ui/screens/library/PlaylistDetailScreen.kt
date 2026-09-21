@@ -32,7 +32,7 @@ import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 data class PlaylistDetailScreen(val playlistId: String) : Screen {
     @Composable
@@ -50,7 +50,7 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(QuranifyColors.Background)
+                .background(GhaisColors.Background)
         ) {
             // Header
             Row(
@@ -63,13 +63,13 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
                     Icon(
                         imageVector = Icons.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = QuranifyColors.TextPrimary
+                        tint = GhaisColors.TextPrimary
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = playlist.title,
-                    color = QuranifyColors.TextPrimary,
+                    color = GhaisColors.TextPrimary,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -86,20 +86,20 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
                     modifier = Modifier
                         .size(160.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(QuranifyColors.Card),
+                        .background(GhaisColors.Card),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
                         contentDescription = null,
-                        tint = QuranifyColors.Primary,
+                        tint = GhaisColors.Primary,
                         modifier = Modifier.size(64.dp)
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "${tracks.size} Tracks • ${playlist.totalDuration}",
-                    color = QuranifyColors.TextSecondary,
+                    color = GhaisColors.TextSecondary,
                     fontSize = 14.sp
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -116,7 +116,7 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
                                 rootNavigator.push(NowPlayingScreen())
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = QuranifyColors.Primary),
+                        colors = ButtonDefaults.buttonColors(containerColor = GhaisColors.Primary),
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = "Play", tint = Color.White)
@@ -131,13 +131,13 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
                                 rootNavigator.push(NowPlayingScreen())
                             }
                         },
-                        modifier = Modifier.background(QuranifyColors.Card, RoundedCornerShape(50))
+                        modifier = Modifier.background(GhaisColors.Card, RoundedCornerShape(50))
                     ) {
-                        Icon(imageVector = Icons.Filled.Shuffle, contentDescription = "Shuffle", tint = QuranifyColors.TextPrimary)
+                        Icon(imageVector = Icons.Filled.Shuffle, contentDescription = "Shuffle", tint = GhaisColors.TextPrimary)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(onClick = { }, modifier = Modifier.background(QuranifyColors.Card, RoundedCornerShape(50))) {
-                        Icon(imageVector = Icons.Filled.Share, contentDescription = "Share", tint = QuranifyColors.TextPrimary)
+                    IconButton(onClick = { }, modifier = Modifier.background(GhaisColors.Card, RoundedCornerShape(50))) {
+                        Icon(imageVector = Icons.Filled.Share, contentDescription = "Share", tint = GhaisColors.TextPrimary)
                     }
                 }
             }
@@ -178,13 +178,13 @@ fun PlaylistTrackRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "${track.surahNameEn} (${track.surahNameAr})",
-                color = QuranifyColors.TextPrimary,
+                color = GhaisColors.TextPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium
             )
             Text(
                 text = track.reciterName,
-                color = QuranifyColors.TextSecondary,
+                color = GhaisColors.TextSecondary,
                 fontSize = 14.sp
             )
         }
@@ -192,7 +192,7 @@ fun PlaylistTrackRow(
             Icon(
                 imageVector = Icons.Filled.Delete,
                 contentDescription = "Remove",
-                tint = QuranifyColors.TextSecondary
+                tint = GhaisColors.TextSecondary
             )
         }
     }

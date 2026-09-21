@@ -49,7 +49,7 @@ import com.ghais.ui.screens.explore.components.isWideCard
 import com.ghais.ui.screens.playlists.MoodPlaylist
 import com.ghais.ui.screens.playlists.MoodPlaylists
 import com.ghais.ui.screens.playlists.PlaylistDetailsScreen
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 /**
  * ExploreScreen:
@@ -173,7 +173,7 @@ object ExploreScreen : Tab {
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Normal
                     ),
-                    cursorBrush = SolidColor(QuranifyColors.Primary),
+                    cursorBrush = SolidColor(GhaisColors.Primary),
                     decorationBox = { inner ->
                         if (query.isEmpty()) {
                             Text(
@@ -232,8 +232,8 @@ object ExploreScreen : Tab {
                                 brush = if (isSelected) {
                                     Brush.verticalGradient(
                                         listOf(
-                                            QuranifyColors.Primary.copy(alpha = 0.70f),
-                                            QuranifyColors.Primary.copy(alpha = 0.20f)
+                                            GhaisColors.Primary.copy(alpha = 0.70f),
+                                            GhaisColors.Primary.copy(alpha = 0.20f)
                                         )
                                     )
                                 } else HairlineSubtleBorder,

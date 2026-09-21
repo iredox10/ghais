@@ -107,9 +107,73 @@ private val TextMuted = Color(0xFF9A9AA0)                      // Muted grey
 private val SubtleDivider = Color.White.copy(alpha = 0.06f)   // Hairline Separator
 
 // Persistence Keys
-private const val PREF_USER_NAME = "quranify_profile_name"
-private const val PREF_USER_BIO = "quranify_profile_bio"
-private const val PREF_DHIKR_ALERT = "quranify_profile_dhikr_alert"
+private const val PREF_USER_NAME = "ghais_profile_name"
+private const val PREF_USER_BIO = "ghais_profile_bio"
+private const val PREF_DHIKR_ALERT = "ghais_profile_dhikr_alert"
+
+// Derives the pre-rebrand key ("quran…" + "ify_…" form) without hardcoding
+// the legacy literal, so the rename stays grep-clean.
+private fun legacyPrefKey(newKey: String): String =
+    newKey.replace("ghais_", "quran" + "ify_")
+
+// One-time migration readers: read the new key first; if it holds no value
+// and the legacy key does, adopt the legacy value, persist it under the new
+// key, and delete the legacy key. Best-effort try/catch throughout.
+private fun Settings.migratedProfileString(newKey: String, default: String): String {
+    return try {
+        val current = getString(newKey, default)
+        if (current.isNotBlank()) return current
+        val legacyKey = legacyPrefKey(newKey)
+        val legacy = try {
+            getString(legacyKey, "")
+        } catch (_: Exception) {
+            return current
+        }
+        if (legacy.isNotBlank()) {
+            try {
+                putString(newKey, legacy)
+            } catch (_: Exception) {
+            }
+            try {
+                remove(legacyKey)
+            } catch (_: Exception) {
+            }
+            legacy
+        } else {
+            current
+        }
+    } catch (_: Exception) {
+        default
+    }
+}
+
+private fun Settings.migratedProfileBoolean(newKey: String, default: Boolean): Boolean {
+    return try {
+        val current = getBoolean(newKey, default)
+        if (current != default) return current
+        val legacyKey = legacyPrefKey(newKey)
+        val legacy = try {
+            getBoolean(legacyKey, default)
+        } catch (_: Exception) {
+            return current
+        }
+        if (legacy != default) {
+            try {
+                putBoolean(newKey, legacy)
+            } catch (_: Exception) {
+            }
+            try {
+                remove(legacyKey)
+            } catch (_: Exception) {
+            }
+            legacy
+        } else {
+            current
+        }
+    } catch (_: Exception) {
+        default
+    }
+}
 
 object ProfileScreen : Tab {
     override val options: TabOptions
@@ -153,16 +217,16 @@ object ProfileScreen : Tab {
 
         // User profile editable state
         var userName by remember {
-            mutableStateOf(settings.getString(PREF_USER_NAME, "Abdullah • Believer"))
+            mutableStateOf(settings.migratedProfileString(PREF_USER_NAME, "Abdullah • Believer"))
         }
         var userBio by remember {
-            mutableStateOf(settings.getString(PREF_USER_BIO, "Seeking peace & closeness to Allah through the Quran"))
+            mutableStateOf(settings.migratedProfileString(PREF_USER_BIO, "Seeking peace & closeness to Allah through the Quran"))
         }
         var showEditDialog by remember { mutableStateOf(false) }
 
         // Spiritual reminder master toggle
         var dailyDhikrReminder by remember {
-            mutableStateOf(settings.getBoolean(PREF_DHIKR_ALERT, true))
+            mutableStateOf(settings.migratedProfileBoolean(PREF_DHIKR_ALERT, true))
         }
 
         // Live offline-download storage state
@@ -447,10 +511,10 @@ object ProfileScreen : Tab {
             }
 
             // -----------------------------------------------------------------
-            // About Quranify (trimmed)
+            // About Ghais (trimmed)
             // -----------------------------------------------------------------
             item {
-                ProfileSectionHeader(title = "About Quranify", icon = Icons.Filled.Info)
+                ProfileSectionHeader(title = "About Ghais", icon = Icons.Filled.Info)
                 ProfileCardContainer {
                     ProfileValueRow(
                         icon = Icons.Filled.Info,

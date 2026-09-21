@@ -1,8 +1,8 @@
 {
   "projectId": "tikitakatalk",
   "projectName": "Quranify",
-  "databaseId": "quranify",
-  "databaseName": "Quranify Production",
+  "databaseId": "ghais",
+  "databaseName": "Ghais Production",
   "collections": [
     {
       "$id": "reciters",

@@ -295,9 +295,9 @@ data class CuratedPlaylistDetailScreen(val playlistId: String) : Screen {
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            // Curator info ("Curated by Quranify • 8 Tracks • 42 mins")
+                            // Curator info ("Curated by Ghais • 8 Tracks • 42 mins")
                             Text(
-                                text = "Curated by ${playlist.curator.ifEmpty { "Quranify" }} • ${playlist.tracks.size} Tracks • ${playlist.totalDuration.ifEmpty { "42 mins" }}",
+                                text = "Curated by ${playlist.curator.ifEmpty { "Ghais" }} • ${playlist.tracks.size} Tracks • ${playlist.totalDuration.ifEmpty { "42 mins" }}",
                                 color = SubtitleGrey,
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Medium

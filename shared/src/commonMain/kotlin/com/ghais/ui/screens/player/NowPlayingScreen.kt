@@ -76,7 +76,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FavoritesStore
-import com.ghais.data.seed.StitchAssets
+import com.ghais.data.seed.GhaisAssets
 import com.ghais.player.AmbientMixer
 import com.ghais.player.AudioEngine
 import com.ghais.player.displayName
@@ -352,7 +352,7 @@ class NowPlayingScreen : Screen {
                 ) {
                     AsyncImage(
                         model = track?.let { photoForSlug(it.reciterSlug) }
-                            ?: StitchAssets.LogoUrl,
+                            ?: GhaisAssets.LogoUrl,
                         contentDescription = reciterName,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
@@ -632,7 +632,7 @@ private fun formatSpeed(speed: Float): String {
 }
 
 private fun photoForSlug(slug: String): String {
-    val photos = StitchAssets.VerifiedReciters
+    val photos = GhaisAssets.VerifiedReciters
     val match = when (slug) {
         "alafasy" -> photos.firstOrNull { it.slug == "mishary" }
         "sudais" -> photos.firstOrNull { it.slug == "al-sudais" }
@@ -642,5 +642,5 @@ private fun photoForSlug(slug: String): String {
             photos.firstOrNull { it.slug == "abdul-basit" }
         else -> photos.firstOrNull { it.slug == slug }
     }
-    return match?.photoUrl ?: StitchAssets.LogoUrl
+    return match?.photoUrl ?: GhaisAssets.LogoUrl
 }

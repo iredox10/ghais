@@ -41,7 +41,7 @@ import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.QuranData
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 private val PureBlack = Color(0xFF000000)
 private val MutedGrey = Color(0xFF9A9AA0)
@@ -184,12 +184,12 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                                 .padding(horizontal = 16.dp, vertical = 5.dp)
                                 .clip(RoundedCornerShape(24.dp))
                                 .background(
-                                    if (activelyPlaying) QuranifyColors.Primary.copy(alpha = 0.08f)
+                                    if (activelyPlaying) GhaisColors.Primary.copy(alpha = 0.08f)
                                     else Color.White.copy(alpha = 0.05f)
                                 )
                                 .border(
                                     1.dp,
-                                    if (activelyPlaying) QuranifyColors.Primary.copy(alpha = 0.40f)
+                                    if (activelyPlaying) GhaisColors.Primary.copy(alpha = 0.40f)
                                     else Color.White.copy(alpha = 0.08f),
                                     RoundedCornerShape(24.dp)
                                 )
@@ -261,12 +261,12 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                                     .size(42.dp)
                                     .clip(CircleShape)
                                     .background(
-                                        if (activelyPlaying) QuranifyColors.Primary.copy(alpha = 0.25f)
+                                        if (activelyPlaying) GhaisColors.Primary.copy(alpha = 0.25f)
                                         else Color.White.copy(alpha = 0.08f)
                                     )
                                     .border(
                                         1.dp,
-                                        if (activelyPlaying) QuranifyColors.Primary.copy(alpha = 0.60f)
+                                        if (activelyPlaying) GhaisColors.Primary.copy(alpha = 0.60f)
                                         else Color.White.copy(alpha = 0.15f),
                                         CircleShape
                                     )
@@ -300,7 +300,7 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                                 Icon(
                                     imageVector = if (activelyPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                                     contentDescription = if (activelyPlaying) "Pause" else "Play",
-                                    tint = if (activelyPlaying) QuranifyColors.Primary else Color.White,
+                                    tint = if (activelyPlaying) GhaisColors.Primary else Color.White,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }

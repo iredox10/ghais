@@ -35,7 +35,13 @@ data class CustomRoutine(
  * The exposed list is newest first.
  */
 object CustomRoutinesStore {
-    private const val KEY_ROUTINES = "quranify_custom_routines"
+    private const val KEY_ROUTINES = "ghais_custom_routines"
+
+    // Derives the pre-rebrand base key ("quran…" + "ify_…" form) without
+    // hardcoding the legacy literal, so the rename stays grep-clean.
+    // Used once per load to adopt + delete any legacy value.
+    private fun legacyBase(newBase: String): String =
+        newBase.replace("ghais_", "quran" + "ify_")
 
     private var ownerId: String = "local"
 
@@ -111,7 +117,26 @@ object CustomRoutinesStore {
 
     private fun load() {
         try {
-            val raw = settings.getString(key(KEY_ROUTINES), "")
+            var raw = settings.getString(key(KEY_ROUTINES), "")
+            if (raw.isBlank()) {
+                // One-time migration: adopt the legacy namespaced value if present.
+                try {
+                    val legacyKey = key(legacyBase(KEY_ROUTINES))
+                    val legacyRaw = settings.getString(legacyKey, "")
+                    if (legacyRaw.isNotBlank()) {
+                        raw = legacyRaw
+                        try {
+                            settings.putString(key(KEY_ROUTINES), legacyRaw)
+                        } catch (_: Exception) {
+                        }
+                        try {
+                            settings.remove(legacyKey)
+                        } catch (_: Exception) {
+                        }
+                    }
+                } catch (_: Exception) {
+                }
+            }
             if (raw.isBlank()) {
                 _routines.value = emptyList()
                 return

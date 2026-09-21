@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.ghais.domain.model.RepeatMode
 import com.ghais.player.AudioEngine
 import com.ghais.player.SleepTimer
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 private val MutedGrey = Color(0xFF9A9AA0)
 val SpeedsList = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 0.75f)
@@ -52,7 +52,7 @@ fun nextRepeatMode(current: RepeatMode): RepeatMode = when (current) {
 }
 
 /**
- * Modern Quranify Player Controls:
+ * Modern Ghais Player Controls:
  * - Playback speed selector (cycles through SpeedsList)
  * - Previous skip/rewind button with enabled state logic (rewinds to 0s if pos > 3s, skips prev if in queue)
  * - Prominent Play/Pause toggle button
@@ -153,7 +153,7 @@ fun PlayerControls(
                     RepeatMode.QUEUE -> "Repeat queue"
                     else -> "Repeat off"
                 },
-                tint = if (repeatMode == RepeatMode.OFF) MutedGrey else QuranifyColors.Primary,
+                tint = if (repeatMode == RepeatMode.OFF) MutedGrey else GhaisColors.Primary,
                 modifier = Modifier.size(27.dp)
             )
         }
@@ -166,7 +166,7 @@ fun PlayerControls(
             Icon(
                 imageVector = Icons.Filled.Bedtime,
                 contentDescription = "Sleep timer",
-                tint = if (isSleepTimerActive) QuranifyColors.Primary else MutedGrey,
+                tint = if (isSleepTimerActive) GhaisColors.Primary else MutedGrey,
                 modifier = Modifier.size(27.dp)
             )
         }

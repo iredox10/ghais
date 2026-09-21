@@ -50,8 +50,8 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.domain.model.RoutineModeType
-import com.ghais.ui.theme.QuranifyColors
-import com.ghais.ui.theme.QuranifyTypography
+import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.theme.GhaisTypography
 
 private val SheetContainer = Color(0xFF181E20)
 private val SheetBorder = Color(0x204EDEA3)
@@ -91,7 +91,7 @@ data class RoutineModeScreen(val modeType: RoutineModeType) : Screen {
         }
 
         Scaffold(
-            containerColor = QuranifyColors.Background,
+            containerColor = GhaisColors.Background,
             topBar = {
                 Row(
                     modifier = Modifier
@@ -109,7 +109,7 @@ data class RoutineModeScreen(val modeType: RoutineModeType) : Screen {
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = modeTitle,
-                        style = QuranifyTypography.titleMedium.copy(
+                        style = GhaisTypography.titleMedium.copy(
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
@@ -167,7 +167,7 @@ fun ModeHeader(title: String, subtitle: String, color: Color) {
             ) {
                 Text(
                     text = "ROUTINE MODE",
-                    style = QuranifyTypography.bodyMedium.copy(
+                    style = GhaisTypography.bodyMedium.copy(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp,
@@ -178,7 +178,7 @@ fun ModeHeader(title: String, subtitle: String, color: Color) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = title,
-                style = QuranifyTypography.titleMedium.copy(
+                style = GhaisTypography.titleMedium.copy(
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -187,7 +187,7 @@ fun ModeHeader(title: String, subtitle: String, color: Color) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = subtitle,
-                style = QuranifyTypography.bodyMedium.copy(
+                style = GhaisTypography.bodyMedium.copy(
                     fontSize = 14.sp,
                     color = TextSecondary
                 )
@@ -218,7 +218,7 @@ fun StartSessionButton(color: Color) {
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "Start Routine Session",
-            style = QuranifyTypography.titleMedium.copy(
+            style = GhaisTypography.titleMedium.copy(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF003824)
@@ -243,7 +243,7 @@ fun CuratedSurahsShelf(surahs: List<String>, color: Color) {
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "CURATED FOR YOU",
-                style = QuranifyTypography.bodyMedium.copy(
+                style = GhaisTypography.bodyMedium.copy(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp,
@@ -287,7 +287,7 @@ fun CuratedSurahsShelf(surahs: List<String>, color: Color) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = surah,
-                                style = QuranifyTypography.titleMedium.copy(
+                                style = GhaisTypography.titleMedium.copy(
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = TextPrimary
@@ -331,7 +331,7 @@ fun AmbientSoundControls(color: Color) {
                 Column {
                     Text(
                         text = "Live Ambient Sounds",
-                        style = QuranifyTypography.titleMedium.copy(
+                        style = GhaisTypography.titleMedium.copy(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
@@ -339,7 +339,7 @@ fun AmbientSoundControls(color: Color) {
                     )
                     Text(
                         text = "Blend calming background nature sounds",
-                        style = QuranifyTypography.bodyMedium.copy(
+                        style = GhaisTypography.bodyMedium.copy(
                             fontSize = 12.sp,
                             color = TextSecondary
                         )
@@ -365,7 +365,7 @@ fun AmbientSlider(label: String, color: Color) {
         ) {
             Text(
                 text = label,
-                style = QuranifyTypography.bodyMedium.copy(
+                style = GhaisTypography.bodyMedium.copy(
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = TextSecondary
@@ -373,7 +373,7 @@ fun AmbientSlider(label: String, color: Color) {
             )
             Text(
                 text = "${(sliderPosition * 100).toInt()}%",
-                style = QuranifyTypography.bodyMedium.copy(
+                style = GhaisTypography.bodyMedium.copy(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = color

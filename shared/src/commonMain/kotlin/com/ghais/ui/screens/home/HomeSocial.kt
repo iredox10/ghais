@@ -31,7 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.ghais.data.repository.UserUsageRepository
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -150,7 +150,7 @@ fun HomeStatsCard() {
                 contentDescription = "Minutes today",
                 value = stats.minutesToday.toString(),
                 label = "min today",
-                iconTint = QuranifyColors.Primary
+                iconTint = GhaisColors.Primary
             )
             HomeStatCell(
                 icon = Icons.Filled.RecordVoiceOver,

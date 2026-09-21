@@ -43,7 +43,7 @@ import coil3.compose.AsyncImage
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.seed.JumpBackInItem
 import com.ghais.player.AudioEngine
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 
 private val DarkCard = Color(0xFF141418)
 private val MutedGrey = Color(0xFF9A9AA0)
@@ -93,7 +93,7 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
             val activelyPlaying = isCurrent && isEnginePlaying
 
             val borderColor by animateColorAsState(
-                targetValue = if (activelyPlaying) QuranifyColors.Primary.copy(alpha = 0.50f)
+                targetValue = if (activelyPlaying) GhaisColors.Primary.copy(alpha = 0.50f)
                 else Color.White.copy(alpha = 0.09f),
                 animationSpec = tween(300)
             )
@@ -148,7 +148,7 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
                     Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = item.subtitle,
-                        color = if (activelyPlaying) QuranifyColors.Primary else MutedGrey,
+                        color = if (activelyPlaying) GhaisColors.Primary else MutedGrey,
                         fontSize = 12.sp,
                         fontWeight = if (activelyPlaying) FontWeight.SemiBold else FontWeight.Normal,
                         maxLines = 1,
@@ -166,7 +166,7 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
                             modifier = Modifier
                                 .fillMaxWidth(item.progress.coerceIn(0f, 1f))
                                 .fillMaxHeight()
-                                .background(QuranifyColors.Primary, RoundedCornerShape(50))
+                                .background(GhaisColors.Primary, RoundedCornerShape(50))
                         )
                     }
                 }
@@ -179,12 +179,12 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
                         .size(40.dp)
                         .clip(CircleShape)
                         .background(
-                            if (activelyPlaying) QuranifyColors.Primary.copy(alpha = 0.20f)
+                            if (activelyPlaying) GhaisColors.Primary.copy(alpha = 0.20f)
                             else Color.White.copy(alpha = 0.08f)
                         )
                         .border(
                             1.dp,
-                            if (activelyPlaying) QuranifyColors.Primary.copy(alpha = 0.40f)
+                            if (activelyPlaying) GhaisColors.Primary.copy(alpha = 0.40f)
                             else Color.White.copy(alpha = 0.15f),
                             CircleShape
                         ),
@@ -193,7 +193,7 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
                     Icon(
                         imageVector = if (activelyPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         contentDescription = if (activelyPlaying) "Pause" else "Resume",
-                        tint = if (activelyPlaying) QuranifyColors.Primary else Color.White,
+                        tint = if (activelyPlaying) GhaisColors.Primary else Color.White,
                         modifier = Modifier.size(20.dp)
                     )
                 }

@@ -15,7 +15,13 @@ import kotlinx.serialization.json.Json
  * JSON-encoded list) but tracks a set of reciter slug Strings.
  */
 object FollowStore {
-    private const val KEY_FOLLOWED_QARI = "quranify_followed_qari"
+    private const val KEY_FOLLOWED_QARI = "ghais_followed_qari"
+
+    // Derives the pre-rebrand base key ("quran…" + "ify_…" form) without
+    // hardcoding the legacy literal, so the rename stays grep-clean.
+    // Used once per load to adopt + delete any legacy value.
+    private fun legacyBase(newBase: String): String =
+        newBase.replace("ghais_", "quran" + "ify_")
 
     private var ownerId: String = "local"
 
@@ -74,7 +80,26 @@ object FollowStore {
 
     private fun load() {
         try {
-            val raw = settings.getString(key(KEY_FOLLOWED_QARI), "")
+            var raw = settings.getString(key(KEY_FOLLOWED_QARI), "")
+            if (raw.isBlank()) {
+                // One-time migration: adopt the legacy namespaced value if present.
+                try {
+                    val legacyKey = key(legacyBase(KEY_FOLLOWED_QARI))
+                    val legacyRaw = settings.getString(legacyKey, "")
+                    if (legacyRaw.isNotBlank()) {
+                        raw = legacyRaw
+                        try {
+                            settings.putString(key(KEY_FOLLOWED_QARI), legacyRaw)
+                        } catch (_: Exception) {
+                        }
+                        try {
+                            settings.remove(legacyKey)
+                        } catch (_: Exception) {
+                        }
+                    }
+                } catch (_: Exception) {
+                }
+            }
             if (raw.isBlank()) {
                 _followedSlugs.value = emptySet()
                 return

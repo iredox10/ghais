@@ -58,9 +58,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.ghais.data.seed.StitchAssets
+import com.ghais.data.seed.GhaisAssets
 import com.ghais.player.AudioEngine
-import com.ghais.ui.theme.QuranifyColors
+import com.ghais.ui.theme.GhaisColors
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -113,7 +113,7 @@ fun NowPlayingTopBar(
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.5.sp,
-                color = QuranifyColors.Primary.copy(alpha = 0.85f)
+                color = GhaisColors.Primary.copy(alpha = 0.85f)
             )
             Spacer(modifier = Modifier.height(2.dp))
             Row(
@@ -127,13 +127,13 @@ fun NowPlayingTopBar(
                     text = displayTitle,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = QuranifyColors.TextPrimary
+                    color = GhaisColors.TextPrimary
                 )
                 Spacer(modifier = Modifier.width(2.dp))
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
                     contentDescription = "Playlist dropdown",
-                    tint = QuranifyColors.Primary,
+                    tint = GhaisColors.Primary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -160,7 +160,7 @@ fun NowPlayingTopBar(
 @Composable
 fun GlowingPingDot(
     modifier: Modifier = Modifier,
-    dotColor: Color = QuranifyColors.Primary
+    dotColor: Color = GhaisColors.Primary
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "PingTransition")
     val pulseScale by infiniteTransition.animateFloat(
@@ -227,14 +227,14 @@ fun FloatingTajweedRibbon(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            GlowingPingDot(dotColor = QuranifyColors.Primary)
+            GlowingPingDot(dotColor = GhaisColors.Primary)
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = text,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.8.sp,
-                color = QuranifyColors.Primary
+                color = GhaisColors.Primary
             )
         }
     }
@@ -248,8 +248,8 @@ fun FloatingTajweedRibbon(
 @Composable
 fun SacredGeometryMandala(
     modifier: Modifier = Modifier,
-    primaryColor: Color = QuranifyColors.Primary,
-    accentColor: Color = QuranifyColors.Secondary
+    primaryColor: Color = GhaisColors.Primary,
+    accentColor: Color = GhaisColors.Secondary
 ) {
     Canvas(modifier = modifier) {
         val center = this.center
@@ -436,8 +436,8 @@ fun SacredGeometryMandala(
 @Composable
 fun SacredMandalaArtwork(
     modifier: Modifier = Modifier,
-    primaryColor: Color = QuranifyColors.Primary,
-    accentColor: Color = QuranifyColors.Secondary
+    primaryColor: Color = GhaisColors.Primary,
+    accentColor: Color = GhaisColors.Secondary
 ) {
     SacredGeometryMandala(
         modifier = modifier,
@@ -535,7 +535,7 @@ fun VinylRecordGrooves(
 fun CenterSoundwaveBadge(
     modifier: Modifier = Modifier,
     badgeSize: Dp = 52.dp,
-    iconTint: Color = QuranifyColors.Primary,
+    iconTint: Color = GhaisColors.Primary,
     isPlaying: Boolean = false
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "BadgeSpin")
@@ -613,10 +613,10 @@ fun VinylDiscRecord(
                 modifier = Modifier
                     .size(124.dp)
                     .clip(CircleShape)
-                    .border(1.5.dp, QuranifyColors.Secondary.copy(alpha = 0.5f), CircleShape),
+                    .border(1.5.dp, GhaisColors.Secondary.copy(alpha = 0.5f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                val resolvedUrl = imageUrl.ifBlank { StitchAssets.NowPlayingVinylArtUrl }
+                val resolvedUrl = imageUrl.ifBlank { GhaisAssets.NowPlayingVinylArtUrl }
                 if (resolvedUrl.isNotBlank()) {
                     AsyncImage(
                         model = resolvedUrl,
@@ -651,7 +651,7 @@ fun VinylDiscRecord(
         // Center glass soundwave cap
         CenterSoundwaveBadge(
             isPlaying = isPlaying,
-            iconTint = QuranifyColors.Primary
+            iconTint = GhaisColors.Primary
         )
     }
 }
@@ -682,9 +682,9 @@ fun VinylDiscArtwork(
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            QuranifyColors.Primary.copy(alpha = 0.28f),
-                            QuranifyColors.PrimaryContainer.copy(alpha = 0.12f),
-                            QuranifyColors.Secondary.copy(alpha = 0.08f),
+                            GhaisColors.Primary.copy(alpha = 0.28f),
+                            GhaisColors.PrimaryContainer.copy(alpha = 0.12f),
+                            GhaisColors.Secondary.copy(alpha = 0.08f),
                             Color.Transparent
                         )
                     ),

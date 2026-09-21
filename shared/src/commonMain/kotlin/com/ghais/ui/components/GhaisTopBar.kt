@@ -13,12 +13,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.ghais.ui.theme.QuranifyColors
-import com.ghais.ui.theme.QuranifySpacing
-import com.ghais.ui.theme.QuranifyTypography
+import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.theme.GhaisSpacing
+import com.ghais.ui.theme.GhaisTypography
 
 @Composable
-fun QuranifyTopBar(
+fun GhaisTopBar(
     title: String,
     modifier: Modifier = Modifier,
     onBackClick: (() -> Unit)? = null,
@@ -29,8 +29,8 @@ fun QuranifyTopBar(
             .fillMaxWidth()
             .background(backgroundColor)
             .padding(
-                horizontal = QuranifySpacing.md,
-                vertical = QuranifySpacing.sm
+                horizontal = GhaisSpacing.md,
+                vertical = GhaisSpacing.sm
             )
     ) {
         if (onBackClick != null) {
@@ -41,15 +41,15 @@ fun QuranifyTopBar(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = QuranifyColors.TextPrimary
+                    tint = GhaisColors.TextPrimary
                 )
             }
         }
         
         Text(
             text = title,
-            style = QuranifyTypography.titleMedium,
-            color = QuranifyColors.TextPrimary,
+            style = GhaisTypography.titleMedium,
+            color = GhaisColors.TextPrimary,
             modifier = Modifier.align(Alignment.Center)
         )
     }

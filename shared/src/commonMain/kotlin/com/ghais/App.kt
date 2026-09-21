@@ -41,12 +41,12 @@ import com.ghais.ui.navigation.MainScreen
 import com.ghais.ui.screens.auth.AuthScreen
 import com.ghais.ui.screens.onboarding.OnboardingScreen
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.theme.QuranifyTheme
+import com.ghais.ui.theme.GhaisTheme
 import kotlinx.coroutines.delay
 
 @Composable
 fun App() {
-    QuranifyTheme {
+    GhaisTheme {
         val session by AuthRepository.session.collectAsState()
         val onboardingSeen by OnboardingStore.seen.collectAsState()
         LaunchedEffect(Unit) { AuthRepository.refreshSession() }

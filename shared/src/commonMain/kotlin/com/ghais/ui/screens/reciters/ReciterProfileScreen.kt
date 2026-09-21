@@ -43,7 +43,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
-import com.ghais.data.seed.StitchAssets
+import com.ghais.data.seed.GhaisAssets
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.Surah
 import com.ghais.domain.model.TrackItem
@@ -953,7 +953,7 @@ private fun resolveReciterMetadata(reciter: Reciter): ReciterDisplayMeta {
 
     val photoUrl = verifiedFromList?.photoUrl
         ?: reciter.imageUrl
-        ?: StitchAssets.VerifiedReciters.find {
+        ?: GhaisAssets.VerifiedReciters.find {
             it.slug.lowercase() == cleanSlug ||
             (cleanSlug == "alafasy" && it.slug == "mishary") ||
             (cleanSlug == "sudais" && it.slug == "al-sudais") ||
