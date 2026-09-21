@@ -35,11 +35,15 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.ui.window.Dialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -541,6 +545,7 @@ private fun ReciterStep(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GoalReminderStep(
     minutes: Int,
@@ -633,24 +638,90 @@ private fun GoalReminderStep(
         }
         if (reminderOn) {
             Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            var showClock by remember { mutableStateOf(false) }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(GlassFill)
+                    .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
+                    .clickable { showClock = true }
+                    .padding(18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                TimeStepper(
-                    label = "Hour",
-                    value = hour.toString().padStart(2, '0'),
-                    onMinus = { onHourChange((hour + 23) % 24) },
-                    onPlus = { onHourChange((hour + 1) % 24) },
-                    modifier = Modifier.weight(1f)
+                Text(
+                    text = "Reminder time",
+                    color = MutedGrey,
+                    fontSize = 13.sp
                 )
-                TimeStepper(
-                    label = "Minute",
-                    value = minute.toString().padStart(2, '0'),
-                    onMinus = { onMinuteChange((minute + 59) % 60) },
-                    onPlus = { onMinuteChange((minute + 1) % 60) },
-                    modifier = Modifier.weight(1f)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}",
+                    color = Color.White,
+                    fontSize = 44.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-0.5).sp
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Tap to set time",
+                    color = LinkBlue,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            if (showClock) {
+                val clockState = rememberTimePickerState(
+                    initialHour = hour,
+                    initialMinute = minute,
+                    is24Hour = true
+                )
+                Dialog(onDismissRequest = { showClock = false }) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(28.dp))
+                                    .background(Color(0xFF1C1C1E))
+                                    .padding(20.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            TimePicker(state = clockState)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(50.dp))
+                                        .background(Color.White.copy(alpha = 0.08f))
+                                        .clickable { showClock = false }
+                                        .padding(vertical = 12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Cancel", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(50.dp))
+                                        .background(LinkBlue)
+                                        .clickable {
+                                            onHourChange(clockState.hour)
+                                            onMinuteChange(clockState.minute)
+                                            showClock = false
+                                        }
+                                        .padding(vertical = 12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Set time", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         Spacer(modifier = Modifier.height(20.dp))
