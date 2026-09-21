@@ -1,5 +1,6 @@
 package com.quranify.ui.screens.explore.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,6 +31,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.quranify.data.seed.StitchAssets
+import org.jetbrains.compose.resources.painterResource
+import quranify.shared.generated.resources.Res
+import quranify.shared.generated.resources.ghais_mark
 import com.quranify.ui.theme.QuranifyColors
 
 @Composable
@@ -59,9 +63,9 @@ fun ExploreTopBar(
                     .padding(4.dp),
                 contentAlignment = Alignment.Center
             ) {
-                AsyncImage(
-                    model = StitchAssets.LogoUrl,
-                    contentDescription = "Quranify App Logo",
+                Image(
+                    painter = painterResource(Res.drawable.ghais_mark),
+                    contentDescription = "Ghais App Logo",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize()
                 )

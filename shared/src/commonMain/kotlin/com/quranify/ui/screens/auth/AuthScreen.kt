@@ -1,5 +1,6 @@
 package com.quranify.ui.screens.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +39,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import org.jetbrains.compose.resources.painterResource
+import quranify.shared.generated.resources.Res
+import quranify.shared.generated.resources.ghais_mark
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -108,20 +113,20 @@ fun AuthScreenContent(
             // Hero
             Box(
                 modifier = Modifier
-                    .size(72.dp)
-                    .background(GlassSurface, RoundedCornerShape(24.dp)),
+                    .size(88.dp)
+                    .background(GlassSurface, RoundedCornerShape(28.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Favorite,
-                    contentDescription = "Quranify",
-                    tint = LinkBlue,
-                    modifier = Modifier.size(32.dp),
+                Image(
+                    painter = painterResource(Res.drawable.ghais_mark),
+                    contentDescription = "Ghais",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(64.dp),
                 )
             }
             Spacer(Modifier.height(16.dp))
             Text(
-                text = "Quranify",
+                text = "Ghais",
                 fontSize = 30.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = Color.White,

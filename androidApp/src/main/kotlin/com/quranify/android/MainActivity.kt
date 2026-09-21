@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
         kotlinx.coroutines.MainScope().launch {
             val result = com.quranify.data.auth.AuthRepository.completeGoogleSignIn(userId, secret)
             result.exceptionOrNull()?.let {
-                android.util.Log.e("QuranifyAuth", "Google sign-in completion failed", it)
+                android.util.Log.e("GhaisAuth", "Google sign-in completion failed", it)
             }
         }
     }

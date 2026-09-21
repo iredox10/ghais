@@ -66,7 +66,7 @@ class QuranPlaybackService : MediaSessionService() {
 
         fun displayTitle(surahNameEn: String, ayahNo: Int = 0, isFullSurah: Boolean = true): String {
             val name = surahNameEn.trim()
-            if (name.isBlank()) return "Quranify"
+            if (name.isBlank()) return "Ghais"
             // Must match AudioEngine.trackDisplayTitle exactly: updateMetadata()
             // early-returns on equal titles, and any replaceMediaItem call made
             // while buffering resets the timeline (wipes resume seeks).
@@ -262,7 +262,7 @@ class QuranPlaybackService : MediaSessionService() {
             }
             AudioEngine.resume()
             val title = displayTitle(track.surahNameEn, track.ayahNo, track.isFullSurah)
-            val artist = track.reciterName.ifBlank { "Quranify" }
+            val artist = track.reciterName.ifBlank { "Ghais" }
             val item = MediaItem.Builder()
                 .setMediaId(track.audioUrl)
                 .setUri(track.audioUrl)
@@ -284,7 +284,7 @@ class QuranPlaybackService : MediaSessionService() {
             AudioEngine.currentTrack.collect { track ->
                 if (track == null) return@collect
                 val title = displayTitle(track.surahNameEn, track.ayahNo, track.isFullSurah)
-                val artist = track.reciterName.ifBlank { "Quranify" }
+                val artist = track.reciterName.ifBlank { "Ghais" }
                 PlayerBridge.updateMetadata(
                     title,
                     artist,

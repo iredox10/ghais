@@ -178,12 +178,12 @@ object AppSettingsScreen : Screen {
                     SettingsStaticRow(
                         icon = Icons.Filled.Info,
                         title = "Version",
-                        subtitle = "Quranify 1.0"
+                        subtitle = "Ghais 1.0"
                     )
                     SettingsDivider()
                     SettingsActionRow(
                         icon = Icons.Filled.Star,
-                        title = "Rate Quranify",
+                        title = "Rate Ghais",
                         subtitle = "Not wired yet",
                         trailing = null,
                         // No-op: store listing / review flow not wired.
@@ -192,7 +192,7 @@ object AppSettingsScreen : Screen {
                     SettingsDivider()
                     SettingsActionRow(
                         icon = Icons.Filled.Share,
-                        title = "Share Quranify",
+                        title = "Share Ghais",
                         subtitle = "Not wired yet",
                         trailing = null,
                         // No-op: share sheet not wired.

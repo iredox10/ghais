@@ -213,7 +213,7 @@ actual object PlayerBridge {
                 .apply {
                     val t = pendingTitle ?: title
                     val a = pendingArtist ?: artist
-                    if (!t.isNullOrBlank()) setTitle(t) else setTitle("Quranify")
+                    if (!t.isNullOrBlank()) setTitle(t) else setTitle("Ghais")
                     if (!a.isNullOrBlank()) setArtist(a)
                 }
                 .build()
