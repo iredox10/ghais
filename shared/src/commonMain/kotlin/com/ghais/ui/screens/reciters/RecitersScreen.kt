@@ -10,11 +10,15 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.QuranData
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.ui.navigation.LocalRootNavigator
+import com.ghais.ui.screens.reciters.glass.FollowBanner
+import com.ghais.ui.screens.reciters.glass.ProtonReciterHeader
+import com.ghais.ui.screens.reciters.glass.ProtonReciterSearch
 
 private val PureBlack = Color(0xFF000000)
 
@@ -37,6 +41,8 @@ class RecitersScreen : Tab {
             ?: LocalNavigator.current?.parent
             ?: LocalNavigator.current
         var searchQuery by remember { mutableStateOf("") }
+        val followedSlugs by FollowStore.followedSlugs.collectAsState()
+        val followedCount = followedSlugs.size
 
         val groups = remember(searchQuery) {
             QuranData.RECITERS
@@ -56,11 +62,28 @@ class RecitersScreen : Tab {
                 .fillMaxSize()
                 .background(PureBlack)
         ) {
-            RecitersHero(
-                searchQuery = searchQuery,
-                onSearchChange = { searchQuery = it },
-                countText = "${QuranData.RECITERS.size} reciters • ${groups.size} nations"
+            ProtonReciterHeader(
+                titleWhite = "Voices of",
+                titleGrey = "the Quran",
+                subtitle = "${QuranData.RECITERS.size} reciters • ${groups.size} nations"
             )
+            ProtonReciterSearch(
+                query = searchQuery,
+                onQuery = { searchQuery = it }
+            )
+
+            if (searchQuery.isBlank()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    FollowBanner(
+                        followedCount = followedCount,
+                        onOpen = { rootNavigator?.push(FollowedRecitersScreen) }
+                    )
+                }
+            }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
