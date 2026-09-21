@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 object OnboardingStore {
     const val KEY_SEEN = "ghais_onboarding_seen"
     private const val KEY_STEP = "ghais_onboarding_step"
+    private const val KEY_DONE = "ghais_onboarding_done"
     private const val KEY_GOAL = "ghais_onboarding_goal"
     private const val KEY_DAILY_GOAL_MINUTES = "ghais_daily_goal_minutes"
 
@@ -123,6 +124,9 @@ object OnboardingStore {
     private val _seen = MutableStateFlow(false)
     val seen: StateFlow<Boolean> = _seen.asStateFlow()
 
+    private val _doneForOwner = MutableStateFlow(false)
+    val isDoneForCurrentUser: StateFlow<Boolean> = _doneForOwner.asStateFlow()
+
     private val _step = MutableStateFlow(0)
     val step: StateFlow<Int> = _step.asStateFlow()
 
@@ -140,6 +144,11 @@ object OnboardingStore {
         if (ownerId == this.ownerId) return
         this.ownerId = ownerId
         loadPersonal()
+        try {
+            _doneForOwner.value = settings.getBoolean(key(KEY_DONE), false)
+        } catch (_: Exception) {
+            _doneForOwner.value = false
+        }
     }
 
     fun setStep(index: Int) {
@@ -170,10 +179,25 @@ object OnboardingStore {
 
     fun complete() {
         _seen.value = true
+        _doneForOwner.value = true
         _step.value = 0
         try {
             settings.putBoolean(KEY_SEEN, true)
             settings.putInt(KEY_STEP, 0)
+            settings.putBoolean(key(KEY_DONE), true)
+        } catch (_: Exception) {
+        }
+    }
+
+    fun markDoneForCurrentUser() {
+        _doneForOwner.value = true
+        _seen.value = true
+        try {
+            settings.putBoolean(key(KEY_DONE), true)
+        } catch (_: Exception) {
+        }
+        try {
+            settings.putBoolean(KEY_SEEN, true)
         } catch (_: Exception) {
         }
     }
@@ -188,10 +212,12 @@ object OnboardingStore {
      */
     fun restartForNewUser() {
         _seen.value = false
+        _doneForOwner.value = false
         _step.value = 0
         try {
             settings.putBoolean(KEY_SEEN, false)
             settings.putInt(KEY_STEP, 0)
+            settings.putBoolean(key(KEY_DONE), false)
         } catch (_: Exception) {
         }
     }
@@ -201,6 +227,11 @@ object OnboardingStore {
             _seen.value = migratedBoolean(namespaced = false, newBase = KEY_SEEN, default = false)
         } catch (_: Exception) {
             _seen.value = false
+        }
+        try {
+            _doneForOwner.value = settings.getBoolean(key(KEY_DONE), false)
+        } catch (_: Exception) {
+            _doneForOwner.value = false
         }
         try {
             _step.value = migratedInt(namespaced = false, newBase = KEY_STEP, default = 0).coerceAtLeast(0)
@@ -222,6 +253,11 @@ object OnboardingStore {
     }
 
     private fun loadPersonal() {
+        try {
+            _doneForOwner.value = settings.getBoolean(key(KEY_DONE), false)
+        } catch (_: Exception) {
+            _doneForOwner.value = false
+        }
         try {
             val rawGoal = migratedString(namespaced = true, newBase = KEY_GOAL)
             _goal.value = rawGoal.ifBlank { null }
