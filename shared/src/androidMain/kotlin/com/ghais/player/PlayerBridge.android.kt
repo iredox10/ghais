@@ -35,6 +35,7 @@ actual object PlayerBridge {
     private var pollStarted = false
     private var pendingTitle: String? = null
     private var pendingArtist: String? = null
+    private var pendingArtworkUri: String? = null
 
     private val listener = object : androidx.media3.common.Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -171,13 +172,20 @@ actual object PlayerBridge {
             if (p.isPlaying) return
             val index = p.currentMediaItemIndex.coerceIn(0, p.mediaItemCount - 1)
             val current = p.getMediaItemAt(index)
-            if (current.mediaMetadata.title?.toString() == title) return
+            val artworkUriStr = try { AmbientVideoArt.artworkUri.value?.toString() } catch (_: Exception) { null }
+            val currentArtworkStr = try { current.mediaMetadata.artworkUri?.toString() } catch (_: Exception) { null }
+            if (current.mediaMetadata.title?.toString() == title && currentArtworkStr == artworkUriStr) return
             // Replacing the item resets the timeline — preserve position so a
             // resume seek applied just before us isn't wiped out.
             val resumePos = p.currentPosition.coerceAtLeast(0L)
             val meta = current.mediaMetadata.buildUpon()
                 .setTitle(title)
                 .apply { artist?.let { setArtist(it) } }
+                .apply {
+                    if (!artworkUriStr.isNullOrBlank() && artworkUriStr != currentArtworkStr) {
+                        try { setArtworkUri(android.net.Uri.parse(artworkUriStr)) } catch (_: Exception) { }
+                    }
+                }
                 .build()
             p.replaceMediaItem(index, current.buildUpon().setMediaMetadata(meta).build())
             if (resumePos > 1_000L) {
@@ -193,6 +201,10 @@ actual object PlayerBridge {
     actual fun setPlaybackMetadata(title: String?, artist: String?) {
         if (!title.isNullOrBlank()) pendingTitle = title
         if (!artist.isNullOrBlank()) pendingArtist = artist
+    }
+
+    actual fun setPlaybackArtworkUri(uri: String?) {
+        pendingArtworkUri = uri?.takeIf { it.isNotBlank() }
     }
 
     /** Android-only: start playback with lockscreen/notification metadata set atomically. */
@@ -215,6 +227,10 @@ actual object PlayerBridge {
                     val a = pendingArtist ?: artist
                     if (!t.isNullOrBlank()) setTitle(t) else setTitle("Ghais")
                     if (!a.isNullOrBlank()) setArtist(a)
+                    val artwork = pendingArtworkUri
+                    if (!artwork.isNullOrBlank()) {
+                        try { setArtworkUri(android.net.Uri.parse(artwork)) } catch (_: Exception) { }
+                    }
                 }
                 .build()
             val item = androidx.media3.common.MediaItem.Builder()

@@ -63,6 +63,8 @@ actual object PlayerBridge {
 
     private var onTrackEnd: (() -> Unit)? = null
 
+    private var pendingArtworkUri: String? = null
+
     private fun configureAudioSession() {
         try {
             val session = AVAudioSession.sharedInstance()
@@ -226,5 +228,10 @@ actual object PlayerBridge {
 
     actual fun setPlaybackMetadata(title: String?, artist: String?) {
         // iOS NowPlayingInfo is out of scope for this fix; no-op.
+    }
+
+    actual fun setPlaybackArtworkUri(uri: String?) {
+        pendingArtworkUri = uri
+        // AVPlayerItem externalMetadata artwork is out of scope; no-op.
     }
 }

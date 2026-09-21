@@ -26,6 +26,11 @@ expect object PlayerBridge {
     fun play(url: String)
     /** Hint for lockscreen/notification title; consumed atomically by the next play() (no race). */
     fun setPlaybackMetadata(title: String?, artist: String?)
+    /**
+     * Hint for lockscreen/notification artwork; consumed atomically by the next play().
+     * Null clears the pending artwork.
+     */
+    fun setPlaybackArtworkUri(uri: String?)
     fun pause()
     fun resume()
     fun stop()
