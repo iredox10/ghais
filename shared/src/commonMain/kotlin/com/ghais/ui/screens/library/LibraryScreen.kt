@@ -20,10 +20,15 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material3.Icon
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.playlists.MoodPlaylists
 import com.ghais.ui.screens.playlists.PlaylistCover
 import com.ghais.ui.screens.playlists.PlaylistDetailsScreen
+import com.ghais.ui.screens.routines.MyRoutinesScreen
 
 object LibraryScreen : Tab {
     override val options: TabOptions
@@ -61,6 +66,48 @@ object LibraryScreen : Tab {
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(0.84f)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Color.White.copy(alpha = 0.05f))
+                            .clickable { rootNavigator?.push(MyRoutinesScreen) }
+                            .padding(14.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.QueueMusic,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.35f),
+                            modifier = Modifier
+                                .size(40.dp)
+                                .align(Alignment.TopStart)
+                        )
+                        Column(
+                            modifier = Modifier.align(Alignment.BottomStart)
+                        ) {
+                            Text(
+                                text = "My Routines",
+                                color = Color.White,
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 23.sp
+                            )
+                            Text(
+                                text = "Your custom recitation routines",
+                                color = Color.White.copy(alpha = 0.6f),
+                                fontSize = 13.sp
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Open my routines",
+                            tint = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier.align(Alignment.CenterEnd)
+                        )
+                    }
+                }
                 items(MoodPlaylists, key = { it.id }) { playlist ->
                     Box(
                         modifier = Modifier
