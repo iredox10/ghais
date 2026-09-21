@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.quranify.App
 import com.quranify.player.QuranDownloads
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -24,25 +25,7 @@ class MainActivity : ComponentActivity() {
         com.quranify.player.AmbientVideoBridge.init(this)
         QuranDownloads.init(this)
         com.quranify.data.repository.ScheduleEngine.init(this)
-        // TEMP-DEBUG schedule hook (revert).
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            try {
-                val cal = java.util.Calendar.getInstance().apply { add(java.util.Calendar.MINUTE, 2) }
-                com.quranify.data.repository.SchedulesStore.add(
-                    com.quranify.data.repository.RecitationSchedule(
-                        id = "hook-test",
-                        hour = cal.get(java.util.Calendar.HOUR_OF_DAY),
-                        minute = cal.get(java.util.Calendar.MINUTE),
-                        reciterSlug = "mishary",
-                        fromSurah = 112, toSurah = 114,
-                        durationMin = null, enabled = true
-                    )
-                )
-                android.util.Log.d("SchedHook", "test schedule added")
-            } catch (e: Exception) {
-                android.util.Log.e("SchedHook", "hook failed", e)
-            }
-        }, 4000)
+        com.quranify.data.auth.AuthRepository.init(this)
         // Any play/resume boots the foreground MediaSession service so audio
         // survives background + shows system notification controls.
         com.quranify.player.PlayerBridge.onPlayRequested = {
@@ -54,8 +37,30 @@ class MainActivity : ComponentActivity() {
         // ForegroundServiceDidNotStartInTimeException (app "closes by itself").
         requestNotificationPermission()
         enableEdgeToEdge()
+        handleOAuthRedirect(intent)
         setContent {
             App()
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleOAuthRedirect(intent)
+    }
+
+    /** Appwrite Google-OAuth return: quranify://auth?userId=..&secret=.. */
+    private fun handleOAuthRedirect(intent: android.content.Intent?) {
+        val uri = intent?.data ?: return
+        if (uri.scheme != "quranify" || uri.host != "auth") return
+        val userId = uri.getQueryParameter("userId")
+        val secret = uri.getQueryParameter("secret")
+        if (userId.isNullOrBlank() || secret.isNullOrBlank()) return
+        kotlinx.coroutines.MainScope().launch {
+            val result = com.quranify.data.auth.AuthRepository.completeGoogleSignIn(userId, secret)
+            result.exceptionOrNull()?.let {
+                android.util.Log.e("QuranifyAuth", "Google sign-in completion failed", it)
+            }
         }
     }
 
