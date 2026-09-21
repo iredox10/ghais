@@ -1,0 +1,2342 @@
+[
+ {
+  "norm": "a",
+  "english": "A",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "abd al raheem alqawsh",
+  "english": "Abd-Al-Raheem Alqawsh",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B1%D8%AD%D9%8A%D9%85%20%D8%A7%D9%84%D9%82%D8%A7%D9%88%D8%B4.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdallah al ghamdi",
+  "english": "Abdallah Al-Ghamdi",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "abdelaziz alyahya",
+  "english": "Abdelaziz Alyahya",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "abdelfatah hartout",
+  "english": "Abdelfatah Hartout",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%81%D8%AA%D8%A7%D8%AD%20%D9%87%D8%B1%D8%B7%D9%88%D8%B7.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdelkarim edghouch",
+  "english": "Abdelkarim Edghouch",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%83%D8%B1%D9%8A%D9%85%20%D8%A7%D9%84%D8%AF%D8%BA%D9%88%D8%B4.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdelmoutalib ben achour",
+  "english": "Abdelmoutalib Ben-Achour",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%85%D8%B7%D9%84%D8%A8%20%D8%A8%D9%86%20%D8%B9%D8%A7%D8%B4%D9%88%D8%B1%D8%A9.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abderrahim naboulssi",
+  "english": "Abderrahim Naboulssi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B1%D8%AD%D9%8A%D9%85%20%D9%86%D8%A8%D9%88%D9%84%D8%B3%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdessamad hamdan",
+  "english": "Abdessamad Hamdan",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B5%D9%85%D8%AF%20%D8%AD%D9%85%D8%AF%D8%A7%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulaziz al ahmad",
+  "english": "Abdulaziz Al-Ahmad",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B9%D8%B2%D9%8A%D8%B2%20%D8%A7%D9%84%D8%A3%D8%AD%D9%85%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulaziz al karani",
+  "english": "Abdulaziz Al-Karani",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B9%D8%B2%D9%8A%D8%B2%20%D8%A7%D9%84%D9%83%D8%B1%D8%B9%D8%A7%D9%86%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulaziz azzahrani",
+  "english": "Abdulaziz Azzahrani",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B9%D8%B2%D9%8A%D8%B2%20%D8%A7%D9%84%D8%B2%D9%87%D8%B1%D8%A7%D9%86%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulbari athobaity",
+  "english": "Abdulbari Athobaity",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%A8%D8%A7%D8%B1%D8%A6%20%D8%A7%D9%84%D8%AB%D8%A8%D9%8A%D8%AA%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulbari muhammad",
+  "english": "Abdulbari Muhammad",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%A8%D8%A7%D8%B1%D8%A6%20%D9%85%D8%AD%D9%85%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulbasit abdussamad",
+  "english": "Abdulbasit Abdussamad",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%A8%D8%A7%D8%B3%D8%B7%20%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B5%D9%85%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulelah al qahtani",
+  "english": "Abdulelah Al Qahtani",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "abdulghani abdullah",
+  "english": "Abdulghani Abdullah",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "abdulhadi al kurdi",
+  "english": "Abdulhadi Al-Kurdi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%D8%A7%D9%84%D9%87%D8%A7%D8%AF%D9%8A%20%D8%A7%D9%84%D9%83%D8%B1%D8%AF%D9%8A.JPG",
+  "profile": ""
+ },
+ {
+  "norm": "abdulhadi kanakeri",
+  "english": "Abdulhadi Kanakeri",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%87%D8%A7%D8%AF%D9%8A%20%D9%83%D9%86%D8%A7%D9%83%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulkaber al hadidi",
+  "english": "Abdulkaber Al-Hadidi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%83%D8%A8%D9%8A%D8%B1%20%D8%A7%D9%84%D8%AD%D8%AF%D9%8A%D8%AF%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdullah abdullatef",
+  "english": "Abdullah Abdullatef",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "abdullah al buaijan",
+  "english": "Abdullah Al-Buaijan",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "abdullah al buraimi",
+  "english": "Abdullah Al-Buraimi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%84%D9%87%20%D8%A7%D9%84%D8%A8%D8%B1%D9%8A%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdullah al johany",
+  "english": "Abdullah Al-Johany",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%84%D9%87%20%D8%A7%D9%84%D8%AC%D9%87%D9%86%D9%8A(1).jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdullah al kandari",
+  "english": "Abdullah Al-Kandari",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%D8%A7%D9%84%D9%84%D9%87%20%D8%A7%D9%84%D9%83%D9%86%D8%AF%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdullah al khalaf",
+  "english": "Abdullah Al-Khalaf",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%84%D9%87%20%D8%AE%D9%84%D9%81.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdullah al mattrod",
+  "english": "Abdullah Al-Mattrod",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%84%D9%87%20%D8%A7%D9%84%D9%85%D8%B7%D8%B1%D9%88%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdullah al qahtani",
+  "english": "Abdullah Al-Qahtani",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "abdullah almunsalih",
+  "english": "Abdullah Almunsalih",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "abdullah basfar",
+  "english": "Abdullah Basfar",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%84%D9%87%20%D8%A8%D8%B5%D9%81%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdullah fahmi",
+  "english": "Abdullah Fahmi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%D8%A7%D9%84%D9%84%D9%87%20%D9%81%D9%87%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdullah ghailan",
+  "english": "Abdullah Ghailan",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%D8%A7%D9%84%D9%84%D9%87%20%D8%BA%D9%8A%D9%84%D8%A7%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdullah kamel",
+  "english": "Abdullah Kamel",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%84%D9%87%20%D9%83%D8%A7%D9%85%D9%84.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdullah khayat",
+  "english": "Abdullah Khayat",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%84%D9%87%20%D8%AE%D9%8A%D8%A7%D8%B7.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdullahi abba zaria",
+  "english": "Abdullahi Abba Zaria",
+  "img": "https://tvquran.com/uploads/authors/images/Abdullahi%20Abba%20Zaria.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdullaziz al hakami",
+  "english": "Abdullaziz Al-hakami",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B9%D8%B2%D9%8A%D8%B2%20%D8%A7%D9%84%D8%AD%D9%83%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulmajeed al arkani",
+  "english": "Abdulmajeed Al-Arkani",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%D8%A7%D9%84%D9%85%D8%AC%D9%8A%D8%AF%20%D8%A7%D9%84%D8%A3%D8%B1%D9%83%D8%A7%D9%86%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulmajeed alserehy",
+  "english": "Abdulmajeed Alserehy",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%85%D8%AC%D9%8A%D8%AF%20%D8%A7%D9%84%D8%B3%D8%B1%D9%8A%D8%AD%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulmohsen al askar",
+  "english": "Abdulmohsen Al-Askar",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%D8%A7%D9%84%D9%85%D8%AD%D8%B3%D9%86%20%D8%A7%D9%84%D8%B9%D8%B3%D9%83%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulmohsen al harthy",
+  "english": "Abdulmohsen Al-Harthy",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%85%D8%AD%D8%B3%D9%86%20%D8%A7%D9%84%D8%AD%D8%A7%D8%B1%D8%AB%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulmohsen al qasim",
+  "english": "Abdulmohsen Al-Qasim",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%85%D8%AD%D8%B3%D9%86%20%D8%A7%D9%84%D9%82%D8%A7%D8%B3%D9%85.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulmohsin al obaikan",
+  "english": "Abdulmohsin Al-Obaikan",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulmojib benkiran",
+  "english": "Abdulmojib Benkiran",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%85%D8%AC%D9%8A%D8%A8%20%D8%A8%D9%86%D9%83%D9%8A%D8%B1%D8%A7%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulqawi abdulmajid",
+  "english": "Abdulqawi Abdulmajid",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%82%D9%88%D9%8A%20%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%85%D8%AC%D9%8A%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulrahman abalkheyl",
+  "english": "Abdulrahman Abalkheyl",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "abdulrahman al husayan",
+  "english": "Abdulrahman al Husayan",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "abdulrahman al juraidy",
+  "english": "Abdulrahman Al-Juraidy",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B1%D8%AD%D9%85%D9%86%20%D8%A7%D9%84%D8%AC%D8%B1%D9%8A%D8%B0%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulrahman al majed",
+  "english": "Abdulrahman Al-Majed",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B1%D8%AD%D9%85%D9%86%20%D8%A7%D9%84%D9%85%D8%A7%D8%AC%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulrahman al shihri",
+  "english": "Abdulrahman Al-Shihri",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B1%D8%AD%D9%85%D9%86%20%D8%A7%D9%84%D8%B4%D9%87%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulrahman aloosi",
+  "english": "Abdulrahman Aloosi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%D8%A7%D9%84%D8%B1%D8%AD%D9%85%D9%86%20%D8%A7%D9%84%D8%B9%D9%88%D8%B3%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulrahman as salama",
+  "english": "Abdulrahman As-Salama",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "abdulrahman assudais",
+  "english": "Abdulrahman Assudais",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B1%D8%AD%D9%85%D9%86%20%D8%A7%D9%84%D8%B3%D8%AF%D9%8A%D8%B3.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulrahman assulami",
+  "english": "Abdulrahman Assulami",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "abdulrahman barziq",
+  "english": "Abdulrahman Barziq",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "abdulrahman benmoussa",
+  "english": "Abdulrahman Benmoussa",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B1%D8%AD%D9%85%D9%86%20%D8%A8%D9%86%D9%85%D9%88%D8%B3%D9%89.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulrahman mosad",
+  "english": "Abdulrahman Mosad",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%D8%A7%D9%84%D8%B1%D8%AD%D9%85%D9%86%20%D9%85%D8%B3%D8%B9%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulrahman saidin",
+  "english": "Abdulrahman Saidin",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "abdulrasheed soufi",
+  "english": "Abdulrasheed Soufi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B1%D8%B4%D9%8A%D8%AF%20%D8%A8%D9%86%20%D8%B9%D9%84%D9%8A%20%D8%B5%D9%88%D9%81%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulwadod haneef",
+  "english": "Abdulwadod Haneef",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%88%D8%AF%D9%88%D8%AF%20%D9%85%D9%82%D8%A8%D9%88%D9%84%20%D8%AD%D9%86%D9%8A%D9%81.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abdulwali al arkani",
+  "english": "Abdulwali Al-Arkani",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%88%D9%84%D9%8A%20%D8%A7%D9%84%D8%A3%D8%B1%D9%83%D8%A7%D9%86%D9%8A.jpeg",
+  "profile": ""
+ },
+ {
+  "norm": "abo alyah aljawarani",
+  "english": "Abo-Alyah Aljawarani",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D9%84%D8%AC%D9%88%D8%B1%D8%A7%D9%86%D9%8A%20%D8%A3%D8%A8%D9%88%D8%A7%D9%84%D8%B9%D8%A7%D9%84%D9%8A%D8%A9.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "abu bakr ashatri",
+  "english": "Abu Bakr Ashatri",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "adel al kalbany",
+  "english": "Adel Al-Kalbany",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A7%D8%AF%D9%84%20%D8%A7%D9%84%D9%83%D9%84%D8%A8%D8%A7%D9%86%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "adel rayan",
+  "english": "Adel Rayan",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A7%D8%AF%D9%84%20%D8%B1%D9%8A%D8%A7%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "adil muslim",
+  "english": "Adil Muslim",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%A7%D8%AF%D9%84%20%D9%85%D8%B3%D9%84%D9%85.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmad al ajmi",
+  "english": "Ahmad Al-Ajmi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D8%A8%D9%86%20%D8%B9%D9%84%D9%8A%20%D8%A7%D9%84%D8%B9%D8%AC%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmad al hawashy",
+  "english": "Ahmad Al-Hawashy",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%AD%D9%88%D8%A7%D8%B4%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmad alnufais",
+  "english": "Ahmad Alnufais",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D9%86%D9%81%D9%8A%D8%B3.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmad alobied",
+  "english": "Ahmad Alobied",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%B9%D8%A8%D9%8A%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed abdurahman darar",
+  "english": "Ahmed abduRahman Darar",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D8%B6%D8%B1%D8%A7%D8%B1.jpeg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed abu aicha",
+  "english": "Ahmed Abu Aicha",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed al tohamy",
+  "english": "Ahmed Al Tohamy",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%AA%D9%87%D8%A7%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed al almaei",
+  "english": "Ahmed Al-Almaei",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed al blyhed",
+  "english": "Ahmed Al-Blyhed",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%A8%D9%84%D9%87%D9%8A%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed al hadad",
+  "english": "Ahmed Al-Hadad",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D9%84%D9%82%D8%A7%D8%B1%D8%A6%20%D8%A3%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%AD%D8%AF%D8%A7%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed al hammadi",
+  "english": "Ahmed Al-Hammadi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%AD%D9%85%D8%A7%D8%AF%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed al omrani",
+  "english": "Ahmed Al-Omrani",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed al swailem",
+  "english": "Ahmed Al-Swailem",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed al tarabolsi",
+  "english": "Ahmed Al-Tarabolsi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D8%AE%D8%B6%D8%B1%20%D8%A7%D9%84%D8%B7%D8%B1%D8%A7%D8%A8%D9%84%D8%B3%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed al turki",
+  "english": "Ahmed Al-Turki",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed ali alhuthaifi",
+  "english": "Ahmed Ali Alhuthaifi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%AD%D8%B0%D9%8A%D9%81%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed amer",
+  "english": "Ahmed Amer",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed areyaei",
+  "english": "Ahmed Areyaei",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed el shafei",
+  "english": "Ahmed El Shafei",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF_%D8%A7%D9%84%D8%B4%D8%A7%D9%81%D8%B9%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed elkhaldi",
+  "english": "Ahmed Elkhaldi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%AE%D8%A7%D9%84%D8%AF%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed jahaf",
+  "english": "Ahmed Jahaf",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed khalil shahin",
+  "english": "Ahmed Khalil Shahin",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D8%AE%D9%84%D9%8A%D9%84%20%D8%B4%D8%A7%D9%87%D9%8A%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed neana",
+  "english": "Ahmed Neana",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D9%86%D8%B9%D9%8A%D9%86%D8%B9.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed saber",
+  "english": "Ahmed Saber",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D8%B5%D8%A7%D8%A8%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed saud",
+  "english": "Ahmed Saud",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "ahmed taher",
+  "english": "Ahmed Taher",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AD%D9%85%D8%AF%20%D8%B7%D8%A7%D9%87%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "akhil hayy",
+  "english": "Akhil Hayy",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%AE%D9%8A%D9%84%20%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%AD%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "akram alalaqmi",
+  "english": "Akram Alalaqmi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D9%83%D8%B1%D9%85%20%D8%A7%D9%84%D8%B9%D9%84%D8%A7%D9%82%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "al amin qunaiwa",
+  "english": "Al-Amin Qunaiwa",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D9%84%D8%A3%D9%85%D9%8A%D9%86%20%D9%85%D8%AD%D9%85%D8%AF%20%D9%82%D9%86%D9%8A%D9%88%D9%87.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "al dokali muhammad",
+  "english": "Al-Dokali Muhammad",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D9%84%D8%AF%D9%88%D9%83%D8%A7%D9%84%D9%8A%20%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%B9%D8%A7%D9%84%D9%85.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "al husseini al azzazy",
+  "english": "Al-Husseini Al-Azzazy",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D9%84%D8%AD%D8%B3%D9%8A%D9%86%D9%8A%20%D8%A7%D9%84%D8%B9%D8%B2%D8%A7%D8%B2%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "al zain mohammad",
+  "english": "Al-Zain Mohammad",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D9%84%D8%B2%D9%8A%D9%86%20%D9%85%D8%AD%D9%85%D8%AF%20%D8%A3%D8%AD%D9%85%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "alaa almzjaja",
+  "english": "Alaa Almzjaja",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "alashri omran",
+  "english": "Alashri Omran",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D9%84%D8%B9%D8%B4%D8%B1%D9%8A%20%D8%B9%D9%85%D8%B1%D8%A7%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "alfateh alzubair",
+  "english": "Alfateh Alzubair",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D9%84%D9%81%D8%A7%D8%AA%D8%AD%20%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%B2%D8%A8%D9%8A%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "alhasan baraeia",
+  "english": "Alhasan Baraeia",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D9%84%D8%AD%D8%B3%D9%86%20%D8%A8%D8%B1%D8%B9%D9%8A%D8%A9.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ali abu hashim",
+  "english": "Ali Abu Hashim",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "ali ahmed mulla",
+  "english": "Ali Ahmed Mulla",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "ali al huthaifi",
+  "english": "Ali Al-Huthaifi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D9%84%D9%8A%20%D8%A7%D9%84%D8%AD%D8%B0%D9%8A%D9%81%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ali hajjaj alsouasi",
+  "english": "Ali Hajjaj Alsouasi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D9%84%D9%8A%20%D8%AD%D8%AC%D8%A7%D8%AC%20%D8%A7%D9%84%D8%B3%D9%88%D9%8A%D8%B3%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ali jaber",
+  "english": "Ali Jaber",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D9%84%D9%8A%20%D8%AC%D8%A7%D8%A8%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "amine addali",
+  "english": "Amine Addali",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A2%D9%85%D9%86%20%D8%A7%D9%84%D8%AF%D8%A7%D9%84%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "anas al ghamdi",
+  "english": "Anas Al-Ghamdi",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "anas al juhani",
+  "english": "Anas Al-Juhani",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "anas jellhoum",
+  "english": "Anas Jellhoum",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D9%86%D8%B3%20%D8%AC%D9%84%D9%87%D9%88%D9%85.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ayman al deeb",
+  "english": "Ayman Al-Deeb",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D9%8A%D9%85%D9%86%20%D8%A3%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%AF%D9%8A%D8%A8.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ayman swed",
+  "english": "Ayman Swed",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D9%8A%D9%85%D9%86%20%D8%B1%D8%B4%D8%AF%D9%8A%20%D8%B3%D9%88%D9%8A%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "azubair al arkani",
+  "english": "Azubair Al-Arkani",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D9%84%D8%B2%D8%A8%D9%8A%D8%B1%20%D8%A7%D9%84%D8%A3%D8%B1%D9%83%D8%A7%D9%86%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "b",
+  "english": "B",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "badr al mishary",
+  "english": "Badr Al Mishary",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "badr al hanoo",
+  "english": "Badr Al-Hanoo",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "badr al turki",
+  "english": "Badr Al-Turki",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A8%D8%AF%D8%B1%20%D8%A7%D9%84%D8%AA%D8%B1%D9%83%D9%8A.jpeg",
+  "profile": ""
+ },
+ {
+  "norm": "bandar baleela",
+  "english": "Bandar Baleela",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A8%D9%86%D8%AF%D8%B1%20%D8%A8%D9%84%D9%8A%D9%84%D9%87.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "bandar noman",
+  "english": "Bandar Noman",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A8%D9%86%D8%AF%D8%B1%20%D9%86%D8%B9%D9%85%D8%A7%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "d",
+  "english": "D",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "daoud hamza",
+  "english": "Daoud Hamza",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AF%D8%A7%D9%88%D8%AF%20%D8%AD%D9%85%D8%B2%D8%A9.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "driss al hashimi",
+  "english": "Driss Al-Hashimi",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "f",
+  "english": "F",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "fahad al bwardi",
+  "english": "Fahad Al-Bwardi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%81%D9%87%D8%AF%20%D8%A7%D9%84%D8%A8%D9%88%D8%A7%D8%B1%D8%AF%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "fahad al kandari",
+  "english": "Fahad Al-Kandari",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%81%D9%87%D8%AF%20%D8%A7%D9%84%D9%83%D9%86%D8%AF%D8%B1%D9%8A.jpeg",
+  "profile": ""
+ },
+ {
+  "norm": "fahd al otaibi",
+  "english": "Fahd Al-Otaibi",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "fahd matar",
+  "english": "Fahd Matar",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "fahd qahl",
+  "english": "Fahd Qahl",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%81%D9%87%D8%AF%20%D9%82%D8%AD%D9%84.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "fares abbad",
+  "english": "Fares Abbad",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%81%D8%A7%D8%B1%D8%B3%20%D8%B9%D8%A8%D8%A7%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "fawaz al kaabi",
+  "english": "Fawaz Al-kaabi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%81%D9%88%D8%A7%D8%B2%20%D8%A7%D9%84%D9%83%D8%B9%D8%A8%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "fayeh al harthy",
+  "english": "Fayeh Al-Harthy",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "fouad al khamri",
+  "english": "Fouad Al-khamri",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%81%D8%A4%D8%A7%D8%AF%20%D8%A7%D9%84%D8%AE%D8%A7%D9%85%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "g",
+  "english": "G",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "ghassan al shorbagi",
+  "english": "Ghassan Al-Shorbagi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%BA%D8%B3%D8%A7%D9%86%20%D8%A7%D9%84%D8%B4%D9%88%D8%B1%D8%A8%D8%AC%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ghazi asaadoun",
+  "english": "Ghazi Asaadoun",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "h",
+  "english": "H",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "hadi al askar",
+  "english": "Hadi Al Askar",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "hafez ishak danish",
+  "english": "Hafez Ishak Danish",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AD%D8%A7%D9%81%D8%B8%20%D8%A5%D8%B3%D8%AD%D8%A7%D9%82%20%D8%AF%D8%A7%D9%86%D9%8A%D8%B4.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "haitham al jadaani",
+  "english": "Haitham Al Jadaani",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%87%D9%8A%D8%AB%D9%85%20%D8%A7%D9%84%D8%AC%D8%B0%D8%B9%D8%A7%D9%86%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "hamad daghriry",
+  "english": "Hamad Daghriry",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AD%D9%85%D8%AF%20%D8%AF%D8%BA%D8%B1%D9%8A%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "hamdi attaher",
+  "english": "Hamdi Attaher",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AD%D9%85%D8%AF%D9%8A%20%D8%A7%D9%84%D8%B7%D8%A7%D9%87%D8%B1.jpeg",
+  "profile": ""
+ },
+ {
+  "norm": "hamid al houti",
+  "english": "Hamid Al-Houti",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AD%D9%85%D9%8A%D8%AF%20%D8%A7%D9%84%D9%87%D9%88%D8%AA%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "hammad uzaei",
+  "english": "Hammad Uzaei",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "hamza al majali",
+  "english": "Hamza Al Majali",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "hani arrifai",
+  "english": "Hani Arrifai",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%87%D8%A7%D9%86%D9%8A%20%D8%A7%D9%84%D8%B1%D9%81%D8%A7%D8%B9%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "hasan saleh",
+  "english": "Hasan Saleh",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AD%D8%B3%D9%86%20%D9%85%D8%AD%D9%85%D8%AF%20%D8%B5%D8%A7%D9%84%D8%AD.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "hassan elfadili",
+  "english": "Hassan Elfadili",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AD%D8%B3%D9%86%20%D8%A7%D9%84%D9%81%D8%A7%D8%B6%D9%84%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "hatem al malky",
+  "english": "Hatem Al-Malky",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AD%D8%A7%D8%AA%D9%85%20%D8%A7%D9%84%D9%85%D8%A7%D9%84%D9%83%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "hatem farid",
+  "english": "Hatem Farid",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AD%D8%A7%D8%AA%D9%85%20%D9%81%D8%B1%D9%8A%D8%AF%20%D8%A7%D9%84%D9%88%D8%A7%D8%B9%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "hazza albalushi",
+  "english": "Hazza Albalushi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%87%D8%B2%D8%A7%D8%B9%20%D8%A7%D9%84%D8%A8%D9%84%D9%88%D8%B4%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "hicham elharraz",
+  "english": "Hicham Elharraz",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%87%D8%B4%D8%A7%D9%85%20%D8%A7%D9%84%D9%87%D8%B1%D8%A7%D8%B2.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "hijazi muhammad youssef",
+  "english": "Hijazi Muhammad Youssef",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "hossein najm din",
+  "english": "Hossein Najm Din",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AD%D8%B3%D9%8A%D9%86%20%D9%86%D8%AC%D9%85%20%D8%A7%D9%84%D8%AF%D9%8A%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "hussein al sheikh",
+  "english": "Hussein Al-Sheikh",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AD%D8%B3%D9%8A%D9%86%20%D8%A2%D9%84%20%D8%A7%D9%84%D8%B4%D9%8A%D8%AE.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "i",
+  "english": "I",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "ibrahim al akhdar",
+  "english": "Ibrahim Al-Akhdar",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A5%D8%A8%D8%B1%D8%A7%D9%87%D9%8A%D9%85%20%D8%A7%D9%84%D8%A3%D8%AE%D8%B6%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ibrahim al arkani",
+  "english": "Ibrahim Al-Arkani",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "ibrahim al asiri",
+  "english": "Ibrahim Al-Asiri",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A5%D8%A8%D8%B1%D8%A7%D9%87%D9%8A%D9%85%20%D8%A7%D9%84%D8%B9%D8%B3%D9%8A%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ibrahim al jarmy",
+  "english": "Ibrahim Al-Jarmy",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A5%D8%A8%D8%B1%D8%A7%D9%87%D9%8A%D9%85%20%D8%A7%D9%84%D8%AC%D8%B1%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ibrahim al jebreen",
+  "english": "Ibrahim Al-Jebreen",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D8%A8%D8%B1%D8%A7%D9%87%D9%8A%D9%85%20%D8%A7%D9%84%D8%AC%D8%A8%D8%B1%D9%8A%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ibrahim al qarjawi",
+  "english": "Ibrahim Al-Qarjawi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A5%D8%A8%D8%B1%D8%A7%D9%87%D9%8A%D9%85%20%D8%AC%D9%85%D8%A7%D9%84%20%D8%A7%D9%84%D9%82%D8%B1%D8%AC%D8%A7%D9%88%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ibrahim al saadan",
+  "english": "Ibrahim Al-Saadan",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "ibrahim alwassel",
+  "english": "Ibrahim Alwassel",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "ibrahim dousari",
+  "english": "Ibrahim Dousari",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A5%D8%A8%D8%B1%D8%A7%D9%87%D9%8A%D9%85%20%D8%A7%D9%84%D8%AF%D9%88%D8%B3%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ibrahim jabrati",
+  "english": "Ibrahim Jabrati",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A5%D8%A8%D8%B1%D8%A7%D9%87%D9%8A%D9%85%20%D8%AC%D8%A8%D8%B1%D8%AA%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "idriss abkar",
+  "english": "Idriss Abkar",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A5%D8%AF%D8%B1%D9%8A%D8%B3%20%D8%A3%D8%A8%D9%83%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ilyas hajry",
+  "english": "Ilyas Hajry",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A5%D9%84%D9%8A%D8%A7%D8%B3%20%D8%AD%D8%AC%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "imad hafiz",
+  "english": "Imad Hafiz",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D9%85%D8%A7%D8%AF%20%D8%B2%D9%87%D9%8A%D8%B1%20%D8%AD%D8%A7%D9%81%D8%B8.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "islam sobhi",
+  "english": "Islam Sobhi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D8%B3%D9%84%D8%A7%D9%85%20%D8%B5%D8%A8%D8%AD%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ismail al izzi",
+  "english": "Ismail al-Izzi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D8%B3%D9%85%D8%A7%D8%B9%D9%8A%D9%84%20%D8%A7%D9%84%D8%B9%D8%B2%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ismail nouri",
+  "english": "Ismail Nouri",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "issam abdelaziz aowid",
+  "english": "Issam Abdelaziz Aowid",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%B5%D8%A7%D9%85%20%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B9%D8%B2%D9%8A%D8%B2%20%D8%A7%D9%84%D8%B9%D9%88%D9%8A%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "j",
+  "english": "J",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "jamaan alosaimi",
+  "english": "Jamaan Alosaimi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AC%D9%85%D8%B9%D8%A7%D9%86%20%D8%A7%D9%84%D8%B9%D8%B5%D9%8A%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "jamal al zaili",
+  "english": "Jamal Al-Zaili",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AC%D9%85%D8%A7%D9%84%20%D8%A7%D9%84%D8%AF%D9%8A%D9%86%20%D8%A7%D9%84%D8%B2%D9%8A%D9%84%D8%B9%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "jamal shaker",
+  "english": "Jamal Shaker",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AC%D9%85%D8%A7%D9%84%20%D8%B4%D8%A7%D9%83%D8%B1%20%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%84%D9%87.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "jazza al suwaileh",
+  "english": "Jazza Al-Suwaileh",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AC%D8%B2%D8%A7%D8%B9%20%D8%A8%D9%86%20%D9%81%D9%84%D9%8A%D8%AD%20%D8%A7%D9%84%D8%B5%D9%88%D9%8A%D9%84%D8%AD.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "k",
+  "english": "K",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "kamel yousef al bahtimi",
+  "english": "Kamel Yousef Al-Bahtimi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%83%D8%A7%D9%85%D9%84%20%D9%8A%D9%88%D8%B3%D9%81%20%D8%A7%D9%84%D8%A8%D9%87%D8%AA%D9%8A%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "khaled al hosani",
+  "english": "Khaled Al Hosani",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AE%D8%A7%D9%84%D8%AF%20%D8%A7%D9%84%D8%AD%D9%88%D8%B3%D9%86%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "khaled al ghamdi",
+  "english": "Khaled Al-Ghamdi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AE%D8%A7%D9%84%D8%AF%20%D8%A7%D9%84%D8%BA%D8%A7%D9%85%D8%AF%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "khaled al qahtani",
+  "english": "Khaled Al-Qahtani",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AE%D8%A7%D9%84%D8%AF%20%D8%A7%D9%84%D9%82%D8%AD%D8%B7%D8%A7%D9%86%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "khaled al shuraimi",
+  "english": "Khaled Al-Shuraimi",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "khaled al wahaibi",
+  "english": "Khaled Al-Wahaibi",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "khaled dhaoui",
+  "english": "Khaled Dhaoui",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "khalid abdulkafi",
+  "english": "khalid Abdulkafi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AE%D8%A7%D9%84%D8%AF%20%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%83%D8%A7%D9%81%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "khalid al jalil",
+  "english": "Khalid Al-Jalil",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AE%D8%A7%D9%84%D8%AF%20%D8%A7%D9%84%D8%AC%D9%84%D9%8A%D9%84.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "khalid almohana",
+  "english": "Khalid Almohana",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AE%D8%A7%D9%84%D8%AF%20%D8%A7%D9%84%D9%85%D9%87%D9%86%D8%A7.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "khalid areyaei",
+  "english": "Khalid Areyaei",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AE%D8%A7%D9%84%D8%AF%20%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B9%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "khalid riad",
+  "english": "Khalid Riad",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AE%D8%A7%D9%84%D8%AF%20%D8%B1%D9%8A%D8%A7%D8%B6.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "khalifa atnieji",
+  "english": "Khalifa Atnieji",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AE%D9%84%D9%8A%D9%81%D8%A9%20%D8%A7%D9%84%D8%B7%D9%86%D9%8A%D8%AC%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "khalil didi",
+  "english": "Khalil Didi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AE%D9%84%D9%8A%D9%84%20%D8%AF%D9%8A%D8%AF%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "l",
+  "english": "L",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "laayoun al kouchi",
+  "english": "Laayoun Al-Kouchi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D9%84%D8%B9%D9%8A%D9%88%D9%86%20%D8%A7%D9%84%D9%83%D9%88%D8%B4%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "lafi al oni",
+  "english": "Lafi Al-Oni",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%84%D8%A7%D9%81%D9%8A%20%D8%A7%D9%84%D8%B9%D9%88%D9%86%D9%8A.png",
+  "profile": ""
+ },
+ {
+  "norm": "m",
+  "english": "M",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "maher al mueaqly",
+  "english": "Maher Al-Mueaqly",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%A7%D9%87%D8%B1%20%D8%A7%D9%84%D9%85%D8%B9%D9%8A%D9%82%D9%84%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "maher shakhashero",
+  "english": "Maher Shakhashero",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%A7%D9%87%D8%B1%20%D8%B4%D8%AE%D8%A7%D8%B4%D9%8A%D8%B1%D9%88.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mahmoud abu al wafa al saeedi",
+  "english": "Mahmoud Abu Al-Wafa Al-Saeedi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D9%88%D8%AF%20%D8%A7%D9%84%D8%B5%D8%B9%D9%8A%D8%AF%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mahmoud ali albanna",
+  "english": "Mahmoud Ali Albanna",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D9%88%D8%AF%20%D8%B9%D9%84%D9%8A%20%D8%A7%D9%84%D8%A8%D9%86%D8%A7.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mahmoud ashitani",
+  "english": "Mahmoud Ashitani",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "mahmoud elshemy",
+  "english": "Mahmoud Elshemy",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D9%88%D8%AF%20%D8%A7%D9%84%D8%B4%D9%8A%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mahmoud hijazi",
+  "english": "Mahmoud Hijazi",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "mahmoud khalil al hussary",
+  "english": "Mahmoud Khalil Al-Hussary",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D9%88%D8%AF%20%D8%AE%D9%84%D9%8A%D9%84%20%D8%A7%D9%84%D8%AD%D8%B5%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mahmoud rifai",
+  "english": "Mahmoud Rifai",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D9%88%D8%AF%20%D8%A7%D9%84%D8%B1%D9%81%D8%A7%D8%B9%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "majed al zamil",
+  "english": "Majed Al-Zamil",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%A7%D8%AC%D8%AF%20%D8%A7%D9%84%D8%B2%D8%A7%D9%85%D9%84.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "majeed al anzi",
+  "english": "Majeed  Al Anzi",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "majeed al firyaan",
+  "english": "Majeed Al-Firyaan",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "majid al hamthany",
+  "english": "Majid Al-Hamthany",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "majid aleaql",
+  "english": "Majid Aleaql",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%A7%D8%AC%D8%AF%20%D8%A7%D9%84%D8%B9%D9%82%D9%84.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "malek chibat al hamd",
+  "english": "Malek Chibat Al-Hamd",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "mansoor az zahrani",
+  "english": "Mansoor Az-Zahrani",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D9%86%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D8%B2%D9%87%D8%B1%D8%A7%D9%86%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mansour al salmi",
+  "english": "Mansour Al-Salmi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D9%86%D8%B5%D9%88%D8%B1%20%D8%A7%D9%84%D8%B3%D8%A7%D9%84%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mevlan kurtishi",
+  "english": "Mevlan Kurtishi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D9%88%D9%84%D8%A7%D9%86%D8%A7%20%D9%83%D8%B1%D8%AA%D8%B4%20%D8%A7%D9%84%D9%85%D9%82%D8%AF%D9%88%D9%86%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mishary alafasi",
+  "english": "Mishary Alafasi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%B4%D8%A7%D8%B1%D9%8A%20%D8%A7%D9%84%D8%B9%D9%81%D8%A7%D8%B3%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "moeedh al harthi",
+  "english": "Moeedh Al-harthi",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "moftah assultany",
+  "english": "Moftah Assultany",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "mohamed obada",
+  "english": "Mohamed Obada",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%B9%D8%A8%D8%A7%D8%AF%D8%A9.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mohamed shahboun",
+  "english": "Mohamed Shahboun",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "mohammed abdel wahhab al tantawi",
+  "english": "Mohammed Abdel-Wahhab Al-Tantawi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%B7%D9%86%D8%B7%D8%A7%D9%88%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mohammed abdulhakim",
+  "english": "Mohammed Abdulhakim",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%AD%D9%83%D9%8A%D9%85.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mohammed hady toure",
+  "english": "Mohammed Hady Toure",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D9%87%D8%A7%D8%AF%D9%8A%20%D8%AA%D9%88%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mohsen al yami",
+  "english": "Mohsen Al-Yami",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D8%B3%D9%86%20%D8%A7%D9%84%D9%8A%D8%A7%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mouad ait elaine",
+  "english": "Mouad Ait-Elaine",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%B9%D8%A7%D8%B0%20%D8%A3%D9%8A%D8%AA%20%D8%A7%D9%84%D8%B9%D9%8A%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mouad assal",
+  "english": "Mouad Assal",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%B9%D8%A7%D8%B0%20%D8%B9%D8%B3%D8%A7%D9%84.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mousa bilal",
+  "english": "Mousa Bilal",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D9%88%D8%B3%D9%89%20%D8%A8%D9%84%D8%A7%D9%84.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muammar al indonesi",
+  "english": "Muammar Al-indonesi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%B9%D9%85%D8%B1%20%D8%A7%D9%84%D8%A3%D9%86%D8%AF%D9%88%D9%86%D9%8A%D8%B3%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muayyid al mazen",
+  "english": "Muayyid Al Mazen",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad abdul salam abu sneina",
+  "english": "Muhammad Abdul Salam Abu Sneina",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A3%D8%A8%D9%88%20%D8%B3%D9%86%D9%8A%D9%86%D8%A9.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad abdullkarem",
+  "english": "Muhammad Abdullkarem",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D9%83%D8%B1%D9%8A%D9%85.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad al barrak",
+  "english": "Muhammad Al-Barrak",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%A8%D8%B1%D8%A7%D9%83.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad al hafez",
+  "english": "Muhammad Al-Hafez",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad al iraoui",
+  "english": "Muhammad Al-Iraoui",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%A7%D9%8A%D8%B1%D8%A7%D9%88%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad al khareef",
+  "english": "Muhammad Al-Khareef",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad al lohaidan",
+  "english": "Muhammad Al-Lohaidan",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D9%84%D8%AD%D9%8A%D8%AF%D8%A7%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad al manshid",
+  "english": "Muhammad Al-Manshid",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D9%85%D9%86%D8%B4%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad al marouti",
+  "english": "Muhammad Al-Marouti",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad al muhasny",
+  "english": "Muhammad Al-Muhasny",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D9%85%D8%AD%D9%8A%D8%B3%D9%86%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad al naqidan",
+  "english": "Muhammad Al-Naqidan",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D9%86%D9%82%D9%8A%D8%AF%D8%A7%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad al subail",
+  "english": "Muhammad Al-Subail",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%B3%D8%A8%D9%8A%D9%84.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad alarfaj",
+  "english": "Muhammad Alarfaj",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%B9%D8%B1%D9%81%D8%AC.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad aldhas",
+  "english": "Muhammad Aldhas",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%AF%D9%87%D8%A7%D8%B3.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad alkrini",
+  "english": "Muhammad Alkrini",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D9%83%D8%B1%D9%8A%D9%86%D9%8A%20%D8%A7%D9%84%D9%85%D9%84%D9%88%D9%83%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad alosaimi",
+  "english": "Muhammad Alosaimi",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad attia hasab",
+  "english": "Muhammad Attia Hasab",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%B9%D8%B7%D9%8A%D8%A9%20%D8%AD%D8%B3%D8%A8.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad ayyub",
+  "english": "Muhammad Ayyub",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A3%D9%8A%D9%88%D8%A8.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad elhodairi",
+  "english": "Muhammad Elhodairi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%AD%D8%B6%D9%8A%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad elkantaoui",
+  "english": "Muhammad Elkantaoui",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D9%83%D9%86%D8%AA%D8%A7%D9%88%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad hafs ali",
+  "english": "Muhammad Hafs Ali",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad hassan",
+  "english": "Muhammad Hassan",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%AD%D8%B3%D8%A7%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad jebril",
+  "english": "Muhammad Jebril",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%AC%D8%A8%D8%B1%D9%8A%D9%84.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad khairul anuar",
+  "english": "Muhammad Khairul Anuar",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%AE%D9%8A%D8%B1%20%D8%A7%D9%84%D9%86%D9%88%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad khalil al qari",
+  "english": "Muhammad Khalil Al-Qari",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%AE%D9%84%D9%8A%D9%84%20%D8%A7%D9%84%D9%82%D8%A7%D8%B1%D8%A6.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad mahmoud tablawi",
+  "english": "Muhammad Mahmoud Tablawi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D9%85%D8%AD%D9%85%D9%88%D8%AF%20%D8%A7%D9%84%D8%B7%D8%A8%D9%84%D8%A7%D9%88%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad othman khan",
+  "english": "Muhammad Othman Khan",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%B9%D8%AB%D9%85%D8%A7%D9%86%20%D8%AE%D8%A7%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad qstali",
+  "english": "Muhammad Qstali",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D9%82%D8%B5%D8%B7%D8%A7%D9%84%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad rashad al shareef",
+  "english": "Muhammad Rashad Al Shareef",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad refaat",
+  "english": "Muhammad Refaat",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%B1%D9%81%D8%B9%D8%AA.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad saleh shah",
+  "english": "Muhammad Saleh Shah",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%B5%D8%A7%D9%84%D8%AD%20%D8%B4%D8%A7%D9%87.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad siddiq al minshawi",
+  "english": "Muhammad Siddiq Al-Minshawi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%B5%D8%AF%D9%8A%D9%82%20%D8%A7%D9%84%D9%85%D9%86%D8%B4%D8%A7%D9%88%D9%8A%202.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad taha",
+  "english": "Muhammad Taha",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "muhammad taha hindawi",
+  "english": "Muhammad Taha Hindawi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%AD%D9%85%D8%AF%20%D8%B7%D9%87%20%D9%87%D9%86%D8%AF%D8%A7%D9%88%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "muhammed as saudi",
+  "english": "Muhammed As Saudi",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "muhammed ayman",
+  "english": "Muhammed Ayman",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "mustafa al lahoni",
+  "english": "Mustafa Al-Lahoni",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%B5%D8%B7%D9%81%D9%89%20%D8%A7%D9%84%D9%84%D8%A7%D9%87%D9%88%D9%86%D9%8A.png",
+  "profile": ""
+ },
+ {
+  "norm": "mustafa bin raad al azzawi",
+  "english": "Mustafa bin Raad Al Azzawi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%B5%D8%B7%D9%81%D9%89%20%D8%A8%D9%86%20%D8%B1%D8%B9%D8%AF%20%D8%A7%D9%84%D8%B9%D8%B2%D8%A7%D9%88%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "mustafa ismail",
+  "english": "Mustafa Ismail",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%85%D8%B5%D8%B7%D9%81%D9%89%20%D8%A5%D8%B3%D9%85%D8%A7%D8%B9%D9%8A%D9%84.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "n",
+  "english": "N",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "nabil al awadi",
+  "english": "Nabil al Awadi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%86%D8%A8%D9%8A%D9%84%20%D8%A7%D9%84%D8%B9%D9%88%D8%B6%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "nabil arrifai",
+  "english": "Nabil Arrifai",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%86%D8%A8%D9%8A%D9%84%20%D8%A7%D9%84%D8%B1%D9%81%D8%A7%D8%B9%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "naif al faisal",
+  "english": "Naif Al Faisal",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%86%D8%A7%D9%8A%D9%81%20%D8%A7%D9%84%D9%81%D9%8A%D8%B5%D9%84.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "nasser al hamd",
+  "english": "Nasser Al Hamd",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "nasser al obaid",
+  "english": "Nasser Al-obaid",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%86%D8%A7%D8%B5%D8%B1%20%D8%A7%D9%84%D8%B9%D8%A8%D9%8A%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "nasser al saeed",
+  "english": "Nasser Al-Saeed",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "nasser alqatami",
+  "english": "Nasser Alqatami",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%86%D8%A7%D8%B5%D8%B1%20%D8%A7%D9%84%D9%82%D8%B7%D8%A7%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "nayef al salem",
+  "english": "Nayef Al Salem",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%86%D8%A7%D9%8A%D9%81%20%D8%A7%D9%84%D8%B3%D8%A7%D9%84%D9%85.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "nayef al owaid",
+  "english": "Nayef Al-Owaid",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "neamah al hassan",
+  "english": "Neamah Al Hassan",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "o",
+  "english": "O",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "okasha kamina",
+  "english": "Okasha Kamina",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D9%83%D8%A7%D8%B4%D8%A9%20%D9%83%D9%85%D9%8A%D9%86%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "omar al anzi",
+  "english": "Omar Al-Anzi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D9%85%D8%B1%20%D8%A3%D8%AD%D9%85%D8%AF%20%D8%A7%D9%84%D8%B9%D9%86%D8%B2%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "omar al nabrawy",
+  "english": "Omar Al-Nabrawy",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "omar al qazabri",
+  "english": "Omar Al-Qazabri",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D9%85%D8%B1%20%D8%A7%D9%84%D9%82%D8%B2%D8%A7%D8%A8%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "osman bostanci",
+  "english": "Osman Bostanci",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D8%AB%D9%85%D8%A7%D9%86%20%D8%A8%D9%88%D8%B3%D8%B7%D8%A7%D9%86%D8%AC%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "othman al ansari",
+  "english": "Othman Al-Ansari",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "p",
+  "english": "P",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "peshawa qadr al kurdi",
+  "english": "Peshawa Qadr Al-Kurdi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A8%D9%8A%D8%B4%D9%87%20%D9%88%D8%A7%20%D9%82%D8%A7%D8%AF%D8%B1%20%D8%A7%D9%84%D9%83%D8%B1%D8%AF%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "q",
+  "english": "Q",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "qasim fadael",
+  "english": "Qasim Fadael",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%82%D8%A7%D8%B3%D9%85%20%D9%81%D8%B6%D8%A7%D8%A6%D9%84.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "quran with translation bosnian",
+  "english": "Quran with translation - Bosnian",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "quran with translation chinese",
+  "english": "Quran with translation - Chinese",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "quran with translation english",
+  "english": "Quran with translation - English",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "quran with translation french",
+  "english": "Quran with translation - French",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "quran with translation german",
+  "english": "Quran with translation - German",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "quran with translation indian telugu",
+  "english": "Quran with translation - Indian Telugu",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "quran with translation indonesian",
+  "english": "Quran with translation - Indonesian",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "quran with translation kurdish",
+  "english": "Quran with translation - Kurdish",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "quran with translation portuguese",
+  "english": "Quran with translation - Portuguese",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "quran with translation spanish",
+  "english": "Quran with translation - Spanish",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "quran with translation tagalog filipino",
+  "english": "Quran with translation - Tagalog Filipino",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "quran with translation turkish",
+  "english": "Quran with translation - Turkish",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "quran with translation urdu",
+  "english": "Quran with translation - Urdu",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "quran with translation uyghur",
+  "english": "Quran with translation - Uyghur",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "r",
+  "english": "R",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "raad al kurdi",
+  "english": "Raad Al-Kurdi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B1%D8%B9%D8%AF%20%D8%A7%D9%84%D9%83%D8%B1%D8%AF%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "rachid belaalia",
+  "english": "Rachid Belaalia",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B1%D8%B4%D9%8A%D8%AF%20%D8%A8%D9%84%D8%B9%D8%A7%D9%84%D9%8A%D8%A9.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "rachid ifrad",
+  "english": "Rachid Ifrad",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B1%D8%B4%D9%8A%D8%AF%20%D8%A5%D9%81%D8%B1%D8%A7%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "ramadan shakour",
+  "english": "Ramadan Shakour",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B1%D9%85%D8%B6%D8%A7%D9%86%20%D8%B4%D9%83%D9%88%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "rami aldeais",
+  "english": "Rami Aldeais",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "rashid al qulaib",
+  "english": "Rashid Al Qulaib",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B1%D8%B4%D9%8A%D8%AF%20%D8%A7%D9%84%D9%82%D9%84%D9%8A%D8%A8.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "rodziah abdulrahman",
+  "english": "Rodziah Abdulrahman",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "rogayah sulong",
+  "english": "Rogayah Sulong",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "s",
+  "english": "S",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "saad al ghamdi",
+  "english": "Saad Al-Ghamdi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B3%D8%B9%D8%AF%20%D8%A7%D9%84%D8%BA%D8%A7%D9%85%D8%AF%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "saad al qarni",
+  "english": "Saad Al-Qarni",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "saad al subaie",
+  "english": "Saad Al-Subaie",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "saad mohammad",
+  "english": "Saad Mohammad",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B3%D8%B9%D8%AF%20%D9%85%D8%AD%D9%85%D8%AF%20%D8%B3%D8%B9%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "saber abdulhakam",
+  "english": "Saber Abdulhakam",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B5%D8%A7%D8%A8%D8%B1%20%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%AD%D9%83%D9%85.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "saeed al khateeb",
+  "english": "Saeed Al-khateeb",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B3%D8%B9%D9%8A%D8%AF%20%D8%A7%D9%84%D8%AE%D8%B7%D9%8A%D8%A8.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "sahl yassin",
+  "english": "Sahl Yassin",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B3%D9%87%D9%84%20%D9%8A%D8%A7%D8%B3%D9%8A%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "said alkady",
+  "english": "Said Alkady",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%A8%D9%88%20%D8%AD%D8%A7%D8%AA%D9%85%20%D8%B3%D8%B9%D9%8A%D8%AF%20%D8%A7%D9%84%D9%82%D8%A7%D8%B6%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "salah al hashim",
+  "english": "Salah Al-Hashim",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B5%D9%84%D8%A7%D8%AD%20%D8%A7%D9%84%D9%87%D8%A7%D8%B4%D9%85.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "salah al musli",
+  "english": "Salah Al-Musli",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B5%D9%84%D8%A7%D8%AD%20%D8%A7%D9%84%D9%85%D8%B5%D9%84%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "salah anajar",
+  "english": "Salah Anajar",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B5%D9%84%D8%A7%D8%AD%20%D8%A7%D9%84%D9%86%D8%AC%D8%A7%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "salah baothman",
+  "english": "Salah Baothman",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B5%D9%84%D8%A7%D8%AD%20%D8%A8%D8%A7%D8%B9%D8%AB%D9%85%D8%A7%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "salah bukhatir",
+  "english": "Salah Bukhatir",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B5%D9%84%D8%A7%D8%AD%20%D8%A8%D9%88%20%D8%AE%D8%A7%D8%B7%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "saleh al habdan",
+  "english": "Saleh Al-Habdan",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B5%D8%A7%D9%84%D8%AD%20%D8%A7%D9%84%D9%87%D8%A8%D8%AF%D8%A7%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "saleh al talib",
+  "english": "Saleh Al-Talib",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B5%D8%A7%D9%84%D8%AD%20%D8%A2%D9%84%20%D8%B7%D8%A7%D9%84%D8%A8.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "saleh al tami",
+  "english": "Saleh Al-Tami",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B5%D8%A7%D9%84%D8%AD%20%D8%A7%D9%84%D8%B7%D8%A7%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "saleh al tawala",
+  "english": "Saleh Al-Tawala",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "saleh alsahood",
+  "english": "Saleh Alsahood",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B5%D8%A7%D9%84%D8%AD%20%D8%A8%D9%86%20%D8%B3%D8%A7%D9%84%D9%85%20%D8%A7%D9%84%D8%B5%D8%A7%D9%87%D9%88%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "salman al otaibi",
+  "english": "Salman Al-Otaibi",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B3%D9%84%D9%85%D8%A7%D9%86%20%D8%A7%D9%84%D8%B9%D8%AA%D9%8A%D8%A8%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "samer islam",
+  "english": "Samer Islam",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B3%D8%A7%D9%85%D8%B1%20%D8%A7%D8%B3%D9%84%D8%A7%D9%85.jpeg",
+  "profile": ""
+ },
+ {
+  "norm": "sami al dosari",
+  "english": "Sami Al-Dosari",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "sami al hasn",
+  "english": "Sami Al-Hasn",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B3%D8%A7%D9%85%D9%8A%20%D8%A7%D9%84%D8%AD%D8%B3%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "samir albashiri",
+  "english": "Samir Albashiri",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "sapinah mamat",
+  "english": "Sapinah Mamat",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "saud al fayez",
+  "english": "Saud Al-Fayez",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B3%D8%B9%D9%88%D8%AF%20%D8%A7%D9%84%D9%81%D8%A7%D9%8A%D8%B2.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "saud ashuraim",
+  "english": "Saud Ashuraim",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B3%D8%B9%D9%88%D8%AF%20%D8%A7%D9%84%D8%B4%D8%B1%D9%8A%D9%85.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "sayeed ramadan",
+  "english": "Sayeed Ramadan",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B3%D9%8A%D8%AF%20%D8%B1%D9%85%D8%B6%D8%A7%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "sayeed said",
+  "english": "Sayeed Said",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B3%D9%8A%D8%AF%20%D8%B3%D8%B9%D9%8A%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "shaban sayyad",
+  "english": "Shaban Sayyad",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B4%D8%B9%D8%A8%D8%A7%D9%86%20%D8%A7%D9%84%D8%B5%D9%8A%D8%A7%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "shahat muhammad anwar",
+  "english": "Shahat Muhammad Anwar",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A7%D9%84%D8%B4%D8%AD%D8%A7%D8%AA%20%D9%85%D8%AD%D9%85%D8%AF%20%D8%A3%D9%86%D9%88%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "shirazad taher",
+  "english": "Shirazad Taher",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B4%D9%8A%D8%B1%D8%B2%D8%A7%D8%AF%20%D8%B7%D8%A7%D9%87%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "slaah al budair",
+  "english": "Slaah Al-Budair",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B5%D9%84%D8%A7%D8%AD%20%D8%A7%D9%84%D8%A8%D8%AF%D9%8A%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "sultan alamri",
+  "english": "Sultan Alamri",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "sultan arukan",
+  "english": "Sultan Arukan",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B3%D9%84%D8%B7%D8%A7%D9%86%20%D8%A7%D9%84%D8%B1%D9%88%D9%83%D8%A7%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "t",
+  "english": "T",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "tamer islam",
+  "english": "Tamer Islam",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AA%D8%A7%D9%85%D8%B1%20%D8%A7%D8%B3%D9%84%D8%A7%D9%85.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "tamim al rimi",
+  "english": "Tamim al-Rimi",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "tareq daawob",
+  "english": "Tareq daawob",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "tawfeeq as sayegh",
+  "english": "Tawfeeq As-Sayegh",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AA%D9%88%D9%81%D9%8A%D9%82%20%D8%A7%D9%84%D8%B5%D8%A7%D9%8A%D8%BA.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "tawfiq al nouri",
+  "english": "Tawfiq Al-Nouri",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%AA%D9%88%D9%81%D9%8A%D9%82%20%D8%A7%D9%84%D9%86%D9%88%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "turki al rumaih",
+  "english": "Turki al Rumaih",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "u",
+  "english": "U",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "umair shamim",
+  "english": "Umair Shamim",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B9%D9%85%D9%8A%D8%B1%20%D8%B4%D9%85%D9%8A%D9%85.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "zamri",
+  "english": "Ustaz Zamri",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%A3%D8%B3%D8%AA%D8%A7%D8%B0%20%D8%B2%D8%A7%D9%85%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "w",
+  "english": "W",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "wadie elyamani",
+  "english": "Wadie Elyamani",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%88%D8%AF%D9%8A%D8%B9%20%D8%AD%D9%85%D8%A7%D8%AF%D9%8A%20%D8%A7%D9%84%D9%8A%D9%85%D9%86%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "wahid abdussalam bali",
+  "english": "Wahid Abdussalam Bali",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%88%D8%AD%D9%8A%D8%AF%20%D8%B9%D8%A8%D8%AF%20%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%A8%D8%A7%D9%84%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "walid al dulaimi",
+  "english": "Walid Al-Dulaimi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%88%D9%84%D9%8A%D8%AF%20%D8%A7%D9%84%D8%AF%D9%84%D9%8A%D9%85%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "walid al naihi",
+  "english": "Walid Al-Naihi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%88%D9%84%D9%8A%D8%AF%20%D8%A7%D9%84%D9%86%D8%A7%D8%A6%D8%AD%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "walid atef",
+  "english": "Walid Atef",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%88%D9%84%D9%8A%D8%AF%20%D8%B9%D8%A7%D8%B7%D9%81.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "wassel almethen",
+  "english": "Wassel Almethen",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%88%D8%A7%D8%B5%D9%84%20%D8%A7%D9%84%D9%85%D8%B0%D9%86.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "wishear hayder arbili",
+  "english": "Wishear Hayder Arbili",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%88%D8%B4%DB%8C%D8%A7%D8%B1%20%D8%AD%DB%8C%D8%AF%D8%B1%20%D8%A7%D8%B1%D8%A8%DB%8C%D9%84%DB%8C.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "y",
+  "english": "Y",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "yacoub al kurdi",
+  "english": "Yacoub Al-Kurdi",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "yahya hawa",
+  "english": "Yahya Hawa",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%8A%D8%AD%D9%8A%D9%89%20%D8%AD%D9%88%D8%A7.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "yasser al dosari",
+  "english": "Yasser Al-Dosari",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%8A%D8%A7%D8%B3%D8%B1%20%D8%A7%D9%84%D8%AF%D9%88%D8%B3%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "yasser al failakawi",
+  "english": "Yasser Al-Failakawi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%8A%D8%A7%D8%B3%D8%B1%20%D8%A7%D9%84%D9%81%D9%8A%D9%84%D9%83%D8%A7%D9%88%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "yasser al mazroui",
+  "english": "Yasser Al-Mazroui",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%8A%D8%A7%D8%B3%D8%B1%20%D8%A7%D9%84%D9%85%D8%B2%D8%B1%D9%88%D8%B9%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "yasser al qurashi",
+  "english": "Yasser Al-Qurashi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%8A%D8%A7%D8%B3%D8%B1%20%D8%A7%D9%84%D9%82%D8%B1%D8%B4%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "yasser salama",
+  "english": "Yasser Salama",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%8A%D8%A7%D8%B3%D8%B1%20%D8%B3%D9%84%D8%A7%D9%85%D8%A9.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "yasser sarhan al deeb",
+  "english": "Yasser Sarhan Al-Deeb",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%8A%D8%A7%D8%B3%D8%B1%20%D8%A7%D9%84%D8%AF%D9%8A%D8%A8.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "yassin al jazairi",
+  "english": "Yassin Al-Jazairi",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%8A%D8%A7%D8%B3%D9%8A%D9%86%20%D8%A7%D9%84%D8%AC%D8%B2%D8%A7%D8%A6%D8%B1%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "younes mellouli",
+  "english": "Younes Mellouli",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "younes souilas",
+  "english": "Younes Souilas",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%8A%D9%88%D9%86%D8%B3%20%D8%A7%D8%B3%D9%88%D9%8A%D9%84%D8%B5.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "yousef al aidarous",
+  "english": "Yousef Al-Aidarous",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "yousef as saeed",
+  "english": "Yousef As-saeed",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%8A%D9%88%D8%B3%D9%81%20%D8%A7%D9%84%D8%B3%D8%B9%D9%8A%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "youssef abkar",
+  "english": "Youssef Abkar",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%8A%D9%88%D8%B3%D9%81-%D8%A7%D8%A8%D9%83%D8%B1.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "youssef achewaie",
+  "english": "Youssef Achewaie",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%8A%D9%88%D8%B3%D9%81%20%D8%A7%D9%84%D8%B4%D9%88%D9%8A%D8%B9%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "youssef assayed",
+  "english": "Youssef Assayed",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "youssef edghouch",
+  "english": "Youssef Edghouch",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%8A%D9%88%D8%B3%D9%81%20%D8%A7%D9%84%D8%AF%D8%BA%D9%88%D8%B4.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "youssef kalou",
+  "english": "Youssef Kalou",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "youssef nouh ahmed",
+  "english": "Youssef Nouh Ahmed",
+  "img": "https://tvquran.com/uploads/authors/images/%D9%8A%D9%88%D8%B3%D9%81%20%D9%86%D9%88%D8%AD%20%D8%A3%D8%AD%D9%85%D8%AF.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "z",
+  "english": "Z",
+  "img": "/bundles/tvquran/img/logo.svg",
+  "profile": ""
+ },
+ {
+  "norm": "zaid bin misfer al bahri",
+  "english": "Zaid bin Misfer Al-Bahri",
+  "img": "https://tvquran.com/uploads/authors/images/author_default.png",
+  "profile": ""
+ },
+ {
+  "norm": "zakaria hamama",
+  "english": "Zakaria Hamama",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B2%D9%83%D8%B1%D9%8A%D8%A7%D8%A1%20%D8%AD%D9%85%D8%A7%D9%85%D8%A9.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "zaki daghistani",
+  "english": "Zaki Daghistani",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B2%D9%83%D9%8A%20%D8%AF%D8%A7%D8%BA%D8%B3%D8%AA%D8%A7%D9%86%D9%8A.jpg",
+  "profile": ""
+ },
+ {
+  "norm": "zayed alatteah",
+  "english": "Zayed Alatteah",
+  "img": "https://tvquran.com/uploads/authors/images/%D8%B2%D8%A7%D9%8A%D8%AF%20%D8%A7%D9%84%D8%B9%D8%B7%D9%8A%D8%A9.jpg",
+  "profile": ""
+ }
+]
