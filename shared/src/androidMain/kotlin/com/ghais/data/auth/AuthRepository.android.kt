@@ -26,6 +26,7 @@ actual object AuthRepository {
 
     private var appContext: android.content.Context? = null
     private var account: Account? = null
+    private var cookieJar: PersistentCookieJar? = null
 
     fun init(context: android.content.Context) {
         appContext = context.applicationContext
@@ -37,10 +38,22 @@ actual object AuthRepository {
         check(AppwriteConfig.isConfigured()) {
             "Appwrite is not configured: paste ENDPOINT and PROJECT_ID in AppwriteConfig."
         }
+        val ctx = appContext
+            ?: throw IllegalStateException("AuthRepository.init(context) has not been called yet.")
         val newAccount = Account(
             Client()
                 .setEndpoint(AppwriteConfig.ENDPOINT)
-                .setProject(AppwriteConfig.PROJECT_ID),
+                .setProject(AppwriteConfig.PROJECT_ID)
+                .apply {
+                    // Persistent cookies keep the a_session_* session across
+                    // restarts — without this every account.get() 401s and
+                    // signup looks like it "does nothing".
+                    val jar = PersistentCookieJar(ctx)
+                    cookieJar = jar
+                    http = okhttp3.OkHttpClient.Builder()
+                        .cookieJar(jar)
+                        .build()
+                },
         )
         account = newAccount
         return newAccount
@@ -121,6 +134,7 @@ actual object AuthRepository {
             } catch (e: AppwriteException) {
                 throw Exception(friendlyMessage(e))
             } finally {
+                cookieJar?.clear()
                 _session.value = null
             }
         }
