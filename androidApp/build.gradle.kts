@@ -9,7 +9,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.quranify.android"
+    namespace = "com.ghais.android"
     compileSdk = 37
 
     defaultConfig {

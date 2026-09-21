@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Quranify"
+rootProject.name = "Ghais"
 include(":shared", ":androidApp")

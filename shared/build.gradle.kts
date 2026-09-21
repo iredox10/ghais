@@ -75,7 +75,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.quranify.shared"
+    namespace = "com.ghais.shared"
     compileSdk = 37
     defaultConfig {
         minSdk = 26
