@@ -18,6 +18,8 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission(),
     ) { _ -> }
 
+    private var askedOnce = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.ghais.player.PlayerBridge.init(this)
@@ -38,10 +40,17 @@ class MainActivity : ComponentActivity() {
         // Do NOT warm-start the FGS here: starting a foreground service with an
         // idle player posts no notification within 10s ->
         // ForegroundServiceDidNotStartInTimeException (app "closes by itself").
-        requestNotificationPermission()
         enableEdgeToEdge()
         setContent {
             App()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!askedOnce) {
+            askedOnce = true
+            requestNotificationPermission()
         }
     }
 
