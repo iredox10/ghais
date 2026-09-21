@@ -56,6 +56,9 @@ kotlin {
         }
         
         androidMain.dependencies {
+            // Appwrite Kotlin SDK is JVM-only: Android gets the live SDK,
+            // iOS uses a stub until a Native HTTP path lands.
+            implementation(libs.appwrite.sdk.kotlin)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.koin.android)
             implementation(libs.androidx.activity.compose)
