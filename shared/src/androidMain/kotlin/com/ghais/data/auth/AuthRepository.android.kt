@@ -25,6 +25,9 @@ actual object AuthRepository {
     private val _session = MutableStateFlow<AuthSession?>(null)
     actual val session: StateFlow<AuthSession?> = _session.asStateFlow()
 
+    private val _authChecked = MutableStateFlow(false)
+    actual val authChecked: StateFlow<Boolean> = _authChecked.asStateFlow()
+
     private var appContext: android.content.Context? = null
     private var account: Account? = null
     private var cookieJar: PersistentCookieJar? = null
@@ -72,6 +75,7 @@ actual object AuthRepository {
                 )
                 account.createEmailPasswordSession(email = email, password = password)
                 refreshSession()
+                _authChecked.value = true
             } catch (e: AppwriteException) {
                 throw Exception(friendlyMessage(e))
             }
@@ -84,6 +88,7 @@ actual object AuthRepository {
             try {
                 account.createEmailPasswordSession(email = email, password = password)
                 refreshSession()
+                _authChecked.value = true
             } catch (e: AppwriteException) {
                 throw Exception(friendlyMessage(e))
             }
@@ -113,6 +118,7 @@ actual object AuthRepository {
             }
             exchangeGoogleIdToken(idToken)
             refreshSession()
+            _authChecked.value = true
             if (_session.value == null) {
                 throw Exception("Google sign-in failed, please try again.")
             }
@@ -156,22 +162,27 @@ actual object AuthRepository {
             } finally {
                 cookieJar?.clear()
                 _session.value = null
+                _authChecked.value = true
             }
         }
     }
 
     actual suspend fun refreshSession() {
-        val user = try {
-            accountOrThrow().get()
-        } catch (_: Exception) {
-            _session.value = null
-            return
+        try {
+            val user = try {
+                accountOrThrow().get()
+            } catch (_: Exception) {
+                _session.value = null
+                return
+            }
+            _session.value = AuthSession(
+                userId = user.id,
+                email = user.email,
+                name = user.name,
+            )
+        } finally {
+            _authChecked.value = true
         }
-        _session.value = AuthSession(
-            userId = user.id,
-            email = user.email,
-            name = user.name,
-        )
     }
 
     private fun friendlyMessage(e: AppwriteException): String {
