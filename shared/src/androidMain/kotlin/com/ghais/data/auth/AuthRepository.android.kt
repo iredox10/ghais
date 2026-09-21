@@ -2,7 +2,6 @@ package com.ghais.data.auth
 
 import io.appwrite.Client
 import io.appwrite.ID
-import io.appwrite.enums.OAuthProvider
 import io.appwrite.exceptions.AppwriteException
 import io.appwrite.services.Account
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,12 +13,12 @@ import okhttp3.RequestBody.Companion.toRequestBody
 /**
  * Android live implementation (Appwrite Kotlin SDK, JVM artifact).
  *
- * Google OAuth: opens the provider URL in the system browser; Appwrite
- * redirects to `ghais://auth?userId=..&secret=..`, which lands in
- * `MainActivity` (intent-filter + `singleTask`) and finishes via
- * [completeGoogleSignIn]. Console prerequisites: Google provider enabled with
- * a Cloud OAuth client, Android platform registered (package + SHA-256), and
- * `ghais://auth` allow-listed as success/failure URL.
+ * Google sign-in is native-only: Credential Manager returns a Google ID
+ * token on-device, exchanged for an Appwrite session via
+ * `POST /account/sessions/id-token`. Console prerequisites: Google provider
+ * with native sign-in enabled, the Web client ID pasted in
+ * [AppwriteConfig.GOOGLE_WEB_CLIENT_ID], and matching native client ID(s)
+ * registered in the Console.
  */
 actual object AuthRepository {
 
@@ -91,46 +90,31 @@ actual object AuthRepository {
         }
     }
 
+    /**
+     * Native-only Google sign-in: Google ID token on-device via Credential
+     * Manager, exchanged for an Appwrite session. No browser involved.
+     * Requires [AppwriteConfig.GOOGLE_WEB_CLIENT_ID] (Google Cloud **Web**
+     * client ID) plus the matching native client ID registered in the
+     * Appwrite Console (Auth > Google > Native client IDs).
+     */
     actual suspend fun signInWithGoogle(): Result<Unit> {
-        // 1. Native first: Google ID token on-device, no browser. Needs the
-        // Web client ID pasted in AppwriteConfig (used as token audience).
-        val activity = ActivityHolder.current()
-        val webClientId = AppwriteConfig.GOOGLE_WEB_CLIENT_ID
-        if (activity != null && webClientId.isNotBlank() && !webClientId.contains("PASTE")) {
-            try {
-                val idToken = GoogleNativeAuth.getIdToken(activity, webClientId)
-                exchangeGoogleIdToken(idToken)
-                refreshSession()
-                if (_session.value != null) return Result.success(Unit)
-            } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
-                return Result.failure(Exception("Google sign-in cancelled."))
-            } catch (e: Exception) {
-                // Fall through to the browser flow below.
-                android.util.Log.w("GhaisAuth", "Native Google sign-in failed, trying browser", e)
-            }
-        }
-        // 2. Browser fallback (previous behavior).
         return runCatching {
-            val account = accountOrThrow()
-            val url = try {
-                account.createOAuth2Token(
-                    provider = OAuthProvider.GOOGLE,
-                    success = AppwriteConfig.OAUTH_SUCCESS_URL,
-                    failure = AppwriteConfig.OAUTH_FAILURE_URL,
-                )
-            } catch (e: AppwriteException) {
-                throw Exception(friendlyMessage(e))
-            }
-            val ctx = appContext
+            accountOrThrow()
+            val activity = ActivityHolder.current()
                 ?: throw Exception("Google sign-in is not ready yet, please retry.")
-            try {
-                val intent = android.content.Intent(
-                    android.content.Intent.ACTION_VIEW,
-                    android.net.Uri.parse(url),
-                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                ctx.startActivity(intent)
-            } catch (e: Exception) {
-                throw Exception("Could not open a browser for Google sign-in.")
+            val webClientId = AppwriteConfig.GOOGLE_WEB_CLIENT_ID
+            if (webClientId.isBlank() || webClientId.contains("PASTE")) {
+                throw Exception("Google sign-in is not configured yet on this build.")
+            }
+            val idToken = try {
+                GoogleNativeAuth.getIdToken(activity, webClientId)
+            } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
+                throw Exception("Google sign-in cancelled.")
+            }
+            exchangeGoogleIdToken(idToken)
+            refreshSession()
+            if (_session.value == null) {
+                throw Exception("Google sign-in failed, please try again.")
             }
         }
     }
@@ -159,18 +143,6 @@ actual object AuthRepository {
                     ?.takeIf { it.isNotBlank() }
                     ?: "Google sign-in failed (server ${response.code})."
                 throw Exception(message)
-            }
-        }
-    }
-
-    actual suspend fun completeGoogleSignIn(userId: String, secret: String): Result<Unit> {
-        return runCatching {
-            val account = accountOrThrow()
-            try {
-                account.createSession(userId = userId, secret = secret)
-                refreshSession()
-            } catch (e: AppwriteException) {
-                throw Exception(friendlyMessage(e))
             }
         }
     }

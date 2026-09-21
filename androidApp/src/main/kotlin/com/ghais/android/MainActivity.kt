@@ -38,31 +38,8 @@ class MainActivity : ComponentActivity() {
         // ForegroundServiceDidNotStartInTimeException (app "closes by itself").
         requestNotificationPermission()
         enableEdgeToEdge()
-        handleOAuthRedirect(intent)
         setContent {
             App()
-        }
-    }
-
-    override fun onNewIntent(intent: android.content.Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        handleOAuthRedirect(intent)
-    }
-
-    /** Appwrite Google-OAuth return: appwrite-callback-*?userId=..&secret=.. */
-    private fun handleOAuthRedirect(intent: android.content.Intent?) {
-        val uri = intent?.data ?: return
-        val scheme = uri.scheme ?: return
-        if (scheme != "appwrite-callback-tikitakatalk" && scheme != "ghais") return
-        val userId = uri.getQueryParameter("userId")
-        val secret = uri.getQueryParameter("secret")
-        if (userId.isNullOrBlank() || secret.isNullOrBlank()) return
-        kotlinx.coroutines.MainScope().launch {
-            val result = com.ghais.data.auth.AuthRepository.completeGoogleSignIn(userId, secret)
-            result.exceptionOrNull()?.let {
-                android.util.Log.e("GhaisAuth", "Google sign-in completion failed", it)
-            }
         }
     }
 

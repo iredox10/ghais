@@ -38,12 +38,6 @@ expect object AuthRepository {
      */
     suspend fun signInWithGoogle(): Result<Unit>
 
-    /**
-     * Completes Google OAuth after the platform layer intercepts the
-     * `ghais://auth?userId=...&secret=...` success redirect.
-     */
-    suspend fun completeGoogleSignIn(userId: String, secret: String): Result<Unit>
-
     /** Signs out (local state always cleared, even if the network call fails). */
     suspend fun signOut(): Result<Unit>
 

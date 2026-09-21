@@ -24,9 +24,6 @@ actual object AuthRepository {
     actual suspend fun signInWithGoogle(): Result<Unit> =
         Result.failure(Exception("Google sign-in is not available on iOS yet — continue as guest."))
 
-    actual suspend fun completeGoogleSignIn(userId: String, secret: String): Result<Unit> =
-        Result.failure(Exception("Google sign-in is not available on iOS yet."))
-
     actual suspend fun signOut(): Result<Unit> {
         _session.value = null
         return Result.success(Unit)
