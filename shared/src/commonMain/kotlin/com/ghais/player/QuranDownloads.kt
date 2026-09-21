@@ -22,6 +22,15 @@ object DownloadKeys {
 }
 
 expect object QuranDownloads {
+    /**
+     * Rebinds the downloaded-KEYS index to the given owner (`"local"` while
+     * signed out, else the user id). The index key is namespaced
+     * (`"<uid>::<base>"`, bare base for `"local"`) and reloaded, emitting on
+     * [downloadedKeys]. Files on disk stay shared (device-level storage);
+     * [progress]/[failedKeys] are transient and untouched.
+     */
+    fun setOwner(ownerId: String)
+
     /** Keys fully downloaded and playable offline. */
     val downloadedKeys: StateFlow<Set<String>>
     /** In-progress downloads: key -> 0f..1f (indeterminate = -1f). */

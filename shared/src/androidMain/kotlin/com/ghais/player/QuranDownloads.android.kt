@@ -33,6 +33,11 @@ actual object QuranDownloads {
     private const val TAG = "QuranDownloads"
     private const val PREF_KEY = "quran_downloaded"
 
+    private var ownerId: String = "local"
+
+    private fun key(base: String): String =
+        if (ownerId == "local") base else "$ownerId::$base"
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @Volatile
@@ -65,6 +70,24 @@ actual object QuranDownloads {
         }
     }
 
+    /**
+     * Rebinds the downloaded-keys index to [ownerId] (`"local"` while signed
+     * out, else the user id) and reloads it, emitting on [downloadedKeys].
+     * Files on disk stay shared (device-level storage); only the persisted
+     * index key is namespaced. Progress/failed flows are transient and
+     * untouched.
+     */
+    actual fun setOwner(ownerId: String) {
+        if (ownerId == this.ownerId) return
+        this.ownerId = ownerId
+        try {
+            _downloadedKeys.value = readPersisted()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to reload downloaded set", e)
+            _downloadedKeys.value = emptySet()
+        }
+    }
+
     private fun contextOrNull(): Context? {
         val ctx = appContext
         if (ctx == null) {
@@ -79,14 +102,14 @@ actual object QuranDownloads {
         File(ctx.filesDir, "quran/$slug/$surahId.mp3")
 
     private fun readPersisted(): Set<String> {
-        val raw = settings.getStringOrNull(PREF_KEY) ?: return emptySet()
+        val raw = settings.getStringOrNull(key(PREF_KEY)) ?: return emptySet()
         if (raw.isEmpty()) return emptySet()
         return raw.split("\n").filter { it.isNotEmpty() }.toSet()
     }
 
     private fun persist() {
         try {
-            settings.putString(PREF_KEY, _downloadedKeys.value.joinToString("\n"))
+            settings.putString(key(PREF_KEY), _downloadedKeys.value.joinToString("\n"))
         } catch (e: Exception) {
             Log.e(TAG, "Failed to persist downloaded set", e)
         }
@@ -256,7 +279,7 @@ actual object QuranDownloads {
         _progress.value = emptyMap()
         _failedKeys.value = emptySet()
         try {
-            settings.remove(PREF_KEY)
+            settings.remove(key(PREF_KEY))
         } catch (e: Exception) {
             Log.e(TAG, "Failed to clear persisted downloaded set", e)
         }

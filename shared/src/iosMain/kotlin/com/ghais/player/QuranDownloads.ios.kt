@@ -34,6 +34,11 @@ import platform.Foundation.stringByDeletingLastPathComponent
 actual object QuranDownloads {
     private const val PREF_KEY = "quran_downloaded"
 
+    private var ownerId: String = "local"
+
+    private fun key(base: String): String =
+        if (ownerId == "local") base else "$ownerId::$base"
+
     private val _downloadedKeys = MutableStateFlow(emptySet<String>())
     actual val downloadedKeys: StateFlow<Set<String>> = _downloadedKeys.asStateFlow()
 
@@ -54,20 +59,37 @@ actual object QuranDownloads {
         }
     }
 
+    /**
+     * Rebinds the downloaded-keys index to [ownerId] (`"local"` while signed
+     * out, else the user id) and reloads it, emitting on [downloadedKeys].
+     * Files on disk stay shared (device-level storage); only the persisted
+     * index key is namespaced. Progress/failed flows are transient and
+     * untouched.
+     */
+    actual fun setOwner(ownerId: String) {
+        if (ownerId == this.ownerId) return
+        this.ownerId = ownerId
+        try {
+            _downloadedKeys.value = readPersisted()
+        } catch (_: Exception) {
+            _downloadedKeys.value = emptySet()
+        }
+    }
+
     private fun baseDir(): String = NSHomeDirectory() + "/Documents/quran"
 
     private fun fileFor(slug: String, surahId: Int): String =
         "${baseDir()}/$slug/$surahId.mp3"
 
     private fun readPersisted(): Set<String> {
-        val arr = NSUserDefaults.standardUserDefaults.stringArrayForKey(PREF_KEY)
+        val arr = NSUserDefaults.standardUserDefaults.stringArrayForKey(key(PREF_KEY))
             ?: return emptySet()
         return arr.filterIsInstance<String>().toSet()
     }
 
     private fun persist() {
         try {
-            NSUserDefaults.standardUserDefaults.setObject(_downloadedKeys.value.toList(), PREF_KEY)
+            NSUserDefaults.standardUserDefaults.setObject(_downloadedKeys.value.toList(), key(PREF_KEY))
         } catch (_: Exception) {
         }
     }
@@ -240,7 +262,7 @@ actual object QuranDownloads {
         _progress.value = emptyMap()
         _failedKeys.value = emptySet()
         try {
-            NSUserDefaults.standardUserDefaults.removeObjectForKey(PREF_KEY)
+            NSUserDefaults.standardUserDefaults.removeObjectForKey(key(PREF_KEY))
         } catch (_: Exception) {
         }
     }
