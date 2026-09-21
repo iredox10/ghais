@@ -66,6 +66,10 @@ kotlin {
             implementation(libs.media3.exoplayer)
             implementation(libs.media3.session)
             implementation(libs.media3.ui)
+            implementation(libs.androidx.credentials)
+            implementation(libs.androidx.credentials.play.services.auth)
+            implementation(libs.play.services.auth)
+            implementation(libs.googleid)
         }
         
         iosMain.dependencies {

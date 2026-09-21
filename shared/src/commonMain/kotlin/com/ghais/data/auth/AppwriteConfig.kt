@@ -16,6 +16,15 @@ object AppwriteConfig {
     const val PROJECT_ID = "tikitakatalk"
 
     /**
+     * Google Cloud **Web** client ID (the `....apps.googleusercontent.com`
+     * OAuth client of type *Web application*). Used as the audience when
+     * requesting a Google ID token on-device for native sign-in. This is NOT
+     * the Android client ID — the native client ID goes in the Appwrite
+     * Console (Auth > Google > Native client IDs) instead.
+     */
+    const val GOOGLE_WEB_CLIENT_ID = "PASTE-GOOGLE-WEB-CLIENT-ID"
+
+    /**
      * Deep-link scheme the app uses for the OAuth2 redirect back from the
      * browser (`successUrl` / `failureUrl`). Uses Appwrite's reserved
      * `appwrite-callback-<project>` scheme, which the server accepts without

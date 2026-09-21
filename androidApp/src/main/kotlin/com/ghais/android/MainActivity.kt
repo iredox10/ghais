@@ -26,6 +26,7 @@ class MainActivity : ComponentActivity() {
         QuranDownloads.init(this)
         com.ghais.data.repository.ScheduleEngine.init(this)
         com.ghais.data.auth.AuthRepository.init(this)
+        com.ghais.data.auth.ActivityHolder.register(this)
         // Any play/resume boots the foreground MediaSession service so audio
         // survives background + shows system notification controls.
         com.ghais.player.PlayerBridge.onPlayRequested = {

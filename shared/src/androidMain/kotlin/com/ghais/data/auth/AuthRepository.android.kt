@@ -8,6 +8,8 @@ import io.appwrite.services.Account
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
  * Android live implementation (Appwrite Kotlin SDK, JVM artifact).
@@ -90,6 +92,24 @@ actual object AuthRepository {
     }
 
     actual suspend fun signInWithGoogle(): Result<Unit> {
+        // 1. Native first: Google ID token on-device, no browser. Needs the
+        // Web client ID pasted in AppwriteConfig (used as token audience).
+        val activity = ActivityHolder.current()
+        val webClientId = AppwriteConfig.GOOGLE_WEB_CLIENT_ID
+        if (activity != null && webClientId.isNotBlank() && !webClientId.contains("PASTE")) {
+            try {
+                val idToken = GoogleNativeAuth.getIdToken(activity, webClientId)
+                exchangeGoogleIdToken(idToken)
+                refreshSession()
+                if (_session.value != null) return Result.success(Unit)
+            } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
+                return Result.failure(Exception("Google sign-in cancelled."))
+            } catch (e: Exception) {
+                // Fall through to the browser flow below.
+                android.util.Log.w("GhaisAuth", "Native Google sign-in failed, trying browser", e)
+            }
+        }
+        // 2. Browser fallback (previous behavior).
         return runCatching {
             val account = accountOrThrow()
             val url = try {
@@ -111,6 +131,34 @@ actual object AuthRepository {
                 ctx.startActivity(intent)
             } catch (e: Exception) {
                 throw Exception("Could not open a browser for Google sign-in.")
+            }
+        }
+    }
+
+    /**
+     * Exchanges a Google ID token for an Appwrite session via
+     * `POST /account/sessions/id-token`, sharing the persistent cookie jar so
+     * the resulting session survives restarts. Throws with the server's
+     * message on failure.
+     */
+    private fun exchangeGoogleIdToken(idToken: String) {
+        accountOrThrow()
+        val jar = cookieJar
+            ?: throw IllegalStateException("Auth storage is not ready yet, please retry.")
+        val http = okhttp3.OkHttpClient.Builder().cookieJar(jar).build()
+        val body = "{\"provider\":\"google\",\"token\":\"$idToken\"}"
+        val request = okhttp3.Request.Builder()
+            .url("${AppwriteConfig.ENDPOINT}/account/sessions/id-token")
+            .addHeader("X-Appwrite-Project", AppwriteConfig.PROJECT_ID)
+            .post(body.toRequestBody("application/json".toMediaType()))
+            .build()
+        http.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                val message = response.body.string()
+                    .let { Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(it)?.groupValues?.getOrNull(1) }
+                    ?.takeIf { it.isNotBlank() }
+                    ?: "Google sign-in failed (server ${response.code})."
+                throw Exception(message)
             }
         }
     }
