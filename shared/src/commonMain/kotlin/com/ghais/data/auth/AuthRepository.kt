@@ -24,6 +24,9 @@ expect object AuthRepository {
     /** Observable signed-in user; `null` = signed out (or not yet checked). */
     val session: StateFlow<AuthSession?>
 
+    /** True once refreshSession() has completed at least once (session may still be null = signed out). False = restore not yet attempted; UI must show splash, never the auth gate. */
+    val authChecked: StateFlow<Boolean>
+
     /** Registers a new account and immediately signs the user in. */
     suspend fun signUp(email: String, name: String, password: String): Result<Unit>
 

@@ -15,6 +15,9 @@ actual object AuthRepository {
     private val _session = MutableStateFlow<AuthSession?>(null)
     actual val session: StateFlow<AuthSession?> = _session.asStateFlow()
 
+    private val _authChecked = MutableStateFlow(false)
+    actual val authChecked: StateFlow<Boolean> = _authChecked.asStateFlow()
+
     actual suspend fun signUp(email: String, name: String, password: String): Result<Unit> =
         Result.failure(Exception("Sign-up is not available on iOS yet — continue as guest."))
 
@@ -26,10 +29,12 @@ actual object AuthRepository {
 
     actual suspend fun signOut(): Result<Unit> {
         _session.value = null
+        _authChecked.value = true
         return Result.success(Unit)
     }
 
     actual suspend fun refreshSession() {
         _session.value = null
+        _authChecked.value = true
     }
 }
