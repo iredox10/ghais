@@ -26,3 +26,11 @@ val HairlineSubtleBorder = Brush.verticalGradient(
         Color.White.copy(alpha = 0.04f)
     )
 )
+
+val ChromeTop = Color(0xFFF5F5F7)
+val ChromeBottom = Color(0xFFC7C7CC)
+val InkDark = Color(0xFF0B0C0E)
+val GlassFill = Color.White.copy(alpha = 0.08f)
+val GlassBorder = Color.White.copy(alpha = 0.10f)
+val ChromeGradient = Brush.verticalGradient(listOf(ChromeTop, ChromeBottom))
+val GlassGradient = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.03f)))

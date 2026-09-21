@@ -1,55 +1,28 @@
 package com.ghais.ui.screens.explore
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SelfImprovement
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.ui.navigation.LocalRootNavigator
-import com.ghais.ui.screens.explore.components.DarkObsidian
 import com.ghais.ui.screens.explore.components.ExploreBentoCard
-import com.ghais.ui.screens.explore.components.HairlineSpecularBorder
-import com.ghais.ui.screens.explore.components.HairlineSubtleBorder
-import com.ghais.ui.screens.explore.components.OffWhiteText
 import com.ghais.ui.screens.explore.components.PureBlack
-import com.ghais.ui.screens.explore.components.SystemGrey
 import com.ghais.ui.screens.explore.components.isWideCard
-import com.ghais.ui.screens.playlists.MoodPlaylist
+import com.ghais.ui.screens.explore.glass.ProtonCategoryRow
+import com.ghais.ui.screens.explore.glass.ProtonEmptyState
+import com.ghais.ui.screens.explore.glass.ProtonExploreHeader
+import com.ghais.ui.screens.explore.glass.ProtonExploreSearch
+import com.ghais.ui.screens.explore.glass.ProtonFeaturedBanner
 import com.ghais.ui.screens.playlists.MoodPlaylists
 import com.ghais.ui.screens.playlists.PlaylistDetailsScreen
-import com.ghais.ui.theme.GhaisColors
 
 /**
  * ExploreScreen:
@@ -119,182 +92,38 @@ object ExploreScreen : Tab {
                 .fillMaxSize()
                 .background(PureBlack)
         ) {
-            // iOS SF Large Title & Subtitle
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "Explore",
-                    color = OffWhiteText,
-                    fontSize = 34.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.5).sp
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Curated collections, deep focus routines & sacred themes",
-                    color = SystemGrey,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Normal
-                )
-            }
+            ProtonExploreHeader(
+                titleWhite = "Find Your",
+                titleGrey = "Focus",
+                subtitle = "Curated collections, deep focus routines & sacred themes"
+            )
 
-            // iOS Glassmorphic Search Bar with 48dp minimum touch target
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
-                    .heightIn(min = 48.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
-                    .border(
-                        width = 0.5.dp,
-                        brush = HairlineSpecularBorder,
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Search,
-                    contentDescription = "Search",
-                    tint = SystemGrey,
-                    modifier = Modifier.size(20.dp)
+            ProtonExploreSearch(
+                query = query,
+                onQuery = { query = it }
+            )
+
+            ProtonCategoryRow(
+                categories = Categories,
+                selected = selectedCategory,
+                onSelect = { selectedCategory = it }
+            )
+
+            if (query.isBlank() && selectedCategory == "All" && filteredCards.isNotEmpty()) {
+                ProtonFeaturedBanner(
+                    title = "Deep Focus & Study",
+                    subtitle = "Steady recitation to carry your day",
+                    buttonText = "Open",
+                    onOpen = { rootNavigator?.push(PlaylistDetailsScreen("study-focus")) }
                 )
-                Spacer(modifier = Modifier.width(10.dp))
-                BasicTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    singleLine = true,
-                    textStyle = TextStyle(
-                        color = OffWhiteText,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Normal
-                    ),
-                    cursorBrush = SolidColor(GhaisColors.Primary),
-                    decorationBox = { inner ->
-                        if (query.isEmpty()) {
-                            Text(
-                                text = "Search collections, surahs & moods...",
-                                color = SystemGrey,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Normal
-                            )
-                        }
-                        inner()
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-
-                AnimatedVisibility(
-                    visible = query.isNotEmpty(),
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-                    IconButton(
-                        onClick = { query = "" },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Clear",
-                            tint = SystemGrey,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
-
-            // iOS Category Filter Pills Row
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(Categories) { category ->
-                    val isSelected = category == selectedCategory
-                    val chipShape = RoundedCornerShape(12.dp)
-
-                    Box(
-                        modifier = Modifier
-                            .heightIn(min = 36.dp)
-                            .clip(chipShape)
-                            .background(
-                                if (isSelected) Color(0xFF1F2937).copy(alpha = 0.90f)
-                                else Color.White.copy(alpha = 0.05f)
-                            )
-                            .border(
-                                width = if (isSelected) 1.dp else 0.5.dp,
-                                brush = if (isSelected) {
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            GhaisColors.Primary.copy(alpha = 0.70f),
-                                            GhaisColors.Primary.copy(alpha = 0.20f)
-                                        )
-                                    )
-                                } else HairlineSubtleBorder,
-                                shape = chipShape
-                            )
-                            .clickable { selectedCategory = category }
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = category,
-                            fontSize = 13.sp,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                            color = if (isSelected) OffWhiteText else SystemGrey
-                        )
-                    }
-                }
             }
 
             // Bento Grid of Modular Cards with Chunky / Oversized Avatars
             if (filteredCards.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.05f))
-                                .border(0.5.dp, HairlineSubtleBorder, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.SelfImprovement,
-                                contentDescription = null,
-                                tint = SystemGrey,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No collections found",
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = OffWhiteText
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Try adjusting your search query or category filter.",
-                            fontSize = 13.sp,
-                            color = SystemGrey
-                        )
-                    }
-                }
+                ProtonEmptyState(
+                    title = "No collections found",
+                    body = "Try adjusting your search query or category filter."
+                )
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),

@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
@@ -842,7 +843,8 @@ fun MoodPlaylist.toExploreCardItem(): ExploreCardItem {
 fun MoodPlaylist.isWideCard(): Boolean = id == "study-focus" || id == "sleep-mode"
 
 /**
- * Bento card wrapper that renders [MoodPlaylist] using [ExploreModularCard].
+ * Bento card wrapper that renders [MoodPlaylist] as a Proton glass row.
+ * Navigation behavior unchanged: whole container invokes [onClick].
  */
 @Composable
 fun ExploreBentoCard(
@@ -850,14 +852,68 @@ fun ExploreBentoCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-    val isWide = playlist.isWideCard()
-    val variant = if (isWide) ExploreCardVariant.HERO_WIDE else ExploreCardVariant.GRID
-    ExploreModularCard(
-        item = playlist.toExploreCardItem(),
-        modifier = modifier,
-        variant = variant,
-        onClick = onClick
+    val glassBrush = Brush.verticalGradient(
+        listOf(
+            Color.White.copy(alpha = 0.08f),
+            Color.White.copy(alpha = 0.03f)
+        )
     )
+    val cardShape = RoundedCornerShape(24.dp)
+    val initial = playlist.title.firstOrNull()?.uppercase() ?: "•"
+
+    Row(
+        modifier = modifier
+            .clip(cardShape)
+            .background(glassBrush)
+            .border(1.dp, Color.White.copy(alpha = 0.10f), cardShape)
+            .clickable(onClick = onClick)
+            .padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.White.copy(alpha = 0.08f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = initial,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 12.dp)
+        ) {
+            Text(
+                text = playlist.title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = playlist.description,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
+                color = Color.White.copy(alpha = 0.6f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Icon(
+            imageVector = Icons.Filled.ChevronRight,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.6f),
+            modifier = Modifier.size(20.dp)
+        )
+    }
 }
 
 /**
