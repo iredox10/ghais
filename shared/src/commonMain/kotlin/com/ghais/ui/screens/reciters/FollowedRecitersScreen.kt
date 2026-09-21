@@ -39,7 +39,6 @@ import com.ghais.data.repository.resolveFollowedQari
 
 private val PureBlack = Color(0xFF000000)
 private val MutedGrey = Color(0xFF9A9AA0)
-private val LinkBlue = Color(0xFF4C8DFF)
 private val DarkCard = Color(0xFF1C1C1E)
 
 object FollowedRecitersScreen : Screen {
@@ -65,19 +64,6 @@ object FollowedRecitersScreen : Screen {
                 .fillMaxSize()
                 .background(PureBlack)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                LinkBlue.copy(alpha = 0.35f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -187,7 +173,14 @@ object FollowedRecitersScreen : Screen {
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 5.dp)
                                     .clip(RoundedCornerShape(24.dp))
-                                    .background(Color.White.copy(alpha = 0.05f))
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = 0.08f),
+                                                Color.White.copy(alpha = 0.03f)
+                                            )
+                                        )
+                                    )
                                     .border(
                                         1.dp,
                                         Color.White.copy(alpha = 0.08f),
@@ -282,7 +275,7 @@ object FollowedRecitersScreen : Screen {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = "Open profile",
-                                    tint = MutedGrey,
+                                    tint = Color.White,
                                     modifier = Modifier.size(24.dp)
                                 )
                             }

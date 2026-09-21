@@ -41,13 +41,10 @@ import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.QuranData
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
-import com.ghais.ui.theme.GhaisColors
 
 private val PureBlack = Color(0xFF000000)
 private val MutedGrey = Color(0xFF9A9AA0)
-private val LinkBlue = Color(0xFF4C8DFF)
 private val DarkCard = Color(0xFF1C1C1E)
-private val Emerald = Color(0xFF30D158)
 
 data class RegionRecitersScreen(val nation: String) : Screen {
     @Composable
@@ -74,19 +71,6 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                 .fillMaxSize()
                 .background(PureBlack)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                LinkBlue.copy(alpha = 0.35f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -184,12 +168,16 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                                 .padding(horizontal = 16.dp, vertical = 5.dp)
                                 .clip(RoundedCornerShape(24.dp))
                                 .background(
-                                    if (activelyPlaying) GhaisColors.Primary.copy(alpha = 0.08f)
-                                    else Color.White.copy(alpha = 0.05f)
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.White.copy(alpha = 0.08f),
+                                            Color.White.copy(alpha = 0.03f)
+                                        )
+                                    )
                                 )
                                 .border(
                                     1.dp,
-                                    if (activelyPlaying) GhaisColors.Primary.copy(alpha = 0.40f)
+                                    if (activelyPlaying) Color.White.copy(alpha = 0.12f)
                                     else Color.White.copy(alpha = 0.08f),
                                     RoundedCornerShape(24.dp)
                                 )
@@ -261,13 +249,12 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                                     .size(42.dp)
                                     .clip(CircleShape)
                                     .background(
-                                        if (activelyPlaying) GhaisColors.Primary.copy(alpha = 0.25f)
-                                        else Color.White.copy(alpha = 0.08f)
+                                        Color.White.copy(alpha = 0.08f)
                                     )
                                     .border(
                                         1.dp,
-                                        if (activelyPlaying) GhaisColors.Primary.copy(alpha = 0.60f)
-                                        else Color.White.copy(alpha = 0.15f),
+                                        if (activelyPlaying) Color.White.copy(alpha = 0.12f)
+                                        else Color.White.copy(alpha = 0.10f),
                                         CircleShape
                                     )
                                     .clickable {
@@ -300,7 +287,7 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                                 Icon(
                                     imageVector = if (activelyPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                                     contentDescription = if (activelyPlaying) "Pause" else "Play",
-                                    tint = if (activelyPlaying) GhaisColors.Primary else Color.White,
+                                    tint = Color.White,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -313,7 +300,7 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                                 Icon(
                                     imageVector = if (isFollowing) Icons.Filled.Check else Icons.Filled.PersonAdd,
                                     contentDescription = if (isFollowing) "Following" else "Follow",
-                                    tint = if (isFollowing) Emerald else Color.White.copy(alpha = 0.85f),
+                                    tint = if (isFollowing) Color.White else Color.White.copy(alpha = 0.85f),
                                     modifier = Modifier.size(22.dp)
                                 )
                             }

@@ -268,6 +268,7 @@ private fun AllRecitersTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(Color.Black)
             .statusBarsPadding()
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -277,8 +278,8 @@ private fun AllRecitersTopBar(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF161822))
-                .border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
+                .background(Color.White.copy(alpha = 0.08f))
+                .border(1.dp, Color.White.copy(alpha = 0.10f), CircleShape)
                 .clickable { onBackClick() },
             contentAlignment = Alignment.Center
         ) {
@@ -310,15 +311,15 @@ private fun AllRecitersTopBar(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .background(GhaisColors.TrendingPurple.copy(alpha = 0.16f))
-                    .border(1.dp, GhaisColors.TrendingPurple.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(12.dp))
                     .padding(horizontal = 9.dp, vertical = 3.dp)
             ) {
                 Text(
                     text = "$totalCount Reciters",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = GhaisColors.TrendingPurple
+                    color = Color(0xFF9CA3AF)
                 )
             }
         }
@@ -327,7 +328,7 @@ private fun AllRecitersTopBar(
 
 /**
  * Search Bar with instant text filtering (by English name, Arabic name, or country)
- * in frosted dark glass with purple/white border.
+ * in mono glass pill (white 8% + white 10% border).
  */
 @Composable
 private fun ReciterSearchBar(
@@ -338,18 +339,12 @@ private fun ReciterSearchBar(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF13151D).copy(alpha = 0.95f))
+            .clip(RoundedCornerShape(50.dp))
+            .background(Color.White.copy(alpha = 0.08f))
             .border(
                 width = 1.dp,
-                brush = Brush.linearGradient(
-                    listOf(
-                        GhaisColors.TrendingPurple.copy(alpha = 0.45f),
-                        Color.White.copy(alpha = 0.15f),
-                        GhaisColors.TrendingPurple.copy(alpha = 0.30f)
-                    )
-                ),
-                shape = RoundedCornerShape(16.dp)
+                color = Color.White.copy(alpha = 0.10f),
+                shape = RoundedCornerShape(50.dp)
             )
             .padding(horizontal = 14.dp, vertical = 11.dp)
     ) {
@@ -360,7 +355,7 @@ private fun ReciterSearchBar(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "Search",
-                tint = if (query.isNotEmpty()) GhaisColors.TrendingPurple else Color(0xFF9CA3AF),
+                tint = Color(0xFF9CA3AF),
                 modifier = Modifier.size(20.dp)
             )
 
@@ -382,7 +377,7 @@ private fun ReciterSearchBar(
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Medium
                     ),
-                    cursorBrush = SolidColor(GhaisColors.TrendingPurple),
+                    cursorBrush = SolidColor(Color.White),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -393,7 +388,7 @@ private fun ReciterSearchBar(
                     modifier = Modifier
                         .size(22.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF262835))
+                        .background(Color.White.copy(alpha = 0.10f))
                         .clickable { onQueryChange("") },
                     contentAlignment = Alignment.Center
                 ) {
@@ -411,7 +406,7 @@ private fun ReciterSearchBar(
 
 /**
  * Filter chips row: "All", "Murattal", "Mujawwad", "Taraweeh", "Egypt", "Saudi Arabia"
- * with active chip in Trending Purple.
+ * with active chip in silver gradient + dark text.
  */
 @Composable
 private fun ReciterFilterChipsRow(
@@ -429,11 +424,25 @@ private fun ReciterFilterChipsRow(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
                     .background(
-                        if (isSelected) GhaisColors.TrendingPurple else Color(0xFF14161F)
+                        if (isSelected) {
+                            Brush.linearGradient(
+                                listOf(
+                                    Color(0xFFF2F3F5),
+                                    Color(0xFFC9CED6)
+                                )
+                            )
+                        } else {
+                            Brush.linearGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.08f),
+                                    Color.White.copy(alpha = 0.08f)
+                                )
+                            )
+                        }
                     )
                     .border(
                         width = 1.dp,
-                        color = if (isSelected) GhaisColors.TrendingPurple else Color.White.copy(alpha = 0.10f),
+                        color = if (isSelected) Color.Transparent else Color.White.copy(alpha = 0.10f),
                         shape = RoundedCornerShape(20.dp)
                     )
                     .clickable { onFilterSelected(filter) }
@@ -443,7 +452,7 @@ private fun ReciterFilterChipsRow(
                     text = filter,
                     fontSize = 13.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) Color.White else Color(0xFF9CA3AF)
+                    color = if (isSelected) Color(0xFF101216) else Color(0xFF9CA3AF)
                 )
             }
         }
@@ -452,8 +461,8 @@ private fun ReciterFilterChipsRow(
 
 /**
  * 2-column Reciter Card:
- * - Large circular avatar with subtle purple gradient border.
- * - Verified purple checkmark badge.
+ * - Large circular avatar with mono white 20% border.
+ * - Verified mono check badge (black + white check).
  * - Name in bold white, Arabic name, follower count.
  * - Style badge pill (e.g. "Murattal").
  * - Clicking navigates to `ReciterProfileScreen(reciter.slug)`.
@@ -466,18 +475,19 @@ private fun ReciterGridCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF12141C))
+            .clip(RoundedCornerShape(24.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.08f),
+                        Color.White.copy(alpha = 0.03f)
+                    )
+                )
+            )
             .border(
                 width = 1.dp,
-                brush = Brush.linearGradient(
-                    listOf(
-                        GhaisColors.TrendingPurple.copy(alpha = 0.22f),
-                        Color.White.copy(alpha = 0.08f),
-                        Color.Transparent
-                    )
-                ),
-                shape = RoundedCornerShape(20.dp)
+                color = Color.White.copy(alpha = 0.10f),
+                shape = RoundedCornerShape(24.dp)
             )
             .clickable { onClick() }
             .padding(14.dp),
@@ -498,17 +508,10 @@ private fun ReciterGridCard(
                         .clip(CircleShape)
                         .border(
                             width = 2.dp,
-                            brush = Brush.linearGradient(
-                                listOf(
-                                    GhaisColors.ElectricViolet,
-                                    GhaisColors.TrendingPurple,
-                                    GhaisColors.NeonLilac,
-                                    Color.White.copy(alpha = 0.35f)
-                                )
-                            ),
+                            color = Color.White.copy(alpha = 0.20f),
                             shape = CircleShape
                         )
-                        .background(Color(0xFF1B1D28), CircleShape)
+                        .background(Color.White.copy(alpha = 0.05f), CircleShape)
                 ) {
                     AsyncImage(
                         model = reciter.photoUrl,
@@ -520,14 +523,14 @@ private fun ReciterGridCard(
                     )
                 }
 
-                // Verified purple checkmark badge
+                // Verified check badge
                 Box(
                     modifier = Modifier
                         .size(22.dp)
                         .align(Alignment.BottomEnd)
                         .clip(CircleShape)
-                        .background(GhaisColors.TrendingPurple)
-                        .border(2.dp, Color(0xFF12141C), CircleShape),
+                        .background(Color.Black)
+                        .border(2.dp, Color.White.copy(alpha = 0.20f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -582,10 +585,10 @@ private fun ReciterGridCard(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .background(GhaisColors.TrendingPurple.copy(alpha = 0.16f))
+                    .background(Color.White.copy(alpha = 0.08f))
                     .border(
                         width = 0.8.dp,
-                        color = GhaisColors.TrendingPurple.copy(alpha = 0.40f),
+                        color = Color.White.copy(alpha = 0.10f),
                         shape = RoundedCornerShape(12.dp)
                     )
                     .padding(horizontal = 9.dp, vertical = 3.dp)
@@ -594,7 +597,7 @@ private fun ReciterGridCard(
                     text = reciter.style,
                     fontSize = 10.5.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFE9D5FF)
+                    color = Color.White
                 )
             }
         }
@@ -616,7 +619,8 @@ private fun EmptyRecitersState(query: String) {
             modifier = Modifier
                 .size(64.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF161824)),
+                .background(Color.White.copy(alpha = 0.05f))
+                .border(1.dp, Color.White.copy(alpha = 0.10f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
