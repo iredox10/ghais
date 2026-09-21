@@ -1,10 +1,8 @@
 package com.ghais.ui.screens.profile
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,27 +12,21 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
@@ -62,10 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,6 +72,16 @@ import com.ghais.data.sync.SyncEngine
 import com.ghais.data.sync.SyncStatus
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.navigation.LocalRootNavigator
+import com.ghais.ui.screens.profile.glass.AuroraBackdrop
+import com.ghais.ui.screens.profile.glass.EditProfileDialogGlass
+import com.ghais.ui.screens.profile.glass.GlassCardContainer
+import com.ghais.ui.screens.profile.glass.GlassDivider
+import com.ghais.ui.screens.profile.glass.GlassLinkRow
+import com.ghais.ui.screens.profile.glass.GlassSectionHeader
+import com.ghais.ui.screens.profile.glass.GlassSwitchRow
+import com.ghais.ui.screens.profile.glass.GlassValueRow
+import com.ghais.ui.screens.profile.glass.ProfileHeroGlass
+import com.ghais.ui.screens.profile.glass.StorageGlassCard
 import com.ghais.ui.screens.settings.AppSettingsScreen
 import com.ghais.ui.screens.stats.StatsScreen
 import com.russhwolf.settings.Settings
@@ -237,47 +236,40 @@ object ProfileScreen : Tab {
         }
         val cachedSurahCount = downloadedKeys.size
 
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(PureBlackBg),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 120.dp)
+                .background(PureBlackBg)
         ) {
+            AuroraBackdrop()
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(PureBlackBg),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 120.dp)
+            ) {
             // -----------------------------------------------------------------
             // 1. Screen Title & Ambient Subtitle
             // -----------------------------------------------------------------
             item {
                 Column(modifier = Modifier.padding(bottom = 20.dp, start = 4.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = "Profile",
-                            color = TextWhitePrimary,
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = (-0.5).sp
-                        )
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50.dp))
-                                .background(LinkBlue.copy(alpha = 0.15f))
-                                .border(0.5.dp, LinkBlue.copy(alpha = 0.35f), RoundedCornerShape(50.dp))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text(
-                                text = "PRO",
-                                color = LinkBlue,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-                        }
-                    }
+                    Text(
+                        text = "Your Journey,",
+                        color = TextWhitePrimary,
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-0.5).sp
+                    )
+                    Text(
+                        text = "Safely Kept",
+                        color = TextMuted,
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-0.5).sp
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Your spiritual journey, stats & preferences",
+                        text = "Stats, downloads & preferences",
                         color = TextMuted,
                         fontSize = 13.sp
                     )
@@ -288,7 +280,7 @@ object ProfileScreen : Tab {
             // 2. Modular Profile Identity Card (Chunky / Oversized Avatar)
             // -----------------------------------------------------------------
             item {
-                ProfileHeroCard(
+                ProfileHeroGlass(
                     userName = userName,
                     userBio = userBio,
                     onEditClick = { showEditDialog = true },
@@ -304,8 +296,8 @@ object ProfileScreen : Tab {
             // Favorites row (live count — kept)
             // -----------------------------------------------------------------
             item {
-                ProfileCardContainer {
-                    ProfileLinkRow(
+                GlassCardContainer {
+                    GlassLinkRow(
                         icon = Icons.Filled.Favorite,
                         iconTint = HeartRed,
                         title = "Favorite Verses & Surahs",
@@ -320,133 +312,21 @@ object ProfileScreen : Tab {
             // 9. Section: Storage & Offline Downloads
             // -----------------------------------------------------------------
             item {
-                ProfileSectionHeader(title = "Storage & Offline Data", icon = Icons.Filled.Storage)
-                ProfileCardContainer {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(LinkBlue.copy(alpha = 0.14f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Storage,
-                                        contentDescription = null,
-                                        tint = LinkBlue,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                                Column {
-                                    Text(
-                                        text = "Storage Used",
-                                        color = TextWhitePrimary,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = if (cachedSurahCount == 1) "1 surah cached offline • ${formatStorageBytes(storageSizeBytes)}" else "$cachedSurahCount surahs cached offline • ${formatStorageBytes(storageSizeBytes)}",
-                                        color = TextMuted,
-                                        fontSize = 12.sp
-                                    )
-                                }
-                            }
-                            Text(
-                                text = formatStorageBytes(storageSizeBytes),
-                                color = TextWhitePrimary,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(Color.White.copy(alpha = 0.10f))
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth(0.25f)
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(
-                                        Brush.horizontalGradient(
-                                            listOf(LinkBlue, HeroBlue)
-                                        )
-                                    )
-                            )
+                GlassSectionHeader(title = "Storage & Offline Data", icon = Icons.Filled.Storage)
+                val progressFraction = (storageSizeBytes / (512 * 1024 * 1024f)).coerceIn(0.02f, 1f)
+                val cachedSummary = if (cachedSurahCount == 1) "1 surah cached offline" else "$cachedSurahCount surahs cached offline"
+                StorageGlassCard(
+                    storageLabel = formatStorageBytes(storageSizeBytes),
+                    cachedSummary = cachedSummary,
+                    progressFraction = progressFraction,
+                    cacheBadge = formatStorageBytes(storageSizeBytes),
+                    onClearClick = {
+                        scope.launch {
+                            QuranDownloads.clearAll()
+                            storageSizeBytes = QuranDownloads.storageBytes()
                         }
                     }
-
-                    SubtleDividerLine()
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                scope.launch {
-                                    QuranDownloads.clearAll()
-                                    storageSizeBytes = QuranDownloads.storageBytes()
-                                }
-                            }
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(HeartRed.copy(alpha = 0.14f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.DeleteOutline,
-                                    contentDescription = "Clear Cache",
-                                    tint = HeartRed,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Column {
-                                Text(
-                                    text = "Clear Audio Cache",
-                                    color = TextWhitePrimary,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = "Frees temporary streaming buffer",
-                                    color = TextMuted,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50.dp))
-                                .background(Color.White.copy(alpha = 0.08f))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = formatStorageBytes(storageSizeBytes),
-                                color = TextMuted,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
+                )
             }
 
             // -----------------------------------------------------------------
@@ -460,9 +340,9 @@ object ProfileScreen : Tab {
             // Spiritual Reminders (single summary row + toggle)
             // -----------------------------------------------------------------
             item {
-                ProfileSectionHeader(title = "Spiritual Reminders", icon = Icons.Filled.Notifications)
-                ProfileCardContainer {
-                    ProfileSwitchRow(
+                GlassSectionHeader(title = "Spiritual Reminders", icon = Icons.Filled.Notifications)
+                GlassCardContainer {
+                    GlassSwitchRow(
                         icon = Icons.Filled.Notifications,
                         title = "Daily Dhikr Reminder",
                         subtitle = "Morning & Evening Adhkar spiritual alerts",
@@ -479,8 +359,8 @@ object ProfileScreen : Tab {
             // Settings & Stats link rows
             // -----------------------------------------------------------------
             item {
-                ProfileCardContainer {
-                    ProfileLinkRow(
+                GlassCardContainer {
+                    GlassLinkRow(
                         icon = Icons.Filled.Settings,
                         iconTint = LinkBlue,
                         title = "Settings",
@@ -488,9 +368,9 @@ object ProfileScreen : Tab {
                         onClick = { rootNavigator?.push(AppSettingsScreen) }
                     )
 
-                    SubtleDividerLine()
+                    GlassDivider()
 
-                    ProfileLinkRow(
+                    GlassLinkRow(
                         icon = Icons.Filled.BarChart,
                         iconTint = Emerald,
                         title = "Your stats",
@@ -498,9 +378,9 @@ object ProfileScreen : Tab {
                         onClick = { rootNavigator?.push(StatsScreen) }
                     )
 
-                    SubtleDividerLine()
+                    GlassDivider()
 
-                    ProfileLinkRow(
+                    GlassLinkRow(
                         icon = Icons.Filled.Sync,
                         iconTint = Emerald,
                         title = "Sync",
@@ -514,18 +394,18 @@ object ProfileScreen : Tab {
             // About Ghais (trimmed)
             // -----------------------------------------------------------------
             item {
-                ProfileSectionHeader(title = "About Ghais", icon = Icons.Filled.Info)
-                ProfileCardContainer {
-                    ProfileValueRow(
+                GlassSectionHeader(title = "About Ghais", icon = Icons.Filled.Info)
+                GlassCardContainer {
+                    GlassValueRow(
                         icon = Icons.Filled.Info,
                         title = "App Version",
                         subtitle = "Production release channel",
                         value = "v1.0.0 (Build 2026.1)"
                     )
 
-                    SubtleDividerLine()
+                    GlassDivider()
 
-                    ProfileValueRow(
+                    GlassValueRow(
                         icon = Icons.Filled.Favorite,
                         title = "Audio Sources",
                         subtitle = "MP3Quran (242 reciters), Tanzil & EveryAyah",
@@ -533,627 +413,34 @@ object ProfileScreen : Tab {
                     )
                 }
             }
+            }
         }
 
         // ---------------------------------------------------------------------
         // Edit Profile Dialog
         // ---------------------------------------------------------------------
         if (showEditDialog) {
-            var editingName by remember { mutableStateOf(userName) }
-            var editingBio by remember { mutableStateOf(userBio) }
-
-            AlertDialog(
-                onDismissRequest = { showEditDialog = false },
-                title = {
-                    Text(
-                        text = "Edit Profile",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
+            EditProfileDialogGlass(
+                initialName = userName,
+                initialBio = userBio,
+                onSave = { n, b ->
+                    if (n.isNotBlank()) {
+                        userName = n
+                        settings.putString(PREF_USER_NAME, n)
+                    }
+                    if (b.isNotBlank()) {
+                        userBio = b
+                        settings.putString(PREF_USER_BIO, b)
+                    }
+                    showEditDialog = false
                 },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Text(
-                            text = "Display Name",
-                            color = TextMuted,
-                            fontSize = 12.sp
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.White.copy(alpha = 0.06f))
-                                .border(1.dp, CardBorderSubtle, RoundedCornerShape(12.dp))
-                                .padding(horizontal = 14.dp, vertical = 10.dp)
-                        ) {
-                            BasicTextField(
-                                value = editingName,
-                                onValueChange = { editingName = it },
-                                singleLine = true,
-                                textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-
-                        Text(
-                            text = "Spiritual Bio / Intention",
-                            color = TextMuted,
-                            fontSize = 12.sp
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.White.copy(alpha = 0.06f))
-                                .border(1.dp, CardBorderSubtle, RoundedCornerShape(12.dp))
-                                .padding(horizontal = 14.dp, vertical = 10.dp)
-                        ) {
-                            BasicTextField(
-                                value = editingBio,
-                                onValueChange = { editingBio = it },
-                                maxLines = 3,
-                                textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            if (editingName.isNotBlank()) {
-                                userName = editingName.trim()
-                                settings.putString(PREF_USER_NAME, userName)
-                            }
-                            if (editingBio.isNotBlank()) {
-                                userBio = editingBio.trim()
-                                settings.putString(PREF_USER_BIO, userBio)
-                            }
-                            showEditDialog = false
-                        }
-                    ) {
-                        Text(
-                            text = "Save",
-                            color = LinkBlue,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showEditDialog = false }) {
-                        Text(
-                            text = "Cancel",
-                            color = TextMuted
-                        )
-                    }
-                },
-                containerColor = DarkCard,
-                shape = RoundedCornerShape(20.dp)
+                onDismiss = { showEditDialog = false }
             )
         }
     }
 }
 
-// -----------------------------------------------------------------------------
-// Component Primitives & Modular Cards
-// -----------------------------------------------------------------------------
-
-@Composable
-private fun ProfileHeroCard(
-    userName: String,
-    userBio: String,
-    onEditClick: () -> Unit,
-    sessionName: String? = null,
-    sessionEmail: String? = null,
-    isGuest: Boolean = true,
-    onLogoutClick: () -> Unit = {}
-) {
-    val displayName = sessionName?.takeIf { it.isNotBlank() } ?: userName
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp))
-            .background(GlassCard)
-            .border(
-                BorderStroke(
-                    width = 1.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            LinkBlue.copy(alpha = 0.25f),
-                            CardBorderSubtle
-                        )
-                    )
-                ),
-                shape = RoundedCornerShape(26.dp)
-            )
-            .padding(vertical = 26.dp, horizontal = 20.dp)
-    ) {
-        // Soft top glow for the glassmorphic feel
-        Box(
-            modifier = Modifier
-                .size(240.dp)
-                .align(Alignment.TopCenter)
-                .offset(y = (-120).dp)
-                .background(
-                    Brush.radialGradient(
-                        listOf(
-                            LinkBlue.copy(alpha = 0.22f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Chunky / Oversized Avatar with Glowing Sweep Gradient Rim
-            Box(
-                modifier = Modifier
-                    .size(112.dp)
-                    .clip(CircleShape)
-                    .border(
-                        BorderStroke(
-                            width = 3.dp,
-                            brush = Brush.sweepGradient(
-                                listOf(
-                                    LinkBlue,
-                                    HeroBlue,
-                                    LinkBlue.copy(alpha = 0.6f),
-                                    HeroBlue.copy(alpha = 0.7f),
-                                    LinkBlue,
-                                    LinkBlue
-                                )
-                            )
-                        ),
-                        shape = CircleShape
-                    )
-                    .padding(4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(
-                                listOf(
-                                    HeroBlue.copy(alpha = 0.45f),
-                                    HeroIndigo
-                                )
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = displayName.firstOrNull()?.toString()?.uppercase() ?: "A",
-                        color = LinkBlue,
-                        fontSize = 44.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Text(
-                text = displayName,
-                color = TextWhitePrimary,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.ExtraBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = userBio,
-                color = TextMuted,
-                fontSize = 13.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 17.sp,
-                textAlign = TextAlign.Center
-            )
-
-            if (!sessionEmail.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = sessionEmail,
-                    color = TextMuted.copy(alpha = 0.8f),
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Synced Badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50.dp))
-                        .background(LinkBlue.copy(alpha = 0.16f))
-                        .border(0.5.dp, LinkBlue.copy(alpha = 0.35f), RoundedCornerShape(50.dp))
-                        .padding(horizontal = 7.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = "PRO MEMBER",
-                        color = LinkBlue,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50.dp))
-                        .background(Emerald.copy(alpha = 0.16f))
-                        .border(0.5.dp, Emerald.copy(alpha = 0.35f), RoundedCornerShape(50.dp))
-                        .padding(horizontal = 7.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = "CLOUD SYNCED",
-                        color = Emerald,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp
-                    )
-                }
-
-                if (isGuest) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .border(0.5.dp, CardBorderSubtle, RoundedCornerShape(50.dp))
-                            .padding(horizontal = 7.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "GUEST MODE",
-                            color = TextMuted,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.8.sp
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Edit Profile pill (reference-style action button)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50.dp))
-                    .background(LinkBlue)
-                    .clickable { onEditClick() }
-                    .padding(horizontal = 26.dp, vertical = 12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Edit,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = "Edit Profile",
-                    color = Color.White,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            if (!isGuest) {
-                Spacer(modifier = Modifier.height(10.dp))
-                TextButton(onClick = onLogoutClick) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Logout,
-                            contentDescription = null,
-                            tint = HeartRed.copy(alpha = 0.9f),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "Log out",
-                            color = HeartRed.copy(alpha = 0.9f),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfileLinkRow(
-    icon: ImageVector,
-    iconTint: Color,
-    title: String,
-    subtitle: String,
-    badge: String = "",
-    onClick: () -> Unit = {}
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(iconTint.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                color = TextWhitePrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                color = TextMuted,
-                fontSize = 12.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        if (badge.isNotEmpty()) {
-            Spacer(modifier = Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = badge,
-                    color = TextMuted,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.width(6.dp))
-
-        Icon(
-            imageVector = Icons.Filled.ChevronRight,
-            contentDescription = null,
-            tint = TextMuted.copy(alpha = 0.6f),
-            modifier = Modifier.size(18.dp)
-        )
-    }
-}
-
-@Composable
-private fun ProfileSectionHeader(
-    title: String,
-    icon: ImageVector? = null
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 4.dp, bottom = 10.dp, top = 22.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = LinkBlue,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-        Text(
-            text = title.uppercase(),
-            color = LinkBlue,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.ExtraBold,
-            letterSpacing = 1.sp
-        )
-    }
-}
-
-@Composable
-private fun ProfileCardContainer(
-    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(GlassCard)
-            .border(
-                BorderStroke(1.dp, CardBorderSubtle),
-                shape = RoundedCornerShape(20.dp)
-            )
-    ) {
-        content()
-    }
-}
-
-@Composable
-private fun ProfileSwitchRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) { onCheckedChange(!checked) }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(
-                    if (checked) LinkBlue.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.06f)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (checked) LinkBlue else TextMuted,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                color = TextWhitePrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            if (subtitle.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = subtitle,
-                    color = TextMuted,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = LinkBlue,
-                checkedBorderColor = Color.Transparent,
-                uncheckedThumbColor = Color(0xFF8E989C),
-                uncheckedTrackColor = Color.White.copy(alpha = 0.12f),
-                uncheckedBorderColor = Color.White.copy(alpha = 0.12f)
-            )
-        )
-    }
-}
-
-@Composable
-private fun ProfileValueRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    value: String
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.06f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = TextMuted,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                color = TextWhitePrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            if (subtitle.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = subtitle,
-                    color = TextMuted,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-
-        if (value.isNotEmpty()) {
-            Spacer(modifier = Modifier.width(12.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
-                    .border(0.5.dp, CardBorderSubtle, RoundedCornerShape(50.dp))
-                    .padding(horizontal = 9.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = value,
-                    color = TextWhitePrimary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-    }
-}
+// Glass primitives live in com.ghais.ui.screens.profile.glass (see imports above).
 
 // Storage size formatting: B / KB / MB with one decimal
 private fun formatStorageBytes(bytes: Long): String {
@@ -1179,16 +466,6 @@ private fun formatSyncRelative(nowMs: Long, atMs: Long): String {
         seconds < 86400 -> "${seconds / 3600}h ago"
         else -> "${seconds / 86400}d ago"
     }
-}
-
-@Composable
-private fun SubtleDividerLine() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(1.dp)
-            .background(SubtleDivider)
-    )
 }
 
 // -----------------------------------------------------------------------------
@@ -1276,7 +553,7 @@ private fun RecitationSchedulesSection() {
         showSheet = false
     }
 
-    ProfileSectionHeader(title = "Recitation schedules", icon = Icons.Filled.Schedule)
+    GlassSectionHeader(title = "Recitation schedules", icon = Icons.Filled.Schedule)
     Text(
         text = "Play Quran automatically at your times",
         color = TextMuted,
@@ -1285,7 +562,7 @@ private fun RecitationSchedulesSection() {
     )
 
     if (schedules.isEmpty()) {
-        ProfileCardContainer {
+        GlassCardContainer {
             Text(
                 text = "No schedules — add one to wake up to Quran",
                 color = TextMuted,
@@ -1615,7 +892,7 @@ private fun ScheduleCard(
     onToggle: (Boolean) -> Unit,
     onDelete: () -> Unit
 ) {
-    ProfileCardContainer {
+    GlassCardContainer {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
