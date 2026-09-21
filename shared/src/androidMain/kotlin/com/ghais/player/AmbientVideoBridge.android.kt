@@ -89,6 +89,7 @@ actual object AmbientVideoBridge {
      */
     fun init(context: android.content.Context) {
         appContext = context.applicationContext
+        AmbientVideoArt.init(context)
     }
 
     /** Fixed layer binding for the composable: layer A always shows this player. Null when init was skipped. */
@@ -127,6 +128,7 @@ actual object AmbientVideoBridge {
                 _frontIsA.value = true
                 _frontKey.value = assetKeys[0]
                 _backReadyKey.value = null
+                AmbientVideoArt.refreshFor(assetKeys[0])
                 android.util.Log.d(TAG, "rotation started: $assetKeys")
             }
         }
@@ -188,6 +190,7 @@ actual object AmbientVideoBridge {
                 _frontIsA.value = isFrontA
                 _frontKey.value = readyKey
                 _backReadyKey.value = null
+                AmbientVideoArt.refreshFor(readyKey)
                 android.util.Log.d(TAG, "swapped to $readyKey")
                 nextIndex = if (rotation.isNotEmpty()) (nextIndex + 1) % rotation.size else 0
             }
@@ -254,6 +257,7 @@ actual object AmbientVideoBridge {
         _frontIsA.value = true
         _frontKey.value = null
         _backReadyKey.value = null
+        AmbientVideoArt.refreshFor(null)
         // swapEvent stays monotonic so the view's last-handled guard stays valid.
     }
 
