@@ -1,7 +1,6 @@
 package com.ghais.ui.screens.profile.glass
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,19 +33,22 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val GlassWhite = Color(0xFFFFFFFF)
-private val GlassMuted = Color(0xFF9A9AA0)
-private val GlassBlue = Color(0xFF4C8DFF)
+private val ProtonWhite = Color(0xFFFFFFFF)
+private val ProtonMuted = Color(0xFF9A9AA0)
+private val ProtonEmerald = Color(0xFF4EDEA3)
+private val ProtonDanger = Color(0xFFFF5A6E)
 
 @Composable
-fun GlassLinkRow(
+fun ProtonRow(
     icon: ImageVector,
-    iconTint: Color,
     title: String,
     subtitle: String,
-    badge: String = "",
+    countBadge: Int = 0,
+    destructive: Boolean = false,
     onClick: () -> Unit = {}
 ) {
+    val titleColor = if (destructive) ProtonDanger else ProtonWhite
+    val iconTint = if (destructive) ProtonDanger else ProtonWhite
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -53,70 +56,72 @@ fun GlassLinkRow(
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(iconTint.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(20.dp)
-            )
+        Box {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(ProtonWhite.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            if (countBadge > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 4.dp, y = (-4).dp)
+                        .size(18.dp)
+                        .clip(CircleShape)
+                        .background(ProtonWhite.copy(alpha = 0.20f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (countBadge > 99) "99+" else countBadge.toString(),
+                        color = ProtonWhite,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                }
+            }
         }
-
         Spacer(modifier = Modifier.width(14.dp))
-
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                color = GlassWhite,
+                color = titleColor,
                 fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                color = GlassMuted,
+                color = ProtonMuted,
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
-
-        if (badge.isNotEmpty()) {
-            Spacer(modifier = Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = badge,
-                    color = GlassMuted,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.width(6.dp))
-
+        Spacer(modifier = Modifier.width(8.dp))
         Icon(
             imageVector = Icons.Filled.ChevronRight,
             contentDescription = null,
-            tint = GlassMuted.copy(alpha = 0.6f),
+            tint = ProtonMuted.copy(alpha = 0.6f),
             modifier = Modifier.size(18.dp)
         )
     }
 }
 
 @Composable
-fun GlassSwitchRow(
+fun ProtonSwitchRow(
     icon: ImageVector,
     title: String,
     subtitle: String,
@@ -124,7 +129,6 @@ fun GlassSwitchRow(
     onCheckedChange: (Boolean) -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -139,59 +143,53 @@ fun GlassSwitchRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(
-                    if (checked) GlassBlue.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.06f)
-                ),
+                .background(ProtonWhite.copy(alpha = 0.08f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (checked) GlassBlue else GlassMuted,
+                tint = ProtonWhite,
                 modifier = Modifier.size(20.dp)
             )
         }
-
         Spacer(modifier = Modifier.width(14.dp))
-
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                color = GlassWhite,
+                color = ProtonWhite,
                 fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            if (subtitle.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = subtitle,
-                    color = GlassMuted,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                color = ProtonMuted,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
-
         Spacer(modifier = Modifier.width(12.dp))
-
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = GlassBlue,
+                checkedThumbColor = ProtonWhite,
+                checkedTrackColor = ProtonEmerald,
                 checkedBorderColor = Color.Transparent,
-                uncheckedThumbColor = Color(0xFF8E989C),
-                uncheckedTrackColor = Color.White.copy(alpha = 0.12f),
-                uncheckedBorderColor = Color.White.copy(alpha = 0.12f)
+                uncheckedThumbColor = ProtonWhite,
+                uncheckedTrackColor = ProtonWhite.copy(alpha = 0.12f),
+                uncheckedBorderColor = Color.Transparent
             )
         )
     }
 }
 
 @Composable
-fun GlassValueRow(
+fun ProtonValueRow(
     icon: ImageVector,
     title: String,
     subtitle: String,
@@ -207,52 +205,49 @@ fun GlassValueRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.06f)),
+                .background(ProtonWhite.copy(alpha = 0.08f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = GlassMuted,
+                tint = ProtonWhite,
                 modifier = Modifier.size(20.dp)
             )
         }
-
         Spacer(modifier = Modifier.width(14.dp))
-
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                color = GlassWhite,
+                color = ProtonWhite,
                 fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            if (subtitle.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = subtitle,
-                    color = GlassMuted,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                color = ProtonMuted,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
-
         if (value.isNotEmpty()) {
             Spacer(modifier = Modifier.width(12.dp))
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(50.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
-                    .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(50.dp))
+                    .background(ProtonWhite.copy(alpha = 0.08f))
                     .padding(horizontal = 9.dp, vertical = 4.dp)
             ) {
                 Text(
                     text = value,
-                    color = GlassWhite,
+                    color = ProtonWhite,
                     fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1
                 )
             }
         }
