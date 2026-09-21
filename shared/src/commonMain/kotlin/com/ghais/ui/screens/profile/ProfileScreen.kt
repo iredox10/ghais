@@ -33,6 +33,7 @@ import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.data.auth.AuthRepository
 import com.ghais.data.repository.FavoritesStore
+import com.ghais.data.repository.OnboardingStore
 import com.ghais.data.sync.SyncEngine
 import com.ghais.data.sync.SyncStatus
 import com.ghais.player.QuranDownloads
@@ -146,6 +147,7 @@ object ProfileScreen : Tab {
         // Live favourites count
         val favoriteTracks by FavoritesStore.favoriteTracks.collectAsState()
         val favoriteCount = favoriteTracks.size
+        val dailyMinutes by OnboardingStore.dailyGoalMinutes.collectAsState()
 
         // Auth session (null = guest)
         val session by AuthRepository.session.collectAsState()
@@ -197,14 +199,15 @@ object ProfileScreen : Tab {
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 120.dp)
             ) {
                 // -----------------------------------------------------------------
-                // 1. Cloud Sync feature card
+                // 1. Daily Goal feature card
                 // -----------------------------------------------------------------
                 item {
                     FeatureCard(
-                        title = "Cloud Sync",
-                        body = "Keep favorites, playlists and progress safe across devices.",
-                        buttonText = "Sync now"
-                    ) { scope.launch { SyncEngine.syncNow() } }
+                        title = "Daily Goal",
+                        body = "You're aiming for $dailyMinutes minutes of listening a day. Small steps, lasting reward.",
+                        buttonText = "View stats",
+                        onButton = { rootNavigator?.push(StatsScreen) }
+                    )
                     Spacer(modifier = Modifier.height(18.dp))
                 }
 
