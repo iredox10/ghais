@@ -31,10 +31,12 @@ import androidx.compose.ui.zIndex
 import cafe.adriel.voyager.core.stack.StackEvent
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.ScreenTransition
+import com.quranify.data.auth.AuthRepository
 import com.quranify.player.AudioEngine
 import com.quranify.ui.components.MiniPlayer
 import com.quranify.ui.navigation.LocalRootNavigator
 import com.quranify.ui.navigation.MainScreen
+import com.quranify.ui.screens.auth.AuthScreen
 import com.quranify.ui.screens.player.NowPlayingScreen
 import com.quranify.ui.theme.QuranifyTheme
 import kotlinx.coroutines.delay
@@ -42,7 +44,23 @@ import kotlinx.coroutines.delay
 @Composable
 fun App() {
     QuranifyTheme {
-        Navigator(MainScreen) { navigator ->
+        val session by AuthRepository.session.collectAsState()
+        var guestSkipped by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) { AuthRepository.refreshSession() }
+        // Reset guest bypass whenever a real session appears, so a later
+        // logout (session -> null) brings the gate back automatically.
+        LaunchedEffect(session) {
+            if (session != null) guestSkipped = false
+        }
+        val showAuth = session == null && !guestSkipped
+        if (showAuth) {
+            // Full-screen gate above everything; MiniPlayer stays under the gate.
+            AuthScreen(
+                onAuthenticated = { guestSkipped = false },
+                onGuest = { guestSkipped = true },
+            ).Content()
+        } else {
+            Navigator(MainScreen) { navigator ->
             val currentTrack by AudioEngine.currentTrack.collectAsState()
             val isNowPlaying = navigator.lastItem is NowPlayingScreen
             val isPushedScreen = navigator.lastItem !is MainScreen && !isNowPlaying
@@ -117,6 +135,7 @@ fun App() {
                         )
                     }
                 }
+            }
             }
         }
     }

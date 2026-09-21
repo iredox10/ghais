@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
@@ -72,6 +73,7 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.quranify.data.auth.AuthRepository
 import com.quranify.data.repository.FavoritesStore
 import com.quranify.data.repository.QuranDataRepository
 import com.quranify.data.repository.RecitationSchedule
@@ -128,6 +130,9 @@ object ProfileScreen : Tab {
         // Live favourites count
         val favoriteTracks by FavoritesStore.favoriteTracks.collectAsState()
         val favoriteCount = favoriteTracks.size
+
+        // Auth session (null = guest)
+        val session by AuthRepository.session.collectAsState()
 
         // User profile editable state
         var userName by remember {
@@ -205,7 +210,11 @@ object ProfileScreen : Tab {
                 ProfileHeroCard(
                     userName = userName,
                     userBio = userBio,
-                    onEditClick = { showEditDialog = true }
+                    onEditClick = { showEditDialog = true },
+                    sessionName = session?.name,
+                    sessionEmail = session?.email,
+                    isGuest = session == null,
+                    onLogoutClick = { scope.launch { AuthRepository.signOut() } }
                 )
                 Spacer(modifier = Modifier.height(18.dp))
             }
@@ -546,8 +555,13 @@ object ProfileScreen : Tab {
 private fun ProfileHeroCard(
     userName: String,
     userBio: String,
-    onEditClick: () -> Unit
+    onEditClick: () -> Unit,
+    sessionName: String? = null,
+    sessionEmail: String? = null,
+    isGuest: Boolean = true,
+    onLogoutClick: () -> Unit = {}
 ) {
+    val displayName = sessionName?.takeIf { it.isNotBlank() } ?: userName
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -625,7 +639,7 @@ private fun ProfileHeroCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = userName.firstOrNull()?.toString()?.uppercase() ?: "A",
+                        text = displayName.firstOrNull()?.toString()?.uppercase() ?: "A",
                         color = LinkBlue,
                         fontSize = 44.sp,
                         fontWeight = FontWeight.ExtraBold
@@ -636,7 +650,7 @@ private fun ProfileHeroCard(
             Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text = userName,
+                text = displayName,
                 color = TextWhitePrimary,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.ExtraBold,
@@ -656,6 +670,18 @@ private fun ProfileHeroCard(
                 lineHeight = 17.sp,
                 textAlign = TextAlign.Center
             )
+
+            if (!sessionEmail.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = sessionEmail,
+                    color = TextMuted.copy(alpha = 0.8f),
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
+            }
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -696,6 +722,24 @@ private fun ProfileHeroCard(
                         letterSpacing = 0.8.sp
                     )
                 }
+
+                if (isGuest) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50.dp))
+                            .background(Color.White.copy(alpha = 0.08f))
+                            .border(0.5.dp, CardBorderSubtle, RoundedCornerShape(50.dp))
+                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "GUEST MODE",
+                            color = TextMuted,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -722,6 +766,29 @@ private fun ProfileHeroCard(
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
+            }
+
+            if (!isGuest) {
+                Spacer(modifier = Modifier.height(10.dp))
+                TextButton(onClick = onLogoutClick) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Logout,
+                            contentDescription = null,
+                            tint = HeartRed.copy(alpha = 0.9f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Log out",
+                            color = HeartRed.copy(alpha = 0.9f),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
         }
     }
