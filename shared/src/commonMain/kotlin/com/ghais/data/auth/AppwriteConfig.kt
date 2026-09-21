@@ -17,13 +17,15 @@ object AppwriteConfig {
 
     /**
      * Deep-link scheme the app uses for the OAuth2 redirect back from the
-     * browser (`successUrl` / `failureUrl`). Must match the intent-filter /
-     * URL-type registered on each platform AND the hostname allow-listed in
-     * the Appwrite Console (see [AuthRepository.signInWithGoogle]).
+     * browser (`successUrl` / `failureUrl`). Uses Appwrite's reserved
+     * `appwrite-callback-<project>` scheme, which the server accepts without
+     * extra platform registration (a custom scheme like `ghais://auth` gets
+     * rejected with "Invalid 'success' param" until registered in Console).
+     * Must match the intent-filter / URL-type registered on each platform.
      */
-    const val OAUTH_REDIRECT_SCHEME = "ghais"
+    const val OAUTH_REDIRECT_SCHEME = "appwrite-callback-tikitakatalk"
 
-    /** `ghais://auth` — success/failure redirect target for OAuth2. */
+    /** Success redirect target for OAuth2 (userId + secret come as query params). */
     const val OAUTH_SUCCESS_URL = "$OAUTH_REDIRECT_SCHEME://auth"
 
     /** Same deep link; the failure case carries `?error=...` query params. */

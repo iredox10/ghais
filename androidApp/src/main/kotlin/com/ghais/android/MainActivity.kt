@@ -49,10 +49,11 @@ class MainActivity : ComponentActivity() {
         handleOAuthRedirect(intent)
     }
 
-    /** Appwrite Google-OAuth return: ghais://auth?userId=..&secret=.. */
+    /** Appwrite Google-OAuth return: appwrite-callback-*?userId=..&secret=.. */
     private fun handleOAuthRedirect(intent: android.content.Intent?) {
         val uri = intent?.data ?: return
-        if (uri.scheme != "ghais" || uri.host != "auth") return
+        val scheme = uri.scheme ?: return
+        if (scheme != "appwrite-callback-tikitakatalk" && scheme != "ghais") return
         val userId = uri.getQueryParameter("userId")
         val secret = uri.getQueryParameter("secret")
         if (userId.isNullOrBlank() || secret.isNullOrBlank()) return
