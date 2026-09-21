@@ -23,7 +23,11 @@ expect object PlayerBridge {
     /** Last player error message, null when healthy. */
     val errorMessage: StateFlow<String?>
 
-    fun play(url: String)
+    /**
+     * Starts playback, resuming from [startPositionMs] atomically when > 0
+     * (applied at prepare time so early seeks can't be dropped while buffering).
+     */
+    fun play(url: String, startPositionMs: Long = 0L)
     /** Hint for lockscreen/notification title; consumed atomically by the next play() (no race). */
     fun setPlaybackMetadata(title: String?, artist: String?)
     /**

@@ -194,8 +194,8 @@ actual object PlayerBridge {
         } catch (_: Exception) { }
     }
 
-    actual fun play(url: String) {
-        playWithMetadata(url, pendingTitle, pendingArtist)
+    actual fun play(url: String, startPositionMs: Long) {
+        playWithMetadata(url, pendingTitle, pendingArtist, startPositionMs)
     }
 
     actual fun setPlaybackMetadata(title: String?, artist: String?) {
@@ -208,7 +208,7 @@ actual object PlayerBridge {
     }
 
     /** Android-only: start playback with lockscreen/notification metadata set atomically. */
-    fun playWithMetadata(url: String, title: String?, artist: String?) {
+    fun playWithMetadata(url: String, title: String?, artist: String?, startPositionMs: Long = 0L) {
         if (!title.isNullOrBlank()) pendingTitle = title
         if (!artist.isNullOrBlank()) pendingArtist = artist
         try { onPlayRequested?.invoke() } catch (_: Exception) { }
@@ -238,7 +238,7 @@ actual object PlayerBridge {
                 .setMediaId(url)
                 .setMediaMetadata(metadata)
                 .build()
-            p.setMediaItem(item)
+            p.setMediaItem(item, startPositionMs.coerceAtLeast(0L))
             p.prepare()
             p.play()
         } catch (e: Exception) {

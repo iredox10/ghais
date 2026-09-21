@@ -421,7 +421,11 @@ object AudioEngine {
         } else {
             track.audioUrl
         }
-        PlayerBridge.play(playbackUri)
+        // Atomic resume: start position rides along with prepare, so early
+        // seeks can't be dropped while buffering. The retry net below stays
+        // as a backstop for mid-play item replacements.
+        val resumeAt = pendingSeekMs.also { pendingSeekMs = 0L; pendingSeekTries = 0 }
+        PlayerBridge.play(playbackUri, resumeAt)
     }
 
     private fun stopPlayback() {

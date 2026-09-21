@@ -13,6 +13,7 @@
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ghais_launcher"
+        android:roundIcon="@mipmap/ghais_launcher"
         android:label="Ghais"
         android:supportsRtl="true"
         android:theme="@style/Theme.Quranify">

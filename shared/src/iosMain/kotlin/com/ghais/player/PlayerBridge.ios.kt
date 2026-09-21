@@ -133,7 +133,7 @@ actual object PlayerBridge {
         }
     }
 
-    actual fun play(url: String) {
+    actual fun play(url: String, startPositionMs: Long) {
         try {
             _errorMessage.value = null
             _isBuffering.value = true
@@ -151,6 +151,9 @@ actual object PlayerBridge {
             observeTrackEnd(item)
             p.replaceCurrentItemWithPlayerItem(item)
             p.volume = currentVolume
+            if (startPositionMs > 0L) {
+                p.seekToTime(CMTimeMakeWithSeconds(startPositionMs / 1000.0, 600))
+            }
             p.play()
             p.rate = currentSpeed
         } catch (e: Exception) {
