@@ -29,7 +29,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,8 +62,10 @@ private val AuthErrorRed = Color(0xFFFF6B6B)
 /**
  * Voyager screen wrapper for the auth gate.
  *
+ * Auth is mandatory — there is no guest mode.
+ *
  * @param onAuthenticated called on successful sign-in / sign-up (host pops/dismisses the gate).
- * @param onGuest called when the user taps "Continue as guest" (host dismisses gate for session).
+ * @param onGuest legacy no-op kept for backward compatibility; no guest affordance is rendered.
  */
 class AuthScreen(
     private val onAuthenticated: () -> Unit = {},
@@ -82,7 +83,7 @@ class AuthScreen(
 @Composable
 fun AuthScreenContent(
     onAuthenticated: () -> Unit,
-    onGuest: () -> Unit,
+    onGuest: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -164,14 +165,6 @@ fun AuthScreenContent(
                     }
                 }
                 Spacer(Modifier.height(20.dp))
-                TextButton(onClick = onGuest) {
-                    Text(
-                        text = "Continue as guest",
-                        color = MutedGrey,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
                 return@Column
             }
 
@@ -392,16 +385,6 @@ fun AuthScreenContent(
             }
 
             Spacer(Modifier.height(12.dp))
-
-            // Guest link
-            TextButton(onClick = onGuest) {
-                Text(
-                    text = "Continue as guest",
-                    color = MutedGrey,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
         }
     }
 }

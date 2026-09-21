@@ -32,12 +32,14 @@ import cafe.adriel.voyager.core.stack.StackEvent
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.ScreenTransition
 import com.ghais.data.auth.AuthRepository
+import com.ghais.data.repository.OnboardingStore
 import com.ghais.data.sync.SyncTriggers
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.MiniPlayer
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.navigation.MainScreen
 import com.ghais.ui.screens.auth.AuthScreen
+import com.ghais.ui.screens.onboarding.OnboardingScreen
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.theme.QuranifyTheme
 import kotlinx.coroutines.delay
@@ -46,20 +48,17 @@ import kotlinx.coroutines.delay
 fun App() {
     QuranifyTheme {
         val session by AuthRepository.session.collectAsState()
-        var guestSkipped by remember { mutableStateOf(false) }
+        val onboardingSeen by OnboardingStore.seen.collectAsState()
         LaunchedEffect(Unit) { AuthRepository.refreshSession() }
         LaunchedEffect(Unit) { SyncTriggers.start(this) }
-        // Reset guest bypass whenever a real session appears, so a later
-        // logout (session -> null) brings the gate back automatically.
-        LaunchedEffect(session) {
-            if (session != null) guestSkipped = false
-        }
-        val showAuth = session == null && !guestSkipped
-        if (showAuth) {
+        if (!onboardingSeen) {
+            OnboardingScreen.Content()
+        } else if (session == null) {
             // Full-screen gate above everything; MiniPlayer stays under the gate.
+            // Auth is mandatory — no guest mode. onAuthenticated needs no action:
+            // the session flow flips automatically and dismisses the gate.
             AuthScreen(
-                onAuthenticated = { guestSkipped = false },
-                onGuest = { guestSkipped = true },
+                onAuthenticated = {},
             ).Content()
         } else {
             Navigator(MainScreen) { navigator ->
