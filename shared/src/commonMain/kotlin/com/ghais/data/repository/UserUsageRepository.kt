@@ -59,6 +59,25 @@ object UserUsageRepository {
     private const val KEY_UNIQUE_RECITERS = "quranify_stats_unique_reciters"
     private const val KEY_UNIQUE_SURAHS = "quranify_stats_unique_surahs"
 
+    private var ownerPrefix = ""
+    private var currentOwnerId = "local"
+
+    private fun k(key: String): String =
+        if (ownerPrefix.isEmpty()) key else ownerPrefix + key
+
+    fun setOwner(ownerId: String) {
+        val normalized = ownerId.ifBlank { "local" }
+        if (normalized == currentOwnerId) return
+        currentOwnerId = normalized
+        ownerPrefix = if (normalized == "local") "" else "$normalized::"
+        lastRecordedTimeMs = 0L
+        unaccountedMs = 0L
+        lastSavedTimestampMs = currentTimeMs()
+        _history.value = emptyList()
+        loadHistory()
+        loadStats()
+    }
+
     private val _history = MutableStateFlow<List<JumpBackInItem>>(emptyList())
     val history: StateFlow<List<JumpBackInItem>> = _history.asStateFlow()
 
@@ -88,7 +107,7 @@ object UserUsageRepository {
     private fun currentEpochDay(): Long = currentTimeMs() / 86_400_000L
 
     private fun loadHistory() {
-        val rawJson = settings.getString(KEY_HISTORY, "")
+        val rawJson = settings.getString(k(KEY_HISTORY), "")
         if (rawJson.isNotBlank()) {
             try {
                 val parsed = json.decodeFromString<List<PersistedHistoryItem>>(rawJson)
@@ -104,10 +123,10 @@ object UserUsageRepository {
 
     private fun loadStats() {
         val today = currentEpochDay()
-        val savedDay = settings.getLong(KEY_LAST_DAY, 0L)
-        var streak = settings.getInt(KEY_STREAK, 1).coerceAtLeast(1)
-        var secondsToday = settings.getLong(KEY_SECONDS_TODAY, 0L)
-        val totalSeconds = settings.getLong(KEY_TOTAL_SECONDS, 0L)
+        val savedDay = settings.getLong(k(KEY_LAST_DAY), 0L)
+        var streak = settings.getInt(k(KEY_STREAK), 1).coerceAtLeast(1)
+        var secondsToday = settings.getLong(k(KEY_SECONDS_TODAY), 0L)
+        val totalSeconds = settings.getLong(k(KEY_TOTAL_SECONDS), 0L)
 
         if (savedDay != 0L) {
             if (today == savedDay + 1L) {
@@ -203,11 +222,11 @@ object UserUsageRepository {
         unaccountedMs %= 1000L
 
         val today = currentEpochDay()
-        val savedDay = settings.getLong(KEY_LAST_DAY, 0L)
+        val savedDay = settings.getLong(k(KEY_LAST_DAY), 0L)
 
         var streak = _stats.value.daysStreak
-        var secondsToday = settings.getLong(KEY_SECONDS_TODAY, 0L) + deltaSeconds
-        val totalSeconds = settings.getLong(KEY_TOTAL_SECONDS, 0L) + deltaSeconds
+        var secondsToday = settings.getLong(k(KEY_SECONDS_TODAY), 0L) + deltaSeconds
+        val totalSeconds = settings.getLong(k(KEY_TOTAL_SECONDS), 0L) + deltaSeconds
 
         if (savedDay != today) {
             if (savedDay != 0L && today == savedDay + 1L) {
@@ -216,12 +235,12 @@ object UserUsageRepository {
                 streak = 1
             }
             secondsToday = deltaSeconds
-            settings.putLong(KEY_LAST_DAY, today)
-            settings.putInt(KEY_STREAK, streak)
+            settings.putLong(k(KEY_LAST_DAY), today)
+            settings.putInt(k(KEY_STREAK), streak)
         }
 
-        settings.putLong(KEY_SECONDS_TODAY, secondsToday)
-        settings.putLong(KEY_TOTAL_SECONDS, totalSeconds)
+        settings.putLong(k(KEY_SECONDS_TODAY), secondsToday)
+        settings.putLong(k(KEY_TOTAL_SECONDS), totalSeconds)
 
         _stats.update { current ->
             current.copy(
@@ -234,8 +253,8 @@ object UserUsageRepository {
 
     private fun ensureStreakUpdatedForToday() {
         val today = currentEpochDay()
-        val savedDay = settings.getLong(KEY_LAST_DAY, 0L)
-        var streak = settings.getInt(KEY_STREAK, 1).coerceAtLeast(1)
+        val savedDay = settings.getLong(k(KEY_LAST_DAY), 0L)
+        var streak = settings.getInt(k(KEY_STREAK), 1).coerceAtLeast(1)
 
         if (savedDay != today) {
             if (savedDay != 0L && today == savedDay + 1L) {
@@ -243,9 +262,9 @@ object UserUsageRepository {
             } else if (savedDay != 0L && today > savedDay + 1L) {
                 streak = 1
             }
-            settings.putLong(KEY_LAST_DAY, today)
-            settings.putInt(KEY_STREAK, streak)
-            settings.putLong(KEY_SECONDS_TODAY, 0L)
+            settings.putLong(k(KEY_LAST_DAY), today)
+            settings.putInt(k(KEY_STREAK), streak)
+            settings.putLong(k(KEY_SECONDS_TODAY), 0L)
 
             _stats.update { it.copy(daysStreak = streak, minutesToday = 0) }
         }
@@ -306,26 +325,26 @@ object UserUsageRepository {
         try {
             val list = _history.value.map { it.toPersistedHistoryItem() }
             val raw = json.encodeToString(list)
-            settings.putString(KEY_HISTORY, raw)
+            settings.putString(k(KEY_HISTORY), raw)
         } catch (_: Exception) {}
     }
 
     private fun saveStatsToDisk() {
         try {
             val current = _stats.value
-            settings.putInt(KEY_STREAK, current.daysStreak)
-            settings.putLong(KEY_TOTAL_SECONDS, current.totalSecondsListened)
+            settings.putInt(k(KEY_STREAK), current.daysStreak)
+            settings.putLong(k(KEY_TOTAL_SECONDS), current.totalSecondsListened)
         } catch (_: Exception) {}
     }
 
     private fun getStoredSet(key: String): Set<String> {
-        val raw = settings.getString(key, "")
+        val raw = settings.getString(k(key), "")
         if (raw.isBlank()) return emptySet()
         return raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
     }
 
     private fun saveStoredSet(key: String, set: Set<String>) {
-        settings.putString(key, set.joinToString(","))
+        settings.putString(k(key), set.joinToString(","))
     }
 
     private fun PersistedHistoryItem.toJumpBackInItem(): JumpBackInItem {
