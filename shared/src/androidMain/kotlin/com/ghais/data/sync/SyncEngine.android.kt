@@ -4,6 +4,7 @@ import android.util.Log
 import com.ghais.data.auth.AppwriteConfig
 import com.ghais.data.auth.AuthRepository
 import com.ghais.data.auth.PersistentCookieJar
+import com.ghais.data.repository.CustomRoutinesStore
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.SchedulesStore
@@ -44,6 +45,10 @@ import kotlinx.serialization.json.Json
 actual object SyncEngine {
 
     private const val TAG = "GhaisSync"
+
+    private const val PLAYLISTS = "playlists"
+    private const val PLAYLIST_ITEMS = "playlist_items"
+    private const val ROUTINE_DOC_PREFIX = "rtn-"
 
     // Database/collection ids come from the sibling-owned SyncModels.kt
     // (same package: DB_ID, LIKES, PLAYBACK, FOLLOWS, STATS, SCHEDULES).
@@ -124,6 +129,7 @@ actual object SyncEngine {
             runCollection(PLAYBACK) { pushPlayback(db, userId) }
             runCollection(STATS) { pushStats(db, userId) }
             runCollection(SCHEDULES) { pushSchedules(db, userId) }
+            runCollection(PLAYLISTS) { pushRoutines(db, userId) }
         }
         if (firstError == null) {
             _lastError.value = null
@@ -315,6 +321,118 @@ actual object SyncEngine {
             upsert(db, SCHEDULES, scheduleDocId(userId, schedule.id), data)
         }
     }
+
+    // --------------------------------------------------------------- routines
+    //
+    // v1: push-only. Each PUBLIC routine is published to `playlists` /
+    // `playlist_items` (playlist doc id "rtn-<routineId>"); routines flipped
+    // back to private (or deleted locally) have their previously published
+    // docs + items removed. No pull in v1: public catalog browsing is a future
+    // screen, so cloud state never writes back into CustomRoutinesStore.
+    // Skipped when signed out: syncNow returns DISABLED before any network.
+    // Private routines are never published (upsert runs for public ones only);
+    // the delete pass below only removes stale cloud docs this app owns.
+
+    private suspend fun pushRoutines(db: Databases, userId: String) {
+        val local = CustomRoutinesStore.routines.value
+        val publicRoutines = local.filter { it.isPublic }
+        val publicDocIds = publicRoutines.map { routineDocId(it.id) }.toSet()
+
+        // Previously published docs owned by this user (client-side prefix
+        // filter: only docs this app created, id starting "rtn-").
+        val owned = listPlaylistsForOwner(db, userId) ?: return
+        for (doc in owned) {
+            if (doc.id.startsWith(ROUTINE_DOC_PREFIX) && doc.id !in publicDocIds) {
+                deletePlaylistWithItems(db, doc.id)
+            }
+        }
+
+        for (routine in publicRoutines) {
+            val playlistDocId = routineDocId(routine.id)
+            val playlistData: Map<String, Any?> = mapOf(
+                "owner_id" to userId,
+                "title" to routine.title,
+                "description" to routine.description,
+                "is_public" to true,
+                "cover_url" to "",
+            )
+            upsert(db, PLAYLISTS, playlistDocId, playlistData)
+            // Replace items wholesale so reorders/removals converge.
+            val existingItems = listPlaylistItems(db, playlistDocId) ?: continue
+            for (item in existingItems) {
+                try {
+                    db.deleteDocument(DB_ID, PLAYLIST_ITEMS, item.id)
+                } catch (e: Exception) {
+                    Log.e(TAG, "delete stale playlist item ${item.id} failed", e)
+                }
+            }
+            routine.items.forEachIndexed { index, item ->
+                val itemData: Map<String, Any?> = mapOf(
+                    "playlist_id" to playlistDocId,
+                    "position" to index,
+                    "reciter_slug" to item.reciterSlug,
+                    "surah_id" to item.surahId,
+                    "ayah_from" to 0,
+                    "ayah_to" to 0,
+                )
+                upsert(db, PLAYLIST_ITEMS, routineItemDocId(playlistDocId, index), itemData)
+            }
+        }
+    }
+
+    private suspend fun listPlaylistsForOwner(
+        db: Databases,
+        userId: String,
+    ): List<io.appwrite.models.Document<Map<String, Any>>>? {
+        return try {
+            db.listDocuments(DB_ID, PLAYLISTS, listOf(Query.equal("owner_id", userId))).documents
+        } catch (e: AppwriteException) {
+            if (e.code == 404) {
+                Log.w(TAG, "Collection '$PLAYLISTS' not found; skipping.")
+                null
+            } else {
+                throw e
+            }
+        }
+    }
+
+    private suspend fun listPlaylistItems(
+        db: Databases,
+        playlistId: String,
+    ): List<io.appwrite.models.Document<Map<String, Any>>>? {
+        return try {
+            db.listDocuments(DB_ID, PLAYLIST_ITEMS, listOf(Query.equal("playlist_id", playlistId))).documents
+        } catch (e: AppwriteException) {
+            if (e.code == 404) {
+                Log.w(TAG, "Collection '$PLAYLIST_ITEMS' not found; skipping.")
+                null
+            } else {
+                throw e
+            }
+        }
+    }
+
+    private suspend fun deletePlaylistWithItems(db: Databases, playlistDocId: String) {
+        val items = listPlaylistItems(db, playlistDocId)
+        for (item in items.orEmpty()) {
+            try {
+                db.deleteDocument(DB_ID, PLAYLIST_ITEMS, item.id)
+            } catch (e: Exception) {
+                Log.e(TAG, "delete stale playlist item ${item.id} failed", e)
+            }
+        }
+        try {
+            db.deleteDocument(DB_ID, PLAYLISTS, playlistDocId)
+        } catch (e: Exception) {
+            Log.e(TAG, "delete stale playlist $playlistDocId failed", e)
+        }
+    }
+
+    private fun routineDocId(routineId: String): String =
+        "$ROUTINE_DOC_PREFIX${sanitizeId(routineId)}".take(36)
+
+    private fun routineItemDocId(playlistDocId: String, position: Int): String =
+        "$playlistDocId-$position".take(36)
 
     // ---------------------------------------------------------------- helpers
 

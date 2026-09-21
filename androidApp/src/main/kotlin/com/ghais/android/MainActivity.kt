@@ -28,6 +28,7 @@ class MainActivity : ComponentActivity() {
         com.ghais.data.auth.AuthRepository.init(this)
         com.ghais.data.auth.ActivityHolder.register(this)
         com.ghais.data.sync.SyncEngine.init(this)
+        com.ghais.data.share.ShareSheet.init(this)
         // Any play/resume boots the foreground MediaSession service so audio
         // survives background + shows system notification controls.
         com.ghais.player.PlayerBridge.onPlayRequested = {
