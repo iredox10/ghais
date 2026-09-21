@@ -58,7 +58,9 @@ fun App() {
             // Auth is mandatory — no guest mode. onAuthenticated needs no action:
             // the session flow flips automatically and dismisses the gate.
             AuthScreen(
-                onAuthenticated = {},
+                onAuthenticated = { isNewAccount ->
+                    if (isNewAccount) OnboardingStore.restartForNewUser()
+                },
             ).Content()
         } else {
             Navigator(MainScreen) { navigator ->

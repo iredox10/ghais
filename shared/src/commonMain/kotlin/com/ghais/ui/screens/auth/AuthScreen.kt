@@ -65,10 +65,12 @@ private val AuthErrorRed = Color(0xFFFF6B6B)
  * Auth is mandatory — there is no guest mode.
  *
  * @param onAuthenticated called on successful sign-in / sign-up (host pops/dismisses the gate).
+ * `true` when a brand-new account was just created (host replays onboarding);
+ * `false` for returning logins (host goes straight home).
  * @param onGuest legacy no-op kept for backward compatibility; no guest affordance is rendered.
  */
 class AuthScreen(
-    private val onAuthenticated: () -> Unit = {},
+    private val onAuthenticated: (Boolean) -> Unit = {},
     private val onGuest: () -> Unit = {},
 ) : Screen {
     @Composable
@@ -82,7 +84,7 @@ class AuthScreen(
 
 @Composable
 fun AuthScreenContent(
-    onAuthenticated: () -> Unit,
+    onAuthenticated: (Boolean) -> Unit,
     onGuest: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -275,7 +277,7 @@ fun AuthScreenContent(
                         }
                         loading = false
                         result
-                            .onSuccess { onAuthenticated() }
+                            .onSuccess { onAuthenticated(isSignup) }
                             .onFailure { errorMessage = it.message }
                     }
                 },
@@ -344,7 +346,7 @@ fun AuthScreenContent(
                         val result = AuthRepository.signInWithGoogle()
                         googleLoading = false
                         result
-                            .onSuccess { onAuthenticated() }
+                            .onSuccess { onAuthenticated(false) }
                             .onFailure { errorMessage = it.message }
                     }
                 },

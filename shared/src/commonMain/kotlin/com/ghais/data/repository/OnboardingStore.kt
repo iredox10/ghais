@@ -75,6 +75,14 @@ object OnboardingStore {
     }
 
     fun resetForDebug() {
+        restartForNewUser()
+    }
+
+    /**
+     * Replays the flow for a freshly created account: a new user always sees
+     * onboarding even on a device where it was completed before.
+     */
+    fun restartForNewUser() {
         _seen.value = false
         _step.value = 0
         try {
