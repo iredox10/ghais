@@ -8,17 +8,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.DownloadDone
-import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,11 +27,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.data.auth.AuthRepository
-import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.OnboardingStore
-import com.ghais.data.sync.SyncEngine
-import com.ghais.data.sync.SyncStatus
-import com.ghais.player.QuranDownloads
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.profile.glass.AuroraBackdrop
 import com.ghais.ui.screens.profile.glass.EditProfileDialogGlass
@@ -49,12 +40,10 @@ import com.ghais.ui.screens.profile.glass.ProtonRow
 import com.ghais.ui.screens.profile.glass.ProtonSwitchRow
 import com.ghais.ui.screens.profile.glass.ProtonValueRow
 import com.ghais.ui.screens.profile.glass.SchedulesProtonSection
-import com.ghais.ui.screens.profile.glass.StorageHealthCard
 import com.ghais.ui.screens.settings.AppSettingsScreen
 import com.ghais.ui.screens.stats.StatsScreen
 import com.russhwolf.settings.Settings
 import kotlinx.coroutines.launch
-import kotlin.time.Clock
 
 // Persistence Keys
 private const val PREF_USER_NAME = "ghais_profile_name"
@@ -144,27 +133,11 @@ object ProfileScreen : Tab {
             ?: LocalNavigator.current?.parent
             ?: LocalNavigator.current
 
-        // Live favourites count
-        val favoriteTracks by FavoritesStore.favoriteTracks.collectAsState()
-        val favoriteCount = favoriteTracks.size
+        // Live daily goal (Daily Goal card below)
         val dailyMinutes by OnboardingStore.dailyGoalMinutes.collectAsState()
 
         // Auth session (null = guest)
         val session by AuthRepository.session.collectAsState()
-
-        // Cloud-sync status (manual Sync row below)
-        val syncStatus by SyncEngine.status.collectAsState()
-        val syncLastAt by SyncEngine.lastSyncedAt.collectAsState()
-        val syncError by SyncEngine.lastError.collectAsState()
-        val syncSubtitle = when {
-            session == null -> "Sign in to sync"
-            syncStatus == SyncStatus.SYNCING -> "Syncing…"
-            syncStatus == SyncStatus.ERROR ->
-                syncError?.takeIf { it.isNotBlank() }?.let { "Sync failed • $it" } ?: "Sync failed"
-            else -> syncLastAt?.let {
-                "Last synced ${formatSyncRelative(Clock.System.now().toEpochMilliseconds(), it)}"
-            } ?: "Tap to sync now"
-        }
 
         // User profile editable state
         var userName by remember {
@@ -179,14 +152,6 @@ object ProfileScreen : Tab {
         var dailyDhikrReminder by remember {
             mutableStateOf(settings.migratedProfileBoolean(PREF_DHIKR_ALERT, true))
         }
-
-        // Live offline-download storage state
-        val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
-        var storageSizeBytes by remember { mutableStateOf(0L) }
-        LaunchedEffect(downloadedKeys) {
-            storageSizeBytes = QuranDownloads.storageBytes()
-        }
-        val cachedSurahCount = downloadedKeys.size
 
         Box(
             modifier = Modifier
@@ -225,56 +190,7 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 3. Storage Health
-                // -----------------------------------------------------------------
-                item {
-                    GlassSectionLabel("Storage Health")
-                    val cachedSummary = if (cachedSurahCount == 1) {
-                        "1 surah cached offline"
-                    } else {
-                        "$cachedSurahCount surahs cached offline"
-                    }
-                    StorageHealthCard(
-                        usedLabel = formatStorageBytes(storageSizeBytes),
-                        summary = cachedSummary,
-                        progress = (storageSizeBytes / (512 * 1024 * 1024f)).coerceIn(0.03f, 1f),
-                        onClear = {
-                            scope.launch {
-                                QuranDownloads.clearAll()
-                                storageSizeBytes = QuranDownloads.storageBytes()
-                            }
-                        }
-                    )
-                    Spacer(modifier = Modifier.height(18.dp))
-                }
-
-                // -----------------------------------------------------------------
-                // 4. Library (badge rows)
-                // -----------------------------------------------------------------
-                item {
-                    GlassSectionLabel("Library")
-                    GlassCardContainer {
-                        ProtonRow(
-                            icon = Icons.Filled.MusicNote,
-                            title = "Favorite Verses & Surahs",
-                            subtitle = "Bookmarked ayahs and cherished recitations",
-                            countBadge = favoriteCount
-                        )
-
-                        GlassDivider()
-
-                        ProtonRow(
-                            icon = Icons.Filled.DownloadDone,
-                            title = "Offline downloads",
-                            subtitle = "$cachedSurahCount surahs cached • " + formatStorageBytes(storageSizeBytes),
-                            countBadge = cachedSurahCount
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(18.dp))
-                }
-
-                // -----------------------------------------------------------------
-                // 5. Recitation schedules
+                // 3. Recitation schedules
                 // -----------------------------------------------------------------
                 item {
                     SchedulesProtonSection()
@@ -282,7 +198,7 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 6. Preferences
+                // 4. Preferences
                 // -----------------------------------------------------------------
                 item {
                     GlassSectionLabel("Preferences")
@@ -311,32 +227,7 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 7. Journey
-                // -----------------------------------------------------------------
-                item {
-                    GlassSectionLabel("Journey")
-                    GlassCardContainer {
-                        ProtonRow(
-                            icon = Icons.Filled.Insights,
-                            title = "Your stats",
-                            subtitle = "Streaks, listening time & Khatmah journey",
-                            onClick = { rootNavigator?.push(StatsScreen) }
-                        )
-
-                        GlassDivider()
-
-                        ProtonRow(
-                            icon = Icons.Filled.CloudDone,
-                            title = "Sync",
-                            subtitle = syncSubtitle,
-                            onClick = { scope.launch { SyncEngine.syncNow() } }
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(18.dp))
-                }
-
-                // -----------------------------------------------------------------
-                // 8. About
+                // 5. About
                 // -----------------------------------------------------------------
                 item {
                     GlassSectionLabel("About")
@@ -361,7 +252,7 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 9. Log out (always visible — auth is mandatory)
+                // 6. Log out (always visible — auth is mandatory)
                 // -----------------------------------------------------------------
                 item {
                     GlassCardContainer {
@@ -398,31 +289,5 @@ object ProfileScreen : Tab {
                 onDismiss = { showEditDialog = false }
             )
         }
-    }
-}
-
-// Storage size formatting: B / KB / MB with one decimal
-private fun formatStorageBytes(bytes: Long): String {
-    if (bytes < 1024) return "$bytes B"
-    val kb = bytes / 1024.0
-    if (kb < 1024) return "${oneDecimal(kb)} KB"
-    val mb = kb / 1024.0
-    return "${oneDecimal(mb)} MB"
-}
-
-private fun oneDecimal(value: Double): String {
-    val tenths = kotlin.math.round(value * 10).toLong()
-    return "${tenths / 10}.${kotlin.math.abs(tenths % 10)}"
-}
-
-// Relative sync timestamp: "just now" / "Xs ago" / "Xm ago" / "Xh ago" / "Xd ago"
-private fun formatSyncRelative(nowMs: Long, atMs: Long): String {
-    val seconds = ((nowMs - atMs).coerceAtLeast(0L)) / 1000L
-    return when {
-        seconds < 10 -> "just now"
-        seconds < 60 -> "${seconds}s ago"
-        seconds < 3600 -> "${seconds / 60}m ago"
-        seconds < 86400 -> "${seconds / 3600}h ago"
-        else -> "${seconds / 86400}d ago"
     }
 }
