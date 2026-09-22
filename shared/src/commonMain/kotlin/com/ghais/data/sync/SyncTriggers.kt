@@ -47,10 +47,16 @@ object SyncTriggers {
         started = true
 
         // Owner binding + pull-restore shortly after login.
+        // Offline-open users (session null, cachedSession present) bind to
+        // the cached owner id so their own data shows without internet.
         var lastSessionId: String? = null
         scope.launch {
-            AuthRepository.session.collect { session ->
-                val owner = session?.userId ?: "local"
+            combine(
+                AuthRepository.session,
+                AuthRepository.cachedSession,
+            ) { session, cached -> session to cached }
+                .collect { (session, cached) ->
+                val owner = session?.userId ?: cached?.userId ?: "local"
                 // Fresh login from signed-out state: snapshot the local ("local"
                 // namespace) choices — e.g. qari followed during onboarding —
                 // so they can be adopted into the new account below. Never
@@ -103,22 +109,20 @@ object SyncTriggers {
             }
         }
 
-        // Offline→online catch-up: when connectivity returns with an active
-        // session, run one pass. The wasSignedIn/wasOnline guard keeps this to
+        // Offline→online catch-up: when connectivity returns, retry the
+        // session first (an offline-open user has session null but a cached
+        // owner), then run one pass. The wasOnline guard keeps this to
         // genuine offline→online transitions — login itself is owned by the
         // pull above, and store rebinding stays there too.
         scope.launch {
-            var wasSignedIn = false
             var wasOnline = true
-            combine(
-                AuthRepository.session,
-                NetworkMonitor.isOnline,
-            ) { session, online -> (session != null) to online }
-                .collect { (signedIn, online) ->
-                    if (signedIn && online && wasSignedIn && !wasOnline) {
-                        SyncEngine.syncNow()
+            NetworkMonitor.isOnline.collect { online ->
+                    if (online && !wasOnline) {
+                        AuthRepository.refreshSession()
+                        if (AuthRepository.session.value != null) {
+                            SyncEngine.syncNow()
+                        }
                     }
-                    wasSignedIn = signedIn
                     wasOnline = online
                 }
         }

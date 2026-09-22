@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.screens.profile.glass.GlassDivider
 import com.ghais.ui.theme.GhaisNoir
@@ -19,12 +18,10 @@ import com.ghais.ui.theme.GhaisTypography
  * Phase 3 — Noir Profile sections: editorial header + shared row chrome.
  */
 
-/** Editorial header: "Your • Space" + sync ghost pill (reference headline). */
+/** Editorial header: "Your • Space" greeting (reference headline). */
 @Composable
 fun NoirProfileHeader(
-    userName: String,
-    syncText: String,
-    onSync: () -> Unit
+    userName: String
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -43,8 +40,6 @@ fun NoirProfileHeader(
             color = GhaisNoir.TextSecondary,
             fontSize = 13.sp
         )
-        Spacer(Modifier.height(12.dp))
-        GhostPillButton(text = syncText, onClick = onSync)
     }
 }
 
