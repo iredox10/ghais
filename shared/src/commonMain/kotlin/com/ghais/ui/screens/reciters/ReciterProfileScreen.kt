@@ -6,35 +6,54 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.DownloadDone
-import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
@@ -49,14 +68,31 @@ import com.ghais.domain.model.Surah
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
+import com.ghais.ui.components.noir.ChromePillButton
+import com.ghais.ui.components.noir.GhostPillButton
+import com.ghais.ui.components.noir.NoirHeroCard
+import com.ghais.ui.components.noir.NoirListRow
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.NoirSegmentedProgress
+import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.navigation.LocalRootNavigator
+import com.ghais.ui.screens.home.NoirStatChip
 import com.ghais.ui.screens.player.NowPlayingScreen
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.theme.GhaisTypography
 
 /**
- * Screen displaying the profile of a verified reciter, their metadata badges,
- * action controls ("Play All", "Shuffle", "Follow"), and their full discography of Surahs.
+ * Screen displaying the profile of a verified reciter, their metadata chips,
+ * action controls ("Play All", "Shuffle", "Follow", "Download all"), and their
+ * full discography of Surahs.
  *
- * Fully styled in black-glass theme with LinkBlue accent (#4C8DFF).
+ * Styled in strict Noir Glass monochrome: true-black canvas, alpha-white fills,
+ * ghost hairlines with a top-only specular, chrome CTAs, and grayscale imagery.
+ * Zero hue — state reads through fill elevation, chromium, weight and opacity.
+ *
+ * Presentation only. Playback / queue / download / follow logic is untouched.
  */
 data class ReciterProfileScreen(val reciterSlug: String) : Screen {
 
@@ -107,202 +143,195 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
         val followedSlugs by FollowStore.followedSlugs.collectAsState()
         val isFollowing = reciter.slug in followedSlugs
 
-        Scaffold(
-            containerColor = Color(0xFF000000),
-            topBar = {
-                TopAppBar(
-                    title = {},
-                    navigationIcon = {
-                        IconButton(
-                            onClick = { navigator.pop() },
-                            modifier = Modifier.padding(start = 4.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.05f))
-                                    .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape),
-                                contentAlignment = Alignment.Center
+        // Library offline fraction — drives the hero segmented meter.
+        val downloadedCount = remember(reciter.slug, surahs, downloaded) {
+            surahs.count { "${reciter.slug}/${it.id}" in downloaded }
+        }
+        val libraryProgress: Float = remember(downloadedCount, surahs.size) {
+            if (surahs.isEmpty()) 0f else downloadedCount.toFloat() / surahs.size.toFloat()
+        }
+        val allKeys = remember(reciter.slug, surahs) {
+            surahs.map { "${reciter.slug}/${it.id}" }
+        }
+        val allDone = allKeys.isNotEmpty() && allKeys.all { it in downloaded }
+        val downloadingCount = allKeys.count { dlProgress.containsKey(it) }
+
+        NoirScreenRoot {
+            Scaffold(
+                containerColor = Color.Transparent,
+                topBar = {
+                    TopAppBar(
+                        title = {},
+                        navigationIcon = {
+                            IconButton(
+                                onClick = { navigator.pop() },
+                                modifier = Modifier.padding(start = 4.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent
-                    )
-                )
-            }
-        ) { paddingValues ->
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(bottom = 120.dp) // 120.dp padding for MiniPlayer & dock
-            ) {
-                // Header item
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Avatar container with glowing blue ring & verified badge
-                        ReciterAvatarHeader(
-                            photoUrl = meta.photoUrl,
-                            nameEn = reciter.nameEn
-                        )
-
-                        Spacer(modifier = Modifier.height(18.dp))
-
-                        // Arabic Calligraphy Name in Bold White
-                        Text(
-                            text = reciter.nameAr,
-                            color = Color.White,
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            textAlign = TextAlign.Center
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        // English Name in High-Contrast Text
-                        Text(
-                            text = reciter.nameEn,
-                            color = Color.White,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            textAlign = TextAlign.Center
-                        )
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        // Badges: Country, Riwayah, Style in frosted glass pills with white micro-borders
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            FrostedGlassBadge(text = meta.country)
-                            FrostedGlassBadge(text = meta.riwayah)
-                            FrostedGlassBadge(text = meta.style)
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Follower Count Text
-                        Text(
-                            text = meta.followers,
-                            color = Color(0xFF9A9AA0),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Normal
-                        )
-
-                        Spacer(modifier = Modifier.height(22.dp))
-
-                        // Action Buttons Row: "Play All", "Shuffle", "Follow"
-                        ReciterActionButtonsRow(
-                            reciter = reciter,
-                            surahs = surahs,
-                            allTracks = allTracks,
-                            isFollowing = isFollowing,
-                            onToggleFollow = { FollowStore.toggle(reciter.slug) }
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        // "Download all" pill next to play-all controls (dark card / glass,
-                        // consistent with Shuffle button styling).
-                        DownloadAllPill(
-                            reciter = reciter,
-                            surahs = surahs,
-                            downloaded = downloaded,
-                            dlProgress = dlProgress
-                        )
-
-                        Spacer(modifier = Modifier.height(28.dp))
-
-                        // Recitations Section Header
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Recitations",
-                                color = Color.White,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFF4C8DFF).copy(alpha = 0.12f),
-                                border = BorderStroke(1.dp, Color(0xFF4C8DFF).copy(alpha = 0.3f))
-                            ) {
-                                Text(
-                                    text = "${surahs.size} Surahs",
-                                    color = Color(0xFF4C8DFF),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-                    }
-                }
-
-                // Discography / Surahs List
-                itemsIndexed(
-                    items = surahs,
-                    key = { _, it -> it.id }
-                ) { index, surah ->
-                    val isCurrentSurah = currentTrack?.surahId == surah.id && currentTrack?.reciterSlug == reciter.slug
-                    val isCurrentSurahPlaying = isCurrentSurah && isPlaying
-                    val downloadKey = "${reciter.slug}/${surah.id}"
-                    val isDownloaded = downloadKey in downloaded
-                    val surahProgress: Float? = dlProgress[downloadKey]
-                    val isFailed = downloadKey in failedKeys
-                    val audioUrl = reciter.getFullSurahUrl(surah.id)
-
-                    ReciterSurahListItem(
-                        surah = surah,
-                        reciter = reciter,
-                        isCurrentTrack = isCurrentSurah,
-                        isPlaying = isCurrentSurahPlaying,
-                        isDownloaded = isDownloaded,
-                        downloadProgress = surahProgress,
-                        isDownloadFailed = isFailed,
-                        onDownloadClick = {
-                            if (isDownloaded) {
-                                QuranDownloads.delete(reciter.slug, surah.id)
-                            } else {
-                                QuranDownloads.download(reciter.slug, surah.id, audioUrl)
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(GhaisNoir.Fill2)
+                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back",
+                                        tint = GhaisNoir.TextPrimary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         },
-                        onItemClick = {
-                            if (isCurrentSurahPlaying) {
-                                AudioEngine.pause()
-                            } else if (isCurrentSurah) {
-                                AudioEngine.resume()
-                            } else {
-                                AudioEngine.playQueue(allTracks, startIndex = index)
-                                rootNavigator.push(NowPlayingScreen())
-                            }
-                        }
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent
+                        )
                     )
+                }
+            ) { paddingValues ->
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentPadding = PaddingValues(bottom = 120.dp) // 120.dp padding for MiniPlayer & dock
+                ) {
+                    // Editorial header + hero plate
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                        ) {
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // Editorial monochrome header (mirrors NoirProfileHeader).
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "VERIFIED RECITER",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    letterSpacing = 1.2.sp
+                                )
+                                Text(
+                                    text = meta.followers,
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Normal
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "The voice of",
+                                style = GhaisTypography.displayEditorial,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = reciter.nameEn,
+                                style = GhaisTypography.displayEditorialBold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            // Hero plate: grayscale portrait + identity + stats +
+                            // library meter + chrome/ghost actions.
+                            ReciterNoirHeroPlate(
+                                reciter = reciter,
+                                meta = meta,
+                                surahCount = surahs.size,
+                                downloadedCount = downloadedCount,
+                                libraryProgress = libraryProgress,
+                                allDone = allDone,
+                                downloadingCount = downloadingCount,
+                                isFollowing = isFollowing,
+                                playEnabled = allTracks.isNotEmpty(),
+                                onPlayAll = {
+                                    if (allTracks.isNotEmpty()) {
+                                        AudioEngine.playQueue(allTracks, startIndex = 0)
+                                        rootNavigator.push(NowPlayingScreen())
+                                    }
+                                },
+                                onShuffle = {
+                                    if (allTracks.isNotEmpty()) {
+                                        AudioEngine.playQueue(allTracks.shuffled(), startIndex = 0)
+                                        rootNavigator.push(NowPlayingScreen())
+                                    }
+                                },
+                                onToggleFollow = { FollowStore.toggle(reciter.slug) },
+                                onDownloadAll = {
+                                    if (!allDone) {
+                                        surahs.forEach { surah ->
+                                            val key = "${reciter.slug}/${surah.id}"
+                                            if (key !in downloaded && !dlProgress.containsKey(key)) {
+                                                QuranDownloads.download(
+                                                    reciter.slug,
+                                                    surah.id,
+                                                    reciter.getFullSurahUrl(surah.id)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            )
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            // Recitations section header (monochrome, count as ghost action).
+                            NoirSectionHeader(
+                                label = "Recitations",
+                                actionLabel = "${surahs.size} Surahs",
+                                onAction = {}
+                            )
+                        }
+                    }
+
+                    // Discography / Surahs list
+                    itemsIndexed(
+                        items = surahs,
+                        key = { _, it -> it.id }
+                    ) { index, surah ->
+                        val isCurrentSurah =
+                            currentTrack?.surahId == surah.id && currentTrack?.reciterSlug == reciter.slug
+                        val isCurrentSurahPlaying = isCurrentSurah && isPlaying
+                        val downloadKey = "${reciter.slug}/${surah.id}"
+                        val isDownloaded = downloadKey in downloaded
+                        val surahProgress: Float? = dlProgress[downloadKey]
+                        val isFailed = downloadKey in failedKeys
+                        val audioUrl = reciter.getFullSurahUrl(surah.id)
+
+                        ReciterNoirSurahRow(
+                            surah = surah,
+                            isCurrentTrack = isCurrentSurah,
+                            isPlaying = isCurrentSurahPlaying,
+                            isDownloaded = isDownloaded,
+                            downloadProgress = surahProgress,
+                            isDownloadFailed = isFailed,
+                            onDownloadClick = {
+                                if (isDownloaded) {
+                                    QuranDownloads.delete(reciter.slug, surah.id)
+                                } else {
+                                    QuranDownloads.download(reciter.slug, surah.id, audioUrl)
+                                }
+                            },
+                            onItemClick = {
+                                if (isCurrentSurahPlaying) {
+                                    AudioEngine.pause()
+                                } else if (isCurrentSurah) {
+                                    AudioEngine.resume()
+                                } else {
+                                    AudioEngine.playQueue(allTracks, startIndex = index)
+                                    rootNavigator.push(NowPlayingScreen())
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -310,43 +339,177 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
 }
 
 /**
- * Avatar with glowing blue ring (#4C8DFF) and verified badge.
+ * True-grayscale filter — reciter portraits stay recognisable while remaining
+ * strictly monochrome (mirrors the Home NoirArtworkWell recipe).
+ */
+private val NoirGrayscale: ColorFilter by lazy {
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+}
+
+/**
+ * Hero plate for the reciter (mirrors the Home "resume plate" pattern):
+ * grayscale portrait with chromium ring + monogram fallback, identity text,
+ * stat chips, segmented library meter, and chrome/ghost actions.
+ *
+ * Presentation only — all callbacks preserve the original screen logic.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ReciterNoirHeroPlate(
+    reciter: Reciter,
+    meta: ReciterDisplayMeta,
+    surahCount: Int,
+    downloadedCount: Int,
+    libraryProgress: Float,
+    allDone: Boolean,
+    downloadingCount: Int,
+    isFollowing: Boolean,
+    playEnabled: Boolean,
+    onPlayAll: () -> Unit,
+    onShuffle: () -> Unit,
+    onToggleFollow: () -> Unit,
+    onDownloadAll: () -> Unit
+) {
+    NoirHeroCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ReciterNoirAvatar(
+                    photoUrl = meta.photoUrl,
+                    nameEn = reciter.nameEn,
+                    size = 84.dp
+                )
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "RECITER",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.2.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = reciter.nameAr,
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        text = "$surahCount Surahs • $downloadedCount offline",
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Stats as non-interactive NoirStatChip wells (zero hue).
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                NoirStatChip(text = meta.country)
+                NoirStatChip(text = meta.riwayah)
+                NoirStatChip(text = meta.style)
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Segmented library meter (engraved track, chrome fill).
+            NoirSegmentedProgress(progress = libraryProgress, trackHeight = 8.dp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "$downloadedCount of $surahCount offline",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.sp
+                )
+                Text(
+                    text = "${(libraryProgress * 100).toInt()}% kept",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Primary CTA: chromium resume pill.
+            ChromePillButton(
+                text = "Play All",
+                onClick = onPlayAll,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = playEnabled,
+                leadingIcon = Icons.Default.PlayArrow
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Secondary actions as ghost pills — fill elevation carries state.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                GhostPillButton(
+                    text = "Shuffle",
+                    onClick = onShuffle,
+                    modifier = Modifier.weight(1f)
+                )
+                GhostPillButton(
+                    text = if (isFollowing) "Following" else "Follow",
+                    onClick = onToggleFollow,
+                    modifier = Modifier.weight(1f),
+                    active = isFollowing
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            GhostPillButton(
+                text = when {
+                    allDone -> "Downloaded"
+                    downloadingCount > 0 -> "Downloading ($downloadingCount/$surahCount)"
+                    else -> "Download all"
+                },
+                onClick = onDownloadAll,
+                modifier = Modifier.fillMaxWidth(),
+                active = allDone
+            )
+        }
+    }
+}
+
+/**
+ * Grayscale portrait plate: clay well + chromium (specular) ring, darkening
+ * scrim so the photo reads engraved, monogram fallback mirroring the profile
+ * identity pill, and a chromium verified dot.
  */
 @Composable
-private fun ReciterAvatarHeader(
+private fun ReciterNoirAvatar(
     photoUrl: String?,
-    nameEn: String
+    nameEn: String,
+    size: Dp = 84.dp
 ) {
     Box(
-        modifier = Modifier.size(118.dp),
+        modifier = Modifier.size(size),
         contentAlignment = Alignment.Center
     ) {
-        // Glowing blue ring & frosted halo
         Box(
             modifier = Modifier
-                .size(118.dp)
+                .size(size)
                 .clip(CircleShape)
-                .background(Color(0xFF2E7CF6).copy(alpha = 0.2f))
-                .border(
-                    width = 2.5.dp,
-                    brush = Brush.sweepGradient(
-                        listOf(
-                            Color(0xFF2E7CF6),
-                            Color(0xFF4C8DFF),
-                            Color(0xFF7AA8FF),
-                            Color(0xFF2E7CF6)
-                        )
-                    ),
-                    shape = CircleShape
-                )
-        )
-
-        // Inner Avatar photo or initials
-        Box(
-            modifier = Modifier
-                .size(106.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF1C1C1E)),
+                .background(GhaisNoir.wellFill())
+                .border(1.dp, GhaisNoir.SpecularTop, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             if (!photoUrl.isNullOrBlank()) {
@@ -354,295 +517,52 @@ private fun ReciterAvatarHeader(
                     model = photoUrl,
                     contentDescription = nameEn,
                     contentScale = ContentScale.Crop,
+                    colorFilter = NoirGrayscale,
                     modifier = Modifier.fillMaxSize()
+                )
+                // Darkening scrim: keeps the plate recessed instead of glowing.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.35f))
                 )
             } else {
                 Text(
                     text = nameEn.take(1).uppercase(),
-                    color = Color.White,
-                    fontSize = 38.sp,
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 32.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
         }
 
-        // Verified Badge at bottom end
+        // Chromium verified dot (chrome fill, near-black glyph).
         Box(
             modifier = Modifier
-                .size(28.dp)
+                .size(26.dp)
                 .align(Alignment.BottomEnd)
-                .clip(CircleShape)
-                .background(Color(0xFF4C8DFF))
-                .border(2.5.dp, Color(0xFF000000), CircleShape),
+                .background(GhaisNoir.chromeFill(), CircleShape)
+                .border(2.dp, GhaisNoir.NoirBlack, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = "Verified Reciter",
-                tint = Color.White,
-                modifier = Modifier.size(15.dp)
+                tint = GhaisNoir.OnChrome,
+                modifier = Modifier.size(13.dp)
             )
         }
     }
 }
 
 /**
- * Frosted glass badge pill with white micro-border.
+ * Single Surah row as a [NoirListRow]: clay icon-well, dual text, and a
+ * monochrome trailing cluster (download affordance + chromium play disc).
+ * Determinate downloads render a thin [NoirSegmentedProgress] under the row.
  */
 @Composable
-private fun FrostedGlassBadge(
-    text: String,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(50),
-        color = Color.White.copy(alpha = 0.05f), // subtle white glass tint
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)) // white micro-border
-    ) {
-        Text(
-            text = text,
-            color = Color.White,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
-        )
-    }
-}
-
-/**
- * Action buttons: "Play All" (LinkBlue gradient), "Shuffle" (frosted dark glass),
- * and "Follow" (toggle state with blue outline).
- */
-@Composable
-private fun ReciterActionButtonsRow(
-    reciter: Reciter,
-    surahs: List<Surah>,
-    allTracks: List<TrackItem>,
-    isFollowing: Boolean,
-    onToggleFollow: () -> Unit
-) {
-    val rootNavigator = LocalRootNavigator.current ?: LocalNavigator.current?.parent ?: LocalNavigator.current
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // "Play All" button with LinkBlue gradient
-        Button(
-            onClick = {
-                if (allTracks.isNotEmpty()) {
-                    AudioEngine.playQueue(allTracks, startIndex = 0)
-                    rootNavigator?.push(NowPlayingScreen())
-                }
-            },
-            modifier = Modifier
-                .weight(1.2f)
-                .height(46.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Transparent
-            ),
-            contentPadding = PaddingValues(0.dp),
-            shape = RoundedCornerShape(23.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            listOf(Color(0xFF2E7CF6), Color(0xFF4C8DFF))
-                        ),
-                        shape = RoundedCornerShape(23.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Play All",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Play All",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-        }
-
-        // "Shuffle" button in frosted dark glass
-        Surface(
-            onClick = {
-                if (allTracks.isNotEmpty()) {
-                    AudioEngine.playQueue(allTracks.shuffled(), startIndex = 0)
-                    rootNavigator?.push(NowPlayingScreen())
-                }
-            },
-            modifier = Modifier
-                .weight(1f)
-                .height(46.dp),
-            shape = RoundedCornerShape(23.dp),
-            color = Color(0xFF1C1C1E),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Shuffle,
-                    contentDescription = "Shuffle",
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Shuffle",
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
-                )
-            }
-        }
-
-        // "Follow" toggle button with blue outline
-        Surface(
-            onClick = onToggleFollow,
-            modifier = Modifier
-                .weight(1f)
-                .height(46.dp),
-            shape = RoundedCornerShape(23.dp),
-            color = if (isFollowing) Color(0xFF4C8DFF).copy(alpha = 0.18f) else Color.White.copy(alpha = 0.05f),
-            border = BorderStroke(1.dp, Color(0xFF4C8DFF))
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = if (isFollowing) Icons.Default.Check else Icons.Default.PersonAdd,
-                    contentDescription = if (isFollowing) "Following" else "Follow",
-                    tint = if (isFollowing) Color(0xFF4C8DFF) else Color.White,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = if (isFollowing) "Following ✓" else "Follow",
-                    color = if (isFollowing) Color(0xFF4C8DFF) else Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp
-                )
-            }
-        }
-    }
-}
-
-/**
- * "Download all" pill placed next to the play-all controls (dark card / glass,
- * consistent with the Shuffle button). If every surah key is downloaded it shows
- * a static DownloadDone state (tap does nothing harmful); otherwise tapping
- * enqueues all missing surahs via [QuranDownloads.download].
- */
-@Composable
-private fun DownloadAllPill(
-    reciter: Reciter,
-    surahs: List<Surah>,
-    downloaded: Set<String>,
-    dlProgress: Map<String, Float>
-) {
-    val allKeys = remember(reciter.slug, surahs) {
-        surahs.map { "${reciter.slug}/${it.id}" }
-    }
-    val allDone = allKeys.isNotEmpty() && allKeys.all { it in downloaded }
-    val downloadingCount = allKeys.count { dlProgress.containsKey(it) }
-
-    Surface(
-        onClick = {
-            if (!allDone) {
-                surahs.forEach { surah ->
-                    val key = "${reciter.slug}/${surah.id}"
-                    if (key !in downloaded && !dlProgress.containsKey(key)) {
-                        QuranDownloads.download(
-                            reciter.slug,
-                            surah.id,
-                            reciter.getFullSurahUrl(surah.id)
-                        )
-                    }
-                }
-            }
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(46.dp),
-        shape = RoundedCornerShape(23.dp),
-        color = Color(0xFF1C1C1E),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
-    ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            if (allDone) {
-                Icon(
-                    imageVector = Icons.Default.DownloadDone,
-                    contentDescription = "All downloaded",
-                    tint = Color(0xFF10B981),
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Downloaded",
-                    color = Color(0xFF10B981),
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
-                )
-            } else {
-                if (downloadingCount > 0) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = Color(0xFF4C8DFF)
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = "Download all",
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = if (downloadingCount > 0) "Downloading ($downloadingCount/${surahs.size})"
-                    else "Download all",
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
-                )
-            }
-        }
-    }
-}
-
-/**
- * Single Surah item displaying Surah number pill, English name, Arabic name,
- * ayah count ("7 Ayahs • 1:45"), and play button or LinkBlue equalizer.
- */
-@Composable
-private fun ReciterSurahListItem(
+private fun ReciterNoirSurahRow(
     surah: Surah,
-    reciter: Reciter,
     isCurrentTrack: Boolean,
     isPlaying: Boolean,
     onItemClick: () -> Unit,
@@ -654,191 +574,162 @@ private fun ReciterSurahListItem(
     val durationText = remember(surah.ayahsCount) {
         formatSurahDuration(surah.ayahsCount)
     }
+    val isDownloading = downloadProgress != null
+    val stateSuffix = when {
+        isDownloading -> " • Downloading…"
+        isDownloaded -> " • Offline"
+        isDownloadFailed -> " • Tap to retry"
+        else -> ""
+    }
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onItemClick() }
-            .padding(horizontal = 16.dp, vertical = 11.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 5.dp)
     ) {
-        // Surah Number Pill
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(
-                    if (isCurrentTrack) Color(0xFF4C8DFF).copy(alpha = 0.15f) else Color(0xFF1C1C1E)
+        NoirListRow(
+            title = "${surah.id}. ${surah.nameEn}",
+            subtitle = "${surah.nameAr} • ${surah.ayahsCount} Ayahs • $durationText$stateSuffix",
+            icon = Icons.Default.MusicNote,
+            chevron = false,
+            onClick = onItemClick,
+            trailing = {
+                SurahRowTrailing(
+                    isCurrentTrack = isCurrentTrack,
+                    isPlaying = isPlaying,
+                    isDownloaded = isDownloaded,
+                    isDownloading = isDownloading,
+                    isDownloadFailed = isDownloadFailed,
+                    onDownloadClick = onDownloadClick,
+                    onItemClick = onItemClick
                 )
-                .border(
-                    width = 1.dp,
-                    color = if (isCurrentTrack) Color(0xFF4C8DFF) else Color.White.copy(alpha = 0.08f),
-                    shape = RoundedCornerShape(10.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = surah.id.toString(),
-                color = if (isCurrentTrack) Color(0xFF4C8DFF) else Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
-            )
-        }
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        // English Name & Ayah Count with Duration
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = surah.nameEn,
-                color = if (isCurrentTrack) Color(0xFF4C8DFF) else Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "${surah.ayahsCount} Ayahs • $durationText",
-                color = Color(0xFF9A9AA0),
-                fontSize = 12.sp,
-                maxLines = 1
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        // Arabic Name
-        Text(
-            text = surah.nameAr,
-            color = Color.White,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.End
+            }
         )
 
-        Spacer(modifier = Modifier.width(16.dp))
-
-        // Per-surah download affordance (placed before play control, 6dp spacing).
-        Box(
-            modifier = Modifier.size(34.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            val isDownloading = downloadProgress != null
-            when {
-                isDownloaded -> {
-                    IconButton(
-                        onClick = onDownloadClick,
-                        modifier = Modifier.size(34.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DownloadDone,
-                            contentDescription = "Downloaded — tap to delete",
-                            tint = Color(0xFF10B981),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-                isDownloading -> {
-                    val p = downloadProgress ?: -1f
-                    if (p >= 0f && p <= 1f) {
-                        CircularProgressIndicator(
-                            progress = { p },
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = Color(0xFF4C8DFF),
-                            trackColor = Color(0xFF4C8DFF).copy(alpha = 0.2f)
-                        )
-                    } else {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = Color(0xFF4C8DFF)
-                        )
-                    }
-                }
-                isDownloadFailed -> {
-                    IconButton(
-                        onClick = onDownloadClick,
-                        modifier = Modifier.size(34.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Download,
-                            contentDescription = "Download failed — tap to retry",
-                            tint = Color(0xFFEF4444),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-                else -> {
-                    IconButton(
-                        onClick = onDownloadClick,
-                        modifier = Modifier.size(34.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Download,
-                            contentDescription = "Download",
-                            tint = Color(0xFF9A9AA0),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
+        // Segmented determinate progress for active downloads (engraved track).
+        val p = downloadProgress
+        if (p != null && p in 0f..1f) {
+            Spacer(modifier = Modifier.height(6.dp))
+            NoirSegmentedProgress(
+                progress = p,
+                modifier = Modifier.padding(horizontal = 4.dp),
+                trackHeight = 4.dp
+            )
         }
+    }
+}
 
-        Spacer(modifier = Modifier.width(6.dp))
-
-        // Play Button or Active LinkBlue Equalizer Bar
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clickable { onItemClick() },
-            contentAlignment = Alignment.Center
-        ) {
-            if (isPlaying) {
-                ActiveLinkBlueEqualizer()
-            } else if (isCurrentTrack) {
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF4C8DFF).copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
+/**
+ * Monochrome trailing cluster: download affordance + chromium play disc.
+ * Live state reads through chromium fill and the white equalizer — never hue.
+ */
+@Composable
+private fun RowScope.SurahRowTrailing(
+    isCurrentTrack: Boolean,
+    isPlaying: Boolean,
+    isDownloaded: Boolean,
+    isDownloading: Boolean,
+    isDownloadFailed: Boolean,
+    onDownloadClick: () -> Unit,
+    onItemClick: () -> Unit
+) {
+    // Per-surah download affordance — all states in the monochrome ramp.
+    Box(
+        modifier = Modifier.size(34.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            isDownloaded -> {
+                IconButton(
+                    onClick = onDownloadClick,
+                    modifier = Modifier.size(34.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Resume",
-                        tint = Color(0xFF4C8DFF),
+                        imageVector = Icons.Default.Download,
+                        contentDescription = "Downloaded — tap to delete",
+                        tint = GhaisNoir.TextPrimary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.05f)),
-                    contentAlignment = Alignment.Center
+            }
+            isDownloading -> {
+                IconButton(
+                    onClick = {},
+                    modifier = Modifier.size(34.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Play",
-                        tint = Color.White,
+                        imageVector = Icons.Default.Download,
+                        contentDescription = "Downloading",
+                        tint = GhaisNoir.TextTertiary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            isDownloadFailed -> {
+                IconButton(
+                    onClick = onDownloadClick,
+                    modifier = Modifier.size(34.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = "Download failed — tap to retry",
+                        tint = GhaisNoir.TextSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            else -> {
+                IconButton(
+                    onClick = onDownloadClick,
+                    modifier = Modifier.size(34.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = "Download",
+                        tint = GhaisNoir.TextTertiary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
             }
         }
     }
+
+    Spacer(modifier = Modifier.width(6.dp))
+
+    // Play disc: chromium while live, clay well otherwise.
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .background(
+                if (isCurrentTrack) GhaisNoir.chromeFill() else GhaisNoir.wellFill(),
+                GhaisShapes.well
+            )
+            .border(
+                1.dp,
+                if (isCurrentTrack) Color.White.copy(alpha = 0.4f) else GhaisNoir.BorderCard,
+                GhaisShapes.well
+            )
+            .noirClickable(onItemClick),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isPlaying) {
+            ActiveNoirEqualizer()
+        } else {
+            Icon(
+                imageVector = if (isCurrentTrack) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = if (isCurrentTrack) "Resume" else "Play",
+                tint = if (isCurrentTrack) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
 }
 
 /**
- * Animated live equalizer bars pulsing in LinkBlue (#4C8DFF).
+ * Animated live equalizer bars in pure white (monochrome live meter).
  */
 @Composable
-private fun ActiveLinkBlueEqualizer(
+private fun ActiveNoirEqualizer(
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "ReciterEq")
@@ -889,25 +780,25 @@ private fun ActiveLinkBlueEqualizer(
             modifier = Modifier
                 .width(3.dp)
                 .height(h1.dp)
-                .background(Color(0xFF4C8DFF), RoundedCornerShape(1.5.dp))
+                .background(GhaisNoir.TextPrimary, CircleShape)
         )
         Box(
             modifier = Modifier
                 .width(3.dp)
                 .height(h2.dp)
-                .background(Color(0xFF4C8DFF), RoundedCornerShape(1.5.dp))
+                .background(GhaisNoir.TextPrimary, CircleShape)
         )
         Box(
             modifier = Modifier
                 .width(3.dp)
                 .height(h3.dp)
-                .background(Color(0xFF4C8DFF), RoundedCornerShape(1.5.dp))
+                .background(GhaisNoir.TextPrimary, CircleShape)
         )
         Box(
             modifier = Modifier
                 .width(3.dp)
                 .height(h4.dp)
-                .background(Color(0xFF4C8DFF), RoundedCornerShape(1.5.dp))
+                .background(GhaisNoir.TextPrimary, CircleShape)
         )
     }
 }
