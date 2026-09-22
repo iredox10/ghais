@@ -1,40 +1,65 @@
 package com.ghais.ui.screens.library
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.ghais.data.seed.toTrackItem
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.data.seed.QuranDataRepository
+import com.ghais.data.seed.toTrackItem
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
+import com.ghais.ui.components.noir.ChromePillButton
+import com.ghais.ui.components.noir.GhostPillButton
+import com.ghais.ui.components.noir.NoirHeroCard
+import com.ghais.ui.components.noir.NoirListRow
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.navigation.LocalRootNavigator
+import com.ghais.ui.screens.home.NoirStatChip
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisTypography
 
 data class PlaylistDetailScreen(val playlistId: String) : Screen {
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -47,119 +72,230 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
             playlist.tracks.map { it.toTrackItem() }
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(GhaisColors.Background)
-        ) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { navigator.pop() }) {
-                    Icon(
-                        imageVector = Icons.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = GhaisColors.TextPrimary
+        NoirScreenRoot {
+            Scaffold(
+                containerColor = Color.Transparent,
+                topBar = {
+                    TopAppBar(
+                        title = {},
+                        navigationIcon = {
+                            IconButton(
+                                onClick = { navigator.pop() },
+                                modifier = Modifier.padding(start = 4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .background(GhaisNoir.Fill2, CircleShape)
+                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back",
+                                        tint = GhaisNoir.TextPrimary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent
+                        )
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = playlist.title,
-                    color = GhaisColors.TextPrimary,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            // Playlist Info
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
+            ) { paddingValues ->
+                LazyColumn(
                     modifier = Modifier
-                        .size(160.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(GhaisColors.Card),
-                    contentAlignment = Alignment.Center
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.PlayArrow,
-                        contentDescription = null,
-                        tint = GhaisColors.Primary,
-                        modifier = Modifier.size(64.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "${tracks.size} Tracks • ${playlist.totalDuration}",
-                    color = GhaisColors.TextSecondary,
-                    fontSize = 14.sp
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Action Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    Button(
-                        onClick = {
-                            if (tracks.isNotEmpty()) {
-                                AudioEngine.playQueue(tracks, startIndex = 0)
-                                rootNavigator.push(NowPlayingScreen())
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = GhaisColors.Primary),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = "Play", tint = Color.White)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Play All", color = Color.White)
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    IconButton(
-                        onClick = {
-                            if (tracks.isNotEmpty()) {
-                                AudioEngine.playQueue(tracks.shuffled(), startIndex = 0)
-                                rootNavigator.push(NowPlayingScreen())
-                            }
-                        },
-                        modifier = Modifier.background(GhaisColors.Card, RoundedCornerShape(50))
-                    ) {
-                        Icon(imageVector = Icons.Filled.Shuffle, contentDescription = "Shuffle", tint = GhaisColors.TextPrimary)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(onClick = { }, modifier = Modifier.background(GhaisColors.Card, RoundedCornerShape(50))) {
-                        Icon(imageVector = Icons.Filled.Share, contentDescription = "Share", tint = GhaisColors.TextPrimary)
-                    }
-                }
-            }
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                        ) {
+                            Text(
+                                text = "CURATED PLAYLIST",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 1.2.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Listen to",
+                                style = GhaisTypography.displayEditorial,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = playlist.title,
+                                style = GhaisTypography.displayEditorialBold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(14.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+                            NoirHeroCard(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(84.dp)
+                                                .background(GhaisNoir.wellFill(), CircleShape)
+                                                .border(1.dp, GhaisNoir.SpecularTop, CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = playlist.title.take(1).uppercase(),
+                                                color = GhaisNoir.TextPrimary,
+                                                fontSize = 32.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(14.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "PLAYLIST",
+                                                color = GhaisNoir.TextTertiary,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                letterSpacing = 1.2.sp
+                                            )
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text(
+                                                text = playlist.title,
+                                                color = GhaisNoir.TextPrimary,
+                                                fontSize = 20.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Spacer(modifier = Modifier.height(3.dp))
+                                            Text(
+                                                text = "${tracks.size} tracks • ${playlist.totalDuration}",
+                                                color = GhaisNoir.TextSecondary,
+                                                fontSize = 12.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
 
-            // Track List
-            LazyColumn(
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                items(items = tracks) { track ->
-                    PlaylistTrackRow(
-                        track = track,
-                        onTrackClick = {
-                            val index = tracks.indexOf(track).coerceAtLeast(0)
-                            AudioEngine.playQueue(tracks, startIndex = index)
-                            rootNavigator.push(NowPlayingScreen())
+                                    Spacer(modifier = Modifier.height(14.dp))
+
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        NoirStatChip(text = "${tracks.size} Tracks")
+                                        NoirStatChip(text = playlist.totalDuration)
+                                    }
+
+                                    Spacer(modifier = Modifier.height(16.dp))
+
+                                    ChromePillButton(
+                                        text = "Play All",
+                                        onClick = {
+                                            if (tracks.isNotEmpty()) {
+                                                AudioEngine.playQueue(tracks, startIndex = 0)
+                                                rootNavigator.push(NowPlayingScreen())
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = tracks.isNotEmpty(),
+                                        leadingIcon = Icons.Default.PlayArrow
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        GhostPillButton(
+                                            text = "Shuffle",
+                                            onClick = {
+                                                if (tracks.isNotEmpty()) {
+                                                    AudioEngine.playQueue(tracks.shuffled(), startIndex = 0)
+                                                    rootNavigator.push(NowPlayingScreen())
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        GhostPillButton(
+                                            text = "Share",
+                                            onClick = {},
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            NoirSectionHeader(
+                                label = "Tracks",
+                                actionLabel = "${tracks.size} recitations",
+                                onAction = {}
+                            )
                         }
-                    )
+                    }
+
+                    items(items = tracks, key = { it.surahId to it.reciterSlug }) { track ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 5.dp)
+                        ) {
+                            NoirListRow(
+                                title = "${track.surahNameEn} (${track.surahNameAr})",
+                                subtitle = track.reciterName,
+                                icon = Icons.Default.MusicNote,
+                                chevron = false,
+                                onClick = {
+                                    val index = tracks.indexOf(track).coerceAtLeast(0)
+                                    AudioEngine.playQueue(tracks, startIndex = index)
+                                    rootNavigator.push(NowPlayingScreen())
+                                },
+                                trailing = {
+                                    PlaylistRowTrailing(onRemove = {})
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun RowScope.PlaylistRowTrailing(
+    onRemove: () -> Unit
+) {
+    IconButton(onClick = onRemove, modifier = Modifier.size(34.dp)) {
+        Icon(
+            imageVector = Icons.Filled.Delete,
+            contentDescription = "Remove",
+            tint = GhaisNoir.TextTertiary,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+    Spacer(modifier = Modifier.width(6.dp))
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .background(GhaisNoir.wellFill(), CircleShape)
+            .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.PlayArrow,
+            contentDescription = "Play",
+            tint = GhaisNoir.TextPrimary,
+            modifier = Modifier.size(18.dp)
+        )
     }
 }
 
@@ -168,32 +304,20 @@ fun PlaylistTrackRow(
     track: TrackItem,
     onTrackClick: () -> Unit = {}
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onTrackClick() }
-            .padding(horizontal = 24.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 5.dp)
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "${track.surahNameEn} (${track.surahNameAr})",
-                color = GhaisColors.TextPrimary,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = track.reciterName,
-                color = GhaisColors.TextSecondary,
-                fontSize = 14.sp
-            )
-        }
-        IconButton(onClick = { }) {
-            Icon(
-                imageVector = Icons.Filled.Delete,
-                contentDescription = "Remove",
-                tint = GhaisColors.TextSecondary
-            )
-        }
+        NoirListRow(
+            title = "${track.surahNameEn} (${track.surahNameAr})",
+            subtitle = track.reciterName,
+            icon = Icons.Default.MusicNote,
+            chevron = false,
+            onClick = onTrackClick,
+            trailing = {
+                PlaylistRowTrailing(onRemove = {})
+            }
+        )
     }
 }
