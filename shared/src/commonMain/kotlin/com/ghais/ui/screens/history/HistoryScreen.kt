@@ -2,7 +2,6 @@ package com.ghais.ui.screens.history
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +11,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -20,8 +21,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -38,15 +41,23 @@ import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
+import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirCard
+import com.ghais.ui.components.noir.NoirInsetField
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.screens.player.NowPlayingScreen
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 import kotlin.time.Clock
 
 private const val HISTORY_WINDOW_MS = 30L * 24 * 60 * 60 * 1000
 
-private val PureBlack = Color(0xFF000000)
-private val MutedGrey = Color(0xFF9A9AA0)
-private val LinkBlue = Color(0xFF4C8DFF)
-private val DarkCard = Color(0xFF1C1C1E)
+/** True-grayscale filter — thumbs stay recognisable while strictly monochrome. */
+private val NoirGrayscale: ColorFilter by lazy {
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+}
 
 private data class HistorySurahGroup(
     val key: String,
@@ -74,6 +85,17 @@ private fun relativeTime(timestampMs: Long): String {
     return "${days}d ago"
 }
 
+/**
+ * Noir Glass — strict monochrome redesign.
+ *
+ * Canvas #050506 via [NoirScreenRoot] (glow zone -> absolute black + grain).
+ * Engraved [NoirInsetField] search (white cursor, 24% hint, ghost clear),
+ * history rows in the NoirListRow language with grayscale thumbs + 35% scrim,
+ * ghost-well empty state, ghost circular replay affordance. Zero hue — state
+ * reads through fill elevation, weight and opacity.
+ *
+ * Signature, grouping/filter/replay logic and navigation preserved.
+ */
 object HistoryScreen : Screen {
     @Composable
     override fun Content() {
@@ -156,225 +178,291 @@ object HistoryScreen : Screen {
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(PureBlack)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                LinkBlue.copy(alpha = 0.35f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
+        NoirScreenRoot {
             Column(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 12.dp)
             ) {
+                // Top bar — IconWell back + title + monochrome count chip.
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .clickable { navigator.pop() },
+                        modifier = Modifier.noirClickable { navigator.pop() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
+                        IconWell(
+                            icon = Icons.AutoMirrored.Filled.ArrowBack,
+                            size = 40.dp,
+                            iconSize = 20.dp,
+                            contentDescription = "Back"
                         )
                     }
-                    Column(modifier = Modifier.padding(start = 4.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 14.dp)
+                    ) {
                         Text(
                             text = "History",
-                            color = Color.White,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.ExtraBold,
+                            color = GhaisNoir.TextPrimary,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = "${filtered.size} surahs • last 30 days",
-                            color = MutedGrey,
+                            color = GhaisNoir.TextTertiary,
                             fontSize = 12.sp
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${filtered.size}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = GhaisNoir.TextSecondary
                         )
                     }
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.White.copy(alpha = 0.07f))
-                        .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(50))
-                        .padding(horizontal = 14.dp, vertical = 11.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = "Search",
-                        tint = MutedGrey,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    BasicTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        singleLine = true,
-                        textStyle = TextStyle(
-                            color = Color.White,
-                            fontSize = 14.sp
-                        ),
-                        decorationBox = { inner ->
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Search — engraved inset, white cursor, 24% hint, ghost clear.
+                NoirInsetField(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "Search",
+                            tint = if (searchQuery.isNotEmpty()) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Box(modifier = Modifier.weight(1f)) {
                             if (searchQuery.isEmpty()) {
                                 Text(
                                     text = "Search history...",
-                                    color = MutedGrey,
-                                    fontSize = 14.sp
+                                    color = GhaisNoir.TextDisabled,
+                                    fontSize = 13.5.sp
                                 )
                             }
-                            inner()
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                singleLine = true,
+                                textStyle = TextStyle(
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                cursorBrush = SolidColor(GhaisNoir.TextPrimary),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        if (searchQuery.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                                    .background(GhaisNoir.Fill2, CircleShape)
+                                    .noirClickable { searchQuery = "" },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear",
+                                    tint = GhaisNoir.TextSecondary,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
                 }
 
+                Spacer(modifier = Modifier.height(14.dp))
+
                 if (filtered.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 32.dp, vertical = 48.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Nothing here yet — your listening history from the last 30 days will appear here.",
-                            color = MutedGrey,
-                            fontSize = 15.sp,
-                            textAlign = TextAlign.Center
-                        )
+                    // Ghost-well empty state — clay well + 100% headline + 62% hint.
+                    NoirCard(soft = true, modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            IconWell(
+                                icon = Icons.Default.History,
+                                size = 56.dp,
+                                iconSize = 26.dp,
+                                contentDescription = null,
+                                tint = GhaisNoir.TextTertiary
+                            )
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = if (searchQuery.isNotBlank()) "No matches in history" else "No history yet",
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Your listening history from the last 30 days will appear here.",
+                                color = GhaisNoir.TextSecondary,
+                                fontSize = 12.5.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 112.dp)
+                        contentPadding = PaddingValues(top = 2.dp, bottom = 112.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(
                             items = filtered,
                             key = { it.key }
                         ) { group ->
-                            val photoUrl = remember(group.key) {
-                                resolveFollowedQari(group.reciterSlug)?.photoUrl
-                            }
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 5.dp)
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(Color.White.copy(alpha = 0.05f))
-                                    .border(
-                                        1.dp,
-                                        Color.White.copy(alpha = 0.08f),
-                                        RoundedCornerShape(24.dp)
-                                    )
-                                    .clickable { replaySurah(group) }
-                                    .padding(12.dp)
-                            ) {
-                                if (group.coverUrl.isNotBlank()) {
-                                    AsyncImage(
-                                        model = group.coverUrl,
-                                        contentDescription = group.title,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(76.dp)
-                                            .clip(RoundedCornerShape(22.dp))
-                                            .background(DarkCard)
-                                    )
-                                } else if (photoUrl != null) {
-                                    AsyncImage(
-                                        model = photoUrl,
-                                        contentDescription = group.reciterName,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(76.dp)
-                                            .clip(RoundedCornerShape(22.dp))
-                                            .background(DarkCard)
-                                    )
-                                } else {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(76.dp)
-                                            .clip(RoundedCornerShape(22.dp))
-                                            .background(Color.White.copy(alpha = 0.10f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = group.title.take(1),
-                                            color = Color.White,
-                                            fontSize = 28.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.width(12.dp))
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = group.title,
-                                        color = Color.White,
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "${group.reciterName} • ${group.playsCount} plays",
-                                        color = MutedGrey,
-                                        fontSize = 13.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                Column(
-                                    horizontalAlignment = Alignment.End
-                                ) {
-                                    Text(
-                                        text = relativeTime(group.lastPlayedMs),
-                                        color = MutedGrey,
-                                        fontSize = 12.sp,
-                                        maxLines = 1
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Icon(
-                                        imageVector = Icons.Filled.PlayArrow,
-                                        contentDescription = "Replay",
-                                        tint = LinkBlue,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            }
+                            HistoryNoirRow(
+                                group = group,
+                                onReplay = { replaySurah(group) }
+                            )
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * History row in the NoirListRow language: soft card fill + 1px card border +
+ * 22% top-only specular, grayscale thumb (desaturated + 35% black scrim,
+ * monogram fallback), dual text, 38% timestamp, ghost circular replay
+ * affordance with white glyph + ghost chevron.
+ */
+@Composable
+private fun HistoryNoirRow(
+    group: HistorySurahGroup,
+    onReplay: () -> Unit
+) {
+    val photoUrl = remember(group.key) {
+        resolveFollowedQari(group.reciterSlug)?.photoUrl
+    }
+    val thumbUrl = group.coverUrl.takeIf { it.isNotBlank() } ?: photoUrl
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(GhaisShapes.row)
+            .background(GhaisNoir.cardFillSoft(), GhaisShapes.row)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.row)
+            .topSpecular(inset = 22.dp)
+            .noirClickable(onReplay)
+            .padding(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(GhaisNoir.wellFill())
+                .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(18.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (thumbUrl != null) {
+                AsyncImage(
+                    model = thumbUrl,
+                    contentDescription = group.title,
+                    contentScale = ContentScale.Crop,
+                    colorFilter = NoirGrayscale,
+                    modifier = Modifier.fillMaxSize()
+                )
+                // Darkening scrim keeps the plate recessed instead of glowing.
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(Color.Black.copy(alpha = 0.35f))
+                )
+            } else {
+                Text(
+                    text = group.title.take(1).uppercase(),
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = group.title,
+                color = GhaisNoir.TextPrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "${group.reciterName} • ${group.playsCount} plays",
+                color = GhaisNoir.TextSecondary,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = relativeTime(group.lastPlayedMs),
+                color = GhaisNoir.TextTertiary,
+                fontSize = 12.sp,
+                maxLines = 1
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                        .background(GhaisNoir.Fill2, CircleShape)
+                        .noirClickable(onReplay),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "Replay",
+                        tint = GhaisNoir.TextPrimary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = GhaisNoir.TextTertiary,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }

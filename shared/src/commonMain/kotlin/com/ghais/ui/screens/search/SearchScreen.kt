@@ -1,39 +1,79 @@
 package com.ghais.ui.screens.search
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import coil3.compose.AsyncImage
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.data.seed.QuranData
+import com.ghais.domain.model.Reciter
+import com.ghais.domain.model.Surah
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
+import com.ghais.ui.components.noir.ChromeFab
+import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirCard
+import com.ghais.ui.components.noir.NoirInsetField
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.reciters.ReciterProfileScreen
 import com.ghais.ui.screens.surah.SurahDetailScreen
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
+/** True-grayscale filter — thumbs stay recognisable while strictly monochrome. */
+private val NoirGrayscale: ColorFilter by lazy {
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+}
+
+/**
+ * Noir Glass — strict monochrome redesign.
+ *
+ * Canvas #050506 via [NoirScreenRoot] (glow zone -> absolute black + grain).
+ * Engraved [NoirInsetField] search (white cursor, 24% hint, ghost clear),
+ * chrome/ghost filter pills, [NoirCard] ayah plate with chrome play,
+ * result rows in the NoirListRow language with grayscale thumbs, ghost-well
+ * empty states. Zero hue — state reads through fill, weight and opacity.
+ *
+ * Signatures, search/filter/play logic and navigation preserved.
+ */
 class SearchScreen : Screen {
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -44,203 +84,151 @@ class SearchScreen : Screen {
 
         val searchResults = remember(query) { SearchEngine.search(query) }
 
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        OutlinedTextField(
-                            value = query,
-                            onValueChange = { query = it },
-                            modifier = Modifier.fillMaxWidth().height(50.dp),
-                            placeholder = { Text("Search...", color = GhaisColors.TextSecondary) },
-                            trailingIcon = {
-                                if (query.isNotEmpty()) {
-                                    IconButton(onClick = { query = "" }) {
-                                        Icon(Icons.Default.Clear, contentDescription = "Clear", tint = GhaisColors.TextSecondary)
-                                    }
-                                } else {
-                                    IconButton(onClick = { /* Mic action */ }) {
-                                        Icon(Icons.Default.Mic, contentDescription = "Mic", tint = GhaisColors.TextSecondary)
-                                    }
-                                }
-                            },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GhaisColors.Primary,
-                                unfocusedBorderColor = GhaisColors.Card,
-                                focusedContainerColor = GhaisColors.Card,
-                                unfocusedContainerColor = GhaisColors.Card,
-                                focusedTextColor = GhaisColors.TextPrimary,
-                                unfocusedTextColor = GhaisColors.TextPrimary
-                            ),
-                            shape = RoundedCornerShape(25.dp),
-                            singleLine = true
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { navigator.pop() }) {
-                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = GhaisColors.TextPrimary)
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = GhaisColors.Background)
+        // Shared queue builder — unchanged playback logic, surah entry point varies.
+        fun playSurahQueue(entrySurahId: Int, reciterSlug: String, reciterName: String) {
+            val reciter = QuranDataRepository.getReciterBySlug(reciterSlug)
+            val allSurahs = QuranDataRepository.getSurahs()
+            val allTracks = allSurahs.map { s ->
+                TrackItem(
+                    reciterSlug = reciter.slug,
+                    reciterName = reciter.nameEn,
+                    surahId = s.id,
+                    surahNameEn = s.nameEn,
+                    surahNameAr = s.nameAr,
+                    ayahNo = 0,
+                    audioUrl = reciter.getFullSurahUrl(s.id),
+                    durationMs = s.ayahsCount * 15_000L
                 )
-            },
-            containerColor = GhaisColors.Background
-        ) { padding ->
-            Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    filters.forEach { filter ->
-                        FilterChip(
-                            selected = selectedFilter == filter,
-                            onClick = { selectedFilter = filter },
-                            label = { Text(filter) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = GhaisColors.Primary,
-                                selectedLabelColor = GhaisColors.Background,
-                                containerColor = GhaisColors.Card,
-                                labelColor = GhaisColors.TextPrimary
-                            ),
-                            border = null,
-                            shape = RoundedCornerShape(16.dp)
+            }
+            val startIndex = allTracks.indexOfFirst { it.surahId == entrySurahId }.coerceAtLeast(0)
+            AudioEngine.playQueue(allTracks, startIndex = startIndex)
+            rootNavigator.push(NowPlayingScreen())
+        }
+
+        fun playWithCurrentReciter(entrySurahId: Int) {
+            val reciter = AudioEngine.currentTrack.value?.let {
+                QuranDataRepository.getReciterBySlug(it.reciterSlug)
+            } ?: QuranDataRepository.getFallbackReciter()
+            playSurahQueue(entrySurahId, reciter.slug, reciter.nameEn)
+        }
+
+        NoirScreenRoot {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 12.dp)
+            ) {
+                // Top bar — IconWell back + engraved inset search.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.noirClickable { navigator.pop() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconWell(
+                            icon = Icons.AutoMirrored.Filled.ArrowBack,
+                            size = 40.dp,
+                            iconSize = 20.dp,
+                            contentDescription = "Back"
                         )
                     }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    SearchInsetField(
+                        query = query,
+                        onQueryChange = { query = it },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Filters — chrome pill (selected) / ghost pill (resting).
+                SearchFilterChipsRow(
+                    filters = filters,
+                    selectedFilter = selectedFilter,
+                    onFilterSelected = { selectedFilter = it }
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
 
                 if (query.isEmpty()) {
-                    Text("Recent Searches", color = GhaisColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("No recent searches.", color = GhaisColors.TextSecondary)
+                    NoirSectionHeader(
+                        label = "Recent searches",
+                        onAction = {}
+                    )
+                    SearchEmptyWell(
+                        headline = "Search anything",
+                        hint = "Surahs, reciters, or ayah refs like 2:255"
+                    )
                 } else {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        val ayahRef = searchResults.ayahReference
-                        if (ayahRef != null && (selectedFilter == "All" || selectedFilter == "Ayahs")) {
-                            item {
-                                AyahQuickPlayCard(
-                                    ayahRef = ayahRef,
-                                    onClick = { navigator.push(SurahDetailScreen(ayahRef.surahId)) },
-                                    onPlay = {
-                                        val reciter = AudioEngine.currentTrack.value?.let {
-                                            QuranDataRepository.getReciterBySlug(it.reciterSlug)
-                                        } ?: QuranDataRepository.getFallbackReciter()
-                                        val allSurahs = QuranDataRepository.getSurahs()
-                                        val allTracks = allSurahs.map { s ->
-                                            TrackItem(
+                    val ayahRef = searchResults.ayahReference
+                    val showAyah = ayahRef != null && (selectedFilter == "All" || selectedFilter == "Ayahs")
+                    val showSurahs = searchResults.surahs.isNotEmpty() &&
+                        (selectedFilter == "All" || selectedFilter == "Surahs")
+                    val showReciters = searchResults.reciters.isNotEmpty() &&
+                        (selectedFilter == "All" || selectedFilter == "Reciters")
+                    if (!showAyah && !showSurahs && !showReciters) {
+                        SearchEmptyWell(
+                            headline = "No results for \"$query\"",
+                            hint = "Try a surah name, reciter, or ayah ref like 2:255"
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 2.dp, bottom = 120.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            if (showAyah && ayahRef != null) {
+                                item(key = "ayah-${ayahRef.surahId}-${ayahRef.ayahNo}") {
+                                    AyahQuickPlayCard(
+                                        ayahRef = ayahRef,
+                                        onClick = { navigator.push(SurahDetailScreen(ayahRef.surahId)) },
+                                        onPlay = { playWithCurrentReciter(ayahRef.surahId) }
+                                    )
+                                }
+                            }
+
+                            if (showSurahs) {
+                                item(key = "header-surahs") {
+                                    NoirSectionHeader(
+                                        label = "Surahs",
+                                        actionLabel = "${searchResults.surahs.size} shown",
+                                        onAction = {}
+                                    )
+                                }
+                                items(searchResults.surahs, key = { "surah-${it.id}" }) { surah ->
+                                    SurahNoirRow(
+                                        surah = surah,
+                                        onOpen = { playWithCurrentReciter(surah.id) },
+                                        onPlay = { playWithCurrentReciter(surah.id) }
+                                    )
+                                }
+                            }
+
+                            if (showReciters) {
+                                item(key = "header-reciters") {
+                                    NoirSectionHeader(
+                                        label = "Reciters",
+                                        actionLabel = "${searchResults.reciters.size} shown",
+                                        onAction = {}
+                                    )
+                                }
+                                items(searchResults.reciters, key = { "reciter-${it.slug}" }) { reciter ->
+                                    ReciterNoirRow(
+                                        reciter = reciter,
+                                        onOpen = { navigator.push(ReciterProfileScreen(reciter.slug)) },
+                                        onPlay = {
+                                            playSurahQueue(
+                                                entrySurahId = 1,
                                                 reciterSlug = reciter.slug,
-                                                reciterName = reciter.nameEn,
-                                                surahId = s.id,
-                                                surahNameEn = s.nameEn,
-                                                surahNameAr = s.nameAr,
-                                                ayahNo = 0,
-                                                audioUrl = reciter.getFullSurahUrl(s.id),
-                                                durationMs = s.ayahsCount * 15_000L
+                                                reciterName = reciter.nameEn
                                             )
                                         }
-                                        val startIndex = allTracks.indexOfFirst { it.surahId == ayahRef.surahId }.coerceAtLeast(0)
-                                        AudioEngine.playQueue(allTracks, startIndex = startIndex)
-                                        rootNavigator.push(NowPlayingScreen())
-                                    }
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
-                        }
-
-                        if (searchResults.surahs.isNotEmpty() && (selectedFilter == "All" || selectedFilter == "Surahs")) {
-                            item {
-                                Text("Surahs", color = GhaisColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
-                            }
-                            items(searchResults.surahs) { surah ->
-                                val playSurah = {
-                                    val reciter = AudioEngine.currentTrack.value?.let {
-                                        QuranDataRepository.getReciterBySlug(it.reciterSlug)
-                                    } ?: QuranDataRepository.getFallbackReciter()
-                                    val allSurahs = QuranDataRepository.getSurahs()
-                                    val allTracks = allSurahs.map { s ->
-                                        TrackItem(
-                                            reciterSlug = reciter.slug,
-                                            reciterName = reciter.nameEn,
-                                            surahId = s.id,
-                                            surahNameEn = s.nameEn,
-                                            surahNameAr = s.nameAr,
-                                            ayahNo = 0,
-                                            audioUrl = reciter.getFullSurahUrl(s.id),
-                                            durationMs = s.ayahsCount * 15_000L
-                                        )
-                                    }
-                                    val startIndex = allTracks.indexOfFirst { it.surahId == surah.id }.coerceAtLeast(0)
-                                    AudioEngine.playQueue(allTracks, startIndex = startIndex)
-                                    rootNavigator.push(NowPlayingScreen())
-                                }
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { playSurah() }
-                                        .padding(vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    IconButton(
-                                        onClick = { playSurah() },
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Filled.PlayArrow,
-                                            contentDescription = "Play Surah ${surah.nameEn}",
-                                            tint = GhaisColors.Primary
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(surah.nameEn, color = GhaisColors.TextPrimary, fontWeight = FontWeight.SemiBold)
-                                        Text("Surah ${surah.id} • ${surah.ayahsCount} Ayahs", color = GhaisColors.TextSecondary, fontSize = 12.sp)
-                                    }
-                                    Text(surah.nameAr, color = GhaisColors.Primary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-
-                        if (searchResults.reciters.isNotEmpty() && (selectedFilter == "All" || selectedFilter == "Reciters")) {
-                            item {
-                                Text("Reciters", color = GhaisColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
-                            }
-                            items(searchResults.reciters) { reciter ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { navigator.push(ReciterProfileScreen(reciter.slug)) }
-                                        .padding(vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    IconButton(
-                                        onClick = {
-                                            val allSurahs = QuranDataRepository.getSurahs()
-                                            val allTracks = allSurahs.map { s ->
-                                                TrackItem(
-                                                    reciterSlug = reciter.slug,
-                                                    reciterName = reciter.nameEn,
-                                                    surahId = s.id,
-                                                    surahNameEn = s.nameEn,
-                                                    surahNameAr = s.nameAr,
-                                                    ayahNo = 0,
-                                                    audioUrl = reciter.getFullSurahUrl(s.id),
-                                                    durationMs = s.ayahsCount * 15_000L
-                                                )
-                                            }
-                                            AudioEngine.playQueue(allTracks, startIndex = 0)
-                                            rootNavigator.push(NowPlayingScreen())
-                                        },
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Filled.PlayArrow,
-                                            contentDescription = "Play reciter ${reciter.nameEn}",
-                                            tint = GhaisColors.Primary
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(reciter.nameEn, color = GhaisColors.TextPrimary, fontWeight = FontWeight.SemiBold)
-                                        Text(reciter.style.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }, color = GhaisColors.TextSecondary, fontSize = 12.sp)
-                                    }
+                                    )
                                 }
                             }
                         }
@@ -251,38 +239,427 @@ class SearchScreen : Screen {
     }
 }
 
+/**
+ * Engraved inset search: carved recess ([NoirInsetField]), white cursor,
+ * 24% hint ([GhaisNoir.TextDisabled]), ghost clear disc. Search icon lifts
+ * from 38% to 100% once a query is present.
+ */
+@Composable
+private fun SearchInsetField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    NoirInsetField(modifier = modifier) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Search",
+                tint = if (query.isNotEmpty()) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Box(modifier = Modifier.weight(1f)) {
+                if (query.isEmpty()) {
+                    Text(
+                        text = "Search surahs, reciters, ayahs...",
+                        color = GhaisNoir.TextDisabled,
+                        fontSize = 13.5.sp
+                    )
+                }
+                BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    textStyle = TextStyle(
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    cursorBrush = SolidColor(GhaisNoir.TextPrimary),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            if (query.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                        .background(GhaisNoir.Fill2, CircleShape)
+                        .noirClickable { onQueryChange("") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Clear",
+                        tint = GhaisNoir.TextSecondary,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Filter pills: selected = chrome gradient + near-black label;
+ * resting = Fill2 wash + card hairline + 62% label.
+ */
+@Composable
+private fun SearchFilterChipsRow(
+    filters: List<String>,
+    selectedFilter: String,
+    onFilterSelected: (String) -> Unit
+) {
+    LazyRow(
+        contentPadding = PaddingValues(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(filters) { filter ->
+            val isSelected = selectedFilter == filter
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.chromeFill())
+                        .border(1.dp, Color.White.copy(alpha = 0.35f), GhaisShapes.pill)
+                        .noirClickable { onFilterSelected(filter) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = filter,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GhaisNoir.OnChrome
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                        .noirClickable { onFilterSelected(filter) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = filter,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = GhaisNoir.TextSecondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Surah result row in the NoirListRow language: soft card fill + 1px card
+ * border + 22% top-only specular, clay monogram well, dual text, Arabic
+ * title in white, ghost circular play affordance.
+ */
+@Composable
+private fun SurahNoirRow(
+    surah: Surah,
+    onOpen: () -> Unit,
+    onPlay: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(GhaisShapes.row)
+            .background(GhaisNoir.cardFillSoft(), GhaisShapes.row)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.row)
+            .topSpecular(inset = 22.dp)
+            .noirClickable(onOpen)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(GhaisShapes.well)
+                .background(GhaisNoir.wellFill())
+                .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.well),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = surah.nameEn.take(1).uppercase(),
+                color = GhaisNoir.TextPrimary,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp, end = 8.dp)
+        ) {
+            Text(
+                text = surah.nameEn,
+                color = GhaisNoir.TextPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "Surah ${surah.id} • ${surah.ayahsCount} ayahs",
+                color = GhaisNoir.TextSecondary,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Text(
+            text = surah.nameAr,
+            color = GhaisNoir.TextPrimary,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                .background(GhaisNoir.Fill2, CircleShape)
+                .noirClickable(onPlay),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = "Play Surah ${surah.nameEn}",
+                tint = GhaisNoir.TextPrimary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Reciter result row in the NoirListRow language: grayscale photo well
+ * (desaturated + 35% scrim, monogram fallback), dual text, ghost style chip,
+ * circular chevron to the profile. Trailing play keeps the queue-start logic.
+ */
+@Composable
+private fun ReciterNoirRow(
+    reciter: Reciter,
+    onOpen: () -> Unit,
+    onPlay: () -> Unit
+) {
+    val followedPhoto = remember(reciter.slug) {
+        resolveFollowedQari(reciter.slug)?.photoUrl
+    }
+    val photoUrl = reciter.imageUrl?.takeIf { it.isNotBlank() } ?: followedPhoto
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(GhaisShapes.row)
+            .background(GhaisNoir.cardFillSoft(), GhaisShapes.row)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.row)
+            .topSpecular(inset = 22.dp)
+            .noirClickable(onOpen)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(CircleShape)
+                .background(GhaisNoir.wellFill())
+                .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            if (photoUrl != null) {
+                AsyncImage(
+                    model = photoUrl,
+                    contentDescription = reciter.nameEn,
+                    contentScale = ContentScale.Crop,
+                    colorFilter = NoirGrayscale,
+                    modifier = Modifier.fillMaxSize()
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(Color.Black.copy(alpha = 0.35f))
+                )
+            } else {
+                Text(
+                    text = reciter.nameEn.take(1).uppercase(),
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp, end = 8.dp)
+        ) {
+            Text(
+                text = reciter.nameEn,
+                color = GhaisNoir.TextPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                        .padding(horizontal = 9.dp, vertical = 3.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = reciter.style.replaceFirstChar {
+                            if (it.isLowerCase()) it.titlecase() else it.toString()
+                        },
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = reciter.nameAr,
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                .noirClickable(onPlay),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = "Play reciter ${reciter.nameEn}",
+                tint = GhaisNoir.TextSecondary,
+                modifier = Modifier.size(17.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .border(1.dp, GhaisNoir.BorderGhost, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = GhaisNoir.TextTertiary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Ghost-well empty state: soft card + clay icon-well, 100% headline + 62% hint.
+ */
+@Composable
+private fun SearchEmptyWell(
+    headline: String,
+    hint: String
+) {
+    NoirCard(soft = true, modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            IconWell(
+                icon = Icons.Default.Search,
+                size = 56.dp,
+                iconSize = 26.dp,
+                contentDescription = null,
+                tint = GhaisNoir.TextTertiary
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+                text = headline,
+                color = GhaisNoir.TextPrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = hint,
+                color = GhaisNoir.TextSecondary,
+                fontSize = 12.5.sp,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+/**
+ * Ayah quick-play plate (signature preserved): elevated Noir card, 38% kicker,
+ * white identity, chrome play disc with near-black glyph.
+ */
 @Composable
 fun AyahQuickPlayCard(
     ayahRef: AyahReference,
     onClick: () -> Unit = {},
     onPlay: () -> Unit = {}
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = GhaisColors.Card),
-        shape = RoundedCornerShape(16.dp)
+    NoirCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick
     ) {
         Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             val surah = QuranData.SURAHS.find { it.id == ayahRef.surahId }
             Column(modifier = Modifier.weight(1f)) {
-                Text("Ayah Reference Found", color = GhaisColors.Primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "Ayah reference found",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
                 Spacer(Modifier.height(4.dp))
-                Text("${surah?.nameEn} - Ayah ${ayahRef.ayahNo}", color = GhaisColors.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "${surah?.nameEn} • Ayah ${ayahRef.ayahNo}",
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "Surah ${ayahRef.surahId} • Ayah ${ayahRef.ayahNo}",
+                    color = GhaisNoir.TextSecondary,
+                    fontSize = 12.sp
+                )
             }
-            IconButton(
+            Spacer(modifier = Modifier.width(12.dp))
+            ChromeFab(
+                icon = Icons.Default.PlayArrow,
                 onClick = onPlay,
-                modifier = Modifier
-                    .background(GhaisColors.Primary, shape = RoundedCornerShape(24.dp))
-                    .size(48.dp)
-            ) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = "Play Ayah", tint = GhaisColors.Background)
-            }
+                size = 48.dp,
+                contentDescription = "Play Ayah"
+            )
         }
     }
 }
