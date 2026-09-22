@@ -1,11 +1,11 @@
 package com.ghais.ui.screens.profile.glass
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,29 +14,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirSwitch
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
-private val ProtonWhite = Color(0xFFFFFFFF)
-private val ProtonMuted = Color(0xFF9A9AA0)
-private val ProtonEmerald = Color(0xFF4EDEA3)
-private val ProtonDanger = Color(0xFFFF5A6E)
+// Phase 3 — legacy row names re-skinned to Noir (signatures kept).
 
 @Composable
 fun ProtonRow(
@@ -47,48 +43,19 @@ fun ProtonRow(
     destructive: Boolean = false,
     onClick: () -> Unit = {}
 ) {
-    val titleColor = if (destructive) ProtonDanger else ProtonWhite
-    val iconTint = if (destructive) ProtonDanger else ProtonWhite
+    // Monochrome danger: muted 38% white (no red in Noir).
+    val titleColor = if (destructive) GhaisNoir.TextTertiary else GhaisNoir.TextPrimary
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .noirClickable(onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(ProtonWhite.copy(alpha = 0.08f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            IconWell(icon = icon, size = 40.dp, iconSize = 20.dp, tint = titleColor)
             if (countBadge > 0) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = 4.dp, y = (-4).dp)
-                        .size(18.dp)
-                        .clip(CircleShape)
-                        .background(ProtonWhite.copy(alpha = 0.20f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (countBadge > 99) "99+" else countBadge.toString(),
-                        color = ProtonWhite,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1
-                    )
-                }
+                NoirBadgeDot(countBadge, modifier = Modifier.align(Alignment.TopEnd))
             }
         }
         Spacer(modifier = Modifier.width(14.dp))
@@ -104,19 +71,14 @@ fun ProtonRow(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                color = ProtonMuted,
+                color = GhaisNoir.TextSecondary,
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
         Spacer(modifier = Modifier.width(8.dp))
-        Icon(
-            imageVector = Icons.Filled.ChevronRight,
-            contentDescription = null,
-            tint = ProtonMuted.copy(alpha = 0.6f),
-            modifier = Modifier.size(18.dp)
-        )
+        NoirChevronRing()
     }
 }
 
@@ -128,36 +90,19 @@ fun ProtonSwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) { onCheckedChange(!checked) }
+            .noirClickable { onCheckedChange(!checked) }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(ProtonWhite.copy(alpha = 0.08f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = ProtonWhite,
-                modifier = Modifier.size(20.dp)
-            )
-        }
+        IconWell(icon = icon, size = 40.dp, iconSize = 20.dp)
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                color = ProtonWhite,
+                color = GhaisNoir.TextPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -166,25 +111,14 @@ fun ProtonSwitchRow(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                color = ProtonMuted,
+                color = GhaisNoir.TextSecondary,
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
         Spacer(modifier = Modifier.width(12.dp))
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = ProtonWhite,
-                checkedTrackColor = ProtonEmerald,
-                checkedBorderColor = Color.Transparent,
-                uncheckedThumbColor = ProtonWhite,
-                uncheckedTrackColor = ProtonWhite.copy(alpha = 0.12f),
-                uncheckedBorderColor = Color.Transparent
-            )
-        )
+        NoirSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -201,25 +135,12 @@ fun ProtonValueRow(
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(ProtonWhite.copy(alpha = 0.08f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = ProtonWhite,
-                modifier = Modifier.size(20.dp)
-            )
-        }
+        IconWell(icon = icon, size = 40.dp, iconSize = 20.dp)
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                color = ProtonWhite,
+                color = GhaisNoir.TextPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -228,7 +149,7 @@ fun ProtonValueRow(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                color = ProtonMuted,
+                color = GhaisNoir.TextSecondary,
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -236,20 +157,66 @@ fun ProtonValueRow(
         }
         if (value.isNotEmpty()) {
             Spacer(modifier = Modifier.width(12.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50.dp))
-                    .background(ProtonWhite.copy(alpha = 0.08f))
-                    .padding(horizontal = 9.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = value,
-                    color = ProtonWhite,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1
-                )
-            }
+            NoirValueChip(value)
         }
+    }
+}
+
+/** Chrome badge dot (shared by rows). */
+@Composable
+fun NoirBadgeDot(count: Int, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .offset(x = 4.dp, y = (-4).dp)
+            .size(18.dp)
+            .background(GhaisNoir.chromeFill(), CircleShape)
+            .border(1.dp, GhaisNoir.NoirBlack, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = if (count > 99) "99+" else count.toString(),
+            color = GhaisNoir.OnChrome,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
+    }
+}
+
+/** Circular ghost chevron affordance. */
+@Composable
+fun NoirChevronRing(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(28.dp)
+            .border(1.dp, GhaisNoir.BorderGhost, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = GhaisNoir.TextTertiary,
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
+/** Ghost value chip (version strings, "Verified"). */
+@Composable
+fun NoirValueChip(value: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .background(GhaisNoir.Fill2, GhaisShapes.pill)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+            .padding(horizontal = 9.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = value,
+            color = GhaisNoir.TextPrimary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1
+        )
     }
 }

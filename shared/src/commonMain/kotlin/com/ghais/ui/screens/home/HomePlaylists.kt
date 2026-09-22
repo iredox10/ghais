@@ -2,99 +2,82 @@ package com.ghais.ui.screens.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.FavoritesStore
+import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
-// Self-contained tokens (pure-black design language)
-private val DarkCard = Color(0xFF1C1C1E)
-private val LinkBlue = Color(0xFF4C8DFF)
-
-private val FocusGradientTop = Color(0xFF2E7CF6)
-private val FocusGradientBottom = Color(0xFF0A1F44)
-private val NightGradientTop = Color(0xFF3B2E7C)
-private val NightGradientBottom = Color(0xFF0B0B18)
-
+/**
+ * Phase 4 — "Playlists".
+ *
+ * The three tiles used to be hue-coded (blue focus / violet sleep / flat grey).
+ * They are now identical glass plates distinguished purely by claymorphic
+ * artwork — a star well, engraved concentric rings, a moon well — so the
+ * language stays strictly monochrome.
+ */
 @Composable
 fun HomePlaylistsRow(onFavourites: () -> Unit, onFocusWork: () -> Unit, onNightSleep: () -> Unit) {
     val favorites by FavoritesStore.favoriteTracks.collectAsState()
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
+
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            PlaylistShell(
+            NoirPlaylistTile(
                 label = "Favourites",
                 subtitle = "${favorites.size} saved",
                 onClick = onFavourites,
-                bgModifier = Modifier.background(DarkCard),
                 artwork = {
-                    Icon(
-                        imageVector = Icons.Filled.Star,
-                        contentDescription = "Favourites",
-                        tint = Color.White,
-                        modifier = Modifier.size(104.dp)
+                    IconWell(
+                        icon = Icons.Filled.Star,
+                        size = 76.dp,
+                        iconSize = 34.dp,
+                        contentDescription = "Favourites"
                     )
                 }
             )
         }
         item {
-            PlaylistShell(
+            NoirPlaylistTile(
                 label = "Focus & Work",
                 subtitle = "Deep focus",
                 onClick = onFocusWork,
-                bgModifier = Modifier.background(
-                    Brush.verticalGradient(
-                        listOf(FocusGradientTop, FocusGradientBottom)
-                    )
-                ),
-                artwork = {
-                    ConcentricRings()
-                }
+                artwork = { NoirEngravedRings(ringSize = 92.dp) }
             )
         }
         item {
-            PlaylistShell(
+            NoirPlaylistTile(
                 label = "Night & Sleep",
                 subtitle = "Sleep well",
                 onClick = onNightSleep,
-                bgModifier = Modifier.background(
-                    Brush.verticalGradient(
-                        listOf(NightGradientTop, NightGradientBottom)
-                    )
-                ),
                 artwork = {
-                    Icon(
-                        imageVector = Icons.Filled.Bedtime,
-                        contentDescription = "Night and Sleep",
-                        tint = Color.White,
-                        modifier = Modifier.size(104.dp)
+                    IconWell(
+                        icon = Icons.Filled.Bedtime,
+                        size = 76.dp,
+                        iconSize = 34.dp,
+                        contentDescription = "Night and Sleep"
                     )
                 }
             )
@@ -102,75 +85,46 @@ fun HomePlaylistsRow(onFavourites: () -> Unit, onFocusWork: () -> Unit, onNightS
     }
 }
 
+/** Glass playlist plate: oversized clay artwork lifted above the label block. */
 @Composable
-private fun PlaylistShell(
+private fun NoirPlaylistTile(
     label: String,
     subtitle: String,
     onClick: () -> Unit,
-    bgModifier: Modifier,
     artwork: @Composable BoxScope.() -> Unit
 ) {
     Box(
         modifier = Modifier
-            .size(width = 168.dp, height = 200.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .then(bgModifier)
-            .clickable(onClick = onClick)
+            .size(width = 164.dp, height = 196.dp)
+            .background(GhaisNoir.cardFill(), GhaisShapes.cardNoir)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardNoir)
+            .topSpecular(inset = 28.dp)
+            .noirClickable(onClick)
     ) {
-        // Centered oversized artwork, lifted slightly to leave room for bottom label
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
-                .offset(y = (-14).dp),
+                .offset(y = (-12).dp),
             contentAlignment = Alignment.Center,
             content = artwork
         )
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 14.dp, end = 14.dp, bottom = 14.dp)
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
         ) {
             Text(
                 text = label,
-                color = Color.White,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.ExtraBold
+                color = GhaisNoir.TextPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
             )
+            Spacer(Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                color = Color.White.copy(alpha = 0.65f),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Normal
+                color = GhaisNoir.TextSecondary,
+                fontSize = 11.sp
             )
         }
-    }
-}
-
-@Composable
-private fun ConcentricRings() {
-    Box(
-        modifier = Modifier.size(140.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(140.dp)
-                .border(1.dp, Color.White.copy(alpha = 0.32f), CircleShape)
-        )
-        Box(
-            modifier = Modifier
-                .size(112.dp)
-                .border(1.dp, Color.White.copy(alpha = 0.32f), CircleShape)
-        )
-        Box(
-            modifier = Modifier
-                .size(84.dp)
-                .border(1.dp, Color.White.copy(alpha = 0.32f), CircleShape)
-        )
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .border(1.dp, Color.White.copy(alpha = 0.32f), CircleShape)
-        )
     }
 }

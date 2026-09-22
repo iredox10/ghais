@@ -1,7 +1,7 @@
 package com.ghais.ui.screens.library.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,20 +17,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Spa
-import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -41,33 +39,45 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.ghais.data.seed.QuranDataRepository
 import com.ghais.data.seed.GhaisAssets
 import com.ghais.data.seed.toTrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
 import cafe.adriel.voyager.navigator.LocalNavigator
+import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirListRow
+import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.NoirSegmentedProgress
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
 /**
- * 2-column Quick Cards row matching Stitch specs:
- * 1) "Liked Verses & Duas" with amber theme, pin icon, and saved count.
- * 2) "Offline Surahs" with emerald theme, pin icon, and downloaded stats.
+ * Phase 4 — Noir Library quick grids, shelves and rows.
+ *
+ * Strict Noir Glass monochrome: soft glass tiles + 1px card borders +
+ * top-only specular hairlines, clay icon-wells, chrome/ghost pills and
+ * [NoirListRow] shelf rows. Data models, filter logic and navigation targets
+ * are unchanged; state reads through fill elevation, weight and opacity —
+ * zero hue anywhere.
+ */
+
+/**
+ * 2-column Quick Cards row:
+ * 1) "Liked Verses & Duas" with saved count.
+ * 2) "Offline Surahs" with live downloaded stats.
  */
 @Composable
 fun LibraryQuickGridSection(
@@ -78,6 +88,7 @@ fun LibraryQuickGridSection(
     // Live offline count (keys are "$reciterSlug/$surahId").
     val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
     val offlineCount = downloadedKeys.size
+    val quickShape = RoundedCornerShape(18.dp)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -89,22 +100,11 @@ fun LibraryQuickGridSection(
             modifier = Modifier
                 .weight(1f)
                 .height(124.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(GhaisColors.SurfaceContainer)
-                .drawBehind {
-                    // Subtle amber glow in bottom right
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                GhaisColors.Secondary.copy(alpha = 0.14f),
-                                Color.Transparent
-                            ),
-                            center = Offset(size.width, size.height),
-                            radius = 65.dp.toPx()
-                        )
-                    )
-                }
-                .clickable { onLikedVersesClick() }
+                .clip(quickShape)
+                .background(GhaisNoir.cardFillSoft())
+                .border(1.dp, GhaisNoir.BorderCard, quickShape)
+                .topSpecular(inset = 18.dp)
+                .noirClickable { onLikedVersesClick() }
                 .padding(14.dp)
         ) {
             Column(
@@ -116,24 +116,11 @@ fun LibraryQuickGridSection(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(GhaisColors.Secondary.copy(alpha = 0.18f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = "Favorite",
-                            tint = GhaisColors.Secondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    IconWell(icon = Icons.Default.Favorite, size = 38.dp, iconSize = 20.dp)
                     Icon(
                         imageVector = Icons.Default.PushPin,
                         contentDescription = "Pinned",
-                        tint = GhaisColors.TextSecondary,
+                        tint = GhaisNoir.TextTertiary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -143,7 +130,7 @@ fun LibraryQuickGridSection(
                         text = "Liked Verses & Duas",
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = GhaisColors.TextPrimary,
+                        color = GhaisNoir.TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -155,13 +142,13 @@ fun LibraryQuickGridSection(
                         Box(
                             modifier = Modifier
                                 .size(5.dp)
-                                .background(GhaisColors.Secondary, CircleShape)
+                                .background(GhaisNoir.TextSecondary, CircleShape)
                         )
                         Text(
                             text = "142 verses saved",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = GhaisColors.Secondary
+                            color = GhaisNoir.TextSecondary
                         )
                     }
                 }
@@ -173,22 +160,11 @@ fun LibraryQuickGridSection(
             modifier = Modifier
                 .weight(1f)
                 .height(124.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(GhaisColors.SurfaceContainer)
-                .drawBehind {
-                    // Subtle emerald glow in bottom right
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                GhaisColors.Primary.copy(alpha = 0.14f),
-                                Color.Transparent
-                            ),
-                            center = Offset(size.width, size.height),
-                            radius = 65.dp.toPx()
-                        )
-                    )
-                }
-                .clickable { onDownloadedClick() }
+                .clip(quickShape)
+                .background(GhaisNoir.cardFillSoft())
+                .border(1.dp, GhaisNoir.BorderCard, quickShape)
+                .topSpecular(inset = 18.dp)
+                .noirClickable { onDownloadedClick() }
                 .padding(14.dp)
         ) {
             Column(
@@ -200,24 +176,11 @@ fun LibraryQuickGridSection(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(GhaisColors.Primary.copy(alpha = 0.18f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CloudDownload,
-                            contentDescription = "Downloaded",
-                            tint = GhaisColors.Primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    IconWell(icon = Icons.Default.CloudDownload, size = 38.dp, iconSize = 20.dp)
                     Icon(
                         imageVector = Icons.Default.PushPin,
                         contentDescription = "Pinned",
-                        tint = GhaisColors.TextSecondary,
+                        tint = GhaisNoir.TextTertiary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -227,7 +190,7 @@ fun LibraryQuickGridSection(
                         text = "Offline Surahs",
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = GhaisColors.TextPrimary,
+                        color = GhaisNoir.TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -239,14 +202,14 @@ fun LibraryQuickGridSection(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Downloaded",
-                            tint = GhaisColors.Primary,
+                            tint = GhaisNoir.TextSecondary,
                             modifier = Modifier.size(12.dp)
                         )
                         Text(
                             text = "$offlineCount surahs offline",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = GhaisColors.Primary
+                            color = GhaisNoir.TextSecondary
                         )
                     }
                 }
@@ -256,7 +219,7 @@ fun LibraryQuickGridSection(
 }
 
 /**
- * Hifz Goal quick card matching Stitch design:
+ * Hifz Goal quick card:
  * Surah 67 Al-Mulk, memorization progress, and mic review action.
  */
 @Composable
@@ -268,104 +231,120 @@ fun HifzGoalCard(
     onReviewClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val hifzShape = RoundedCornerShape(18.dp)
+    val progress = if (totalAyahs > 0) memorizedAyahs.toFloat() / totalAyahs.toFloat() else 0f
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(GhaisColors.SurfaceLow)
-            .clickable { onReviewClick() }
+            .clip(hifzShape)
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, hifzShape)
+            .topSpecular(inset = 22.dp)
+            .noirClickable { onReviewClick() }
             .padding(14.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Surah number box
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(GhaisColors.SurfaceContainer),
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    // Surah number box (recessed plate).
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(GhaisNoir.wellFill())
+                            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "$surahNumber",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = GhaisNoir.TextPrimary,
+                                lineHeight = 18.sp
+                            )
+                            Text(
+                                text = "SURAH",
+                                fontSize = 8.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = GhaisNoir.TextTertiary
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = surahName,
+                                fontSize = 14.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = GhaisNoir.TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(GhaisShapes.pill)
+                                    .background(GhaisNoir.Fill2)
+                                    .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "HIFZ GOAL",
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.6.sp,
+                                    color = GhaisNoir.TextSecondary
+                                )
+                            }
+                        }
                         Text(
-                            text = "$surahNumber",
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = GhaisColors.Secondary,
-                            lineHeight = 18.sp
-                        )
-                        Text(
-                            text = "SURAH",
-                            fontSize = 8.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            color = GhaisColors.TextSecondary
+                            text = "$memorizedAyahs of $totalAyahs Ayahs memorized • Review today",
+                            fontSize = 11.5.sp,
+                            color = GhaisNoir.TextSecondary,
+                            modifier = Modifier.padding(top = 2.dp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = surahName,
-                            fontSize = 14.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = GhaisColors.TextPrimary
-                        )
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    GhaisColors.Secondary.copy(alpha = 0.15f),
-                                    RoundedCornerShape(4.dp)
-                                )
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "Hifz Goal",
-                                fontSize = 9.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = GhaisColors.Secondary
-                            )
-                        }
-                    }
-                    Text(
-                        text = "$memorizedAyahs of $totalAyahs Ayahs memorized • Review today",
-                        fontSize = 11.5.sp,
-                        color = GhaisColors.TextSecondary,
-                        modifier = Modifier.padding(top = 2.dp),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                IconButton(
+                    onClick = onReviewClick,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(GhaisNoir.wellFill())
+                        .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = "Review",
+                        tint = GhaisNoir.TextPrimary,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
 
-            IconButton(
-                onClick = onReviewClick,
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(GhaisColors.SurfaceHigh)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Mic,
-                    contentDescription = "Review",
-                    tint = GhaisColors.TextPrimary,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Monochrome memorization meter (chrome fill on engraved track).
+            NoirSegmentedProgress(progress = progress)
         }
     }
 }
@@ -421,7 +400,7 @@ private fun resolveDownloadedItems(keys: Set<String>): List<LibraryPlaylistItem>
 }
 
 /**
- * Custom playlists and library items shelf matching Stitch specs.
+ * Custom playlists and library items shelf.
  * Supports dynamic filtering by category ("All", "Playlists", "Downloaded", "Reciters", etc.).
  */
 @Composable
@@ -473,7 +452,7 @@ fun LibraryPlaylistsSection(
                 type = "Playlist",
                 extra = "Word-by-word active",
                 iconVector = Icons.Default.School,
-                iconColor = GhaisColors.Primary,
+                iconColor = null,
                 categories = listOf("All", "Playlists")
             ),
             LibraryPlaylistItem(
@@ -484,7 +463,7 @@ fun LibraryPlaylistsSection(
                 type = "Playlist",
                 isDownloaded = true,
                 iconVector = Icons.Default.Bedtime,
-                iconColor = GhaisColors.Secondary,
+                iconColor = null,
                 categories = listOf("All", "Playlists", "Downloaded")
             )
         )
@@ -513,294 +492,102 @@ fun LibraryPlaylistsSection(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        // Shelf header with Recents & Grid toggle
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.SwapVert,
-                    contentDescription = "Sort",
-                    tint = GhaisColors.Primary,
-                    modifier = Modifier.size(18.dp)
-                )
-                Text(
-                    text = "Recents",
-                    fontSize = 13.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = GhaisColors.TextPrimary
-                )
+        // Shelf header — bright label + ghost count (Noir section rhythm).
+        NoirSectionHeader(
+            label = if (isDownloadedFilter) {
+                "Offline • ${downloadedItems.size}"
+            } else {
+                "Recents • ${filteredItems.size}"
             }
-
-            IconButton(
-                onClick = { /* Grid view toggle */ },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.GridView,
-                    contentDescription = "Grid View",
-                    tint = GhaisColors.TextSecondary,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
+        )
+        Spacer(modifier = Modifier.height(2.dp))
 
         // Shelf item rows: the Downloaded filter lists live offline surahs
         // (tap plays offline, trailing icon deletes); other filters keep mock behavior.
         if (isDownloadedFilter) {
             if (downloadedItems.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 24.dp, horizontal = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CloudDownload,
-                        contentDescription = null,
-                        tint = GhaisColors.TextTertiary,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "No downloads yet — open a reciter and tap Download",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = GhaisColors.TextSecondary,
-                        textAlign = TextAlign.Center
-                    )
-                }
+                NoirLibraryShelveEmpty()
             } else {
-                downloadedItems.forEach { item ->
-                    DownloadedSurahRow(item = item)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    downloadedItems.forEach { item ->
+                        DownloadedSurahRow(item = item)
+                    }
                 }
             }
         } else {
-            filteredItems.forEach { item ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .clickable {
-                        if (item.isReciter) {
-                            onReciterClick(item.id)
-                        } else {
-                            onPlaylistClick(item.id)
-                        }
-                    }
-                    .padding(vertical = 6.dp, horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    // Item thumbnail / avatar
-                    Box(
-                        modifier = Modifier.size(54.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (item.isReciter) {
-                            // Circular reciter portrait with verified badge
-                            Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(CircleShape)
-                                    .background(GhaisColors.SurfaceHigh),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (item.coverUrl != null) {
-                                    AsyncImage(
-                                        model = item.coverUrl,
-                                        contentDescription = item.title,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
-                            }
-                            if (item.verified) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(16.dp)
-                                        .align(Alignment.BottomEnd)
-                                        .clip(CircleShape)
-                                        .background(GhaisColors.Secondary),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Verified",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(10.dp)
-                                    )
-                                }
-                            }
-                        } else if (item.coverUrl != null) {
-                            // Playlist cover image
-                            Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(GhaisColors.SurfaceContainer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                AsyncImage(
-                                    model = item.coverUrl,
-                                    contentDescription = item.title,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        } else {
-                            // Icon placeholder
-                            Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(GhaisColors.SurfaceContainer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (item.iconVector != null) {
-                                    Icon(
-                                        imageVector = item.iconVector,
-                                        contentDescription = item.title,
-                                        tint = item.iconColor ?: GhaisColors.Primary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    // Title & meta details
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = item.title,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = GhaisColors.TextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier.padding(top = 2.dp)
-                        ) {
-                            if (item.badge != null) {
-                                Box(
-                                    modifier = Modifier
-                                        .background(
-                                            GhaisColors.SurfaceHighest,
-                                            RoundedCornerShape(4.dp)
-                                        )
-                                        .padding(horizontal = 5.dp, vertical = 1.dp)
-                                ) {
-                                    Text(
-                                        text = item.badge,
-                                        fontSize = 9.5.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = GhaisColors.Primary
-                                    )
-                                }
-                                Text(
-                                    text = "•",
-                                    fontSize = 11.sp,
-                                    color = GhaisColors.TextTertiary
-                                )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                filteredItems.forEach { item ->
+                    NoirListRow(
+                        title = item.title,
+                        subtitle = libraryRowSubtitle(item),
+                        icon = item.iconVector
+                            ?: if (item.isReciter) Icons.Default.Person else Icons.Default.QueueMusic,
+                        onClick = {
+                            if (item.isReciter) {
+                                onReciterClick(item.id)
                             } else {
-                                Box(
-                                    modifier = Modifier
-                                        .background(
-                                            GhaisColors.SurfaceHighest,
-                                            RoundedCornerShape(4.dp)
-                                        )
-                                        .padding(horizontal = 5.dp, vertical = 1.dp)
-                                ) {
-                                    Text(
-                                        text = item.type,
-                                        fontSize = 9.5.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = GhaisColors.TextSecondary
-                                    )
-                                }
-                                Text(
-                                    text = "•",
-                                    fontSize = 11.sp,
-                                    color = GhaisColors.TextTertiary
-                                )
+                                onPlaylistClick(item.id)
                             }
-
-                            Text(
-                                text = item.subtitle,
-                                fontSize = 11.5.sp,
-                                color = GhaisColors.TextSecondary
-                            )
-
-                            if (item.extra != null) {
-                                Text(
-                                    text = "•",
-                                    fontSize = 11.sp,
-                                    color = GhaisColors.TextTertiary
-                                )
-                                Text(
-                                    text = item.extra,
-                                    fontSize = 11.5.sp,
-                                    color = GhaisColors.Primary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-
-                            if (item.isDownloaded) {
-                                Text(
-                                    text = "•",
-                                    fontSize = 11.sp,
-                                    color = GhaisColors.TextTertiary
-                                )
+                        },
+                        trailing = {
+                            IconButton(
+                                onClick = { onMoreClick(item) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
                                 Icon(
-                                    imageVector = Icons.Default.DownloadDone,
-                                    contentDescription = "Downloaded",
-                                    tint = GhaisColors.Primary,
-                                    modifier = Modifier.size(12.dp)
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "More Options",
+                                    tint = GhaisNoir.TextTertiary,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
-                    }
-                }
-
-                IconButton(
-                    onClick = { onMoreClick(item) },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "More Options",
-                        tint = GhaisColors.TextSecondary,
-                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
-        }
         }
     }
 }
 
+/** Single-line Noir subtitle preserving badge/type, meta, extra and offline state. */
+private fun libraryRowSubtitle(item: LibraryPlaylistItem): String {
+    val head = item.badge ?: item.type
+    val base = "$head • ${item.subtitle}"
+    val withExtra = if (item.extra != null) "$base • ${item.extra}" else base
+    return if (item.isDownloaded) "$withExtra • Offline" else withExtra
+}
+
+/** Ghost empty state for the Downloaded filter — muted well + tertiary copy. */
+@Composable
+private fun NoirLibraryShelveEmpty(modifier: Modifier = Modifier) {
+    val emptyShape = RoundedCornerShape(20.dp)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(emptyShape)
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, emptyShape)
+            .topSpecular(inset = 22.dp)
+            .padding(vertical = 24.dp, horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        IconWell(icon = Icons.Default.CloudDownload, size = 48.dp, iconSize = 24.dp)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "No downloads yet — open a reciter and tap Download",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = GhaisNoir.TextSecondary,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
 /**
- * Offline surah row for the Downloaded filter: same shelf row styling as
- * [LibraryPlaylistsSection]. Tapping plays offline ([AudioEngine] auto-uses the
- * local file for downloaded keys); the trailing icon deletes the download.
+ * Offline surah row for the Downloaded filter as a [NoirListRow]: tapping
+ * plays offline ([AudioEngine] auto-uses the local file for downloaded keys);
+ * the trailing icon deletes the download.
  */
 @Composable
 private fun DownloadedSurahRow(
@@ -818,114 +605,34 @@ private fun DownloadedSurahRow(
         rootNavigator?.push(NowPlayingScreen())
     }
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .clickable { playOffline() }
-            .padding(vertical = 6.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
-            // Surah number thumbnail, matching the HifzGoalCard number-box style.
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(GhaisColors.SurfaceContainer),
-                contentAlignment = Alignment.Center
+    NoirListRow(
+        title = item.title,
+        subtitle = "Offline • ${item.subtitle}",
+        icon = Icons.Default.DownloadDone,
+        modifier = modifier,
+        onClick = { playOffline() },
+        trailing = {
+            IconButton(
+                onClick = {
+                    val slug = item.reciterSlug ?: return@IconButton
+                    val surahNumber = item.surahNumber ?: return@IconButton
+                    QuranDownloads.delete(slug, surahNumber)
+                },
+                modifier = Modifier.size(36.dp)
             ) {
-                Text(
-                    text = "${item.surahNumber ?: "–"}",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = GhaisColors.Primary
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete download",
+                    tint = GhaisNoir.TextTertiary,
+                    modifier = Modifier.size(18.dp)
                 )
             }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Title & meta details
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = GhaisColors.TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.padding(top = 2.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                GhaisColors.SurfaceHighest,
-                                RoundedCornerShape(4.dp)
-                            )
-                            .padding(horizontal = 5.dp, vertical = 1.dp)
-                    ) {
-                        Text(
-                            text = item.type,
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = GhaisColors.TextSecondary
-                        )
-                    }
-                    Text(
-                        text = "•",
-                        fontSize = 11.sp,
-                        color = GhaisColors.TextTertiary
-                    )
-                    Text(
-                        text = item.subtitle,
-                        fontSize = 11.5.sp,
-                        color = GhaisColors.TextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "•",
-                        fontSize = 11.sp,
-                        color = GhaisColors.TextTertiary
-                    )
-                    Icon(
-                        imageVector = Icons.Default.DownloadDone,
-                        contentDescription = "Downloaded",
-                        tint = GhaisColors.Primary,
-                        modifier = Modifier.size(12.dp)
-                    )
-                }
-            }
         }
-
-        IconButton(
-            onClick = {
-                val slug = item.reciterSlug ?: return@IconButton
-                val surahNumber = item.surahNumber ?: return@IconButton
-                QuranDownloads.delete(slug, surahNumber)
-            },
-            modifier = Modifier.size(36.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Delete download",
-                tint = GhaisColors.TextSecondary,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-    }
+    )
 }
 
 /**
- * Hadith inspirational quote footer matching Stitch specs:
+ * Hadith inspirational quote footer:
  * "The best of you are those who learn the Quran and teach it." - Sahih al-Bukhari 5027
  */
 @Composable
@@ -942,7 +649,7 @@ fun LibraryHadithFooter(
         Icon(
             imageVector = Icons.Default.Spa,
             contentDescription = null,
-            tint = GhaisColors.Primary,
+            tint = GhaisNoir.TextTertiary,
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.height(6.dp))
@@ -950,14 +657,14 @@ fun LibraryHadithFooter(
             text = "\"The best of you are those who learn the Quran and teach it.\"",
             fontSize = 12.5.sp,
             fontStyle = FontStyle.Italic,
-            color = GhaisColors.TextSecondary,
+            color = GhaisNoir.TextSecondary,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = "Sahih al-Bukhari 5027",
             fontSize = 10.5.sp,
-            color = GhaisColors.TextTertiary
+            color = GhaisNoir.TextTertiary
         )
     }
 }

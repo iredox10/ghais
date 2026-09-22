@@ -1,7 +1,7 @@
 package com.ghais.ui.screens.player
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
@@ -22,45 +22,50 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
+import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
+/**
+ * Noir Glass queue sheet: CanvasTop chrome + Scrim, IconWell header,
+ * queue rows in the NoirListRow language (soft card fill + ghost border +
+ * top-only specular). The active track reads through fill elevation
+ * (cardFillActive + specular-bright rim + bold white title) — zero hue.
+ *
+ * Queue / audio logic (collects, skipToIndex, removeFromQueue, clear,
+ * duration resolution) is preserved verbatim.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QueueSheet(
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    
+
     val queue by AudioEngine.queue.collectAsState()
     val currentIndex by AudioEngine.currentIndex.collectAsState()
     val currentTrack by AudioEngine.currentTrack.collectAsState()
     val engineDurationMs by AudioEngine.durationMs.collectAsState()
 
-    val surfaceColor = Color(0xFF141419)
-    val cardColor = Color(0xFF1C1C24)
-    val primaryColor = Color(0xFFD4A853)
-    val textPrimaryColor = Color(0xFFF0EDE6)
-    val textSecondaryColor = Color(0xFF8A8A96)
-
-    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope()
     fun animateDismiss() {
         coroutineScope.launch {
             sheetState.hide()
@@ -74,60 +79,85 @@ fun QueueSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = surfaceColor,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        containerColor = GhaisNoir.CanvasTop,
+        scrimColor = GhaisNoir.Scrim,
+        dragHandle = null
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
+            // Sheet chrome: IconWell header + ghost close well.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = "Up Next",
-                        color = textPrimaryColor,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    IconWell(
+                        icon = Icons.AutoMirrored.Filled.List,
+                        size = 40.dp,
+                        iconSize = 20.dp,
+                        contentDescription = null
                     )
-                    if (queue.isNotEmpty()) {
-                        val posText = if (currentIndex in queue.indices) {
-                            "Track ${currentIndex + 1} of ${queue.size}"
-                        } else {
-                            "${queue.size} tracks"
-                        }
+                    Column {
                         Text(
-                            text = posText,
-                            color = primaryColor,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium
+                            text = "Up Next",
+                            color = GhaisNoir.TextPrimary,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
                         )
+                        if (queue.isNotEmpty()) {
+                            val posText = if (currentIndex in queue.indices) {
+                                "Track ${currentIndex + 1} of ${queue.size}"
+                            } else {
+                                "${queue.size} tracks"
+                            }
+                            Text(
+                                text = posText,
+                                color = GhaisNoir.TextSecondary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(
-                        onClick = { AudioEngine.clear() },
-                        enabled = queue.isNotEmpty()
+                    Text(
+                        text = "Clear",
+                        color = if (queue.isNotEmpty()) GhaisNoir.TextSecondary else GhaisNoir.TextDisabled,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .then(
+                                if (queue.isNotEmpty()) Modifier.noirClickable { AudioEngine.clear() }
+                                else Modifier
+                            )
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                            .noirClickable { animateDismiss() },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "Clear Queue",
-                            color = if (queue.isNotEmpty()) primaryColor else textSecondaryColor.copy(alpha = 0.4f)
-                        )
-                    }
-                    IconButton(onClick = { animateDismiss() }) {
                         Icon(
                             imageVector = Icons.Default.Clear,
                             contentDescription = "Close",
-                            tint = textSecondaryColor
+                            tint = GhaisNoir.TextSecondary,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
 
             if (queue.isEmpty()) {
@@ -141,21 +171,22 @@ fun QueueSheet(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                        IconWell(
+                            icon = Icons.AutoMirrored.Filled.QueueMusic,
+                            size = 56.dp,
+                            iconSize = 28.dp,
                             contentDescription = "Empty Queue",
-                            tint = textSecondaryColor.copy(alpha = 0.5f),
-                            modifier = Modifier.size(56.dp)
+                            tint = GhaisNoir.TextTertiary
                         )
                         Text(
                             text = "Queue is empty",
-                            color = textPrimaryColor,
+                            color = GhaisNoir.TextPrimary,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
                             text = "Play a surah or playlist to see the queue",
-                            color = textSecondaryColor,
+                            color = GhaisNoir.TextSecondary,
                             fontSize = 14.sp
                         )
                     }
@@ -163,7 +194,7 @@ fun QueueSheet(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     itemsIndexed(
                         items = queue,
@@ -185,36 +216,59 @@ fun QueueSheet(
                             else -> "Unknown Surah"
                         }
 
+                        // NoirListRow recipe: soft fill (+ active wash when playing),
+                        // 1px card border (specular-bright when active), top specular.
+                        // TrackItem carries no artwork (imageUrl is always null), so the
+                        // typographic number well is the grayscale thumb — same as the
+                        // explore SurahNoirRow.
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isActive) primaryColor.copy(alpha = 0.12f) else Color.Transparent)
-                                .clickable { AudioEngine.skipToIndex(index) }
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                                .clip(GhaisShapes.row)
+                                .background(
+                                    if (isActive) GhaisNoir.cardFillActive()
+                                    else GhaisNoir.cardFillSoft(),
+                                    GhaisShapes.row
+                                )
+                                .border(
+                                    1.dp,
+                                    if (isActive) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                                    GhaisShapes.row
+                                )
+                                .topSpecular(inset = 22.dp)
+                                .noirClickable { AudioEngine.skipToIndex(index) }
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
-                                modifier = Modifier.size(24.dp),
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(GhaisNoir.wellFill())
+                                    .border(
+                                        1.dp,
+                                        if (isActive) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                                        CircleShape
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (isActive) {
                                     Icon(
                                         imageVector = Icons.Default.GraphicEq,
                                         contentDescription = "Currently Playing",
-                                        tint = primaryColor,
+                                        tint = GhaisNoir.TextPrimary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 } else {
                                     Text(
                                         text = "${index + 1}",
-                                        color = textSecondaryColor,
+                                        color = GhaisNoir.TextSecondary,
                                         fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.width(14.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
                             Column(
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -225,9 +279,9 @@ fun QueueSheet(
                                 ) {
                                     Text(
                                         text = surahTitle,
-                                        color = if (isActive) primaryColor else textPrimaryColor,
-                                        fontSize = 15.sp,
-                                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                                        color = GhaisNoir.TextPrimary,
+                                        fontSize = 14.sp,
+                                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.weight(1f, fill = false)
@@ -236,7 +290,7 @@ fun QueueSheet(
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
                                             text = item.surahNameAr,
-                                            color = if (isActive) primaryColor.copy(alpha = 0.85f) else textSecondaryColor.copy(alpha = 0.8f),
+                                            color = GhaisNoir.TextSecondary,
                                             fontSize = 14.sp,
                                             maxLines = 1
                                         )
@@ -248,8 +302,8 @@ fun QueueSheet(
                                 ) {
                                     Text(
                                         text = item.reciterName.ifBlank { "Quran Recitation" },
-                                        color = textSecondaryColor,
-                                        fontSize = 13.sp,
+                                        color = GhaisNoir.TextSecondary,
+                                        fontSize = 12.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.weight(1f, fill = false)
@@ -257,21 +311,26 @@ fun QueueSheet(
                                     if (formattedDuration.isNotEmpty()) {
                                         Text(
                                             text = " • $formattedDuration",
-                                            color = if (isActive) primaryColor.copy(alpha = 0.75f) else textSecondaryColor,
-                                            fontSize = 13.sp
+                                            color = GhaisNoir.TextTertiary,
+                                            fontSize = 12.sp
                                         )
                                     }
                                 }
                             }
-                            IconButton(
-                                onClick = { AudioEngine.removeFromQueue(index) },
-                                modifier = Modifier.size(36.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(GhaisNoir.Fill1)
+                                    .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                                    .noirClickable { AudioEngine.removeFromQueue(index) },
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Clear,
                                     contentDescription = "Remove from queue",
-                                    tint = textSecondaryColor,
-                                    modifier = Modifier.size(18.dp)
+                                    tint = GhaisNoir.TextTertiary,
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
                         }

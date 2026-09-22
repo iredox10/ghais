@@ -145,6 +145,41 @@ object GhaisTypography {
     )
 
     // -------------------------------------------------------------------------
+    // Noir editorial display (Phase 1) — light-weight sticker-typography
+    // headlines with tight tracking ("Keep Your Life Safe" style).
+    // Scripture (Arabic) styles below are deliberately untouched.
+    // -------------------------------------------------------------------------
+    val displayEditorial = TextStyle(
+        fontWeight = FontWeight.Light,
+        fontSize = 34.sp,
+        lineHeight = 42.sp,
+        letterSpacing = (-0.03).em,
+        color = GhaisNoir.TextPrimary
+    )
+    val displayEditorialSmall = TextStyle(
+        fontWeight = FontWeight.Light,
+        fontSize = 28.sp,
+        lineHeight = 36.sp,
+        letterSpacing = (-0.025).em,
+        color = GhaisNoir.TextPrimary
+    )
+    val displayEditorialBold = TextStyle(
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 34.sp,
+        lineHeight = 42.sp,
+        letterSpacing = (-0.03).em,
+        color = GhaisNoir.TextPrimary
+    )
+    // Inline icon-chip support: headline text + IconWell chips in a FlowRow.
+    val editorialBody = TextStyle(
+        fontWeight = FontWeight.Normal,
+        fontSize = 14.sp,
+        lineHeight = 21.sp,
+        letterSpacing = (-0.005).em,
+        color = GhaisNoir.TextSecondary
+    )
+
+    // -------------------------------------------------------------------------
     // Arabic Scripture typography (1.8x line-height ratio for tashkeel diacritics)
     // -------------------------------------------------------------------------
     val arabicTitle = TextStyle(

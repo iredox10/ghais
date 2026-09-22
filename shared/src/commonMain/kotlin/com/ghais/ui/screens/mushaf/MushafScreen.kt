@@ -21,12 +21,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,7 +36,11 @@ import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -55,6 +61,18 @@ data class MushafAyahData(
     val tafsirSnippet: String
 )
 
+/**
+ * Strict Noir Glass Mushaf — true-black canvas (glow zone -> #050506 +
+ * ambient glow + film grain), grayscale hero banner, ayah blocks in the
+ * NoirListRow recipe (engraved number well, chrome/ghost affordances).
+ * Zero hue — tajweed distinction reads through weight only, state reads
+ * through fill elevation, chromium and opacity.
+ *
+ * The Mushaf page is dark paper (near-black #0E0E10, NOT pure white) for
+ * eye comfort. Arabic/uthmani stays at 100% white on all dark wells —
+ * never dimmed below 85%. Tab signature, audio/bookmark/tafsir state and
+ * navigation targets are unchanged.
+ */
 object MushafScreen : Tab {
 
     override val options: TabOptions
@@ -175,18 +193,12 @@ object MushafScreen : Tab {
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(GhaisColors.Background)
-        ) {
+        NoirScreenRoot {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(GhaisColors.Background),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 120.dp)
             ) {
-                // 1. Top Floating Mushaf Control Capsule
+                // 1. Top floating control capsule (noir glass).
                 item {
                     MushafControlCapsule(
                         selectedSurah = selectedSurahName,
@@ -214,13 +226,13 @@ object MushafScreen : Tab {
                     Spacer(modifier = Modifier.height(14.dp))
                 }
 
-                // 2. Surah Ornamentation Header Banner
+                // 2. Surah ornamentation header banner (grayscale hero).
                 item {
                     SurahHeaderBanner()
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // 3. Ayah Reading Stream OR Classic Mushaf Page View
+                // 3. Ayah reading stream OR classic dark-paper page view.
                 if (isPageViewMode) {
                     item {
                         MushafPageViewCard(
@@ -267,7 +279,7 @@ object MushafScreen : Tab {
                     }
                 }
 
-                // 4. Reading Mode Bottom Utilities Capsule (Apple-style Quick Tools)
+                // 4. Reading-mode bottom utilities capsule.
                 item {
                     Spacer(modifier = Modifier.height(10.dp))
                     MushafBottomToolsCapsule(
@@ -285,7 +297,7 @@ object MushafScreen : Tab {
                 }
             }
 
-            // Tafsir Modal Sheet Dialog
+            // Tafsir modal sheet dialog (noir).
             if (activeTafsirAyah != null) {
                 TafsirDialog(
                     ayah = activeTafsirAyah!!,
@@ -297,9 +309,8 @@ object MushafScreen : Tab {
 }
 
 /**
- * Top Floating Mushaf Control Capsule (Apple glassmorphism)
- * Controls: Surah Dropdown, Juz/Page indicator, Font Size cycle,
- * Translation toggle, Tajweed mode toggle, and Recitation Audio toggle.
+ * Top floating control capsule in noir glass: ghost surah selector, engraved
+ * Juz/Page indicator, ghost preference wells, chromium audio disc.
  */
 @Composable
 private fun MushafControlCapsule(
@@ -320,18 +331,9 @@ private fun MushafControlCapsule(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(32.dp))
-            .background(GhaisColors.SurfaceHigh.copy(alpha = 0.92f))
-            .border(
-                1.dp,
-                Brush.horizontalGradient(
-                    listOf(
-                        GhaisColors.OutlineVariant.copy(alpha = 0.6f),
-                        GhaisColors.Primary.copy(alpha = 0.2f),
-                        GhaisColors.OutlineVariant.copy(alpha = 0.6f)
-                    )
-                ),
-                RoundedCornerShape(32.dp)
-            )
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(32.dp))
+            .topSpecular(inset = 30.dp)
             .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
         Row(
@@ -339,20 +341,21 @@ private fun MushafControlCapsule(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Surah Selector Capsule
+            // Surah selector — ghost pill + noir dropdown.
             Box {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(GhaisColors.SurfaceContainer)
-                        .clickable { onToggleSurahMenu() }
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderGhost, RoundedCornerShape(20.dp))
+                        .noirClickable(onClick = onToggleSurahMenu)
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.AutoStories,
                         contentDescription = "Surah Selector",
-                        tint = GhaisColors.Primary,
+                        tint = GhaisNoir.TextPrimary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -360,13 +363,15 @@ private fun MushafControlCapsule(
                         text = selectedSurah,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = GhaisColors.TextPrimary
+                        color = GhaisNoir.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.width(2.dp))
                     Icon(
                         imageVector = Icons.Default.ExpandMore,
                         contentDescription = "Dropdown",
-                        tint = GhaisColors.TextSecondary,
+                        tint = GhaisNoir.TextTertiary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -374,7 +379,7 @@ private fun MushafControlCapsule(
                 DropdownMenu(
                     expanded = isSurahMenuOpen,
                     onDismissRequest = onToggleSurahMenu,
-                    modifier = Modifier.background(GhaisColors.SurfaceHigh)
+                    modifier = Modifier.background(Color(0xFF141416))
                 ) {
                     val surahList = listOf(
                         "Al-Fatihah (1)",
@@ -389,7 +394,7 @@ private fun MushafControlCapsule(
                             text = {
                                 Text(
                                     text = surah,
-                                    color = if (surah == selectedSurah) GhaisColors.Primary else GhaisColors.TextPrimary,
+                                    color = if (surah == selectedSurah) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
                                     fontWeight = if (surah == selectedSurah) FontWeight.Bold else FontWeight.Normal
                                 )
                             },
@@ -399,11 +404,12 @@ private fun MushafControlCapsule(
                 }
             }
 
-            // Juz / Page Indicator
+            // Juz / Page indicator — engraved inset.
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(14.dp))
-                    .background(GhaisColors.Background.copy(alpha = 0.75f))
+                    .background(GhaisNoir.insetFill())
+                    .border(1.dp, GhaisNoir.InsetBorder, RoundedCornerShape(14.dp))
                     .padding(horizontal = 8.dp, vertical = 5.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -411,96 +417,101 @@ private fun MushafControlCapsule(
                         text = "JUZ",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
-                        color = GhaisColors.TextSecondary
+                        color = GhaisNoir.TextTertiary
                     )
                     Spacer(modifier = Modifier.width(3.dp))
                     Text(
                         text = "15",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = GhaisColors.TextPrimary
+                        color = GhaisNoir.TextPrimary
                     )
                     Text(
                         text = " • ",
                         fontSize = 10.sp,
-                        color = GhaisColors.Primary
+                        color = GhaisNoir.TextTertiary
                     )
                     Text(
                         text = "P.",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
-                        color = GhaisColors.TextSecondary
+                        color = GhaisNoir.TextTertiary
                     )
                     Text(
                         text = "293",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = GhaisColors.TextPrimary
+                        color = GhaisNoir.TextPrimary
                     )
                 }
             }
 
-            // Quick Preferences Pill Group (Font Size, Translation, Tajweed, Audio)
+            // Quick preferences: font-size well, translation + tajweed ghosts, chrome audio disc.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // 1. Font Size Button
+                // 1. Font size well.
                 Box(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(GhaisColors.SurfaceContainer)
-                        .clickable { onCycleFontSize() },
+                        .background(GhaisNoir.wellFill())
+                        .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                        .noirClickable(onClick = onCycleFontSize),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             imageVector = Icons.Default.FormatSize,
                             contentDescription = "Font size: $arabicFontSize",
-                            tint = GhaisColors.Primary,
+                            tint = GhaisNoir.TextPrimary,
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
                             text = "${arabicFontSize}pt",
                             fontSize = 8.sp,
                             fontWeight = FontWeight.Bold,
-                            color = GhaisColors.TextSecondary,
+                            color = GhaisNoir.TextTertiary,
                             lineHeight = 9.sp
                         )
                     }
                 }
 
-                // 2. Translation Toggle Button
+                // 2. Translation ghost toggle — active = elevated fill + primary label.
                 Box(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(
-                            if (showTranslation) GhaisColors.Primary.copy(alpha = 0.18f)
-                            else GhaisColors.SurfaceContainer
+                        .background(if (showTranslation) GhaisNoir.Fill4 else GhaisNoir.Fill2)
+                        .border(
+                            1.dp,
+                            if (showTranslation) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
+                            CircleShape
                         )
-                        .clickable { onToggleTranslation() },
+                        .noirClickable(onClick = onToggleTranslation),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Translate,
                         contentDescription = "Toggle Translation",
-                        tint = if (showTranslation) GhaisColors.Primary else GhaisColors.TextSecondary,
+                        tint = if (showTranslation) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
 
-                // 3. Tajweed Toggle Button
+                // 3. Tajweed ghost toggle.
                 Box(
                     modifier = Modifier
                         .height(36.dp)
                         .clip(RoundedCornerShape(18.dp))
-                        .background(
-                            if (isTajweed) GhaisColors.Primary.copy(alpha = 0.18f)
-                            else GhaisColors.SurfaceContainer
+                        .background(if (isTajweed) GhaisNoir.Fill4 else GhaisNoir.Fill2)
+                        .border(
+                            1.dp,
+                            if (isTajweed) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
+                            RoundedCornerShape(18.dp)
                         )
-                        .clickable { onToggleTajweed() }
+                        .noirClickable(onClick = onToggleTajweed)
                         .padding(horizontal = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -508,7 +519,7 @@ private fun MushafControlCapsule(
                         Icon(
                             imageVector = Icons.Default.Palette,
                             contentDescription = "Tajweed",
-                            tint = if (isTajweed) GhaisColors.Primary else GhaisColors.TextSecondary,
+                            tint = if (isTajweed) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
                             modifier = Modifier.size(15.dp)
                         )
                         Spacer(modifier = Modifier.width(3.dp))
@@ -516,27 +527,32 @@ private fun MushafControlCapsule(
                             text = "Tajweed",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isTajweed) GhaisColors.Primary else GhaisColors.TextSecondary
+                            color = if (isTajweed) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary
                         )
                     }
                 }
 
-                // 4. Audio Recitation Quick Toggle Button
+                // 4. Audio disc — chromium while playing, clay well otherwise.
                 Box(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
                         .background(
-                            if (isAudioPlaying) GhaisColors.Primary
-                            else GhaisColors.SurfaceContainer
+                            if (isAudioPlaying) GhaisNoir.chromeFill() else GhaisNoir.wellFill(),
+                            CircleShape
                         )
-                        .clickable { onToggleAudio() },
+                        .border(
+                            1.dp,
+                            if (isAudioPlaying) Color.White.copy(alpha = 0.4f) else GhaisNoir.BorderCard,
+                            CircleShape
+                        )
+                        .noirClickable(onClick = onToggleAudio),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (isAudioPlaying) Icons.Default.GraphicEq else Icons.Default.PlayArrow,
                         contentDescription = if (isAudioPlaying) "Pause Recitation" else "Play Recitation",
-                        tint = if (isAudioPlaying) GhaisColors.OnPrimary else GhaisColors.Primary,
+                        tint = if (isAudioPlaying) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
                         modifier = Modifier.size(17.dp)
                     )
                 }
@@ -546,9 +562,8 @@ private fun MushafControlCapsule(
 }
 
 /**
- * Surah Banner Ornamentation with Bismillah
- * Features sacred geometry arabesque canvas backdrop, Meccan/Verses/Friday pills,
- * ornate Surah rosette title, and luminous Bismillah calligraphy.
+ * Grayscale surah banner: monochrome sacred-geometry backdrop, ghost info
+ * pills, engraved rosette with uthmani at 100% white, luminous Bismillah.
  */
 @Composable
 private fun SurahHeaderBanner() {
@@ -556,34 +571,26 @@ private fun SurahHeaderBanner() {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(
-                brush = Brush.verticalGradient(
-                    listOf(
-                        GhaisColors.SurfaceHigh.copy(alpha = 0.95f),
-                        GhaisColors.SurfaceContainer.copy(alpha = 0.85f),
-                        GhaisColors.Background.copy(alpha = 0.92f)
-                    )
-                )
-            )
-            .border(1.dp, GhaisColors.OutlineVariant.copy(alpha = 0.45f), RoundedCornerShape(22.dp))
+            .background(GhaisNoir.cardFill())
+            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(22.dp))
+            .topSpecular(inset = 30.dp)
             .padding(18.dp)
     ) {
-        // Sacred Geometry Arabesque Motif Backdrop
+        // Monochrome sacred-geometry backdrop — white line-work only.
         Canvas(modifier = Modifier.matchParentSize()) {
             val cx = size.width / 2f
             val cy = size.height / 2f
             val r1 = size.minDimension * 0.35f
             val r2 = size.minDimension * 0.46f
 
-            // Concentric geometric circles
             drawCircle(
-                color = GhaisColors.Primary.copy(alpha = 0.08f),
+                color = Color.White.copy(alpha = 0.08f),
                 radius = r1,
                 center = center,
                 style = Stroke(width = 1.5f)
             )
             drawCircle(
-                color = GhaisColors.Primary.copy(alpha = 0.06f),
+                color = Color.White.copy(alpha = 0.06f),
                 radius = r2,
                 center = center,
                 style = Stroke(
@@ -592,7 +599,7 @@ private fun SurahHeaderBanner() {
                 )
             )
 
-            // 8-Pointed Star Motif
+            // 8-pointed star motif.
             val path = Path()
             val numPoints = 8
             val outerR = size.minDimension * 0.42f
@@ -607,7 +614,7 @@ private fun SurahHeaderBanner() {
             path.close()
             drawPath(
                 path = path,
-                color = GhaisColors.Primary.copy(alpha = 0.05f),
+                color = Color.White.copy(alpha = 0.05f),
                 style = Stroke(width = 1.5f)
             )
         }
@@ -616,84 +623,19 @@ private fun SurahHeaderBanner() {
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Surah Info Pills Bar
+            // Info pills — ghost washes, monochrome glyphs.
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Meccan Pill
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(GhaisColors.SurfaceHighest.copy(alpha = 0.5f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Place,
-                        contentDescription = "Meccan",
-                        tint = Color(0xFF95D3BA),
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                        text = "Meccan",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF95D3BA)
-                    )
-                }
-
-                // 110 Verses Pill
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(GhaisColors.SurfaceHighest.copy(alpha = 0.5f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FilterList,
-                        contentDescription = "Verses",
-                        tint = GhaisColors.TextSecondary,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                        text = "110 Verses",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = GhaisColors.TextSecondary
-                    )
-                }
-
-                // Friday Sunnah Pill
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(GhaisColors.SecondaryContainer.copy(alpha = 0.2f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = "Friday Sunnah",
-                        tint = GhaisColors.Secondary,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                        text = "Friday Sunnah",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GhaisColors.Secondary
-                    )
-                }
+                NoirInfoPill(icon = Icons.Default.Place, text = "Meccan")
+                NoirInfoPill(icon = Icons.Default.FilterList, text = "110 Verses")
+                NoirInfoPill(icon = Icons.Default.Star, text = "Friday Sunnah", emphasized = true)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Surah Title & Decorative Surah Rosette
+            // Surah rosette — engraved well, uthmani at 100% white.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -706,8 +648,8 @@ private fun SurahHeaderBanner() {
                             Brush.horizontalGradient(
                                 listOf(
                                     Color.Transparent,
-                                    GhaisColors.OutlineVariant.copy(alpha = 0.5f),
-                                    GhaisColors.Primary.copy(alpha = 0.4f)
+                                    GhaisNoir.BorderCard,
+                                    GhaisNoir.SpecularTop.copy(alpha = 0.5f)
                                 )
                             )
                         )
@@ -715,23 +657,24 @@ private fun SurahHeaderBanner() {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(24.dp))
-                        .background(GhaisColors.Background.copy(alpha = 0.85f))
-                        .border(1.dp, GhaisColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(24.dp))
+                        .background(GhaisNoir.insetFill())
+                        .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(24.dp))
                         .padding(horizontal = 22.dp, vertical = 8.dp)
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "سُورَةُ الكَهْفِ",
                             fontSize = 32.sp,
+                            lineHeight = 56.sp,
                             fontWeight = FontWeight.Bold,
-                            color = GhaisColors.Primary
+                            color = GhaisNoir.TextPrimary
                         )
                         Text(
                             text = "THE CAVE",
                             fontSize = 10.sp,
                             letterSpacing = 2.5.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = GhaisColors.TextSecondary
+                            color = GhaisNoir.TextTertiary
                         )
                     }
                 }
@@ -742,8 +685,8 @@ private fun SurahHeaderBanner() {
                         .background(
                             Brush.horizontalGradient(
                                 listOf(
-                                    GhaisColors.Primary.copy(alpha = 0.4f),
-                                    GhaisColors.OutlineVariant.copy(alpha = 0.5f),
+                                    GhaisNoir.SpecularTop.copy(alpha = 0.5f),
+                                    GhaisNoir.BorderCard,
                                     Color.Transparent
                                 )
                             )
@@ -753,20 +696,20 @@ private fun SurahHeaderBanner() {
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Luminous Bismillah Calligraphy
+            // Bismillah — uthmani at 100% white, translation secondary.
             Text(
                 text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
                 fontSize = 26.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = GhaisColors.Primary,
-                lineHeight = 44.sp,
+                color = GhaisNoir.TextPrimary,
+                lineHeight = 48.sp,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
                 fontSize = 12.sp,
                 fontStyle = FontStyle.Italic,
-                color = GhaisColors.TextSecondary,
+                color = GhaisNoir.TextSecondary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 4.dp)
             )
@@ -774,11 +717,40 @@ private fun SurahHeaderBanner() {
     }
 }
 
+/** Ghost info pill — informational, zero hue. */
+@Composable
+private fun NoirInfoPill(icon: ImageVector, text: String, emphasized: Boolean = false) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (emphasized) GhaisNoir.Fill4 else GhaisNoir.Fill2)
+            .border(1.dp, GhaisNoir.BorderGhost, RoundedCornerShape(12.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (emphasized) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+            modifier = Modifier.size(13.dp)
+        )
+        Spacer(modifier = Modifier.width(3.dp))
+        Text(
+            text = text,
+            fontSize = 11.sp,
+            fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Medium,
+            color = if (emphasized) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary
+        )
+    }
+}
+
 /**
- * Ayah Block with Specular Emerald Highlight Strip for Active Recitation.
- * Features top header row with Ayah badge, "RECITING NOW" waveform,
- * action buttons (Play, Bookmark, Tafsir, Share), Tajweed-colored Arabic text,
- * and English translation with footnotes.
+ * Ayah block in the NoirListRow recipe: soft glass fill (active = stronger
+ * wash) + card border + top-only specular, chromium edge strip while live,
+ * engraved number well, chrome/ghost action cluster.
+ *
+ * Tajweed distinction is weight-only (SemiBold vs Normal) at 100% white —
+ * zero hue, never below the 85% legibility floor.
  */
 @Composable
 private fun AyahBlock(
@@ -798,38 +770,21 @@ private fun AyahBlock(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(
-                if (isActive) GhaisColors.SurfaceHigh.copy(alpha = 0.95f)
-                else GhaisColors.SurfaceContainer.copy(alpha = 0.65f)
-            )
-            .border(
-                1.dp,
-                if (isActive) GhaisColors.Primary.copy(alpha = 0.45f)
-                else GhaisColors.OutlineVariant.copy(alpha = 0.35f),
-                RoundedCornerShape(18.dp)
-            )
+            .background(if (isActive) GhaisNoir.cardFillActive() else GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(18.dp))
+            .topSpecular(inset = 24.dp)
             .clickable { onCardClick() }
     ) {
-        // Specular Emerald Highlight Strip for Active Reciting Ayah
+        // Chromium edge strip while this ayah is live (monochrome, not emerald).
         if (isActive) {
-            Box(
-                modifier = Modifier.matchParentSize()
-            ) {
+            Box(modifier = Modifier.matchParentSize()) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .fillMaxHeight()
-                        .width(6.dp)
+                        .width(4.dp)
                         .clip(RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    GhaisColors.Primary,
-                                    GhaisColors.Secondary,
-                                    GhaisColors.PrimaryContainer
-                                )
-                            )
-                        )
+                        .background(GhaisNoir.chromeFill())
                 )
             }
         }
@@ -839,13 +794,12 @@ private fun AyahBlock(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
-            // Header Row: Ayah Index + Reciting Waveform + Action Buttons
+            // Header row: engraved index + live badge + ghost/chrome actions.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left: Ayah Index and Reciting Badge
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -854,17 +808,15 @@ private fun AyahBlock(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(CircleShape)
-                            .background(
-                                if (isActive) GhaisColors.Primary.copy(alpha = 0.2f)
-                                else GhaisColors.SurfaceHighest.copy(alpha = 0.6f)
-                            ),
+                            .background(GhaisNoir.wellFill())
+                            .border(1.dp, GhaisNoir.BorderCard, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = ayah.ayahNumber.toString(),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isActive) GhaisColors.Primary else GhaisColors.TextSecondary
+                            color = GhaisNoir.TextPrimary
                         )
                     }
 
@@ -872,7 +824,8 @@ private fun AyahBlock(
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(GhaisColors.Primary.copy(alpha = 0.12f))
+                                .background(GhaisNoir.Fill4)
+                                .border(1.dp, GhaisNoir.BorderGhost, RoundedCornerShape(12.dp))
                                 .padding(horizontal = 8.dp, vertical = 3.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -880,124 +833,93 @@ private fun AyahBlock(
                             Icon(
                                 imageVector = Icons.Default.GraphicEq,
                                 contentDescription = "Waveform",
-                                tint = GhaisColors.Primary,
+                                tint = GhaisNoir.TextPrimary,
                                 modifier = Modifier.size(15.dp)
                             )
                             Text(
                                 text = "RECITING NOW",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = GhaisColors.Primary,
+                                color = GhaisNoir.TextPrimary,
                                 letterSpacing = 0.8.sp
                             )
                         }
                     }
                 }
 
-                // Right: Micro Ayah Actions Pill
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // Play / Pause Button
+                    // Play / pause disc — chromium while live, clay well otherwise.
                     Box(
                         modifier = Modifier
                             .size(34.dp)
                             .clip(CircleShape)
                             .background(
-                                if (isActive) GhaisColors.Primary
-                                else GhaisColors.SurfaceHighest.copy(alpha = 0.5f)
+                                if (isActive) GhaisNoir.chromeFill() else GhaisNoir.wellFill(),
+                                CircleShape
                             )
-                            .clickable { onPlayClick() },
+                            .border(
+                                1.dp,
+                                if (isActive) Color.White.copy(alpha = 0.4f) else GhaisNoir.BorderCard,
+                                CircleShape
+                            )
+                            .noirClickable(onClick = onPlayClick),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = if (isActive) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (isActive) "Pause verse audio" else "Play verse audio",
-                            tint = if (isActive) GhaisColors.OnPrimary else GhaisColors.TextSecondary,
+                            tint = if (isActive) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
 
-                    // Bookmark Button
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(GhaisColors.SurfaceHighest.copy(alpha = 0.5f))
-                            .clickable { onBookmarkClick() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                            contentDescription = "Bookmark ayah",
-                            tint = if (isBookmarked) GhaisColors.Primary else GhaisColors.TextSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-
-                    // Tafsir Button
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(GhaisColors.SurfaceHighest.copy(alpha = 0.5f))
-                            .clickable { onTafsirClick() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                            contentDescription = "Tafsir for verse ${ayah.ayahNumber}",
-                            tint = GhaisColors.TextSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-
-                    // Share Button
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(GhaisColors.SurfaceHighest.copy(alpha = 0.5f))
-                            .clickable { onShareClick() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share ayah",
-                            tint = GhaisColors.TextSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+                    GhostCircleButton(
+                        icon = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                        contentDescription = "Bookmark ayah",
+                        tint = if (isBookmarked) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                        onClick = onBookmarkClick
+                    )
+                    GhostCircleButton(
+                        icon = Icons.AutoMirrored.Filled.MenuBook,
+                        contentDescription = "Tafsir for verse ${ayah.ayahNumber}",
+                        onClick = onTafsirClick
+                    )
+                    GhostCircleButton(
+                        icon = Icons.Default.Share,
+                        contentDescription = "Share ayah",
+                        onClick = onShareClick
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Arabic Ayah Text with Tajweed Coloring and Rosette
+            // Uthmani text — 100% white; tajweed = SemiBold at 100% (weight only).
             val arabicAnnotated = buildAnnotatedString {
-                val baseColor = GhaisColors.TextPrimary
-                val tajweedColor = Color(0xFF95D3BA) // tertiary fixed dim / emerald
+                val base = GhaisNoir.TextPrimary
                 val ayahRosette = " ۝${toArabicDigits(ayah.ayahNumber)} "
 
                 if (isTajweed && ayah.tajweedPart != null) {
                     if (ayah.tajweedPrefix) {
-                        withStyle(SpanStyle(color = GhaisColors.Primary, fontWeight = FontWeight.SemiBold)) {
+                        withStyle(SpanStyle(color = base, fontWeight = FontWeight.SemiBold)) {
                             append(ayah.tajweedPart)
                         }
-                        withStyle(SpanStyle(color = baseColor)) {
+                        withStyle(SpanStyle(color = base)) {
                             append(ayah.textUthmani)
                         }
                     } else {
-                        withStyle(SpanStyle(color = baseColor)) {
+                        withStyle(SpanStyle(color = base)) {
                             append(ayah.textUthmani)
                         }
-                        withStyle(SpanStyle(color = tajweedColor, fontWeight = FontWeight.SemiBold)) {
+                        withStyle(SpanStyle(color = base, fontWeight = FontWeight.SemiBold)) {
                             append(ayah.tajweedPart)
                         }
                     }
                 } else {
-                    withStyle(SpanStyle(color = baseColor)) {
+                    withStyle(SpanStyle(color = base)) {
                         append(ayah.textUthmani)
                         if (ayah.tajweedPart != null) {
                             append(ayah.tajweedPart)
@@ -1005,8 +927,13 @@ private fun AyahBlock(
                     }
                 }
 
-                // Decorative Ayah End Rosette
-                withStyle(SpanStyle(color = GhaisColors.Primary, fontWeight = FontWeight.Bold, fontSize = (arabicFontSize * 0.75f).sp)) {
+                withStyle(
+                    SpanStyle(
+                        color = GhaisNoir.TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = (arabicFontSize * 0.75f).sp
+                    )
+                ) {
                     append(ayahRosette)
                 }
             }
@@ -1020,13 +947,12 @@ private fun AyahBlock(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // English Translation
             if (showTranslation) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = ayah.translation,
                     fontSize = 14.sp,
-                    color = if (isActive) GhaisColors.TextPrimary else GhaisColors.TextSecondary,
+                    color = if (isActive) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
                     lineHeight = 22.sp
                 )
 
@@ -1035,7 +961,7 @@ private fun AyahBlock(
                     Text(
                         text = ayah.footnote,
                         fontSize = 11.sp,
-                        color = GhaisColors.TextTertiary,
+                        color = GhaisNoir.TextTertiary,
                         lineHeight = 15.sp
                     )
                 }
@@ -1044,9 +970,35 @@ private fun AyahBlock(
     }
 }
 
+/** Ghost circular micro-action — Fill2 wash + hairline, monochrome glyph. */
+@Composable
+private fun GhostCircleButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    tint: Color = GhaisNoir.TextTertiary
+) {
+    Box(
+        modifier = Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+            .background(GhaisNoir.Fill2)
+            .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+            .noirClickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(16.dp)
+        )
+    }
+}
+
 /**
- * Reading Mode Bottom Utilities (Apple-style Quick Tools capsule)
- * Features Hifz Repeat loop counter, Tafsir modal trigger, and Page/Stream view toggle.
+ * Reading-mode bottom utilities capsule in noir glass: ghost repeat + tafsir
+ * pills, chromium page/stream toggle. State reads through fill elevation.
  */
 @Composable
 private fun MushafBottomToolsCapsule(
@@ -1063,31 +1015,35 @@ private fun MushafBottomToolsCapsule(
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(32.dp))
-                .background(GhaisColors.SurfaceHigh.copy(alpha = 0.92f))
-                .border(1.dp, GhaisColors.OutlineVariant.copy(alpha = 0.5f), RoundedCornerShape(32.dp))
+                .background(GhaisNoir.cardFillSoft())
+                .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(32.dp))
+                .topSpecular(inset = 30.dp)
                 .padding(6.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Repeat Cycle Pill
+                // Repeat cycle pill — elevated when looping.
+                val repeatOff = repeatLabel.contains("Off")
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .height(38.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(
-                            if (repeatLabel.contains("Off")) GhaisColors.SurfaceContainer
-                            else GhaisColors.Primary.copy(alpha = 0.15f)
+                        .background(if (repeatOff) GhaisNoir.Fill2 else GhaisNoir.Fill4)
+                        .border(
+                            1.dp,
+                            if (repeatOff) GhaisNoir.BorderGhost else GhaisNoir.SpecularTop,
+                            RoundedCornerShape(20.dp)
                         )
-                        .clickable { onCycleRepeat() }
+                        .noirClickable(onClick = onCycleRepeat)
                         .padding(horizontal = 12.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Repeat,
                         contentDescription = "Audio Repeat Loop",
-                        tint = if (repeatLabel.contains("Off")) GhaisColors.TextSecondary else GhaisColors.Primary,
+                        tint = if (repeatOff) GhaisNoir.TextTertiary else GhaisNoir.TextPrimary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -1095,24 +1051,25 @@ private fun MushafBottomToolsCapsule(
                         text = repeatLabel,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (repeatLabel.contains("Off")) GhaisColors.TextSecondary else GhaisColors.TextPrimary
+                        color = if (repeatOff) GhaisNoir.TextTertiary else GhaisNoir.TextPrimary
                     )
                 }
 
-                // Tafsir Modal Trigger
+                // Tafsir trigger — ghost pill.
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .height(38.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(GhaisColors.SurfaceContainer)
-                        .clickable { onOpenTafsir() }
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderGhost, RoundedCornerShape(20.dp))
+                        .noirClickable(onClick = onOpenTafsir)
                         .padding(horizontal = 12.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.MenuBook,
                         contentDescription = "Open Tafsir",
-                        tint = Color(0xFF95D3BA),
+                        tint = GhaisNoir.TextSecondary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -1120,23 +1077,24 @@ private fun MushafBottomToolsCapsule(
                         text = "Tafsir",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = GhaisColors.TextPrimary
+                        color = GhaisNoir.TextPrimary
                     )
                 }
 
-                // Page View Mode Toggle (Stream vs Mushaf Page)
+                // Page/stream toggle — chromium disc.
                 Box(
                     modifier = Modifier
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(GhaisColors.Primary)
-                        .clickable { onTogglePageView() },
+                        .background(GhaisNoir.chromeFill())
+                        .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
+                        .noirClickable(onClick = onTogglePageView),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (isPageView) Icons.Default.ViewAgenda else Icons.Default.Layers,
                         contentDescription = if (isPageView) "Switch to Ayah stream" else "Switch to Mushaf page",
-                        tint = GhaisColors.OnPrimary,
+                        tint = GhaisNoir.OnChrome,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -1145,8 +1103,13 @@ private fun MushafBottomToolsCapsule(
     }
 }
 
+/** Near-black dark paper for the Mushaf page — eye comfort, no pure white. */
+private val NoirDarkPaper = Color(0xFF0E0E10)
+
 /**
- * Traditional Mushaf Page View mode with ornamental frame and continuous text.
+ * Traditional Mushaf page view on dark paper (near-black, not pure white):
+ * engraved header, continuous uthmani at 100% white, hairline rules.
+ * Tajweed distinction is weight-only at 100% white — zero hue.
  */
 @Composable
 private fun MushafPageViewCard(
@@ -1160,15 +1123,17 @@ private fun MushafPageViewCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(GhaisColors.SurfaceHigh.copy(alpha = 0.9f))
-            .border(2.dp, GhaisColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+            .background(NoirDarkPaper)
+            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(20.dp))
+            .topSpecular(inset = 28.dp)
+            .noirClickable(onClick = {})
             .padding(14.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Page Header
+            // Page header — engraved, monochrome.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1180,50 +1145,50 @@ private fun MushafPageViewCard(
                     text = "جُزْء ١٥",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = GhaisColors.TextSecondary
+                    color = GhaisNoir.TextSecondary
                 )
                 Text(
                     text = "سُورَةُ الكَهْفِ",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = GhaisColors.Primary
+                    color = GhaisNoir.TextPrimary
                 )
                 Text(
                     text = "صَفْحَة ٢٩٣",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = GhaisColors.TextSecondary
+                    color = GhaisNoir.TextSecondary
                 )
             }
 
-            HorizontalDivider(color = GhaisColors.OutlineVariant.copy(alpha = 0.5f), thickness = 1.dp)
+            HorizontalDivider(color = GhaisNoir.BorderGhost, thickness = 1.dp)
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Continuous Uthmani Arabic Text
+            // Continuous uthmani — selected ayah bold, rest normal, all 100% white.
             val pageText = buildAnnotatedString {
                 ayahs.forEach { ayah ->
                     val isSelected = ayah.ayahNumber == activeAyah
-                    val color = if (isSelected) GhaisColors.Primary else GhaisColors.TextPrimary
+                    val weight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
 
                     if (isTajweed && ayah.tajweedPart != null) {
                         if (ayah.tajweedPrefix) {
-                            withStyle(SpanStyle(color = Color(0xFF95D3BA), fontWeight = FontWeight.SemiBold)) {
+                            withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = FontWeight.Bold)) {
                                 append(ayah.tajweedPart)
                             }
-                            withStyle(SpanStyle(color = color)) {
+                            withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = weight)) {
                                 append(ayah.textUthmani)
                             }
                         } else {
-                            withStyle(SpanStyle(color = color)) {
+                            withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = weight)) {
                                 append(ayah.textUthmani)
                             }
-                            withStyle(SpanStyle(color = Color(0xFF95D3BA), fontWeight = FontWeight.SemiBold)) {
+                            withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = FontWeight.Bold)) {
                                 append(ayah.tajweedPart)
                             }
                         }
                     } else {
-                        withStyle(SpanStyle(color = color)) {
+                        withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = weight)) {
                             append(ayah.textUthmani)
                             if (ayah.tajweedPart != null) {
                                 append(ayah.tajweedPart)
@@ -1231,7 +1196,12 @@ private fun MushafPageViewCard(
                         }
                     }
 
-                    withStyle(SpanStyle(color = GhaisColors.Primary, fontWeight = FontWeight.Bold)) {
+                    withStyle(
+                        SpanStyle(
+                            color = GhaisNoir.TextPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    ) {
                         append(" ۝${toArabicDigits(ayah.ayahNumber)} ")
                     }
                 }
@@ -1242,18 +1212,22 @@ private fun MushafPageViewCard(
                 fontSize = (arabicFontSize - 2).sp,
                 lineHeight = ((arabicFontSize - 2) * 2.1f).sp,
                 textAlign = TextAlign.End,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .noirClickable(onClick = {
+                        ayahs.find { it.ayahNumber == activeAyah }?.let(onSelectAyah)
+                    })
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            HorizontalDivider(color = GhaisColors.OutlineVariant.copy(alpha = 0.5f), thickness = 1.dp)
+            HorizontalDivider(color = GhaisNoir.BorderGhost, thickness = 1.dp)
 
-            // Page Footer
+            // Page footer.
             Text(
                 text = "— ٢٩٣ —",
                 fontSize = 12.sp,
-                color = GhaisColors.TextTertiary,
+                color = GhaisNoir.TextTertiary,
                 modifier = Modifier.padding(top = 8.dp)
             )
         }
@@ -1261,7 +1235,8 @@ private fun MushafPageViewCard(
 }
 
 /**
- * Tafsir Sheet Dialog for deep study of the active Ayah.
+ * Tafsir sheet dialog in noir glass: dark card, 100%-white quote Arabic,
+ * ghost rule, secondary body, white Close affordance.
  */
 @Composable
 private fun TafsirDialog(
@@ -1280,13 +1255,13 @@ private fun TafsirDialog(
                     text = "Tafsir Ibn Kathir",
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
-                    color = GhaisColors.Primary
+                    color = GhaisNoir.TextPrimary
                 )
                 Text(
                     text = "Ayah ${ayah.ayahNumber}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = GhaisColors.TextSecondary
+                    color = GhaisNoir.TextTertiary
                 )
             }
         },
@@ -1296,28 +1271,28 @@ private fun TafsirDialog(
                     text = ayah.textUthmani + (ayah.tajweedPart ?: "") + " ۝${toArabicDigits(ayah.ayahNumber)}",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = GhaisColors.TextPrimary,
+                    color = GhaisNoir.TextPrimary,
                     textAlign = TextAlign.End,
-                    lineHeight = 32.sp,
+                    lineHeight = 34.sp,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                HorizontalDivider(color = GhaisColors.OutlineVariant.copy(alpha = 0.4f))
+                HorizontalDivider(color = GhaisNoir.BorderGhost)
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = ayah.tafsirSnippet,
                     fontSize = 14.sp,
-                    color = GhaisColors.TextSecondary,
+                    color = GhaisNoir.TextSecondary,
                     lineHeight = 21.sp
                 )
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close", color = GhaisColors.Primary, fontWeight = FontWeight.Bold)
+                Text("Close", color = GhaisNoir.TextPrimary, fontWeight = FontWeight.Bold)
             }
         },
-        containerColor = GhaisColors.SurfaceHigh,
+        containerColor = Color(0xFF131316),
         shape = RoundedCornerShape(20.dp)
     )
 }

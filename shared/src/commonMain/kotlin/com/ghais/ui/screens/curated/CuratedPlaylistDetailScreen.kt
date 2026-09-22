@@ -8,36 +8,54 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,36 +66,38 @@ import coil3.compose.AsyncImage
 import com.ghais.data.seed.CuratedTrack
 import com.ghais.data.seed.DetailedCuratedPlaylist
 import com.ghais.data.seed.QuranDataRepository
-import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.data.seed.toTrackItem
-import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
+import com.ghais.ui.components.noir.ChromePillButton
+import com.ghais.ui.components.noir.GhostPillButton
+import com.ghais.ui.components.noir.NoirHeroCard
+import com.ghais.ui.components.noir.NoirListRow
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.NoirSegmentedProgress
+import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.navigation.LocalRootNavigator
+import com.ghais.ui.screens.home.NoirStatChip
+import com.ghais.ui.screens.player.NowPlayingScreen
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.theme.GhaisTypography
 import kotlinx.coroutines.launch
 
-// Trending Purple & Obsidian Monochrome Design Tokens
-private val PitchBlack = Color(0xFF0B0C0E)
-private val ObsidianCard = Color(0xFF121418)
-private val TrendingPurple = Color(0xFFA855F7)
-private val ElectricViolet = Color(0xFF8B5CF6)
-private val NeonLilac = Color(0xFFC084FC)
-private val MutedGrey = Color(0xFF9CA3AF)
-private val SubtitleGrey = Color(0xFFD1D5DB)
-
 /**
- * Curated Playlist Detail Screen.
- * Opened when the user clicks any curated playlist from the Home screen or All Curated Collections screen.
+ * Curated Playlist Detail Screen — strict Noir Glass monochrome.
  *
- * Implements Black & White + Trending Purple design specifications:
- * - Dynamic artwork container with soft purple bottom gradient fade & ambient aura.
- * - Frosted glass tag pill with purple border.
- * - Bold white title, muted description, and curator info.
- * - Action row: "Play All" purple gradient button, "Shuffle" in frosted obsidian glass, "Save to Library" button.
- * - Full Surahs/Tracks list with index, English/Arabic title, reciter name, duration, and live playing equalizer.
- * - 120.dp bottom padding for dock / mini player.
+ * True-black canvas, alpha-white fills, ghost hairlines with a top-only
+ * specular, grayscale hero art, chrome primary CTA + ghost secondaries,
+ * segmented library meter, and [NoirListRow] track rows. Zero hue — state
+ * reads through fill elevation, chromium, weight and opacity.
+ *
+ * Presentation only. Signature, queue/play logic, save toggle, share
+ * snackbar, and navigation are preserved.
  */
 data class CuratedPlaylistDetailScreen(val playlistId: String) : Screen {
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -96,362 +116,190 @@ data class CuratedPlaylistDetailScreen(val playlistId: String) : Screen {
 
         var isSavedToLibrary by remember { mutableStateOf(false) }
 
-        Scaffold(
-            containerColor = PitchBlack,
-            snackbarHost = { SnackbarHost(snackbarHostState) }
-        ) { paddingValues ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = paddingValues.calculateTopPadding())
-                    .background(PitchBlack)
-            ) {
-                // Soft Ambient Top Aura: Electric Violet & Trending Purple fading into pitch black
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(340.dp)
-                        .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    ElectricViolet.copy(alpha = 0.24f),
-                                    TrendingPurple.copy(alpha = 0.12f),
-                                    Color.Transparent
-                                ),
-                                center = Offset(300f, 100f),
-                                radius = 500f
-                            )
-                        )
-                )
+        // Listening position inside this playlist — drives the hero segmented meter.
+        val activeIndex = remember(currentTrack, playlist) {
+            playlist.tracks.indexOfFirst { track ->
+                currentTrack?.audioUrl == track.audioUrl ||
+                    (currentTrack?.surahId == track.surahNumber && currentTrack?.reciterName == track.reciterName)
+            }
+        }
+        val listenProgress: Float = remember(activeIndex, playlist.tracks.size) {
+            if (activeIndex < 0 || playlist.tracks.isEmpty()) 0f
+            else (activeIndex + 1).toFloat() / playlist.tracks.size.toFloat()
+        }
 
+        NoirScreenRoot {
+            Scaffold(
+                containerColor = Color.Transparent,
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+                topBar = {
+                    TopAppBar(
+                        title = {},
+                        navigationIcon = {
+                            IconButton(
+                                onClick = {
+                                    if (rootNavigator.size > 1) {
+                                        rootNavigator.pop()
+                                    } else {
+                                        navigator.pop()
+                                    }
+                                },
+                                modifier = Modifier.padding(start = 4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(GhaisNoir.Fill2)
+                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back",
+                                        tint = GhaisNoir.TextPrimary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        },
+                        actions = {
+                            IconButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("Playlist link copied to clipboard")
+                                    }
+                                },
+                                modifier = Modifier.padding(end = 4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(GhaisNoir.Fill2)
+                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Share,
+                                        contentDescription = "Share",
+                                        tint = GhaisNoir.TextPrimary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent
+                        )
+                    )
+                }
+            ) { paddingValues ->
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
-                    // 1. Top Bar with Back button and Share button
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .statusBarsPadding()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            // Back Button: Frosted obsidian circle
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF161822).copy(alpha = 0.85f))
-                                    .border(1.dp, Color.White.copy(alpha = 0.14f), CircleShape)
-                                    .clickable {
-                                        if (rootNavigator.size > 1) {
-                                            rootNavigator.pop()
-                                        } else {
-                                            navigator.pop()
-                                        }
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            Text(
-                                text = "Curated Playlist",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-
-                            // Share Button: Frosted obsidian circle
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF161822).copy(alpha = 0.85f))
-                                    .border(1.dp, Color.White.copy(alpha = 0.14f), CircleShape)
-                                    .clickable {
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("Playlist link copied to clipboard")
-                                        }
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Share,
-                                    contentDescription = "Share",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    // 2. Beautiful Artwork Container with Soft Purple Bottom Gradient Fade
+                    // Editorial header + hero plate
                     item {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 24.dp, vertical = 8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                                .padding(horizontal = 16.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(210.dp)
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(ObsidianCard)
-                                    .border(
-                                        width = 1.dp,
-                                        brush = Brush.linearGradient(
-                                            listOf(
-                                                TrendingPurple.copy(alpha = 0.60f),
-                                                Color.White.copy(alpha = 0.20f),
-                                                ElectricViolet.copy(alpha = 0.45f)
-                                            )
-                                        ),
-                                        shape = RoundedCornerShape(24.dp)
-                                    )
-                            ) {
-                                AsyncImage(
-                                    model = playlist.coverUrl,
-                                    contentDescription = playlist.title,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                            Spacer(modifier = Modifier.height(4.dp))
 
-                                // Soft Purple bottom gradient fade
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            brush = Brush.verticalGradient(
-                                                listOf(
-                                                    Color.Transparent,
-                                                    Color.Transparent,
-                                                    TrendingPurple.copy(alpha = 0.25f),
-                                                    PitchBlack.copy(alpha = 0.85f)
-                                                )
-                                            )
-                                        )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "CURATED COLLECTION",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    letterSpacing = 1.2.sp
+                                )
+                                Text(
+                                    text = "${playlist.tracks.size} tracks",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Normal
                                 )
                             }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "A moment of",
+                                style = GhaisTypography.displayEditorial,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = playlist.title,
+                                style = GhaisTypography.displayEditorialBold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = playlist.description.ifEmpty { playlist.subtitle },
+                                style = GhaisTypography.editorialBody,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            CuratedNoirHeroPlate(
+                                playlist = playlist,
+                                listenProgress = listenProgress,
+                                activeIndex = activeIndex,
+                                isSavedToLibrary = isSavedToLibrary,
+                                onPlayAll = {
+                                    val trackItems = playlist.tracks.map { it.toTrackItem() }
+                                    if (trackItems.isNotEmpty()) {
+                                        AudioEngine.playQueue(trackItems, startIndex = 0)
+                                        rootNavigator.push(NowPlayingScreen())
+                                    }
+                                },
+                                onShuffle = {
+                                    val shuffled = playlist.tracks.shuffled().map { it.toTrackItem() }
+                                    if (shuffled.isNotEmpty()) {
+                                        AudioEngine.playQueue(shuffled, startIndex = 0)
+                                        rootNavigator.push(NowPlayingScreen())
+                                    }
+                                },
+                                onToggleSave = {
+                                    isSavedToLibrary = !isSavedToLibrary
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            if (isSavedToLibrary) "Saved to your Library" else "Removed from Library"
+                                        )
+                                    }
+                                }
+                            )
 
                             Spacer(modifier = Modifier.height(18.dp))
 
-                            // Tag pill in frosted glass with purple border
-                            Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(Color(0xCC161822))
-                                    .border(
-                                        width = 1.dp,
-                                        brush = Brush.horizontalGradient(
-                                            listOf(
-                                                TrendingPurple.copy(alpha = 0.75f),
-                                                Color.White.copy(alpha = 0.35f)
-                                            )
-                                        ),
-                                        shape = CircleShape
-                                    )
-                                    .padding(horizontal = 14.dp, vertical = 5.dp)
-                            ) {
-                                Text(
-                                    text = playlist.tag,
-                                    color = Color.White,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = 0.6.sp
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            // Title in bold white
-                            Text(
-                                text = playlist.title,
-                                color = Color.White,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
-                            )
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            // Subtitle / Description in muted grey
-                            Text(
-                                text = playlist.description.ifEmpty { playlist.subtitle },
-                                color = MutedGrey,
-                                fontSize = 13.5.sp,
-                                textAlign = TextAlign.Center,
-                                lineHeight = 19.sp,
-                                modifier = Modifier.padding(horizontal = 8.dp)
-                            )
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // Curator info ("Curated by Ghais • 8 Tracks • 42 mins")
-                            Text(
-                                text = "Curated by ${playlist.curator.ifEmpty { "Ghais" }} • ${playlist.tracks.size} Tracks • ${playlist.totalDuration.ifEmpty { "42 mins" }}",
-                                color = SubtitleGrey,
-                                fontSize = 12.5.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-
-                            Spacer(modifier = Modifier.height(22.dp))
-
-                            // Action Row: Play All, Shuffle, Save to Library
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // "Play All" in Trending Purple gradient button with white play icon
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(48.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            brush = Brush.horizontalGradient(
-                                                listOf(ElectricViolet, TrendingPurple)
-                                            )
-                                        )
-                                        .clickable {
-                                            val trackItems = playlist.tracks.map { it.toTrackItem() }
-                                            if (trackItems.isNotEmpty()) {
-                                                AudioEngine.playQueue(trackItems, startIndex = 0)
-                                                rootNavigator.push(NowPlayingScreen())
-                                            }
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.PlayArrow,
-                                            contentDescription = "Play All",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = "Play All",
-                                            color = Color.White,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-
-                                // "Shuffle" in frosted obsidian glass
-                                Box(
-                                    modifier = Modifier
-                                        .height(48.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF161822).copy(alpha = 0.85f))
-                                        .border(1.dp, Color.White.copy(alpha = 0.14f), CircleShape)
-                                        .clickable {
-                                            val shuffled = playlist.tracks.shuffled().map { it.toTrackItem() }
-                                            if (shuffled.isNotEmpty()) {
-                                                AudioEngine.playQueue(shuffled, startIndex = 0)
-                                                rootNavigator.push(NowPlayingScreen())
-                                            }
-                                        }
-                                        .padding(horizontal = 16.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Shuffle,
-                                            contentDescription = "Shuffle",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "Shuffle",
-                                            color = Color.White,
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    }
-                                }
-
-                                // "Save to Library" icon button
-                                Box(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF161822).copy(alpha = 0.85f))
-                                        .border(
-                                            width = 1.dp,
-                                            color = if (isSavedToLibrary) TrendingPurple else Color.White.copy(alpha = 0.14f),
-                                            shape = CircleShape
-                                        )
-                                        .clickable {
-                                            isSavedToLibrary = !isSavedToLibrary
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    if (isSavedToLibrary) "Saved to your Library" else "Removed from Library"
-                                                )
-                                            }
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = if (isSavedToLibrary) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                                        contentDescription = "Save to Library",
-                                        tint = if (isSavedToLibrary) TrendingPurple else Color.White,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Section Divider & Tracks Header
-                    item {
-                        Spacer(modifier = Modifier.height(18.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Surahs & Recitations",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-
-                            Text(
-                                text = "${playlist.tracks.size} tracks",
-                                fontSize = 12.5.sp,
-                                color = MutedGrey
+                            NoirSectionHeader(
+                                label = "Surahs & Recitations",
+                                actionLabel = "${playlist.tracks.size} tracks",
+                                onAction = {}
                             )
                         }
                     }
 
-                    // 3. Surahs / Tracks List
-                    itemsIndexed(playlist.tracks) { index, track ->
+                    // Surahs / Tracks list
+                    itemsIndexed(
+                        items = playlist.tracks,
+                        key = { index, track -> "${track.surahNumber}_${track.reciterName}_$index" }
+                    ) { index, track ->
                         val isThisTrackActive = currentTrack?.audioUrl == track.audioUrl ||
                             (currentTrack?.surahId == track.surahNumber && currentTrack?.reciterName == track.reciterName)
                         val isCurrentlyPlaying = isThisTrackActive && isPlaying
 
-                        TrackItemRow(
+                        CuratedNoirTrackRow(
                             index = index + 1,
                             track = track,
                             isActive = isThisTrackActive,
@@ -474,138 +322,238 @@ data class CuratedPlaylistDetailScreen(val playlistId: String) : Screen {
 }
 
 /**
- * Single Track item in the Curated Playlist.
- * Displays:
- * - Index number / Animated playing equalizer indicator.
- * - Surah English title, Arabic title, reciter name, duration.
- * - Circular play / pause button.
+ * True-grayscale filter — cover art stays recognisable while remaining
+ * strictly monochrome.
+ */
+private val NoirGrayscale: ColorFilter by lazy {
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+}
+
+/**
+ * Hero plate (mirrors the reciter hero-plate pattern): grayscale cover art
+ * with chromium ring + darkening scrim, identity text, stat chips, segmented
+ * listening meter, and chrome/ghost actions.
+ *
+ * Presentation only — all callbacks preserve the original screen logic.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CuratedNoirHeroPlate(
+    playlist: DetailedCuratedPlaylist,
+    listenProgress: Float,
+    activeIndex: Int,
+    isSavedToLibrary: Boolean,
+    onPlayAll: () -> Unit,
+    onShuffle: () -> Unit,
+    onToggleSave: () -> Unit
+) {
+    NoirHeroCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(84.dp)
+                        .clip(GhaisShapes.medium)
+                        .background(GhaisNoir.wellFill())
+                        .border(1.dp, GhaisNoir.SpecularTop, GhaisShapes.medium),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = playlist.coverUrl,
+                        contentDescription = playlist.title,
+                        contentScale = ContentScale.Crop,
+                        colorFilter = NoirGrayscale,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    // Darkening scrim: keeps the plate recessed instead of glowing.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.35f))
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = playlist.tag.uppercase(),
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.2.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = playlist.title,
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        text = "Curated by ${playlist.curator.ifEmpty { "Ghais" }} • ${playlist.totalDuration.ifEmpty { "42 mins" }}",
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Stats as non-interactive NoirStatChip wells (zero hue).
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                NoirStatChip(text = playlist.tag)
+                NoirStatChip(text = "${playlist.tracks.size} Tracks")
+                NoirStatChip(text = playlist.totalDuration.ifEmpty { "42 mins" })
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Segmented listening meter (engraved track, chrome fill).
+            NoirSegmentedProgress(progress = listenProgress, trackHeight = 8.dp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = if (activeIndex >= 0) "Track ${activeIndex + 1} of ${playlist.tracks.size}" else "${playlist.tracks.size} tracks queued",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.sp
+                )
+                Text(
+                    text = "${(listenProgress * 100).toInt()}% played",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Primary CTA: chromium play pill.
+            ChromePillButton(
+                text = "Play All",
+                onClick = onPlayAll,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = playlist.tracks.isNotEmpty(),
+                leadingIcon = Icons.Default.PlayArrow
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Secondary actions as ghost pills — fill elevation carries state.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                GhostPillButton(
+                    text = "Shuffle",
+                    onClick = onShuffle,
+                    modifier = Modifier.weight(1f)
+                )
+                GhostPillButton(
+                    text = if (isSavedToLibrary) "Saved" else "Save",
+                    onClick = onToggleSave,
+                    modifier = Modifier.weight(1f),
+                    active = isSavedToLibrary
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Single track as a [NoirListRow]: clay icon-well, dual text, and a
+ * monochrome trailing cluster (Arabic title + chromium play disc).
+ * Live state reads through chromium fill and the white equalizer — never hue.
  */
 @Composable
-private fun TrackItemRow(
+private fun CuratedNoirTrackRow(
     index: Int,
     track: CuratedTrack,
     isActive: Boolean,
     isPlaying: Boolean,
     onPlayClick: () -> Unit
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .padding(horizontal = 16.dp, vertical = 5.dp)
+    ) {
+        NoirListRow(
+            title = "${track.surahNumber}. ${track.surahNameEn}",
+            subtitle = "${track.reciterName} • ${track.duration}",
+            icon = Icons.Default.MusicNote,
+            chevron = false,
+            onClick = onPlayClick,
+            trailing = {
+                CuratedRowTrailing(
+                    index = index,
+                    arabicTitle = track.surahNameAr,
+                    isActive = isActive,
+                    isPlaying = isPlaying,
+                    onPlayClick = onPlayClick
+                )
+            }
+        )
+    }
+}
+
+/**
+ * Monochrome trailing cluster: index or Arabic title + chromium play disc.
+ */
+@Composable
+private fun RowScope.CuratedRowTrailing(
+    index: Int,
+    arabicTitle: String,
+    isActive: Boolean,
+    isPlaying: Boolean,
+    onPlayClick: () -> Unit
+) {
+    Text(
+        text = if (arabicTitle.isNotBlank()) arabicTitle else index.toString().padStart(2, '0'),
+        color = if (isActive) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+        fontSize = 15.sp,
+        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
+
+    Spacer(modifier = Modifier.width(10.dp))
+
+    // Play disc: chromium while live, clay well otherwise.
+    Box(
+        modifier = Modifier
+            .size(36.dp)
             .background(
-                if (isActive) TrendingPurple.copy(alpha = 0.08f) else Color.Transparent
+                if (isActive) GhaisNoir.chromeFill() else GhaisNoir.wellFill(),
+                GhaisShapes.well
             )
             .border(
-                width = 1.dp,
-                color = if (isActive) TrendingPurple.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.04f),
-                shape = RoundedCornerShape(14.dp)
+                1.dp,
+                if (isActive) Color.White.copy(alpha = 0.4f) else GhaisNoir.BorderCard,
+                GhaisShapes.well
             )
-            .clickable { onPlayClick() }
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .noirClickable(onPlayClick),
+        contentAlignment = Alignment.Center
     ) {
-        // Left: Index number or Active Playing Equalizer Animation
-        Box(
-            modifier = Modifier.size(32.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isPlaying) {
-                CuratedEqualizerBars()
-            } else if (isActive) {
-                Icon(
-                    imageVector = Icons.Filled.Equalizer,
-                    contentDescription = "Active Track",
-                    tint = TrendingPurple,
-                    modifier = Modifier.size(18.dp)
-                )
-            } else {
-                Text(
-                    text = index.toString().padStart(2, '0'),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFF6B7280)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        // Middle: Surah English title, Reciter Name, Duration
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "${track.surahNumber}. ${track.surahNameEn}",
-                fontSize = 14.5.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = if (isActive) NeonLilac else Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(3.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = track.reciterName,
-                    fontSize = 12.sp,
-                    color = MutedGrey,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-                Text(
-                    text = " • ",
-                    fontSize = 12.sp,
-                    color = Color(0xFF6B7280)
-                )
-                Text(
-                    text = track.duration,
-                    fontSize = 12.sp,
-                    color = Color(0xFF9CA3AF),
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        // Right: Arabic Calligraphy Title
-        Text(
-            text = track.surahNameAr,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White.copy(alpha = 0.85f)
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        // Rightmost: Play / Pause circular button
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(
-                    if (isPlaying) {
-                        Brush.linearGradient(listOf(ElectricViolet, TrendingPurple))
-                    } else {
-                        Brush.linearGradient(
-                            listOf(
-                                Color(0xFF1E212D).copy(alpha = 0.9f),
-                                Color(0xFF161822).copy(alpha = 0.9f)
-                            )
-                        )
-                    }
-                )
-                .border(
-                    width = 1.dp,
-                    color = if (isPlaying) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f),
-                    shape = CircleShape
-                )
-                .clickable { onPlayClick() },
-            contentAlignment = Alignment.Center
-        ) {
+        if (isPlaying) {
+            CuratedNoirEqualizer()
+        } else {
             Icon(
-                imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                contentDescription = if (isPlaying) "Pause" else "Play",
-                tint = Color.White,
+                imageVector = if (isActive) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = if (isActive) "Resume" else "Play",
+                tint = if (isActive) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -613,13 +561,13 @@ private fun TrackItemRow(
 }
 
 /**
- * Animated 3-bar equalizer visualizer pulsing in Trending Purple (#A855F7).
+ * Animated live equalizer bars in pure white (monochrome live meter).
  */
 @Composable
-private fun CuratedEqualizerBars(
+private fun CuratedNoirEqualizer(
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "CuratedEqualizer")
+    val infiniteTransition = rememberInfiniteTransition(label = "CuratedNoirEq")
     val h1 by infiniteTransition.animateFloat(
         initialValue = 4f,
         targetValue = 18f,
@@ -657,22 +605,22 @@ private fun CuratedEqualizerBars(
             modifier = Modifier
                 .width(2.5.dp)
                 .height(h1.dp)
-                .clip(RoundedCornerShape(1.5.dp))
-                .background(TrendingPurple)
+                .clip(CircleShape)
+                .background(GhaisNoir.TextPrimary)
         )
         Box(
             modifier = Modifier
                 .width(2.5.dp)
                 .height(h2.dp)
-                .clip(RoundedCornerShape(1.5.dp))
-                .background(TrendingPurple)
+                .clip(CircleShape)
+                .background(GhaisNoir.TextPrimary)
         )
         Box(
             modifier = Modifier
                 .width(2.5.dp)
                 .height(h3.dp)
-                .clip(RoundedCornerShape(1.5.dp))
-                .background(TrendingPurple)
+                .clip(CircleShape)
+                .background(GhaisNoir.TextPrimary)
         )
     }
 }

@@ -1,14 +1,20 @@
 package com.ghais.ui.screens.player
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.FastForward
@@ -18,7 +24,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -26,16 +31,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.domain.model.RepeatMode
 import com.ghais.player.AudioEngine
 import com.ghais.player.SleepTimer
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
-private val MutedGrey = Color(0xFF9A9AA0)
 val SpeedsList = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 0.75f)
 
 fun formatSpeedLabel(speed: Float): String {
@@ -52,13 +61,12 @@ fun nextRepeatMode(current: RepeatMode): RepeatMode = when (current) {
 }
 
 /**
- * Modern Ghais Player Controls:
- * - Playback speed selector (cycles through SpeedsList)
- * - Previous skip/rewind button with enabled state logic (rewinds to 0s if pos > 3s, skips prev if in queue)
- * - Prominent Play/Pause toggle button
- * - Next skip button with enabled state logic (enabled if next track exists or repeat mode active)
- * - Repeat mode button (cycles OFF → SURAH → QUEUE)
- * - Sleep timer trigger (glowing primary tint when active timer is running)
+ * Noir Glass player controls:
+ * - Play/pause = chrome disc (chromeFill + OnChrome), same recipe as ChromeFab.
+ * - Skip prev/next = clay wells (wellFill + ghost hairline), monochrome glyphs.
+ * - Speed = ghost pill (Fill2 wash + hairline), secondary text.
+ * - Repeat / sleep = clay wells; active state echoes NoirSegmentedProgress
+ *   language (stronger wash + specular border + chrome dot), zero hue.
  */
 @Composable
 fun PlayerControls(
@@ -84,90 +92,177 @@ fun PlayerControls(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier.fillMaxWidth()
     ) {
-        // Speed selector (generous touch target >= 48dp)
-        Box(
-            modifier = Modifier
-                .size(width = 52.dp, height = 48.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .clickable { onSpeedChange(speed) },
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = formatSpeedLabel(speed),
-                color = MutedGrey,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
+        // Speed selector (generous touch target >= 48dp) — ghost pill.
+        SpeedWell(speed = speed, onSpeedChange = onSpeedChange)
 
-        // Previous button
-        IconButton(
-            onClick = onPrevious,
+        // Previous button — clay well.
+        SkipWell(
+            icon = Icons.Filled.FastRewind,
+            contentDescription = "Previous",
             enabled = canSkipPrevious,
-            modifier = Modifier.size(56.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.FastRewind,
-                contentDescription = "Previous",
-                tint = if (canSkipPrevious) Color.White else Color.White.copy(alpha = 0.3f),
-                modifier = Modifier.size(40.dp)
-            )
-        }
+            onClick = onPrevious
+        )
 
-        // Play / Pause button
-        IconButton(
-            onClick = onTogglePlayPause,
-            modifier = Modifier.size(72.dp)
-        ) {
-            Icon(
-                imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                contentDescription = if (isPlaying) "Pause" else "Play",
-                tint = Color.White,
-                modifier = Modifier.size(62.dp)
-            )
-        }
+        // Play / Pause — chrome disc.
+        ChromePlayDisc(
+            isPlaying = isPlaying,
+            onTogglePlayPause = onTogglePlayPause
+        )
 
-        // Next button
-        IconButton(
-            onClick = onNext,
+        // Next button — clay well.
+        SkipWell(
+            icon = Icons.Filled.FastForward,
+            contentDescription = "Next",
             enabled = canSkipNext,
-            modifier = Modifier.size(56.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.FastForward,
-                contentDescription = "Next",
-                tint = if (canSkipNext) Color.White else Color.White.copy(alpha = 0.3f),
-                modifier = Modifier.size(40.dp)
-            )
-        }
+            onClick = onNext
+        )
 
-        // Repeat mode button (cycles OFF → SURAH → QUEUE)
-        IconButton(
-            onClick = onRepeatClick,
-            modifier = Modifier.size(52.dp)
-        ) {
-            Icon(
-                imageVector = if (repeatMode == RepeatMode.SURAH) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-                contentDescription = when (repeatMode) {
-                    RepeatMode.SURAH -> "Repeat surah"
-                    RepeatMode.QUEUE -> "Repeat queue"
-                    else -> "Repeat off"
-                },
-                tint = if (repeatMode == RepeatMode.OFF) MutedGrey else GhaisColors.Primary,
-                modifier = Modifier.size(27.dp)
-            )
-        }
+        // Repeat mode (cycles OFF → SURAH → QUEUE) — toggle well.
+        ToggleWell(
+            icon = if (repeatMode == RepeatMode.SURAH) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+            contentDescription = when (repeatMode) {
+                RepeatMode.SURAH -> "Repeat surah"
+                RepeatMode.QUEUE -> "Repeat queue"
+                else -> "Repeat off"
+            },
+            active = repeatMode != RepeatMode.OFF,
+            onClick = onRepeatClick
+        )
 
-        // Sleep timer button
-        IconButton(
-            onClick = onSleepTimerClick,
-            modifier = Modifier.size(52.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Bedtime,
-                contentDescription = "Sleep timer",
-                tint = if (isSleepTimerActive) GhaisColors.Primary else MutedGrey,
-                modifier = Modifier.size(27.dp)
+        // Sleep timer — toggle well.
+        ToggleWell(
+            icon = Icons.Filled.Bedtime,
+            contentDescription = "Sleep timer",
+            active = isSleepTimerActive,
+            onClick = onSleepTimerClick
+        )
+    }
+}
+
+/** Ghost pill for the speed cycler — wash fill + hairline, secondary label. */
+@Composable
+private fun SpeedWell(
+    speed: Float,
+    onSpeedChange: (Float) -> Unit
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Box(
+        modifier = Modifier
+            .size(width = 52.dp, height = 48.dp)
+            .clip(shape)
+            .background(GhaisNoir.Fill2)
+            .border(1.dp, GhaisNoir.BorderCard, shape)
+            .noirClickable { onSpeedChange(speed) },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = formatSpeedLabel(speed),
+            color = GhaisNoir.TextSecondary,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+/** Clay icon-well for skip actions — embossed dome + ghost rim, no ripple. */
+@Composable
+private fun SkipWell(
+    icon: ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .clip(GhaisShapes.well)
+            .background(GhaisNoir.wellFill())
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.well)
+            .noirClickable { if (enabled) onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = if (enabled) GhaisNoir.TextPrimary else GhaisNoir.TextDisabled,
+            modifier = Modifier.size(26.dp)
+        )
+    }
+}
+
+/** Chrome disc for play/pause — ChromeFab recipe at hero scale, dark glyph. */
+@Composable
+private fun ChromePlayDisc(
+    isPlaying: Boolean,
+    onTogglePlayPause: () -> Unit
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.93f else 1f,
+        animationSpec = spring(dampingRatio = 0.55f, stiffness = 550f),
+        label = "playPress"
+    )
+    Box(
+        modifier = Modifier
+            .scale(scale)
+            .size(72.dp)
+            .clip(GhaisShapes.well)
+            .background(GhaisNoir.chromeFill())
+            .border(1.dp, Color.White.copy(alpha = 0.4f), GhaisShapes.well)
+            .clickable(interactionSource = interaction, indication = null, onClick = onTogglePlayPause),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+            contentDescription = if (isPlaying) "Pause" else "Play",
+            tint = GhaisNoir.OnChrome,
+            modifier = Modifier.size(34.dp)
+        )
+    }
+}
+
+/**
+ * Toggle well for repeat / sleep — clay at rest, chrome-dot + specular
+ * hairline when active (NoirSegmentedProgress language: chrome on engraved).
+ */
+@Composable
+private fun ToggleWell(
+    icon: ImageVector,
+    contentDescription: String,
+    active: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(GhaisShapes.well)
+            .then(
+                if (active) Modifier.background(GhaisNoir.Fill4)
+                else Modifier.background(GhaisNoir.wellFill())
+            )
+            .border(
+                1.dp,
+                if (active) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                GhaisShapes.well
+            )
+            .noirClickable(onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = if (active) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+            modifier = Modifier.size(22.dp)
+        )
+        if (active) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 7.dp)
+                    .size(4.dp)
+                    .clip(CircleShape)
+                    .background(GhaisNoir.chromeFill())
             )
         }
     }

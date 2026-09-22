@@ -6,7 +6,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -49,10 +48,12 @@ object MainScreen : Screen {
                     CurrentTab()
                     // Floating overlay: transparent glass dock + mini-player hover
                     // over the scrolling content (no bottomBar so content ghosts through).
+                    // Scaffold's innerPadding already consumes the navigation-bar
+                    // inset, so no extra navigationBarsPadding() here — adding it
+                    // twice floated the dock ~24dp above the gesture bar.
                     Column(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .navigationBarsPadding()
                     ) {
                         AnimatedVisibility(
                             visible = currentTrack != null,

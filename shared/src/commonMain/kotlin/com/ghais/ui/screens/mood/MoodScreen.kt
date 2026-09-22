@@ -3,14 +3,12 @@ package com.ghais.ui.screens.mood
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -21,22 +19,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Lightbulb
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -58,17 +53,14 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.components.noir.ChromePillButton
+import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
-
-// Obsidian-Emerald Glassmorphic Palette
-private val SheetContainer = Color(0xFF181E20)       // Obsidian container
-private val SheetBorder = Color(0x204EDEA3)          // Subtle emerald border
-private val LiquidEmerald = Color(0xFF4EDEA3)        // Liquid Emerald accent
-private val CardBackground = Color(0xFF1F2527)       // Elevated obsidian card
-private val CardBorder = Color(0x184EDEA3)           // Card border
-private val TextPrimary = Color(0xFFFFFFFF)          // High-emphasis white
-private val TextSecondary = Color(0xFF8E989C)        // Muted subtitle
 
 data class MoodItem(
     val id: String,
@@ -159,8 +151,8 @@ val AVAILABLE_MOODS = listOf(
 )
 
 /**
- * MoodSheet - Modal Bottom Sheet for selecting recitation mood.
- * Follows the Obsidian-Emerald glassmorphic theme strictly.
+ * MoodSheet — strict Noir Glass monochrome.
+ * CanvasTop container + Scrim + IconWell header + chrome check selection.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -174,23 +166,9 @@ fun MoodSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = SheetContainer,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(top = 12.dp, bottom = 8.dp)
-                    .width(36.dp)
-                    .height(4.dp)
-                    .clip(CircleShape)
-                    .background(LiquidEmerald.copy(alpha = 0.45f))
-            )
-        },
-        modifier = Modifier.border(
-            width = 1.dp,
-            color = SheetBorder,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-        )
+        containerColor = GhaisNoir.CanvasTop,
+        scrimColor = GhaisNoir.Scrim,
+        dragHandle = null
     ) {
         MoodModalContent(
             initialMoodId = initialMoodId,
@@ -213,40 +191,40 @@ data class MoodScreen(
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
 
-        Scaffold(
-            containerColor = Color(0xFF111415),
-            topBar = {
+        NoirScreenRoot {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = { navigator.pop() }) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                            .noirClickable { navigator.pop() },
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = TextPrimary
+                            tint = GhaisNoir.TextPrimary,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "Recitation by Mood",
                         style = GhaisTypography.titleMedium.copy(
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = GhaisNoir.TextPrimary
                         )
                     )
                 }
-            }
-        ) { paddingValues ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp)
-            ) {
                 MoodModalContent(
                     initialMoodId = initialMoodId,
                     onClose = { navigator.pop() },
@@ -300,35 +278,64 @@ fun MoodModalContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp)
-            .padding(bottom = 32.dp)
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 32.dp, top = 20.dp)
     ) {
-        // Header
-        Column(
+        // Sheet header: IconWell + dual text + ghost close (sort-sheet pattern).
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Recitation by Mood",
-                style = GhaisTypography.titleMedium.copy(
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                IconWell(
+                    icon = Icons.Rounded.Favorite,
+                    size = 40.dp,
+                    iconSize = 20.dp,
+                    contentDescription = null
                 )
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Curated recitations tailored to your spiritual state",
-                style = GhaisTypography.bodyMedium.copy(
-                    fontSize = 13.sp,
-                    color = TextSecondary
+                Column {
+                    Text(
+                        text = "Recitation by Mood",
+                        style = GhaisTypography.titleMedium.copy(
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = GhaisNoir.TextPrimary
+                        )
+                    )
+                    Text(
+                        text = "Curated recitations for your state",
+                        style = GhaisTypography.bodyMedium.copy(
+                            fontSize = 12.sp,
+                            color = GhaisNoir.TextSecondary
+                        )
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(GhaisNoir.Fill2)
+                    .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                    .noirClickable(onClick = onClose),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = GhaisNoir.TextSecondary,
+                    modifier = Modifier.size(16.dp)
                 )
-            )
+            }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Category Filter Pills (Glowing Pill for active)
+        // Category filter: chrome pill (selected) / ghost pill (resting).
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth(),
@@ -336,49 +343,56 @@ fun MoodModalContent(
         ) {
             items(categories) { category ->
                 val isSelected = selectedCategory == category
-                val pillBg by animateColorAsState(
-                    targetValue = if (isSelected) LiquidEmerald.copy(alpha = 0.18f) else CardBackground
-                )
-                val pillBorder by animateColorAsState(
-                    targetValue = if (isSelected) LiquidEmerald else CardBorder
-                )
-                val pillText by animateColorAsState(
-                    targetValue = if (isSelected) LiquidEmerald else TextSecondary
-                )
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(pillBg)
-                        .border(
-                            width = if (isSelected) 1.5.dp else 1.dp,
-                            color = pillBorder,
-                            shape = RoundedCornerShape(20.dp)
+                if (isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.chromeFill())
+                            .border(1.dp, Color.White.copy(alpha = 0.35f), GhaisShapes.pill)
+                            .noirClickable { selectedCategory = category }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = category,
+                            style = GhaisTypography.bodyMedium.copy(
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = GhaisNoir.OnChrome
+                            )
                         )
-                        .clickable { selectedCategory = category }
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = category,
-                        style = GhaisTypography.bodyMedium.copy(
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = pillText
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                            .noirClickable { selectedCategory = category }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = category,
+                            style = GhaisTypography.bodyMedium.copy(
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = GhaisNoir.TextSecondary
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Mood Items List
+        // Mood items list — soft glass cards, active = elevated wash + chrome check.
         LazyColumn(
             modifier = Modifier
                 .weight(1f, fill = false)
                 .heightIn(max = 340.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(filteredMoods) { mood ->
                 val isSelected = selectedMoodId == mood.id
@@ -392,38 +406,13 @@ fun MoodModalContent(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Primary Action Button (Liquid Emerald Pill with halo)
-        Button(
-            onClick = {
-                onMoodSelected(selectedMood)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = LiquidEmerald,
-                contentColor = Color(0xFF003824)
-            ),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = null,
-                tint = Color(0xFF003824),
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Start ${selectedMood.title}",
-                style = GhaisTypography.titleMedium.copy(
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF003824)
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        // Primary CTA — chrome pill.
+        ChromePillButton(
+            text = "Start ${selectedMood.title}",
+            onClick = { onMoodSelected(selectedMood) },
+            leadingIcon = Icons.Default.PlayArrow,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -433,60 +422,39 @@ private fun MoodOptionCard(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val cardBg by animateColorAsState(
-        targetValue = if (isSelected) LiquidEmerald.copy(alpha = 0.12f) else CardBackground
-    )
+    val cardFill = if (isSelected) GhaisNoir.cardFillActive() else GhaisNoir.cardFillSoft()
     val cardBorder by animateColorAsState(
-        targetValue = if (isSelected) LiquidEmerald.copy(alpha = 0.6f) else CardBorder
+        targetValue = if (isSelected) GhaisNoir.SpecularTop else GhaisNoir.BorderCard
     )
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(cardBg)
-            .border(
-                width = if (isSelected) 1.5.dp else 1.dp,
-                color = cardBorder,
-                shape = RoundedCornerShape(16.dp)
-            )
-            .clickable(onClick = onClick)
-            .padding(14.dp),
+            .clip(GhaisShapes.row)
+            .background(cardFill)
+            .border(1.dp, cardBorder, GhaisShapes.row)
+            .topSpecular(inset = 22.dp)
+            .noirClickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Icon Box with emerald glow
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(
-                    if (isSelected) LiquidEmerald.copy(alpha = 0.22f) else Color(0xFF141819)
-                )
-                .border(
-                    width = 1.dp,
-                    color = if (isSelected) LiquidEmerald.copy(alpha = 0.4f) else CardBorder,
-                    shape = RoundedCornerShape(12.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = mood.icon,
-                contentDescription = null,
-                tint = if (isSelected) LiquidEmerald else TextSecondary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
+        IconWell(
+            icon = mood.icon,
+            size = 44.dp,
+            iconSize = 22.dp,
+            contentDescription = null,
+            tint = if (isSelected) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary
+        )
 
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
-        // Title and description
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = mood.title,
                 style = GhaisTypography.titleMedium.copy(
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                    color = TextPrimary
+                    color = GhaisNoir.TextPrimary
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -496,7 +464,7 @@ private fun MoodOptionCard(
                 text = mood.subtitle,
                 style = GhaisTypography.bodyMedium.copy(
                     fontSize = 12.sp,
-                    color = TextSecondary
+                    color = GhaisNoir.TextSecondary
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -505,38 +473,29 @@ private fun MoodOptionCard(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Glowing Radio Button
-        GlowingMoodRadioButton(selected = isSelected)
-    }
-}
-
-@Composable
-private fun GlowingMoodRadioButton(
-    selected: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val ringColor by animateColorAsState(
-        targetValue = if (selected) LiquidEmerald else Color(0xFF3C4A42)
-    )
-
-    Box(
-        modifier = modifier
-            .size(22.dp)
-            .clip(CircleShape)
-            .border(
-                width = if (selected) 2.dp else 1.5.dp,
-                color = ringColor,
-                shape = CircleShape
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        if (selected) {
+        // Chrome check when selected, ghost ring otherwise.
+        if (isSelected) {
             Box(
                 modifier = Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(LiquidEmerald)
-            )
+                    .size(24.dp)
+                    .background(GhaisNoir.chromeFill(), CircleShape)
+                    .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Selected",
+                    tint = GhaisNoir.OnChrome,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .border(1.5.dp, GhaisNoir.BorderCard, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {}
         }
     }
 }

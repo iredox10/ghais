@@ -18,18 +18,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -41,8 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,27 +46,20 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.domain.model.RoutineModeType
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.components.noir.ChromePillButton
+import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
-
-private val SheetContainer = Color(0xFF181E20)
-private val SheetBorder = Color(0x204EDEA3)
-private val LiquidEmerald = Color(0xFF4EDEA3)
-private val CardBackground = Color(0xFF1F2527)
-private val CardBorder = Color(0x184EDEA3)
-private val TextPrimary = Color(0xFFFFFFFF)
-private val TextSecondary = Color(0xFF8E989C)
 
 data class RoutineModeScreen(val modeType: RoutineModeType) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-
-        val modeColor = when (modeType) {
-            RoutineModeType.STUDY -> Color(0xFF4EDEA3) // Vivid Liquid Emerald
-            RoutineModeType.WORK -> Color(0xFF10B981)  // Forest Emerald
-            RoutineModeType.SLEEP -> Color(0xFF85F8C4) // Mint Glow Emerald
-        }
 
         val modeTitle = when (modeType) {
             RoutineModeType.STUDY -> "Study Mode"
@@ -84,104 +73,138 @@ data class RoutineModeScreen(val modeType: RoutineModeType) : Screen {
             RoutineModeType.SLEEP -> "Calming slow recitations to ease your mind"
         }
 
+        val modeIcon: ImageVector = when (modeType) {
+            RoutineModeType.STUDY -> Icons.AutoMirrored.Filled.MenuBook
+            RoutineModeType.WORK -> Icons.Filled.Work
+            RoutineModeType.SLEEP -> Icons.Filled.Bedtime
+        }
+
         val curatedSurahs = when (modeType) {
             RoutineModeType.STUDY -> listOf("Surah Al-Kahf", "Surah Taha", "Surah Ar-Rahman")
             RoutineModeType.WORK -> listOf("Surah Yaseen", "Surah Al-Waqi'ah", "Surah Al-Mulk")
             RoutineModeType.SLEEP -> listOf("Surah Al-Mulk", "Surah As-Sajdah", "Surah Yaseen")
         }
 
-        Scaffold(
-            containerColor = GhaisColors.Background,
-            topBar = {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { navigator.pop() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = TextPrimary
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = modeTitle,
-                        style = GhaisTypography.titleMedium.copy(
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                    )
-                }
-            }
-        ) { paddingValues ->
+        NoirScreenRoot {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 32.dp)
             ) {
                 item {
-                    ModeHeader(modeTitle, modeSubtitle, modeColor)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(GhaisNoir.Fill2)
+                                .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                                .noirClickable { navigator.pop() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = GhaisNoir.TextPrimary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = modeTitle,
+                            style = GhaisTypography.titleMedium.copy(
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = GhaisNoir.TextPrimary
+                            )
+                        )
+                    }
                 }
 
                 item {
-                    StartSessionButton(modeColor)
+                    ModeHeader(
+                        title = modeTitle,
+                        subtitle = modeSubtitle,
+                        color = Color.White,
+                        icon = modeIcon
+                    )
                 }
 
                 item {
-                    CuratedSurahsShelf(curatedSurahs, modeColor)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp)
+                    ) {
+                        StartSessionButton(color = Color.White)
+                    }
                 }
 
                 item {
-                    AmbientSoundControls(modeColor)
+                    CuratedSurahsShelf(curatedSurahs, Color.White)
+                }
+
+                item {
+                    AmbientSoundControls(Color.White)
                 }
             }
         }
     }
 }
 
+/**
+ * Noir hero: glass plate + clay icon-well + ghost badge + sheen. Zero hue.
+ * [color] retained for signature compatibility and intentionally ignored.
+ */
 @Composable
-fun ModeHeader(title: String, subtitle: String, color: Color) {
+fun ModeHeader(title: String, subtitle: String, color: Color, icon: ImageVector = Icons.Filled.PlayArrow) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp)
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(color.copy(alpha = 0.22f), Color.Transparent)
-                )
-            ),
-        contentAlignment = Alignment.BottomStart
+            .padding(horizontal = 16.dp)
+            .clip(GhaisShapes.cardLarge)
+            .background(GhaisNoir.cardFill())
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardLarge)
+            .topSpecular(inset = 30.dp)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(LiquidEmerald.copy(alpha = 0.15f))
-                    .border(1.dp, LiquidEmerald.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = "ROUTINE MODE",
-                    style = GhaisTypography.bodyMedium.copy(
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        color = LiquidEmerald
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(GhaisNoir.sheen())
+        )
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconWell(icon = icon, size = 52.dp, iconSize = 24.dp)
+                Spacer(modifier = Modifier.width(12.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "ROUTINE MODE",
+                        style = GhaisTypography.bodyMedium.copy(
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = GhaisNoir.TextTertiary
+                        )
                     )
-                )
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             Text(
                 text = title,
                 style = GhaisTypography.titleMedium.copy(
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = GhaisNoir.TextPrimary
                 )
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -189,144 +212,92 @@ fun ModeHeader(title: String, subtitle: String, color: Color) {
                 text = subtitle,
                 style = GhaisTypography.bodyMedium.copy(
                     fontSize = 14.sp,
-                    color = TextSecondary
+                    color = GhaisNoir.TextSecondary
                 )
             )
         }
     }
 }
 
+/**
+ * Chrome primary CTA. [color] retained for compatibility, ignored (zero hue).
+ */
 @Composable
 fun StartSessionButton(color: Color) {
-    Button(
+    ChromePillButton(
+        text = "Start Routine Session",
         onClick = { /* Start Session */ },
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 16.dp)
-            .height(54.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = LiquidEmerald,
-            contentColor = Color(0xFF003824)
-        ),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.PlayArrow,
-            contentDescription = "Start",
-            tint = Color(0xFF003824)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = "Start Routine Session",
-            style = GhaisTypography.titleMedium.copy(
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF003824)
-            )
-        )
-    }
+        leadingIcon = Icons.Default.PlayArrow,
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
+/**
+ * Bento shelf: identical glass plates with clay wells (home routine pattern).
+ * [color] retained for compatibility, ignored.
+ */
 @Composable
 fun CuratedSurahsShelf(surahs: List<String>, color: Color) {
     Column(modifier = Modifier.padding(vertical = 12.dp)) {
-        Row(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(LiquidEmerald)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "CURATED FOR YOU",
-                style = GhaisTypography.bodyMedium.copy(
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
-                    color = TextSecondary
-                )
-            )
-        }
+        NoirSectionHeader(
+            label = "Curated for you",
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
 
         LazyRow(
-            contentPadding = PaddingValues(horizontal = 24.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(surahs) { surah ->
-                Card(
+                Box(
                     modifier = Modifier
                         .width(160.dp)
-                        .height(96.dp)
-                        .border(1.dp, CardBorder, RoundedCornerShape(16.dp)),
-                    colors = CardDefaults.cardColors(containerColor = CardBackground),
-                    shape = RoundedCornerShape(16.dp)
+                        .height(132.dp)
+                        .clip(GhaisShapes.cardNoir)
+                        .background(GhaisNoir.cardFillSoft())
+                        .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardNoir)
+                        .topSpecular(inset = 24.dp)
+                        .padding(14.dp)
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize().padding(14.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Column {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(LiquidEmerald.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = null,
-                                    tint = LiquidEmerald,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = surah,
-                                style = GhaisTypography.titleMedium.copy(
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = TextPrimary
-                                )
-                            )
-                        }
-                    }
+                    IconWell(
+                        icon = Icons.Default.PlayArrow,
+                        size = 40.dp,
+                        iconSize = 20.dp,
+                        contentDescription = null,
+                        modifier = Modifier.align(Alignment.TopStart)
+                    )
+                    Text(
+                        text = surah,
+                        style = GhaisTypography.titleMedium.copy(
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = GhaisNoir.TextPrimary
+                        ),
+                        modifier = Modifier.align(Alignment.BottomStart)
+                    )
                 }
             }
         }
     }
 }
 
+/**
+ * Ambient panel: noir card + engraved chrome sliders. [color] ignored.
+ */
 @Composable
 fun AmbientSoundControls(color: Color) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 8.dp)
-            .border(1.dp, SheetBorder, RoundedCornerShape(20.dp)),
-        colors = CardDefaults.cardColors(containerColor = SheetContainer),
-        shape = RoundedCornerShape(20.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(GhaisShapes.cardNoir)
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardNoir)
+            .topSpecular(inset = 26.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(LiquidEmerald.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Ambient Sounds",
-                        tint = LiquidEmerald,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                IconWell(icon = Icons.Default.Settings, size = 40.dp, iconSize = 20.dp)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
@@ -334,27 +305,31 @@ fun AmbientSoundControls(color: Color) {
                         style = GhaisTypography.titleMedium.copy(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = GhaisNoir.TextPrimary
                         )
                     )
                     Text(
                         text = "Blend calming background nature sounds",
                         style = GhaisTypography.bodyMedium.copy(
                             fontSize = 12.sp,
-                            color = TextSecondary
+                            color = GhaisNoir.TextSecondary
                         )
                     )
                 }
             }
             Spacer(modifier = Modifier.height(20.dp))
 
-            AmbientSlider("Rain Volume", LiquidEmerald)
+            AmbientSlider("Rain Volume", Color.White)
             Spacer(modifier = Modifier.height(12.dp))
-            AmbientSlider("Wind Volume", LiquidEmerald)
+            AmbientSlider("Wind Volume", Color.White)
         }
     }
 }
 
+/**
+ * Monochrome slider: chrome thumb + white active track on engraved rail.
+ * [color] retained for compatibility, ignored.
+ */
 @Composable
 fun AmbientSlider(label: String, color: Color) {
     var sliderPosition by remember { mutableStateOf(0.5f) }
@@ -368,7 +343,7 @@ fun AmbientSlider(label: String, color: Color) {
                 style = GhaisTypography.bodyMedium.copy(
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
-                    color = TextSecondary
+                    color = GhaisNoir.TextSecondary
                 )
             )
             Text(
@@ -376,7 +351,7 @@ fun AmbientSlider(label: String, color: Color) {
                 style = GhaisTypography.bodyMedium.copy(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = color
+                    color = GhaisNoir.TextPrimary
                 )
             )
         }
@@ -384,9 +359,9 @@ fun AmbientSlider(label: String, color: Color) {
             value = sliderPosition,
             onValueChange = { sliderPosition = it },
             colors = SliderDefaults.colors(
-                thumbColor = color,
-                activeTrackColor = color,
-                inactiveTrackColor = Color(0xFF141819)
+                thumbColor = Color.White,
+                activeTrackColor = Color.White,
+                inactiveTrackColor = GhaisNoir.Fill4
             )
         )
     }

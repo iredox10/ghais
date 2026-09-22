@@ -3,7 +3,6 @@ package com.ghais.ui.screens.onboarding
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,14 +32,9 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Work
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.ui.window.Dialog
@@ -72,16 +66,20 @@ import com.ghais.data.repository.RecitationSchedule
 import com.ghais.data.repository.SchedulesStore
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.domain.model.Reciter
+import com.ghais.ui.components.noir.ChromePillButton
+import com.ghais.ui.components.noir.GhostPillButton
+import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirCard
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.NoirSwitch
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
 import ghais.shared.generated.resources.Res
 import ghais.shared.generated.resources.ghais_mark
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
-
-private val PureBlack = Color(0xFF000000)
-private val LinkBlue = Color(0xFF4C8DFF)
-private val MutedGrey = Color(0xFF9A9AA0)
-private val GlassFill = Color.White.copy(alpha = 0.05f)
-private val GlassBorder = Color.White.copy(alpha = 0.08f)
+import com.ghais.ui.theme.GhaisTypography
 
 private const val PageCount = 5
 private const val LastPage = PageCount - 1
@@ -111,11 +109,7 @@ object OnboardingScreen : Screen {
             scope.launch { pagerState.animateScrollToPage(page.coerceIn(0, LastPage)) }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(PureBlack)
-        ) {
+        NoirScreenRoot {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -130,13 +124,15 @@ object OnboardingScreen : Screen {
                             modifier = Modifier
                                 .size(42.dp)
                                 .clip(CircleShape)
-                                .clickable { goTo(currentPage - 1) },
+                                .background(GhaisNoir.Fill2)
+                                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                                .noirClickable { goTo(currentPage - 1) },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
-                                tint = Color.White,
+                                tint = GhaisNoir.TextPrimary,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -145,20 +141,13 @@ object OnboardingScreen : Screen {
                     }
                     Text(
                         text = "Step ${currentPage + 1} of $PageCount",
-                        color = MutedGrey,
+                        color = GhaisNoir.TextTertiary,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.weight(1f)
                     )
-                    TextButton(onClick = { OnboardingStore.complete() }) {
-                        Text(
-                            text = "Skip",
-                            color = MutedGrey,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                    GhostPillButton(text = "Skip", onClick = { OnboardingStore.complete() })
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 DotsRow(current = currentPage)
@@ -243,9 +232,14 @@ private fun DotsRow(current: Int) {
                     .width(if (index == current) 24.dp else 8.dp)
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(
-                        if (index == current) LinkBlue
-                        else Color.White.copy(alpha = 0.18f)
+                    .then(
+                        if (index == current) Modifier.background(
+                            GhaisNoir.chromeFill(),
+                            RoundedCornerShape(4.dp)
+                        ) else Modifier.background(
+                            GhaisNoir.Fill4,
+                            RoundedCornerShape(4.dp)
+                        )
                     )
             )
         }
@@ -254,23 +248,11 @@ private fun DotsRow(current: Int) {
 
 @Composable
 private fun PrimaryButton(label: String, onClick: () -> Unit) {
-    Button(
+    ChromePillButton(
+        text = label,
         onClick = onClick,
-        shape = RoundedCornerShape(26.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = LinkBlue,
-            contentColor = Color.White
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(54.dp)
-    ) {
-        Text(
-            text = label,
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp
-        )
-    }
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable
@@ -296,8 +278,8 @@ private fun WelcomeStep(onNext: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(96.dp)
-                .background(GlassFill, RoundedCornerShape(28.dp))
-                .border(1.dp, GlassBorder, RoundedCornerShape(28.dp)),
+                .background(GhaisNoir.wellFill(), RoundedCornerShape(28.dp))
+                .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(28.dp)),
             contentAlignment = Alignment.Center
         ) {
             Image(
@@ -310,17 +292,13 @@ private fun WelcomeStep(onNext: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
         Text(
             text = "Listen to the Quran every day",
-            color = Color.White,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.ExtraBold,
-            textAlign = TextAlign.Center,
-            lineHeight = 36.sp
+            style = GhaisTypography.displayEditorialSmall,
+            textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = "Daily recitation, reminders and your favorite qari — in one calm place.",
-            color = MutedGrey,
-            fontSize = 15.sp,
+            style = GhaisTypography.editorialBody,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.weight(1f))
@@ -349,14 +327,12 @@ private fun GoalStep(selectedGoal: String?, onPick: (String) -> Unit) {
     StepScroll {
         Text(
             text = "What brings you here?",
-            color = Color.White,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.ExtraBold
+            style = GhaisTypography.displayEditorialSmall
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = "Pick one — we'll tune your setup around it.",
-            color = MutedGrey,
+            color = GhaisNoir.TextTertiary,
             fontSize = 14.sp
         )
         Spacer(modifier = Modifier.height(18.dp))
@@ -377,41 +353,37 @@ private fun GoalCard(option: GoalOption, selected: Boolean, onClick: () -> Unit)
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(if (selected) LinkBlue.copy(alpha = 0.14f) else GlassFill)
-            .border(
-                1.dp,
-                if (selected) LinkBlue else GlassBorder,
+            .background(
+                if (selected) GhaisNoir.cardFillActive() else GhaisNoir.cardFillSoft(),
                 RoundedCornerShape(22.dp)
             )
-            .clickable(onClick = onClick)
+            .border(
+                1.dp,
+                if (selected) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                RoundedCornerShape(22.dp)
+            )
+            .topSpecular(inset = 22.dp)
+            .noirClickable(onClick = onClick)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(46.dp)
-                .clip(RoundedCornerShape(15.dp))
-                .background(Color.White.copy(alpha = 0.08f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = option.icon,
-                contentDescription = null,
-                tint = if (selected) LinkBlue else Color.White,
-                modifier = Modifier.size(24.dp)
-            )
-        }
+        IconWell(
+            icon = option.icon,
+            size = 46.dp,
+            iconSize = 24.dp,
+            tint = if (selected) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary
+        )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = option.label,
-                color = Color.White,
+                color = GhaisNoir.TextPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = option.desc,
-                color = MutedGrey,
+                color = GhaisNoir.TextSecondary,
                 fontSize = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -421,7 +393,7 @@ private fun GoalCard(option: GoalOption, selected: Boolean, onClick: () -> Unit)
             Icon(
                 imageVector = Icons.Filled.Check,
                 contentDescription = null,
-                tint = LinkBlue,
+                tint = GhaisNoir.TextPrimary,
                 modifier = Modifier.size(22.dp)
             )
         }
@@ -437,14 +409,12 @@ private fun ReciterStep(
     StepScroll {
         Text(
             text = "Choose your Qari",
-            color = Color.White,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.ExtraBold
+            style = GhaisTypography.displayEditorialSmall
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = "Tap a voice to follow — you can change it anytime.",
-            color = MutedGrey,
+            color = GhaisNoir.TextTertiary,
             fontSize = 14.sp
         )
         Spacer(modifier = Modifier.height(18.dp))
@@ -462,17 +432,17 @@ private fun ReciterStep(
                     modifier = Modifier
                         .width(84.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .clickable { onPick(reciter.slug) }
+                        .noirClickable { onPick(reciter.slug) }
                         .padding(vertical = 4.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .size(72.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.08f))
+                            .background(GhaisNoir.Fill2)
                             .border(
                                 if (selected) 3.dp else 1.dp,
-                                if (selected) LinkBlue else GlassBorder,
+                                if (selected) Color.White else GhaisNoir.BorderGhost,
                                 CircleShape
                             ),
                         contentAlignment = Alignment.Center
@@ -489,7 +459,7 @@ private fun ReciterStep(
                         } else {
                             Text(
                                 text = reciter.nameEn.take(1).uppercase(),
-                                color = Color.White,
+                                color = GhaisNoir.TextPrimary,
                                 fontSize = 26.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
@@ -498,7 +468,7 @@ private fun ReciterStep(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = reciter.nameEn,
-                        color = if (selected) Color.White else MutedGrey,
+                        color = if (selected) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
                         fontSize = 12.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                         textAlign = TextAlign.Center,
@@ -512,33 +482,27 @@ private fun ReciterStep(
         val selectedSlug = followed.firstOrNull()
         if (selectedSlug != null) {
             val name = QuranDataRepository.getReciterBySlug(selectedSlug).nameEn
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(GlassFill)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = null,
-                    tint = LinkBlue,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "Selected: $name",
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+            NoirCard(modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        tint = GhaisNoir.TextPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "Selected: $name",
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         } else {
             Text(
                 text = "No qari selected yet",
-                color = MutedGrey,
+                color = GhaisNoir.TextTertiary,
                 fontSize = 13.sp
             )
         }
@@ -561,30 +525,23 @@ private fun GoalReminderStep(
     StepScroll {
         Text(
             text = "Set your daily goal",
-            color = Color.White,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.ExtraBold
+            style = GhaisTypography.displayEditorialSmall
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = "How many minutes a day do you want to listen?",
-            color = MutedGrey,
+            color = GhaisNoir.TextTertiary,
             fontSize = 14.sp
         )
         Spacer(modifier = Modifier.height(18.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(GlassFill)
-                .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
-                .padding(18.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        NoirCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
                     text = "$minutes min",
-                    color = Color.White,
+                    color = GhaisNoir.TextPrimary,
                     fontSize = 40.sp,
                     fontWeight = FontWeight.ExtraBold
                 )
@@ -603,72 +560,59 @@ private fun GoalReminderStep(
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(GlassFill)
-                .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
-                .padding(horizontal = 18.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Daily reminder",
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Get a nudge at your chosen time",
-                    color = MutedGrey,
-                    fontSize = 13.sp
+        NoirCard(modifier = Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Daily reminder",
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Get a nudge at your chosen time",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 13.sp
+                    )
+                }
+                NoirSwitch(
+                    checked = reminderOn,
+                    onCheckedChange = onReminderToggle
                 )
             }
-            Switch(
-                checked = reminderOn,
-                onCheckedChange = onReminderToggle,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = LinkBlue,
-                    uncheckedThumbColor = MutedGrey,
-                    uncheckedTrackColor = Color.White.copy(alpha = 0.12f)
-                )
-            )
         }
         if (reminderOn) {
             Spacer(modifier = Modifier.height(12.dp))
             var showClock by remember { mutableStateOf(false) }
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(GlassFill)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
-                    .clickable { showClock = true }
-                    .padding(18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            NoirCard(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { showClock = true }
             ) {
-                Text(
-                    text = "Reminder time",
-                    color = MutedGrey,
-                    fontSize = 13.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}",
-                    color = Color.White,
-                    fontSize = 44.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = (-0.5).sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Tap to set time",
-                    color = LinkBlue,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Reminder time",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}",
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 44.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-0.5).sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Tap to set time",
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             if (showClock) {
@@ -678,13 +622,14 @@ private fun GoalReminderStep(
                     is24Hour = true
                 )
                 Dialog(onDismissRequest = { showClock = false }) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(28.dp))
-                                    .background(Color(0xFF1C1C1E))
-                                    .padding(20.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(28.dp))
+                            .background(GhaisNoir.CanvasTop)
+                            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(28.dp))
+                            .padding(20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             TimePicker(state = clockState)
                             Spacer(modifier = Modifier.height(12.dp))
@@ -692,32 +637,20 @@ private fun GoalReminderStep(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(50.dp))
-                                        .background(Color.White.copy(alpha = 0.08f))
-                                        .clickable { showClock = false }
-                                        .padding(vertical = 12.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("Cancel", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(50.dp))
-                                        .background(LinkBlue)
-                                        .clickable {
-                                            onHourChange(clockState.hour)
-                                            onMinuteChange(clockState.minute)
-                                            showClock = false
-                                        }
-                                        .padding(vertical = 12.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("Set time", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                                }
+                                GhostPillButton(
+                                    text = "Cancel",
+                                    onClick = { showClock = false },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                ChromePillButton(
+                                    text = "Set time",
+                                    onClick = {
+                                        onHourChange(clockState.hour)
+                                        onMinuteChange(clockState.minute)
+                                        showClock = false
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
                         }
                     }
@@ -739,15 +672,15 @@ private fun StepperButton(
         modifier = Modifier
             .size(48.dp)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.08f))
-            .border(1.dp, GlassBorder, CircleShape)
-            .clickable(onClick = onClick),
+            .background(GhaisNoir.Fill2)
+            .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+            .noirClickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = icon,
             contentDescription = desc,
-            tint = Color.White,
+            tint = GhaisNoir.TextPrimary,
             modifier = Modifier.size(22.dp)
         )
     }
@@ -764,16 +697,16 @@ private fun TimeStepper(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(24.dp))
-            .background(GlassFill)
-            .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
+            .background(GhaisNoir.cardFillSoft(), RoundedCornerShape(24.dp))
+            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(24.dp))
             .padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = label, color = MutedGrey, fontSize = 12.sp)
+        Text(text = label, color = GhaisNoir.TextTertiary, fontSize = 12.sp)
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = value,
-            color = Color.White,
+            color = GhaisNoir.TextPrimary,
             fontSize = 28.sp,
             fontWeight = FontWeight.ExtraBold
         )
@@ -809,30 +742,25 @@ private fun PreviewStep(
     StepScroll {
         Text(
             text = "Your setup",
-            color = Color.White,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.ExtraBold
+            style = GhaisTypography.displayEditorialSmall
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = "Here's what we'll start you with.",
-            color = MutedGrey,
+            color = GhaisNoir.TextTertiary,
             fontSize = 14.sp
         )
         Spacer(modifier = Modifier.height(18.dp))
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(GlassFill)
-                .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            PreviewRow(label = "Goal", value = goalLabel)
-            PreviewRow(label = "Qari", value = reciterName)
-            PreviewRow(label = "Daily goal", value = "$minutes min")
-            PreviewRow(label = "Reminder", value = reminderText)
+        NoirCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                PreviewRow(label = "Goal", value = goalLabel)
+                PreviewRow(label = "Qari", value = reciterName)
+                PreviewRow(label = "Daily goal", value = "$minutes min")
+                PreviewRow(label = "Reminder", value = reminderText)
+            }
         }
         Spacer(modifier = Modifier.height(20.dp))
         PrimaryButton(label = "Start listening", onClick = onDone)
@@ -847,13 +775,13 @@ private fun PreviewRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            color = MutedGrey,
+            color = GhaisNoir.TextTertiary,
             fontSize = 14.sp,
             modifier = Modifier.width(96.dp)
         )
         Text(
             text = value,
-            color = Color.White,
+            color = GhaisNoir.TextPrimary,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,

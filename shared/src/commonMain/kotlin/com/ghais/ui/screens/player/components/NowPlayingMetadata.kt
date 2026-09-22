@@ -4,7 +4,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Check
@@ -31,16 +29,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
 /**
- * Now Playing Metadata: Track title, English subtitle, reciter info with verified badge,
- * Apple glassmorphic heart action button, and metadata pills (Juz, Ayah count, Tafsir).
+ * Now Playing Metadata — Noir Glass (monochrome Carbon Glass).
+ *
+ * Text ladder: title [TextPrimary] / subtitle [TextTertiary] / reciter [TextSecondary].
+ * Verified badge + ayah-count pill are chrome; juz pill + heart + tafsir are ghost.
+ * Zero hue: grayscale whites only, no color tints anywhere.
  */
 @Composable
 fun NowPlayingMetadata(
@@ -67,7 +69,7 @@ fun NowPlayingMetadata(
             .fillMaxWidth()
             .padding(horizontal = 24.dp)
     ) {
-        // Track Title, Reciter & Favorite Glass Button
+        // Track Title, Reciter & Favorite Ghost Well Button
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -79,12 +81,12 @@ fun NowPlayingMetadata(
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp,
-                    color = Color.White
+                    color = GhaisNoir.TextPrimary
                 )
                 Text(
                     text = subtitle,
                     fontSize = 13.sp,
-                    color = Color.White.copy(alpha = 0.65f),
+                    color = GhaisNoir.TextTertiary,
                     modifier = Modifier.padding(top = 2.dp)
                 )
                 Row(
@@ -95,35 +97,36 @@ fun NowPlayingMetadata(
                         text = reciterName,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color.White.copy(alpha = 0.9f)
+                        color = GhaisNoir.TextSecondary
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    // Verified Reciter Badge
+                    // Verified Reciter Badge — chrome disc, near-black check
                     Box(
                         modifier = Modifier
                             .size(16.dp)
                             .clip(CircleShape)
-                            .background(GhaisColors.Primary),
+                            .background(GhaisNoir.chromeFill())
+                            .border(1.dp, GhaisNoir.SpecularTop.copy(alpha = 0.5f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Verified Reciter",
-                            tint = Color(0xFF003824),
+                            tint = GhaisNoir.OnChrome,
                             modifier = Modifier.size(10.dp)
                         )
                     }
                 }
             }
 
-            // Glass Heart Action Button (matching Stitch Apple glassmorphism glass-btn)
+            // Ghost heart well (clay emboss, monochrome heart)
             Box(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(Color(0x14FFFFFF))
-                    .border(1.dp, Color(0x24FFFFFF), CircleShape)
-                    .clickable {
+                    .background(GhaisNoir.wellFill())
+                    .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                    .noirClickable {
                         isFavInternal = !isFavInternal
                         onFavoriteClick?.invoke()
                     },
@@ -132,7 +135,7 @@ fun NowPlayingMetadata(
                 Icon(
                     imageVector = if (isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = "Favorite Surah",
-                    tint = if (isFav) GhaisColors.Secondary else Color.White.copy(alpha = 0.5f),
+                    tint = if (isFav) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
                     modifier = Modifier
                         .size(24.dp)
                         .graphicsLayer {
@@ -143,7 +146,7 @@ fun NowPlayingMetadata(
             }
         }
 
-        // Ayah Chips & Tafsir Button
+        // Ayah Pills & Tafsir Ghost Link
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -152,58 +155,58 @@ fun NowPlayingMetadata(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Juz Pill (Frosted glass)
+                // Juz Pill (ghost)
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(Color(0x14FFFFFF))
-                        .border(1.dp, Color(0x1FFFFFFF), RoundedCornerShape(50))
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = juzText,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color.White.copy(alpha = 0.8f)
+                        color = GhaisNoir.TextSecondary
                     )
                 }
 
-                // Ayah Count Pill (Glowing emerald glass)
+                // Ayah Count Pill (chrome — the "active" pill)
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(GhaisColors.Primary.copy(alpha = 0.15f))
-                        .border(1.dp, GhaisColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(50))
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.chromeFill())
+                        .border(1.dp, GhaisNoir.SpecularTop.copy(alpha = 0.5f), GhaisShapes.pill)
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = ayahCountText,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = GhaisColors.Primary
+                        color = GhaisNoir.OnChrome
                     )
                 }
             }
 
-            // Tafsir Ibn Kathir Link
+            // Tafsir Ibn Kathir ghost link
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable { onTafsirClick() }
+                    .clip(GhaisShapes.pill)
+                    .noirClickable { onTafsirClick() }
                     .padding(horizontal = 6.dp, vertical = 4.dp)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.MenuBook,
                     contentDescription = "Tafsir",
-                    tint = Color.White.copy(alpha = 0.65f),
+                    tint = GhaisNoir.TextTertiary,
                     modifier = Modifier.size(15.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "Tafsir Ibn Kathir",
                     fontSize = 11.sp,
-                    color = Color.White.copy(alpha = 0.75f)
+                    color = GhaisNoir.TextSecondary
                 )
             }
         }
