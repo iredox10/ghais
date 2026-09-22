@@ -127,13 +127,17 @@ object SyncTriggers {
         // (reset on new change via debounce).
         scope.launch {
             combine(
-                AuthRepository.session,
-                FavoritesStore.favoriteTracks,
-                FollowStore.followedSlugs,
-                CustomRoutinesStore.routines,
-                SchedulesStore.schedules,
-                UserUsageRepository.stats,
-            ) { _, _, _, _, _, _ -> }
+                combine(
+                    AuthRepository.session,
+                    FavoritesStore.favoriteTracks,
+                    FollowStore.followedSlugs,
+                ) { _, _, _ -> },
+                combine(
+                    CustomRoutinesStore.routines,
+                    SchedulesStore.schedules,
+                    UserUsageRepository.stats,
+                ) { _, _, _ -> },
+            ) { _, _ -> }
                 .debounce(8000)
                 .collect {
                     if (AuthRepository.session.value != null && NetworkMonitor.isOnline.value) {
