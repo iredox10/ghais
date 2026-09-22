@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -45,6 +47,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -54,11 +58,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ghais.data.seed.GhaisAssets
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 import org.jetbrains.compose.resources.painterResource
 import ghais.shared.generated.resources.Res
 import ghais.shared.generated.resources.ghais_mark
 import kotlin.math.roundToInt
+
+/**
+ * Phase 4 — Noir Library header.
+ *
+ * Strict Noir Glass monochrome: alpha-white glass, top-only specular
+ * hairlines, chrome pills and grayscale imagery. Signatures, filter defaults
+ * and callback contracts are unchanged; state reads through fill elevation,
+ * weight and opacity — zero hue anywhere.
+ */
+
+/** True-grayscale filter — avatars stay recognisable, strictly monochrome. */
+private val NoirLibraryGrayscale: ColorFilter by lazy {
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+}
 
 /**
  * Top App Header matching Stitch design specs:
@@ -82,25 +103,33 @@ fun LibraryAppHeader(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.weight(1f)
         ) {
-            Image(
-                painter = painterResource(Res.drawable.ghais_mark),
-                contentDescription = "Ghais App Logo",
-                contentScale = ContentScale.Fit,
+            Box(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(RoundedCornerShape(8.dp))
-            )
+                    .background(GhaisNoir.wellFill())
+                    .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(Res.drawable.ghais_mark),
+                    contentDescription = "Ghais App Logo",
+                    contentScale = ContentScale.Fit,
+                    colorFilter = NoirLibraryGrayscale,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
             Column {
                 Text(
                     text = "ASSALAMU ALAIKUM",
-                    color = GhaisColors.Primary,
+                    color = GhaisNoir.TextTertiary,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
                 Text(
                     text = "Library",
-                    color = GhaisColors.TextPrimary,
+                    color = GhaisNoir.TextPrimary,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -116,12 +145,13 @@ fun LibraryAppHeader(
                 modifier = Modifier
                     .size(38.dp)
                     .clip(CircleShape)
-                    .background(GhaisColors.SurfaceContainer)
+                    .background(GhaisNoir.wellFill())
+                    .border(1.dp, GhaisNoir.BorderCard, CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search Quran",
-                    tint = GhaisColors.TextSecondary,
+                    tint = GhaisNoir.TextSecondary,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -129,10 +159,12 @@ fun LibraryAppHeader(
                 model = GhaisAssets.ProfileAvatarUrl,
                 contentDescription = "Profile",
                 contentScale = ContentScale.Crop,
+                colorFilter = NoirLibraryGrayscale,
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(GhaisColors.SurfaceHigh)
+                    .background(GhaisNoir.wellFill())
+                    .border(1.dp, GhaisNoir.BorderCard, CircleShape)
                     .clickable { onProfileClick() }
             )
         }
@@ -170,7 +202,7 @@ fun LibraryHeaderSection(
 }
 
 /**
- * "Your Library" title row with live pulsing green dot and quick action buttons.
+ * "Your Library" title row with live pulsing monochrome dot and quick action buttons.
  */
 @Composable
 fun LibraryTopBar(
@@ -191,13 +223,13 @@ fun LibraryTopBar(
         ) {
             Text(
                 text = "Your Library",
-                color = GhaisColors.TextPrimary,
+                color = GhaisNoir.TextPrimary,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = (-0.5).sp
             )
 
-            // Live pulsing green dot with radial glow
+            // Live pulsing monochrome dot with soft glow (zero hue).
             val infiniteTransition = rememberInfiniteTransition(label = "LiveDotTransition")
             val alpha by infiniteTransition.animateFloat(
                 initialValue = 0.4f,
@@ -227,14 +259,14 @@ fun LibraryTopBar(
                     modifier = Modifier
                         .size(12.dp)
                         .graphicsLayer(scaleX = scale, scaleY = scale, alpha = alpha * 0.4f)
-                        .background(GhaisColors.Primary, CircleShape)
+                        .background(GhaisNoir.TextPrimary, CircleShape)
                 )
                 // Center dot
                 Box(
                     modifier = Modifier
                         .size(8.dp)
                         .graphicsLayer(alpha = alpha)
-                        .background(GhaisColors.Primary, CircleShape)
+                        .background(GhaisNoir.TextPrimary, CircleShape)
                 )
             }
         }
@@ -248,12 +280,13 @@ fun LibraryTopBar(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(GhaisColors.SurfaceContainer)
+                    .background(GhaisNoir.wellFill())
+                    .border(1.dp, GhaisNoir.BorderCard, CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search Library",
-                    tint = GhaisColors.TextSecondary,
+                    tint = GhaisNoir.TextSecondary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -262,12 +295,13 @@ fun LibraryTopBar(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(GhaisColors.SurfaceContainer)
+                    .background(GhaisNoir.wellFill())
+                    .border(1.dp, GhaisNoir.BorderCard, CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Add Playlist or Bookmark",
-                    tint = GhaisColors.Primary,
+                    tint = GhaisNoir.TextPrimary,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -276,7 +310,9 @@ fun LibraryTopBar(
 }
 
 /**
- * Filter chips row with animated selection, icons, and Stitch colors.
+ * Filter chips row — selected chip is an extruded chrome pill (near-black
+ * label), unselected chips are Fill2 washes with ghost rims. State reads
+ * through elevation + label opacity, never hue.
  */
 @Composable
 fun LibraryFilterChips(
@@ -293,33 +329,67 @@ fun LibraryFilterChips(
         items(filters, key = { it }) { filter ->
             val isSelected = filter == selectedFilter
             val isDownloaded = filter == "Downloaded"
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        if (isSelected) GhaisColors.Primary else GhaisColors.SurfaceContainer
-                    )
-                    .clickable { onSelectFilter(filter) }
-                    .padding(horizontal = 14.dp, vertical = 7.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .heightIn(min = 36.dp)
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.chromeFill())
+                        .border(1.dp, Color.White.copy(alpha = 0.35f), GhaisShapes.pill)
+                        .noirClickable { onSelectFilter(filter) }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    if (isDownloaded) {
-                        Icon(
-                            imageVector = Icons.Default.DownloadDone,
-                            contentDescription = null,
-                            tint = if (isSelected) GhaisColors.OnPrimary else GhaisColors.Primary,
-                            modifier = Modifier.size(14.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (isDownloaded) {
+                            Icon(
+                                imageVector = Icons.Default.DownloadDone,
+                                contentDescription = null,
+                                tint = GhaisNoir.OnChrome,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                        Text(
+                            text = filter,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = GhaisNoir.OnChrome
                         )
                     }
-                    Text(
-                        text = filter,
-                        fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) GhaisColors.OnPrimary else GhaisColors.TextSecondary
-                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .heightIn(min = 36.dp)
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                        .noirClickable { onSelectFilter(filter) }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (isDownloaded) {
+                            Icon(
+                                imageVector = Icons.Default.DownloadDone,
+                                contentDescription = null,
+                                tint = GhaisNoir.TextTertiary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                        Text(
+                            text = filter,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = GhaisNoir.TextSecondary
+                        )
+                    }
                 }
             }
         }
@@ -327,8 +397,9 @@ fun LibraryFilterChips(
 }
 
 /**
- * Ramadan Khatm progress card with 42% circular Canvas arc,
- * top-right emerald glow, streak/trend stat, and resume action.
+ * Ramadan Khatm progress card — soft glass fill + 1px card border + top-only
+ * specular, monochrome progress ring, chrome resume pill. Depth comes from
+ * fill elevation and a white top-right glow, never hue.
  */
 @Composable
 fun RamadanKhatmCard(
@@ -340,17 +411,20 @@ fun RamadanKhatmCard(
     daysLeft: Int = 24,
     progress: Float = 0.42f
 ) {
+    val cardShape = RoundedCornerShape(20.dp)
     val cardModifier = modifier
         .fillMaxWidth()
         .padding(horizontal = 16.dp, vertical = 8.dp)
-        .clip(RoundedCornerShape(20.dp))
-        .background(GhaisColors.SurfaceContainer)
+        .clip(cardShape)
+        .background(GhaisNoir.cardFill())
+        .border(1.dp, GhaisNoir.BorderCard, cardShape)
+        .topSpecular(inset = 22.dp)
         .drawBehind {
-            // Subtle top-right emerald radial glow matching Stitch design
+            // Subtle top-right monochrome glow (ambient light, zero hue).
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        GhaisColors.Primary.copy(alpha = 0.12f),
+                        GhaisNoir.AmbientGlow,
                         Color.Transparent
                     ),
                     center = Offset(size.width, 0f),
@@ -359,7 +433,7 @@ fun RamadanKhatmCard(
             )
         }
         .then(
-            if (onClick != null) Modifier.clickable { onClick() } else Modifier
+            if (onClick != null) Modifier.noirClickable { onClick() } else Modifier
         )
         .padding(16.dp)
 
@@ -377,23 +451,24 @@ fun RamadanKhatmCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .background(
-                                GhaisColors.Secondary.copy(alpha = 0.18f),
-                                RoundedCornerShape(8.dp)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Ramadan Goal",
+                            text = "RAMADAN GOAL",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = GhaisColors.Secondary
+                            letterSpacing = 0.9.sp,
+                            color = GhaisNoir.TextSecondary
                         )
                     }
                     Text(
                         text = "$daysLeft days left",
                         fontSize = 11.sp,
-                        color = GhaisColors.TextSecondary
+                        color = GhaisNoir.TextTertiary
                     )
                 }
 
@@ -403,12 +478,12 @@ fun RamadanKhatmCard(
                     text = "Ramadan Khatm Tracker",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = GhaisColors.TextPrimary
+                    color = GhaisNoir.TextPrimary
                 )
                 Text(
                     text = "Juz $currentJuz of $totalJuz • On track today",
                     fontSize = 12.sp,
-                    color = GhaisColors.TextSecondary,
+                    color = GhaisNoir.TextSecondary,
                     modifier = Modifier.padding(top = 2.dp)
                 )
 
@@ -417,16 +492,18 @@ fun RamadanKhatmCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(GhaisColors.Primary)
-                            .clickable { onResumeClick() }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.chromeFill())
+                            .border(1.dp, Color.White.copy(alpha = 0.35f), GhaisShapes.pill)
+                            .noirClickable { onResumeClick() }
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
                                 contentDescription = "Resume",
-                                tint = GhaisColors.OnPrimary,
+                                tint = GhaisNoir.OnChrome,
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -434,7 +511,7 @@ fun RamadanKhatmCard(
                                 text = "Resume Juz $currentJuz",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = GhaisColors.OnPrimary
+                                color = GhaisNoir.OnChrome
                             )
                         }
                     }
@@ -445,7 +522,7 @@ fun RamadanKhatmCard(
                         Icon(
                             imageVector = Icons.Default.TrendingUp,
                             contentDescription = "Trending",
-                            tint = GhaisColors.Primary,
+                            tint = GhaisNoir.TextSecondary,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(3.dp))
@@ -453,7 +530,7 @@ fun RamadanKhatmCard(
                             text = "+18m daily avg",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = GhaisColors.Primary
+                            color = GhaisNoir.TextSecondary
                         )
                     }
                 }
@@ -461,7 +538,7 @@ fun RamadanKhatmCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Right: Circular Progress Arc (42% Khatm)
+            // Right: Circular Progress Ring (monochrome arc on engraved track).
             Box(
                 modifier = Modifier.size(76.dp),
                 contentAlignment = Alignment.Center
@@ -474,15 +551,15 @@ fun RamadanKhatmCard(
                     val arcSize = Size(diameter, diameter)
                     val topLeft = Offset(arcPaddingX, arcPaddingY)
 
-                    // Track circle
+                    // Track circle (engraved).
                     drawCircle(
-                        color = GhaisColors.SurfaceHighest,
+                        color = Color.White.copy(alpha = 0.08f),
                         radius = diameter / 2f,
                         style = Stroke(width = strokeWidth)
                     )
-                    // Active arc: 42% = 151.2 degrees
+                    // Active arc: chrome-white, round cap.
                     drawArc(
-                        color = GhaisColors.Primary,
+                        color = Color.White.copy(alpha = 0.92f),
                         startAngle = -90f,
                         sweepAngle = 360f * progress,
                         useCenter = false,
@@ -496,14 +573,14 @@ fun RamadanKhatmCard(
                         text = "${(progress * 100).roundToInt()}%",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = GhaisColors.TextPrimary
+                        color = GhaisNoir.TextPrimary
                     )
                     Text(
                         text = "KHATM",
                         fontSize = 8.5.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp,
-                        color = GhaisColors.TextSecondary
+                        color = GhaisNoir.TextTertiary
                     )
                 }
             }
