@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -49,6 +51,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ghais.data.repository.AyahVerse
+import com.ghais.domain.model.TrackItem
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
@@ -59,21 +63,40 @@ import com.ghais.ui.theme.GhaisShapes
  *
  * - Card: elevated glass fill + ghost border + top specular hairline.
  * - Ambient sheens: white-only radial glows (zero hue).
+ * - Header: "AYAH {ayahNo}" badge, Surah name, live sync indicator dot,
+ *   and dismiss/toggle mode button.
  * - Active ayah: engraved inset section, white gradient indicator bar,
- *   arabic in [TextPrimary], transliteration in [TextTertiary] italic,
- *   translation in [TextSecondary].
- * - Signature unchanged (used by NowPlayingScreen: arabicVerse + modifier).
+ *   Arabic Uthmani in [TextPrimary] (25.sp, RTL), transliteration in [TextTertiary] italic,
+ *   and English translation in [TextSecondary] (14.5.sp).
+ * - Upcoming ayah preview: recessed well with "NEXT: Ayah {ayahNo}" and preview text,
+ *   clickable via [onNextAyah].
  */
 @Composable
 fun NowPlayingLyricsCard(
-    arabicVerse: String = "فَبِأَيِّ آلَاءِ رَبِّكُمَا تُكَذِّبَانِ",
-    transliteration: String = "\"Fabi-ayyi ala-i Rabbikuma tukaththiban\"",
-    translation: String = "So which of the favors of your Lord would you both deny?",
-    upcomingAyahNumber: Int = 14,
-    upcomingArabic: String = "خَلَقَ الْإِنسَانَ مِن صَلْصَالٍ كَالْفَخَّارِ",
-    upcomingTranslation: String = "He created man from clay like that of pottery...",
+    currentTrack: TrackItem?,
+    currentAyahVerse: AyahVerse?,
+    upcomingAyahVerse: AyahVerse?,
+    isPlaying: Boolean,
+    onNextAyah: (() -> Unit)? = null,
+    onPreviousAyah: (() -> Unit)? = null,
+    onToggleAyahMode: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val displayAyahNo = currentTrack?.ayahNo?.takeIf { it > 0 }
+        ?: currentAyahVerse?.ayahNo
+        ?: 1
+
+    val surahName = currentTrack?.surahNameEn?.takeIf { it.isNotBlank() }
+        ?: currentAyahVerse?.surahId?.let { "Surah $it" }
+        ?: ""
+
+    val activeArabic = currentAyahVerse?.textUthmani?.takeIf { it.isNotBlank() }
+        ?: currentTrack?.textUthmani?.takeIf { it.isNotBlank() }
+        ?: ""
+
+    val transliterationText = currentAyahVerse?.transliteration?.takeIf { it.isNotBlank() }
+    val translationText = currentAyahVerse?.translation?.takeIf { it.isNotBlank() }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -112,51 +135,124 @@ fun NowPlayingLyricsCard(
         )
 
         Column(modifier = Modifier.padding(18.dp)) {
-            // Header: Subtitles icon + SYNCHRONIZED AYAH LYRICS + Sync ghost pill
+            // Header: AYAH badge + Surah name + (optional Prev Ayah) + Sync indicator + Toggle/Dismiss button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Subtitles,
-                        contentDescription = "Subtitles",
-                        tint = GhaisNoir.TextSecondary,
-                        modifier = Modifier.size(17.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "SYNCHRONIZED AYAH LYRICS",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.3.sp,
-                        color = GhaisNoir.TextSecondary
-                    )
-                }
-
-                // Sync Active ghost pill with white indicator dot
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(GhaisShapes.pill)
-                        .background(GhaisNoir.Fill2)
-                        .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
-                        .padding(horizontal = 9.dp, vertical = 3.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
-                    Box(
+                    if (onPreviousAyah != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(26.dp)
+                                .clip(CircleShape)
+                                .background(GhaisNoir.Fill2)
+                                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                                .noirClickable { onPreviousAyah() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SkipPrevious,
+                                contentDescription = "Previous Ayah",
+                                tint = GhaisNoir.TextSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+
+                    // Ayah badge pill
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(GhaisNoir.TextPrimary)
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    Text(
-                        text = "Sync Active",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = GhaisNoir.TextSecondary
-                    )
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.Fill3)
+                            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                            .padding(horizontal = 9.dp, vertical = 3.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Subtitles,
+                            contentDescription = null,
+                            tint = GhaisNoir.TextSecondary,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = "AYAH $displayAyahNo",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.3.sp,
+                            color = GhaisNoir.TextPrimary
+                        )
+                    }
+
+                    if (surahName.isNotBlank()) {
+                        Text(
+                            text = surahName,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = GhaisNoir.TextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // Right header section: Sync indicator & dismiss / toggle button
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // Sync active ghost pill with indicator dot
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                            .then(
+                                if (onToggleAyahMode != null) Modifier.noirClickable { onToggleAyahMode() }
+                                else Modifier
+                            )
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(if (isPlaying) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = if (isPlaying) "Sync Active" else "Synced",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = GhaisNoir.TextSecondary
+                        )
+                    }
+
+                    if (onToggleAyahMode != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(GhaisNoir.Fill2)
+                                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                                .noirClickable { onToggleAyahMode() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Toggle Ayah Mode",
+                                tint = GhaisNoir.TextSecondary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -192,79 +288,181 @@ fun NowPlayingLyricsCard(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 10.dp)
+                        .padding(start = 12.dp)
                 ) {
-                    // Arabic verse — primary rung of the text ladder
-                    Text(
-                        text = arabicVerse,
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GhaisNoir.TextPrimary,
-                        textAlign = TextAlign.End,
-                        lineHeight = 44.sp,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
+                    // Arabic verse — prominent Uthmani text (100% white, RTL)
+                    if (activeArabic.isNotBlank()) {
+                        Text(
+                            text = activeArabic,
+                            fontSize = 25.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = GhaisNoir.TextPrimary,
+                            textAlign = TextAlign.End,
+                            lineHeight = 44.sp,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
 
                     // Phonetic transliteration — tertiary italic
-                    Text(
-                        text = transliteration,
-                        fontSize = 12.5.sp,
-                        fontStyle = FontStyle.Italic,
-                        color = GhaisNoir.TextTertiary,
-                        lineHeight = 17.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
+                    if (!transliterationText.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = transliterationText,
+                            fontSize = 13.sp,
+                            fontStyle = FontStyle.Italic,
+                            color = GhaisNoir.TextTertiary,
+                            lineHeight = 18.sp
+                        )
+                    }
 
                     // English translation — secondary
-                    Text(
-                        text = translation,
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = GhaisNoir.TextSecondary,
-                        lineHeight = 19.sp
-                    )
+                    if (!translationText.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = translationText,
+                            fontSize = 14.5.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = GhaisNoir.TextSecondary,
+                            lineHeight = 21.sp
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // Upcoming Ayah preview (recessed well, clickable via onNextAyah)
+            if (upcomingAyahVerse != null) {
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // Upcoming Ayah (previewed softly in muted white)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer { alpha = 0.55f }
-                    .padding(horizontal = 4.dp)
-            ) {
-                Text(
-                    text = "AYAH $upcomingAyahNumber PREVIEW",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 1.2.sp,
-                    color = GhaisNoir.TextTertiary
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = upcomingArabic,
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = GhaisNoir.TextSecondary,
-                    textAlign = TextAlign.End,
-                    lineHeight = 30.sp,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    text = upcomingTranslation,
-                    fontSize = 12.sp,
-                    color = GhaisNoir.TextTertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(GhaisShapes.row)
+                        .background(GhaisNoir.insetFill())
+                        .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.row)
+                        .then(
+                            if (onNextAyah != null) Modifier.noirClickable { onNextAyah() }
+                            else Modifier
+                        )
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "NEXT: Ayah ${upcomingAyahVerse.ayahNo}",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 1.2.sp,
+                                color = GhaisNoir.TextTertiary
+                            )
+
+                            if (onNextAyah != null) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Text(
+                                        text = "Skip",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = GhaisNoir.TextTertiary
+                                    )
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = "Next Ayah",
+                                        tint = GhaisNoir.TextTertiary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (upcomingAyahVerse.textUthmani.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(3.dp))
+                            Text(
+                                text = upcomingAyahVerse.textUthmani,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = GhaisNoir.TextSecondary,
+                                textAlign = TextAlign.End,
+                                lineHeight = 28.sp,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        if (upcomingAyahVerse.translation.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = upcomingAyahVerse.translation,
+                                fontSize = 12.sp,
+                                color = GhaisNoir.TextTertiary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
             }
         }
     }
+}
+
+/**
+ * Backward-compatible overload for [NowPlayingLyricsCard].
+ */
+@Composable
+fun NowPlayingLyricsCard(
+    arabicVerse: String = "فَبِأَيِّ آلَاءِ رَبِّكُمَا تُكَذِّبَانِ",
+    transliteration: String = "\"Fabi-ayyi ala-i Rabbikuma tukaththiban\"",
+    translation: String = "So which of the favors of your Lord would you both deny?",
+    upcomingAyahNumber: Int = 14,
+    upcomingArabic: String = "خَلَقَ الْإِنسَانَ مِن صَلْصَالٍ كَالْفَخَّارِ",
+    upcomingTranslation: String = "He created man from clay like that of pottery...",
+    modifier: Modifier = Modifier
+) {
+    val track = remember(upcomingAyahNumber) {
+        TrackItem(
+            reciterSlug = "mishari-al-afasy",
+            reciterName = "Mishari Rashid Al-Afasy",
+            surahId = 55,
+            surahNameEn = "Ar-Rahman",
+            surahNameAr = "الرحمن",
+            ayahNo = (upcomingAyahNumber - 1).coerceAtLeast(1),
+            audioUrl = ""
+        )
+    }
+    val currentVerse = remember(arabicVerse, translation, transliteration, upcomingAyahNumber) {
+        AyahVerse(
+            surahId = 55,
+            ayahNo = (upcomingAyahNumber - 1).coerceAtLeast(1),
+            textUthmani = arabicVerse,
+            translation = translation,
+            transliteration = transliteration
+        )
+    }
+    val upcomingVerse = remember(upcomingAyahNumber, upcomingArabic, upcomingTranslation) {
+        if (upcomingArabic.isNotBlank()) {
+            AyahVerse(
+                surahId = 55,
+                ayahNo = upcomingAyahNumber,
+                textUthmani = upcomingArabic,
+                translation = upcomingTranslation
+            )
+        } else null
+    }
+
+    NowPlayingLyricsCard(
+        currentTrack = track,
+        currentAyahVerse = currentVerse,
+        upcomingAyahVerse = upcomingVerse,
+        isPlaying = true,
+        modifier = modifier
+    )
 }
 
 /**
