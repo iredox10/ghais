@@ -2,17 +2,16 @@ package com.ghais.ui.screens.reciters
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.PersonRemove
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -20,8 +19,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -34,13 +33,20 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
-import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.resolveFollowedQari
+import com.ghais.ui.components.noir.GhostPillButton
+import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirCard
+import com.ghais.ui.components.noir.NoirInsetField
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
-private val PureBlack = Color(0xFF000000)
-private val MutedGrey = Color(0xFF9A9AA0)
-private val LinkBlue = Color(0xFF4C8DFF)
-private val DarkCard = Color(0xFF1C1C1E)
+private val NoirGrayscale: ColorFilter by lazy {
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+}
 
 object FollowedRecitersScreen : Screen {
     @Composable
@@ -60,51 +66,27 @@ object FollowedRecitersScreen : Screen {
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(PureBlack)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                LinkBlue.copy(alpha = 0.35f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
+        NoirScreenRoot {
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .clickable { navigator.pop() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    Column(modifier = Modifier.padding(start = 4.dp)) {
+                    IconWell(
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                        size = 42.dp,
+                        iconSize = 22.dp,
+                        contentDescription = "Back",
+                        modifier = Modifier.noirClickable { navigator.pop() }
+                    )
+                    Column(modifier = Modifier.padding(start = 12.dp)) {
                         Text(
                             text = "Following",
-                            color = Color.White,
+                            color = GhaisNoir.TextPrimary,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.ExtraBold,
                             maxLines = 1,
@@ -112,69 +94,95 @@ object FollowedRecitersScreen : Screen {
                         )
                         Text(
                             text = "${filtered.size} following",
-                            color = MutedGrey,
+                            color = GhaisNoir.TextTertiary,
                             fontSize = 12.sp
                         )
                     }
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                NoirInsetField(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.White.copy(alpha = 0.07f))
-                        .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(50))
-                        .padding(horizontal = 14.dp, vertical = 11.dp)
+                        .padding(horizontal = 20.dp, vertical = 6.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = "Search",
-                        tint = MutedGrey,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    BasicTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        singleLine = true,
-                        textStyle = TextStyle(
-                            color = Color.White,
-                            fontSize = 14.sp
-                        ),
-                        decorationBox = { inner ->
-                            if (searchQuery.isEmpty()) {
-                                Text(
-                                    text = "Search following...",
-                                    color = MutedGrey,
-                                    fontSize = 14.sp
-                                )
-                            }
-                            inner()
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "Search",
+                            tint = GhaisNoir.TextTertiary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        BasicTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            singleLine = true,
+                            textStyle = TextStyle(
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 14.sp
+                            ),
+                            decorationBox = { inner ->
+                                if (searchQuery.isEmpty()) {
+                                    Text(
+                                        text = "Search following...",
+                                        color = GhaisNoir.TextTertiary,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                                inner()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 if (filtered.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 32.dp, vertical = 48.dp),
+                            .padding(horizontal = 20.dp, vertical = 24.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "You're not following anyone yet — discover qari in Reciters",
-                            color = MutedGrey,
-                            fontSize = 15.sp,
-                            textAlign = TextAlign.Center
-                        )
+                        NoirCard(modifier = Modifier.fillMaxWidth()) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                IconWell(
+                                    icon = Icons.Filled.RecordVoiceOver,
+                                    size = 52.dp,
+                                    iconSize = 24.dp,
+                                    contentDescription = null,
+                                    tint = GhaisNoir.TextSecondary
+                                )
+                                Spacer(Modifier.height(14.dp))
+                                Text(
+                                    text = "No Qari followed yet",
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "Follow a Qari from their profile and they will appear here.",
+                                    color = GhaisNoir.TextSecondary,
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(Modifier.height(16.dp))
+                                GhostPillButton(
+                                    text = "Discover reciters",
+                                    onClick = { navigator.pop() }
+                                )
+                            }
+                        }
                     }
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 112.dp)
+                        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 112.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(
                             items = filtered,
@@ -185,40 +193,51 @@ object FollowedRecitersScreen : Screen {
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 5.dp)
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(Color.White.copy(alpha = 0.05f))
-                                    .border(
-                                        1.dp,
-                                        Color.White.copy(alpha = 0.08f),
-                                        RoundedCornerShape(24.dp)
-                                    )
-                                    .clickable { navigator.push(ReciterProfileScreen(reciter.slug)) }
+                                    .clip(GhaisShapes.row)
+                                    .background(GhaisNoir.cardFillSoft(), GhaisShapes.row)
+                                    .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.row)
+                                    .topSpecular(inset = 22.dp)
+                                    .noirClickable { navigator.push(ReciterProfileScreen(reciter.slug)) }
                                     .padding(12.dp)
                             ) {
                                 val photo = qari.photoUrl ?: photoForSlug(reciter.slug)
                                 if (photo != null) {
-                                    AsyncImage(
-                                        model = photo,
-                                        contentDescription = reciter.nameEn,
-                                        contentScale = ContentScale.Crop,
+                                    Box(
                                         modifier = Modifier
-                                            .size(76.dp)
-                                            .clip(RoundedCornerShape(22.dp))
-                                            .background(DarkCard)
-                                    )
+                                            .size(64.dp)
+                                            .clip(RoundedCornerShape(18.dp))
+                                            .background(GhaisNoir.wellFill())
+                                            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(18.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        AsyncImage(
+                                            model = photo,
+                                            contentDescription = reciter.nameEn,
+                                            contentScale = ContentScale.Crop,
+                                            colorFilter = NoirGrayscale,
+                                            modifier = Modifier.matchParentSize()
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .matchParentSize()
+                                                .background(
+                                                    androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.35f)
+                                                )
+                                        )
+                                    }
                                 } else {
                                     Box(
                                         modifier = Modifier
-                                            .size(76.dp)
-                                            .clip(RoundedCornerShape(22.dp))
-                                            .background(Color.White.copy(alpha = 0.10f)),
+                                            .size(64.dp)
+                                            .clip(RoundedCornerShape(18.dp))
+                                            .background(GhaisNoir.wellFill())
+                                            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(18.dp)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = reciter.nameEn.take(1),
-                                            color = Color.White,
-                                            fontSize = 28.sp,
+                                            text = reciter.nameEn.take(1).uppercase(),
+                                            color = GhaisNoir.TextPrimary,
+                                            fontSize = 24.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
@@ -229,25 +248,25 @@ object FollowedRecitersScreen : Screen {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = reciter.nameEn,
-                                        color = Color.White,
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Bold,
+                                        color = GhaisNoir.TextPrimary,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = "${reciter.riwayah} • ${reciter.style}",
-                                        color = MutedGrey,
-                                        fontSize = 13.sp,
+                                        color = GhaisNoir.TextSecondary,
+                                        fontSize = 12.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = reciter.nameAr,
-                                        color = Color.White.copy(alpha = 0.85f),
-                                        fontSize = 15.sp,
+                                        color = GhaisNoir.TextSecondary,
+                                        fontSize = 14.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -255,36 +274,38 @@ object FollowedRecitersScreen : Screen {
 
                                 Spacer(modifier = Modifier.width(8.dp))
 
-                                // Unfollow affordance
+                                // Unfollow affordance — ghost well, monochrome glyph
                                 Box(
                                     modifier = Modifier
-                                        .size(42.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.08f))
-                                        .border(
-                                            1.dp,
-                                            Color.White.copy(alpha = 0.15f),
-                                            CircleShape
-                                        )
-                                        .clickable { FollowStore.toggle(qari.storedSlug) },
+                                        .size(40.dp)
+                                        .background(GhaisNoir.wellFill(), GhaisShapes.well)
+                                        .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.well)
+                                        .noirClickable { FollowStore.toggle(qari.storedSlug) },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.PersonRemove,
                                         contentDescription = "Unfollow",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(22.dp)
+                                        tint = GhaisNoir.TextSecondary,
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
 
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
 
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                    contentDescription = "Open profile",
-                                    tint = MutedGrey,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.well),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = "Open profile",
+                                        tint = GhaisNoir.TextTertiary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
                     }
