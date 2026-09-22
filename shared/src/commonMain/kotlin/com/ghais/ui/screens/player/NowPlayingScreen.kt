@@ -166,7 +166,7 @@ class NowPlayingScreen : Screen {
         var isScrubbing by remember { mutableStateOf(false) }
         var scrubFraction by remember { mutableStateOf(0f) }
         val poke: () -> Unit = { idleTick++; controlsVisible = true }
-        val uiBusy = showSleepTimer || showQueue || showAmbient || showVolume || isScrubbing
+        val uiBusy = showSleepTimer || showQueue || showAmbient || showVolume || isScrubbing || isAyahMode
         androidx.compose.runtime.LaunchedEffect(controlsVisible, idleTick, uiBusy) {
             if (controlsVisible && !uiBusy) {
                 kotlinx.coroutines.delay(10_000L)

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -236,21 +237,25 @@ fun NowPlayingLyricsCard(
                     }
 
                     if (onToggleAyahMode != null) {
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .background(GhaisNoir.Fill2)
-                                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
-                                .noirClickable { onToggleAyahMode() },
-                            contentAlignment = Alignment.Center
+                        IconButton(
+                            onClick = onToggleAyahMode,
+                            modifier = Modifier.size(36.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Toggle Ayah Mode",
-                                tint = GhaisNoir.TextSecondary,
-                                modifier = Modifier.size(13.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(GhaisNoir.Fill2)
+                                    .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Close Ayah Mode",
+                                    tint = GhaisNoir.TextSecondary,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
                         }
                     }
                 }
