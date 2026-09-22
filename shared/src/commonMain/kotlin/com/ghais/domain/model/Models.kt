@@ -39,7 +39,7 @@ data class Reciter(
     fun getAyahAudioUrl(surahId: Int, ayahNo: Int): String {
         val s = surahId.toString().padStart(3, '0')
         val a = ayahNo.toString().padStart(3, '0')
-        val folder = audioFolder.ifEmpty { "Alafasy_64kbps" }
+        val folder = audioFolder.ifEmpty { resolveEveryAyahFolder(slug) }
         return "https://everyayah.com/data/$folder/$s$a.mp3"
     }
 
@@ -76,6 +76,32 @@ data class Reciter(
             "ahmed-alajamy", "alajamy", "ajamy" -> "https://server10.mp3quran.net/ajm/$pad.mp3"
             else -> "https://server8.mp3quran.net/afs/$pad.mp3"
         }
+    }
+}
+
+/**
+ * Resolves the EveryAyah audio folder for a given reciter slug.
+ * Maps known reciter slugs to their corresponding EveryAyah folder.
+ */
+fun resolveEveryAyahFolder(slug: String, defaultFolder: String = "Alafasy_64kbps"): String {
+    val normalized = slug.trim().lowercase().replace('_', '-')
+    return when (normalized) {
+        "alafasy", "mishary" -> "Alafasy_64kbps"
+        "abdul-basit", "basit" -> "Abdul_Basit_Murattal_64kbps"
+        "al-minshawi", "minshawi" -> "Minshawy_Murattal_128kbps"
+        "al-husary", "husary" -> "Husary_128kbps"
+        "al-sudais", "sudais" -> "Abdurrahmaan_As-Sudais_192kbps"
+        "al-muaiqly", "muaiqly" -> "Maher_AlMuaiqly_64kbps"
+        "saad-alghamdi", "alghamdi", "ghamdi" -> "Ghamadi_40kbps"
+        "saud-shuraim", "shuraim" -> "Saood_ash-Shuraym_128kbps"
+        "al-dossari", "dossari" -> "Yasser_Ad-Dussary_128kbps"
+        "hudhaify", "al-hudhaify", "huthaify", "ali-bin-abdulrahman-al-huthaify" -> "Hudhaify_64kbps"
+        "abu-bakr-al-shatri", "shatri" -> "Abu_Bakr_Ash-Shaatree_128kbps"
+        "ahmed-alajamy", "alajamy", "ajamy" -> "Ahmed_ibn_Ali_al-Ajamy_128kbps_Quran-Say.Com"
+        "fares-abbad", "abbad" -> "Fares_Abbad_64kbps"
+        "nasser-alqatami", "nasser-al-qatami", "qatami" -> "Nasser_Alqatami_128kbps"
+        "yasser-salama", "yasser-salamah", "salama", "salamah" -> "Yasser_Salamah_128kbps"
+        else -> defaultFolder
     }
 }
 
