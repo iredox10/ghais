@@ -4,15 +4,19 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -151,6 +155,23 @@ class NowPlayingScreen : Screen {
         var showQueue by remember { mutableStateOf(false) }
         var showAmbient by remember { mutableStateOf(false) }
         var showVolume by remember { mutableStateOf(false) }
+
+        // Cinematic idle fade — mirrors Media3's controllerShowTimeoutMs:
+        // 10s without interaction melts all chrome except video + transport.
+        // Any tap/drag/scrub pokes the timer; sheets, scrubbing and the
+        // volume panel suspend hiding while the user is active.
+        var controlsVisible by remember { mutableStateOf(true) }
+        var idleTick by remember { mutableStateOf(0) }
+        var isScrubbing by remember { mutableStateOf(false) }
+        var scrubFraction by remember { mutableStateOf(0f) }
+        val poke: () -> Unit = { idleTick++; controlsVisible = true }
+        val uiBusy = showSleepTimer || showQueue || showAmbient || showVolume || isScrubbing
+        androidx.compose.runtime.LaunchedEffect(controlsVisible, idleTick, uiBusy) {
+            if (controlsVisible && !uiBusy) {
+                kotlinx.coroutines.delay(10_000L)
+                controlsVisible = false
+            }
+        }
         val mixer = remember { AmbientMixer }
         val ambientChannels by mixer.channels.collectAsState()
         val ambientVolume by mixer.masterAmbientVolume.collectAsState()
@@ -185,11 +206,15 @@ class NowPlayingScreen : Screen {
             modifier = Modifier
                 .offset { IntOffset(0, dragOffsetY.roundToInt()) }
                 .pointerInput(Unit) {
+                    detectTapGestures(onTap = { poke() })
+                }
+                .pointerInput(Unit) {
                     detectVerticalDragGestures(
                         onDragStart = {
                             settleJob?.cancel()
                             dragVelocityY = 0f
                             lastDragTime = 0L
+                            poke()
                         },
                         onDragEnd = {
                             val shouldDismiss = dragOffsetY >= dismissThresholdPx ||
@@ -280,27 +305,33 @@ class NowPlayingScreen : Screen {
             ) {
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Top pill bar handle (tap-to-dismiss option with generous touch target)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp, bottom = 2.dp),
-                    contentAlignment = Alignment.Center
+                // Top pill bar handle — melts away with the idle fade.
+                AnimatedVisibility(
+                    visible = controlsVisible,
+                    enter = fadeIn(tween(350)) + slideInVertically(tween(350)) { -it },
+                    exit = fadeOut(tween(350)) + slideOutVertically(tween(350)) { -it }
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(width = 64.dp, height = 36.dp)
-                            .clip(RoundedCornerShape(18.dp))
-                            .clickable { (rootNavigator ?: navigator)?.pop() },
+                            .fillMaxWidth()
+                            .padding(top = 8.dp, bottom = 2.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .width(48.dp)
-                                .height(5.dp)
-                                .clip(RoundedCornerShape(50))
-                                .background(GhaisNoir.TextDisabled)
-                        )
+                                .size(width = 64.dp, height = 36.dp)
+                                .clip(RoundedCornerShape(18.dp))
+                                .clickable { (rootNavigator ?: navigator)?.pop() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(48.dp)
+                                    .height(5.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(GhaisNoir.TextDisabled)
+                            )
+                        }
                     }
                 }
 
@@ -309,11 +340,17 @@ class NowPlayingScreen : Screen {
                 // Video-first: clear the middle so the ambient video breathes.
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Minimal identity: qari photo + titles + like, floating over video.
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+                // Identity + ambience melt away with the idle fade.
+                AnimatedVisibility(
+                    visible = controlsVisible,
+                    enter = fadeIn(tween(350)) + slideInVertically(tween(350)) { it / 2 },
+                    exit = fadeOut(tween(350)) + slideOutVertically(tween(350)) { it / 2 }
                 ) {
+                    // Minimal identity: qari photo + titles + like, floating over video.
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                     NoirReciterAvatar(
                         photoUrl = track?.let { photoForSlug(it.reciterSlug) },
                         nameEn = reciterName,
@@ -365,7 +402,7 @@ class NowPlayingScreen : Screen {
                                 if (isFav) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
                                 CircleShape
                             )
-                            .noirClickable { track?.let { FavoritesStore.toggle(it) } },
+                                    .noirClickable { poke(); track?.let { FavoritesStore.toggle(it) } },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -379,8 +416,9 @@ class NowPlayingScreen : Screen {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Background sound as explicit text — a new concept, so it reads
-                // as a labeled row users can find and understand.
+                // Ambience as explicit text — a new concept, so it reads as one
+                // slim labeled line users can find and understand at a glance.
+                Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -388,11 +426,11 @@ class NowPlayingScreen : Screen {
                         .clip(GhaisShapes.pill)
                         .background(GhaisNoir.Fill2)
                         .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
-                        .noirClickable { showAmbient = true }
-                        .padding(horizontal = 16.dp, vertical = 11.dp)
+                        .noirClickable { poke(); showAmbient = true }
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Text(
-                        text = "Background sound",
+                        text = "Ambience",
                         color = GhaisNoir.TextTertiary,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
@@ -401,7 +439,7 @@ class NowPlayingScreen : Screen {
                     Text(
                         text = selectedAmbientType?.displayName() ?: "Off",
                         color = GhaisNoir.TextPrimary,
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1
                     )
@@ -409,9 +447,10 @@ class NowPlayingScreen : Screen {
                     Text(
                         text = "›",
                         color = GhaisNoir.TextTertiary,
-                        fontSize = 18.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
+                }
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -429,6 +468,7 @@ class NowPlayingScreen : Screen {
                             .background(GhaisNoir.Fill1)
                             .border(1.dp, GhaisNoir.BorderGhost, RoundedCornerShape(12.dp))
                             .noirClickable {
+                                poke()
                                 val idx = PlayerSpeeds.indexOf(speed).takeIf { it >= 0 } ?: 0
                                 AudioEngine.setPlaybackSpeed(PlayerSpeeds[(idx + 1) % PlayerSpeeds.size])
                             },
@@ -446,13 +486,13 @@ class NowPlayingScreen : Screen {
                         icon = Icons.Filled.FastRewind,
                         contentDescription = "Previous",
                         enabled = canSkipPrevious,
-                        onClick = { AudioEngine.skipPrevious() },
+                        onClick = { poke(); AudioEngine.skipPrevious() },
                         iconSize = 26.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     ChromeFab(
                         icon = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        onClick = { AudioEngine.togglePlayPause() },
+                        onClick = { poke(); AudioEngine.togglePlayPause() },
                         size = 68.dp,
                         contentDescription = if (isPlaying) "Pause" else "Play"
                     )
@@ -461,7 +501,7 @@ class NowPlayingScreen : Screen {
                         icon = Icons.Filled.FastForward,
                         contentDescription = "Next",
                         enabled = canSkipNext,
-                        onClick = { AudioEngine.skipNext() },
+                        onClick = { poke(); AudioEngine.skipNext() },
                         iconSize = 26.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -471,17 +511,23 @@ class NowPlayingScreen : Screen {
                         contentDescription = "Repeat",
                         active = repeatActive,
                         tint = if (repeatActive) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                        onClick = { AudioEngine.setRepeatMode(nextRepeatMode(repeatMode)) }
+                        onClick = { poke(); AudioEngine.setRepeatMode(nextRepeatMode(repeatMode)) }
                     )
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
 
+                // Progress, times + overflow melt away with the idle fade.
+                AnimatedVisibility(
+                    visible = controlsVisible,
+                    enter = fadeIn(tween(350)) + slideInVertically(tween(350)) { it / 2 },
+                    exit = fadeOut(tween(350)) + slideOutVertically(tween(350)) { it / 2 }
+                ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
                 // Progress scrubber (tap & horizontal scrub with live preview) —
                 // NoirSegmentedProgress language: engraved track + chrome fill.
-                var isScrubbing by remember { mutableStateOf(false) }
-                var scrubFraction by remember { mutableStateOf(0f) }
-
+                // isScrubbing/scrubFraction live at screen level so scrubbing
+                // suspends the idle fade (see uiBusy above).
                 val activeProgress = if (isScrubbing) scrubFraction else progress.coerceIn(0f, 1f)
                 val activePositionMs = if (isScrubbing && totalMs > 0L) {
                     (scrubFraction * totalMs).toLong()
@@ -609,21 +655,21 @@ class NowPlayingScreen : Screen {
                         contentDescription = "Volume",
                         active = showVolume,
                         tint = if (volume > 0f) GhaisNoir.TextTertiary else GhaisNoir.TextDisabled,
-                        onClick = { showVolume = !showVolume }
+                        onClick = { poke(); showVolume = !showVolume }
                     )
                     NoirUtilityWell(
                         icon = Icons.Filled.QueueMusic,
                         contentDescription = "Queue",
                         active = false,
                         tint = GhaisNoir.TextTertiary,
-                        onClick = { showQueue = true }
+                        onClick = { poke(); showQueue = true }
                     )
                     NoirUtilityWell(
                         icon = Icons.Filled.Bedtime,
                         contentDescription = "Sleep timer",
                         active = sleepTimerState.isActive,
                         tint = GhaisNoir.TextTertiary,
-                        onClick = { showSleepTimer = true }
+                        onClick = { poke(); showSleepTimer = true }
                     )
                 }
 
@@ -639,6 +685,8 @@ class NowPlayingScreen : Screen {
                         onAmbientVolumeChange = { mixer.setMasterAmbientVolume(it) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 12.dp)
                     )
+                }
+                }
                 }
 
                 Spacer(modifier = Modifier.height(28.dp))
