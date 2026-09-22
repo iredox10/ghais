@@ -26,6 +26,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.data.repository.FavoritesStore
+import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.seed.QuranData
 import com.ghais.domain.model.Ayah
 import com.ghais.domain.model.TrackItem
@@ -64,13 +65,13 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
         var selectedReciter by remember { mutableStateOf(QuranData.RECITERS.first()) }
         var expandedReciterMenu by remember { mutableStateOf(false) }
 
-        // Generate ayahs for this surah
+        // Generate ayahs for this surah with authentic Uthmani text
         val ayahs = remember(surahId) {
             (1..surah.ayahsCount).map { ayahNo ->
                 Ayah(
                     surahId = surah.id,
                     ayahNo = ayahNo,
-                    textUthmani = if (ayahNo == 1 && surah.id == 1) "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ" else "آية رقم $ayahNo من سورة ${surah.nameAr}"
+                    textUthmani = QuranAyahRepository.getAyahImmediate(surah.id, ayahNo).textUthmani
                 )
             }
         }
@@ -80,17 +81,20 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
         val isEnginePlaying by AudioEngine.isPlaying.collectAsState()
 
         // Track builder: per-ayah URL for the currently selected reciter.
-        fun buildTracks(): List<TrackItem> = ayahs.map { ayah ->
-            TrackItem(
-                reciterSlug = selectedReciter.slug,
-                reciterName = selectedReciter.nameEn,
-                surahId = surah.id,
-                surahNameEn = surah.nameEn,
-                surahNameAr = surah.nameAr,
-                ayahNo = ayah.ayahNo,
-                audioUrl = selectedReciter.getAyahAudioUrl(surah.id, ayah.ayahNo),
-                textUthmani = ayah.textUthmani
-            )
+        fun buildTracks(): List<TrackItem> {
+            AudioEngine.setAyahMode(true)
+            return ayahs.map { ayah ->
+                TrackItem(
+                    reciterSlug = selectedReciter.slug,
+                    reciterName = selectedReciter.nameEn,
+                    surahId = surah.id,
+                    surahNameEn = surah.nameEn,
+                    surahNameAr = surah.nameAr,
+                    ayahNo = ayah.ayahNo,
+                    audioUrl = selectedReciter.getAyahAudioUrl(surah.id, ayah.ayahNo),
+                    textUthmani = ayah.textUthmani
+                )
+            }
         }
 
         /** Same ayah currently loaded (regardless of play/pause or reciter switch) -> highlight. */
@@ -112,6 +116,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                 AudioEngine.pause()
                 return
             }
+            AudioEngine.setAyahMode(true)
             val t = currentTrack
             if (t != null && t.surahId == surah.id && t.ayahNo == ayah.ayahNo &&
                 t.reciterSlug != selectedReciter.slug
@@ -231,6 +236,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                                     expandedReciterMenu = false
                                 },
                                 onPlayAll = {
+                                    AudioEngine.setAyahMode(true)
                                     AudioEngine.playQueue(buildTracks(), 0)
                                     rootNavigator.push(NowPlayingScreen())
                                 },

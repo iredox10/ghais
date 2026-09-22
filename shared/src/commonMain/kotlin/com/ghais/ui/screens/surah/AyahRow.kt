@@ -80,6 +80,7 @@ fun AyahRow(
             ) {
                 Text(
                     text = ayah.textUthmani,
+                    modifier = Modifier.fillMaxWidth(),
                     color = GhaisNoir.TextPrimary,
                     fontSize = 22.sp,
                     lineHeight = 40.sp,
