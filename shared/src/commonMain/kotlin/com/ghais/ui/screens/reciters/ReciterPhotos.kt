@@ -14,27 +14,31 @@ import com.ghais.data.seed.GhaisAssets
 import com.ghais.ui.screens.home.NoirArtworkWell
 
 fun photoForSlug(slug: String): String? {
-    val clean = slug.lowercase()
+    val clean = slug.lowercase().replace('_', '-')
     val verified = ALL_VERIFIED_RECITERS.find {
-        it.slug.lowercase() == clean ||
-        (clean == "alafasy" && it.slug == "mishary") ||
-        (clean == "sudais" && it.slug == "al-sudais") ||
-        (clean == "muaiqly" && it.slug == "al-muaiqly") ||
-        (clean == "dossari" && it.slug == "al-dossari") ||
-        (clean.startsWith("abdulbaset") && it.slug == "abdul-basit") ||
-        (clean == "shuraym" && it.slug == "shuraim") ||
-        (clean.contains("minshawi") && it.slug.contains("minshawi"))
+        val vSlug = it.slug.lowercase().replace('_', '-')
+        vSlug == clean ||
+        (clean.contains("alafasy") || clean.contains("mishary")) && (vSlug == "mishary" || vSlug == "alafasy") ||
+        clean.contains("sudais") && vSlug.contains("sudais") ||
+        clean.contains("muaiqly") && vSlug.contains("muaiqly") ||
+        clean.contains("dossari") && vSlug.contains("dossari") ||
+        (clean.contains("abdul-basit") || clean.contains("abdulbaset") || clean.contains("basit")) && (vSlug.contains("abdul-basit") || vSlug.contains("basit")) ||
+        (clean.contains("shuraym") || clean.contains("shuraim")) && (vSlug.contains("shuraim") || vSlug.contains("shuraym")) ||
+        clean.contains("minshawi") && vSlug.contains("minshawi") ||
+        clean.contains("husary") && vSlug.contains("husary")
     }
     if (verified != null) return verified.photoUrl
 
     val photos = GhaisAssets.VerifiedReciters
-    return when (clean) {
-        "alafasy", "mishary" -> photos.firstOrNull { it.slug == "mishary" }?.photoUrl
-        "sudais", "al-sudais" -> photos.firstOrNull { it.slug == "al-sudais" }?.photoUrl
-        "muaiqly", "al-muaiqly" -> photos.firstOrNull { it.slug == "al-muaiqly" }?.photoUrl
-        "dossari", "al-dossari" -> photos.firstOrNull { it.slug == "al-dossari" }?.photoUrl
-        "abdulbaset_murattal", "abdulbaset_mujawwad", "abdul-basit" ->
-            photos.firstOrNull { it.slug == "abdul-basit" }?.photoUrl
+    return when {
+        clean.contains("alafasy") || clean.contains("mishary") -> photos.firstOrNull { it.slug == "mishary" }?.photoUrl
+        clean.contains("sudais") -> photos.firstOrNull { it.slug == "al-sudais" }?.photoUrl
+        clean.contains("muaiqly") -> photos.firstOrNull { it.slug == "al-muaiqly" }?.photoUrl
+        clean.contains("dossari") -> photos.firstOrNull { it.slug == "al-dossari" }?.photoUrl
+        clean.contains("basit") || clean.contains("abdulbaset") -> photos.firstOrNull { it.slug == "abdul-basit" }?.photoUrl
+        clean.contains("husary") -> ALL_VERIFIED_RECITERS.firstOrNull { it.slug == "husary" }?.photoUrl
+        clean.contains("minshawi") -> ALL_VERIFIED_RECITERS.firstOrNull { it.slug == "minshawi" }?.photoUrl
+        clean.contains("shuraim") || clean.contains("shuraym") -> ALL_VERIFIED_RECITERS.firstOrNull { it.slug == "shuraim" }?.photoUrl
         else -> null
     }
 }
