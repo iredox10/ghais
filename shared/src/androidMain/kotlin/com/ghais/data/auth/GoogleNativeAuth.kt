@@ -4,8 +4,11 @@ import androidx.activity.ComponentActivity
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import java.lang.ref.WeakReference
 
 /**
@@ -43,7 +46,25 @@ internal object GoogleNativeAuth {
         val request = GetCredentialRequest.Builder()
             .addCredentialOption(googleIdOption)
             .build()
-        val result = CredentialManager.create(activity).getCredential(activity, request)
-        return GoogleIdTokenCredential.createFrom(result.credential.data).idToken
+        try {
+            val result = CredentialManager.create(activity).getCredential(activity, request)
+            return try {
+                GoogleIdTokenCredential.createFrom(result.credential.data).idToken
+            } catch (e: IllegalArgumentException) {
+                throw Exception("Google returned an unexpected credential. Log in with email instead.", e)
+            } catch (e: GoogleIdTokenParsingException) {
+                throw Exception("Google returned an unexpected credential. Log in with email instead.", e)
+            }
+        } catch (e: GetCredentialCancellationException) {
+            throw e
+        } catch (_: NoCredentialException) {
+            throw Exception("No Google accounts on this device. Add one in Settings, or log in with email.")
+        } catch (e: GetCredentialException) {
+            // Backend detail (e.g. error 28444 when the SHA-1 is not
+            // registered for the OAuth client) stays in logcat, never in
+            // the user-facing box. Console checklist lives in KDoc above.
+            android.util.Log.w("GoogleNativeAuth", "getCredential failed", e)
+            throw Exception("Google sign-in is unavailable right now. Log in with email instead.")
+        }
     }
 }
