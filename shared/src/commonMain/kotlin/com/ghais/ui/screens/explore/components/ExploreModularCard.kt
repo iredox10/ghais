@@ -1,19 +1,10 @@
 package com.ghais.ui.screens.explore.components
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
@@ -22,8 +13,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -40,7 +32,11 @@ import com.ghais.data.seed.GhaisAssets
 import com.ghais.data.seed.toTrackItem
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.screens.playlists.MoodPlaylist
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
 /**
  * Variants supported by [ExploreModularCard]:
@@ -53,7 +49,19 @@ enum class ExploreCardVariant {
 }
 
 /**
+ * True-grayscale filter — artwork stays recognisable while remaining strictly
+ * monochrome. Mirrors the Home `NoirArtworkWell` pattern. Instantiated once so
+ * recompositions never re-allocate it.
+ */
+private val NoirGrayscale: ColorFilter by lazy {
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+}
+
+/**
  * Data model representing a modular explore collection or playlist item.
+ *
+ * NOTE (Noir Glass): [accentColor] is retained for signature compatibility but
+ * is intentionally ignored at render time — the card renders zero hue.
  */
 data class ExploreCardItem(
     val id: String,
@@ -62,21 +70,23 @@ data class ExploreCardItem(
     val category: String, // e.g. "FOCUS", "SLEEP", "WORK", "HEALING"
     val avatarUrl: String,
     val surahCountText: String, // e.g. "6 Surahs • Tartil"
-    val accentColor: Color = Color(0xFFD4A853), // Halo & badge tint
+    val accentColor: Color = Color.White, // Legacy compat — ignored (Noir = zero hue)
     val tracks: List<TrackItem> = emptyList(),
     val surahIds: List<Int> = emptyList()
 )
 
 /**
- * ExploreModularCard:
+ * ExploreModularCard — strict Noir Glass monochrome.
  *
- * iOS HIG Apple-style Modular Card featuring:
- * - Prominent chunky/oversized avatar (76.dp - 84.dp) with luminous halo border and ambient aura.
- * - Glassmorphism: Frosted specular gradient border, diagonal sheen, and specular top hairline.
- * - Dark Minimalist UI: Layered dark surfaces (#141418), soft off-white titles, muted metadata.
- * - Frosted glass play button that immediately starts full-surah queue playback.
- * - Category pill badge and Surah count chip.
- * - Supports Hero Wide (span 2) and Grid (span 1) variants.
+ * Depth recipe (matches NoirCard / NoirHeroCard + Home artwork wells):
+ * - Fill: cardFillSoft resting, cardFillActive while playing.
+ * - Hairlines: BorderCard resting / SpecularTop while playing + topSpecular + sheen.
+ * - Artwork: grayscale (saturation-0) + 35% black scrim inside a clay well,
+ *   monogram fallback when there is no artwork.
+ * - Play affordance: chrome disc while playing, smoked well otherwise.
+ * - Text ladder: 100 / 62 / 38 / 24 %. Zero hue.
+ *
+ * Public signatures and play/navigation callbacks are preserved.
  */
 @Composable
 fun ExploreModularCard(
@@ -139,6 +149,8 @@ fun ExploreModularCard(
 
 /**
  * Direct parameter overload for [ExploreModularCard].
+ *
+ * NOTE: [accentColor] is retained for compatibility and ignored (zero hue).
  */
 @Composable
 fun ExploreModularCard(
@@ -149,7 +161,7 @@ fun ExploreModularCard(
     surahCountText: String,
     modifier: Modifier = Modifier,
     variant: ExploreCardVariant = ExploreCardVariant.GRID,
-    accentColor: Color = Color(0xFFD4A853),
+    accentColor: Color = Color.White,
     avatarShape: Shape = RoundedCornerShape(22.dp),
     isPlaying: Boolean = false,
     onClick: () -> Unit = {},
@@ -182,7 +194,7 @@ fun ExploreHeroModularCard(
     avatarUrl: String,
     surahCountText: String,
     modifier: Modifier = Modifier,
-    accentColor: Color = Color(0xFFD4A853),
+    accentColor: Color = Color.White,
     avatarShape: Shape = RoundedCornerShape(22.dp),
     isPlaying: Boolean = false,
     onClick: () -> Unit = {},
@@ -215,7 +227,7 @@ fun ExploreGridModularCard(
     avatarUrl: String,
     surahCountText: String,
     modifier: Modifier = Modifier,
-    accentColor: Color = Color(0xFFD4A853),
+    accentColor: Color = Color.White,
     avatarShape: Shape = RoundedCornerShape(22.dp),
     isPlaying: Boolean = false,
     onClick: () -> Unit = {},
@@ -239,6 +251,10 @@ fun ExploreGridModularCard(
 
 /**
  * Internal rendering implementation for both Hero Wide and Grid card variants.
+ *
+ * Noir shell: gradient fill (soft resting / active while playing) + 1px ghost
+ * border (BorderCard resting / SpecularTop while playing) + bright TOP-ONLY
+ * specular hairline + diagonal sheen. No flat greys, no hue.
  */
 @Composable
 private fun ExploreModularCardContent(
@@ -249,71 +265,30 @@ private fun ExploreModularCardContent(
     surahCountText: String,
     modifier: Modifier = Modifier,
     variant: ExploreCardVariant = ExploreCardVariant.GRID,
-    accentColor: Color = Color(0xFFD4A853),
+    accentColor: Color = Color.White,
     avatarShape: Shape = RoundedCornerShape(22.dp),
     isPlaying: Boolean = false,
     onClick: () -> Unit = {},
     onPlayClick: () -> Unit = {}
 ) {
-    val cardShape = RoundedCornerShape(24.dp)
+    val cardShape = if (variant == ExploreCardVariant.HERO_WIDE) GhaisShapes.cardLarge else GhaisShapes.cardNoir
+    val fill = if (isPlaying) GhaisNoir.cardFillActive() else GhaisNoir.cardFillSoft()
+    val border = if (isPlaying) GhaisNoir.SpecularTop else GhaisNoir.BorderCard
 
-    // Dark Minimalist + Translucent Base Layer with Specular Border
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(cardShape)
-            .background(Color(0xFF141418))
-            .border(
-                width = 1.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.25f),
-                        Color.White.copy(alpha = 0.05f)
-                    )
-                ),
-                shape = cardShape
-            )
-            .clickable(onClick = onClick)
+            .background(fill)
+            .border(1.dp, border, cardShape)
+            .topSpecular(inset = if (variant == ExploreCardVariant.HERO_WIDE) 30.dp else 26.dp)
+            .noirClickable(onClick)
     ) {
-        // Subtle Frosted Glass Translucent Layer
+        // Diagonal glass sheen swept across the card.
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .background(Color.White.copy(alpha = 0.035f))
-        )
-
-        // Subtle Diagonal Light Sheen Overlay
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.10f),
-                            Color.Transparent,
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.03f)
-                        )
-                    )
-                )
-        )
-
-        // Top Specular Hairline Inside Card Edge
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .padding(horizontal = 24.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.28f),
-                            Color.Transparent
-                        )
-                    )
-                )
-                .align(Alignment.TopCenter)
+                .background(GhaisNoir.sheen())
         )
 
         // Content Layout according to Variant
@@ -369,7 +344,7 @@ private fun HeroWideLayout(
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Chunky Oversized Avatar (84.dp) with Halo
+        // Chunky Oversized Avatar (84.dp) — Noir clay well.
         ExploreCardAvatar(
             avatarUrl = avatarUrl,
             title = title,
@@ -386,7 +361,7 @@ private fun HeroWideLayout(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.Center
         ) {
-            // Top Row: Category badge, Surah count chip & Frosted Play Button
+            // Top Row: Category badge, Surah count chip & Play Disc
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -411,7 +386,6 @@ private fun HeroWideLayout(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Frosted Glass Play Button
                 ExplorePlayButton(
                     isPlaying = isPlaying,
                     accentColor = accentColor,
@@ -422,26 +396,26 @@ private fun HeroWideLayout(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Headline Title in bold 19sp
+            // Headline Title — 100% ladder.
             Text(
                 text = title,
                 fontSize = 19.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = (-0.3).sp,
-                color = Color(0xFFF3F4F6),
+                color = GhaisNoir.TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Descriptive text with 2-line clamp
+            // Descriptive text with 2-line clamp — 62% ladder.
             Text(
                 text = description,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Normal,
                 lineHeight = 18.sp,
-                color = Color(0xFF9CA3AF),
+                color = GhaisNoir.TextSecondary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -470,7 +444,7 @@ private fun GridLayout(
             .padding(14.dp),
         horizontalAlignment = Alignment.Start
     ) {
-        // Top row: Category Badge (left) and Frosted Glass Play Button (right)
+        // Top row: Category Badge (left) and Play Disc (right)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -495,7 +469,7 @@ private fun GridLayout(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Prominent Chunky Avatar (76.dp) centered
+        // Prominent Chunky Avatar (76.dp) centered — Noir clay well.
         Box(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
@@ -512,26 +486,26 @@ private fun GridLayout(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Headline Title in bold 17sp
+        // Headline Title — 100% ladder.
         Text(
             text = title,
             fontSize = 17.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = (-0.2).sp,
-            color = Color(0xFFF3F4F6),
+            color = GhaisNoir.TextPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Subheadline Descriptive text with 2-line clamp
+        // Subheadline Descriptive text with 2-line clamp — 62% ladder.
         Text(
             text = description,
             fontSize = 12.5.sp,
             fontWeight = FontWeight.Normal,
             lineHeight = 16.5.sp,
-            color = Color(0xFF9CA3AF),
+            color = GhaisNoir.TextSecondary,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
@@ -546,8 +520,12 @@ private fun GridLayout(
 }
 
 /**
- * Chunky / Oversized Avatar with luminous glowing halo border.
- * When actively playing, the halo gently breathes with a luminous animation.
+ * Noir artwork well: grayscale image inside a clay well with a 35% black scrim
+ * so it reads as an engraved tile. Falls back to a monogram when there is no
+ * artwork. The rim brightens to SpecularTop while playing — state reads through
+ * fill elevation and chromium, never hue.
+ *
+ * NOTE: [accentColor] is retained for compatibility and ignored.
  */
 @Composable
 private fun ExploreCardAvatar(
@@ -559,88 +537,45 @@ private fun ExploreCardAvatar(
     isPlaying: Boolean,
     modifier: Modifier = Modifier
 ) {
-    // Subtle breathing halo pulse when actively playing
-    val haloPulseAlpha = if (isPlaying) {
-        val infiniteTransition = rememberInfiniteTransition(label = "haloPulseTransition")
-        val animatedAlpha by infiniteTransition.animateFloat(
-            initialValue = 0.45f,
-            targetValue = 0.85f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1200, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "haloPulseAlpha"
-        )
-        animatedAlpha
-    } else {
-        0.55f
-    }
+    val monogram = remember(title) { title.firstOrNull()?.uppercase() ?: "Q" }
 
     Box(
         modifier = modifier.size(size),
         contentAlignment = Alignment.Center
     ) {
-        // Outer ambient glow aura
         Box(
             modifier = Modifier
                 .size(size)
                 .clip(avatarShape)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            accentColor.copy(alpha = haloPulseAlpha * 0.40f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
-
-        // Main Avatar Image Container with Glowing Halo Border
-        Box(
-            modifier = Modifier
-                .size(size - 2.dp)
-                .clip(avatarShape)
-                .background(Color(0xFF191B22))
+                .background(GhaisNoir.wellFill())
                 .border(
-                    width = 2.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            accentColor.copy(alpha = haloPulseAlpha),
-                            accentColor.copy(alpha = haloPulseAlpha * 0.30f)
-                        )
-                    ),
+                    width = 1.dp,
+                    color = if (isPlaying) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
                     shape = avatarShape
-                )
+                ),
+            contentAlignment = Alignment.Center
         ) {
             if (avatarUrl.isNotBlank()) {
                 AsyncImage(
                     model = avatarUrl,
                     contentDescription = title,
                     contentScale = ContentScale.Crop,
+                    colorFilter = NoirGrayscale,
                     modifier = Modifier.fillMaxSize()
                 )
-            } else {
-                // Elegant fallback placeholder with subtle gradient and book icon
+                // Darkening scrim: keeps the plate recessed instead of glowing.
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    Color(0xFF222733),
-                                    Color(0xFF141720)
-                                )
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.AutoStories,
-                        contentDescription = title,
-                        tint = accentColor.copy(alpha = 0.75f),
-                        modifier = Modifier.size(size * 0.42f)
-                    )
-                }
+                        .matchParentSize()
+                        .background(Color.Black.copy(alpha = 0.35f))
+                )
+            } else {
+                Text(
+                    text = monogram,
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = (size.value * 0.32f).sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -648,6 +583,9 @@ private fun ExploreCardAvatar(
 
 /**
  * Category badge pill (e.g. "FOCUS", "SLEEP", "WORK", "HEALING").
+ *
+ * Monochrome informational pill: Fill2 wash + ghost rim + 38% label.
+ * NOTE: [accentColor] is retained for compatibility and ignored.
  */
 @Composable
 private fun ExploreCategoryBadge(
@@ -657,15 +595,15 @@ private fun ExploreCategoryBadge(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(50))
-            .background(accentColor.copy(alpha = 0.14f))
-            .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(50))
+            .clip(GhaisShapes.pill)
+            .background(GhaisNoir.Fill2)
+            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
             .padding(horizontal = 9.dp, vertical = 3.5.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = category.uppercase(),
-            color = accentColor,
+            color = GhaisNoir.TextTertiary,
             fontSize = 10.5.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.9.sp
@@ -675,6 +613,8 @@ private fun ExploreCategoryBadge(
 
 /**
  * Surah count chip (e.g. "6 Surahs • Tartil").
+ *
+ * Monochrome informational chip: Fill2 wash + ghost rim + 62% label.
  */
 @Composable
 private fun ExploreSurahCountChip(
@@ -683,15 +623,15 @@ private fun ExploreSurahCountChip(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(50))
-            .background(Color.White.copy(alpha = 0.07f))
-            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(50))
+            .clip(GhaisShapes.pill)
+            .background(GhaisNoir.Fill2)
+            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
             .padding(horizontal = 9.dp, vertical = 3.5.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            color = Color(0xFFD1D5DB),
+            color = GhaisNoir.TextSecondary,
             fontSize = 11.5.sp,
             fontWeight = FontWeight.Medium
         )
@@ -699,7 +639,10 @@ private fun ExploreSurahCountChip(
 }
 
 /**
- * Frosted Glass Play Button that triggers immediate full-surah queue playback.
+ * Noir play affordance: chromium disc while playing, smoked well otherwise.
+ * Fill carries the state — never hue.
+ *
+ * NOTE: [accentColor] is retained for compatibility and ignored.
  */
 @Composable
 private fun ExplorePlayButton(
@@ -712,25 +655,23 @@ private fun ExplorePlayButton(
     Box(
         modifier = modifier
             .size(size)
-            .clip(CircleShape)
-            .background(Color(0xFF20232B).copy(alpha = 0.85f))
+            .clip(GhaisShapes.well)
+            .background(
+                if (isPlaying) GhaisNoir.chromeFill() else GhaisNoir.wellFill(),
+                GhaisShapes.well
+            )
             .border(
                 width = 1.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        if (isPlaying) accentColor.copy(alpha = 0.75f) else Color.White.copy(alpha = 0.40f),
-                        if (isPlaying) accentColor.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.10f)
-                    )
-                ),
-                shape = CircleShape
+                color = if (isPlaying) Color.White.copy(alpha = 0.4f) else GhaisNoir.BorderCard,
+                shape = GhaisShapes.well
             )
-            .clickable(onClick = onClick),
+            .noirClickable(onClick),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
             contentDescription = if (isPlaying) "Pause" else "Play",
-            tint = if (isPlaying) accentColor else Color(0xFFF3F4F6),
+            tint = if (isPlaying) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
             modifier = Modifier.size(size * 0.52f)
         )
     }
@@ -766,6 +707,8 @@ fun buildTracksFromSurahIds(
 
 /**
  * Map [MoodPlaylist] to [ExploreCardItem].
+ *
+ * Noir: accent is always monochrome (legacy field kept for compatibility).
  */
 fun MoodPlaylist.toExploreCardItem(): ExploreCardItem {
     val category = when (id) {
@@ -782,19 +725,8 @@ fun MoodPlaylist.toExploreCardItem(): ExploreCardItem {
         else -> "QURAN"
     }
 
-    val accent = when (id) {
-        "study-focus" -> Color(0xFF4EDEA3) // Vivid Emerald
-        "focus-work" -> Color(0xFF6EE7B7)  // Mint Glow
-        "sleep-mode" -> Color(0xFFC084FC)  // Lavender
-        "heart-soothing" -> Color(0xFF38BDF8) // Sky Blue
-        "duaa-ruqia" -> Color(0xFF34D399)   // Sage Emerald
-        "tahajjud" -> Color(0xFFA855F7)     // Royal Violet
-        "sunrise-barakah" -> Color(0xFFF2B880) // Champagne Gold
-        "emotional" -> Color(0xFFFB7185)    // Rose
-        "most-beautiful" -> Color(0xFFFBBF24) // Amber
-        "favourites" -> Color(0xFFD4A853)   // Gold
-        else -> Color(0xFFD4A853)
-    }
+    // Noir Glass: zero hue — state reads through fill elevation, not color.
+    val accent = Color.White
 
     val avatarUrl = when (id) {
         "study-focus" -> GhaisAssets.AllCuratedPlaylists.find { it.id == "mindful-hifz" }?.coverUrl ?: GhaisAssets.LibraryMorningCover
@@ -862,17 +794,12 @@ fun ExploreBentoCard(
 
 /**
  * Map [DetailedCuratedPlaylist] to [ExploreCardItem].
+ *
+ * Noir: accent is always monochrome (legacy field kept for compatibility).
  */
 fun DetailedCuratedPlaylist.toExploreCardItem(): ExploreCardItem {
     val categoryUpper = tag.ifEmpty { "CURATED" }.uppercase()
-    val accent = when (categoryUpper) {
-        "FOCUS" -> Color(0xFF6EE7B7)
-        "SLEEP", "NIGHT" -> Color(0xFFC084FC)
-        "HEALING" -> Color(0xFF38BDF8)
-        "MORNING", "BARAKAH" -> Color(0xFFF2B880)
-        "PEACE", "TRANQUILITY" -> Color(0xFF4EDEA3)
-        else -> Color(0xFFD4A853)
-    }
+    val accent = Color.White
 
     return ExploreCardItem(
         id = id,
@@ -888,17 +815,12 @@ fun DetailedCuratedPlaylist.toExploreCardItem(): ExploreCardItem {
 
 /**
  * Map [CuratedPlaylist] to [ExploreCardItem].
+ *
+ * Noir: accent is always monochrome (legacy field kept for compatibility).
  */
 fun CuratedPlaylist.toExploreCardItem(): ExploreCardItem {
     val categoryUpper = (if (category.isNotEmpty()) category else tag).uppercase()
-    val accent = when (categoryUpper) {
-        "FOCUS" -> Color(0xFF6EE7B7)
-        "SLEEP", "NIGHT" -> Color(0xFFC084FC)
-        "HEALING" -> Color(0xFF38BDF8)
-        "MORNING", "BARAKAH" -> Color(0xFFF2B880)
-        "PEACE", "TRANQUILITY" -> Color(0xFF4EDEA3)
-        else -> Color(0xFFD4A853)
-    }
+    val accent = Color.White
 
     return ExploreCardItem(
         id = id,
@@ -913,6 +835,8 @@ fun CuratedPlaylist.toExploreCardItem(): ExploreCardItem {
 
 /**
  * Map [DetailedReciter] to [ExploreCardItem].
+ *
+ * Noir: accent is always monochrome (legacy field kept for compatibility).
  */
 fun DetailedReciter.toExploreCardItem(): ExploreCardItem {
     return ExploreCardItem(
@@ -922,7 +846,7 @@ fun DetailedReciter.toExploreCardItem(): ExploreCardItem {
         category = style.uppercase(),
         avatarUrl = photoUrl,
         surahCountText = "${recitations.size} Surahs • $riwayah",
-        accentColor = Color(0xFFD4A853),
+        accentColor = Color.White,
         tracks = recitations.map { it.toTrackItem(this) }
     )
 }
