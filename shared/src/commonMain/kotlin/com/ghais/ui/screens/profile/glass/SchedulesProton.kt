@@ -143,7 +143,7 @@ fun SchedulesProtonSection() {
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "%02d:%02d".format(schedule.hour, schedule.minute),
+                                    text = "${schedule.hour.toString().padStart(2, '0')}:${schedule.minute.toString().padStart(2, '0')}",
                                     color = GhaisNoir.TextPrimary,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold
@@ -266,13 +266,13 @@ private fun SchedEditorDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SchedStepperRow(
                     label = "Hour",
-                    valueText = "%02d".format(hour),
+                    valueText = hour.toString().padStart(2, '0'),
                     onMinus = { hour = (hour - 1).mod(24) },
                     onPlus = { hour = (hour + 1).mod(24) }
                 )
                 SchedStepperRow(
                     label = "Minute",
-                    valueText = "%02d".format(minute),
+                    valueText = minute.toString().padStart(2, '0'),
                     onMinus = { minute = (minute - 1).mod(60) },
                     onPlus = { minute = (minute + 1).mod(60) }
                 )
