@@ -232,9 +232,14 @@ private fun DotsRow(current: Int) {
                     .width(if (index == current) 24.dp else 8.dp)
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(
-                        if (index == current) GhaisNoir.chromeFill() else GhaisNoir.Fill4,
-                        RoundedCornerShape(4.dp)
+                    .then(
+                        if (index == current) Modifier.background(
+                            GhaisNoir.chromeFill(),
+                            RoundedCornerShape(4.dp)
+                        ) else Modifier.background(
+                            GhaisNoir.Fill4,
+                            RoundedCornerShape(4.dp)
+                        )
                     )
             )
         }

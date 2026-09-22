@@ -237,7 +237,10 @@ private fun ToggleWell(
         modifier = Modifier
             .size(48.dp)
             .clip(GhaisShapes.well)
-            .background(if (active) GhaisNoir.Fill4 else GhaisNoir.wellFill())
+            .then(
+                if (active) Modifier.background(GhaisNoir.Fill4)
+                else Modifier.background(GhaisNoir.wellFill())
+            )
             .border(
                 1.dp,
                 if (active) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,

@@ -92,7 +92,7 @@ object AppSettingsScreen : Screen {
                 // 1. Playback
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        NoirSectionHeader(title = "Playback")
+                        NoirSectionHeader(label = "Playback")
                         NoirListRow(
                             icon = Icons.Filled.PlayArrow,
                             title = "Autoplay next",
@@ -123,7 +123,7 @@ object AppSettingsScreen : Screen {
                 // 2. Downloads & storage
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        NoirSectionHeader(title = "Downloads & storage")
+                        NoirSectionHeader(label = "Downloads & storage")
                         NoirListRow(
                             icon = Icons.Filled.Wifi,
                             title = "Wi-Fi only",
@@ -157,7 +157,7 @@ object AppSettingsScreen : Screen {
                 // 3. Reminders & notifications (placeholder — no scheduling infra).
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        NoirSectionHeader(title = "Reminders & notifications")
+                        NoirSectionHeader(label = "Reminders & notifications")
                         NoirListRow(
                             icon = Icons.Filled.Notifications,
                             title = "Daily reminder",
@@ -176,7 +176,7 @@ object AppSettingsScreen : Screen {
                 // 4. About
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        NoirSectionHeader(title = "About")
+                        NoirSectionHeader(label = "About")
                         NoirListRow(
                             icon = Icons.Filled.Info,
                             title = "Version",

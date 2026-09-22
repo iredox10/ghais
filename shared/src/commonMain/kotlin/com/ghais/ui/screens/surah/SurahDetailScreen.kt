@@ -186,8 +186,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                         },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
-                },
-                containerColor = Color.Transparent
+                }
             ) { paddingValues ->
                 LazyColumn(
                     modifier = Modifier
