@@ -144,6 +144,13 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
         val followedSlugs by FollowStore.followedSlugs.collectAsState()
         val isFollowing = reciter.slug in followedSlugs
 
+        // Live follower count from public reciter_stats (null = unknown = hidden).
+        val followerCounts by FollowStore.followerCounts.collectAsState()
+        val followerCount = followerCounts[reciter.slug]
+        LaunchedEffect(reciter.slug) {
+            FollowStore.refreshCount(reciter.slug)
+        }
+
         // Library offline fraction — drives the hero segmented meter.
         val downloadedCount = remember(reciter.slug, surahs, downloaded) {
             surahs.count { "${reciter.slug}/${it.id}" in downloaded }
@@ -219,12 +226,15 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                     fontWeight = FontWeight.SemiBold,
                                     letterSpacing = 1.2.sp
                                 )
-                                Text(
-                                    text = meta.followers,
-                                    color = GhaisNoir.TextTertiary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Normal
-                                )
+                                // Live follower count — hidden while unknown.
+                                if (followerCount != null) {
+                                    Text(
+                                        text = FollowStore.formatFollowerCount(followerCount),
+                                        color = GhaisNoir.TextTertiary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Normal
+                                    )
+                                }
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
@@ -252,6 +262,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                 allDone = allDone,
                                 downloadingCount = downloadingCount,
                                 isFollowing = isFollowing,
+                                followerCount = followerCount,
                                 playEnabled = allTracks.isNotEmpty(),
                                 onPlayAll = {
                                     if (allTracks.isNotEmpty()) {
@@ -365,6 +376,7 @@ private fun ReciterNoirHeroPlate(
     allDone: Boolean,
     downloadingCount: Int,
     isFollowing: Boolean,
+    followerCount: Long?,
     playEnabled: Boolean,
     onPlayAll: () -> Unit,
     onShuffle: () -> Unit,
@@ -420,6 +432,10 @@ private fun ReciterNoirHeroPlate(
                 NoirStatChip(text = meta.country)
                 NoirStatChip(text = meta.riwayah)
                 NoirStatChip(text = meta.style)
+                // Live follower count — hidden while unknown.
+                if (followerCount != null) {
+                    NoirStatChip(text = FollowStore.formatFollowerCount(followerCount))
+                }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -819,7 +835,6 @@ private fun formatSurahDuration(ayahsCount: Int): String {
  */
 private data class ReciterDisplayMeta(
     val photoUrl: String?,
-    val followers: String,
     val country: String,
     val riwayah: String,
     val style: String
@@ -854,12 +869,6 @@ private fun resolveReciterMetadata(reciter: Reciter): ReciterDisplayMeta {
             (cleanSlug.startsWith("abdulbaset") && it.slug.startsWith("abdul"))
         }?.photoUrl
 
-    val followers = verifiedFromList?.followers ?: run {
-        val hash = reciter.nameEn.hashCode().let { if (it < 0) -it else it }
-        val fansK = (hash % 850) + 120
-        "${(fansK / 100.0).toString().take(3)}M followers"
-    }
-
     val country = reciter.country.ifBlank {
         verifiedFromList?.country ?: when {
             cleanSlug.contains("alafasy") || cleanSlug == "mishary" -> "Kuwait"
@@ -880,7 +889,6 @@ private fun resolveReciterMetadata(reciter: Reciter): ReciterDisplayMeta {
 
     return ReciterDisplayMeta(
         photoUrl = photoUrl,
-        followers = followers,
         country = country,
         riwayah = riwayah,
         style = style
