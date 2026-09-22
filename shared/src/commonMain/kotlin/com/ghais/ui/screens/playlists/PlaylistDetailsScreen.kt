@@ -1,25 +1,46 @@
 package com.ghais.ui.screens.playlists
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,19 +58,39 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.seed.QuranData
+import com.ghais.domain.model.Surah
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
+import com.ghais.ui.components.noir.ChromePillButton
+import com.ghais.ui.components.noir.GhostPillButton
+import com.ghais.ui.components.noir.NoirHeroCard
+import com.ghais.ui.components.noir.NoirListRow
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.NoirSegmentedProgress
+import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.navigation.LocalRootNavigator
+import com.ghais.ui.screens.home.NoirStatChip
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.surah.SurahDetailScreen
-
-private val MutedGrey = Color(0xFF9A9AA0)
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.theme.GhaisTypography
 
 /**
  * One playlist's own screen: cover art, name, description,
  * then its surahs ready to play.
+ *
+ * Styled in strict Noir Glass monochrome: true-black canvas, alpha-white
+ * fills, ghost hairlines with a top-only specular, chrome CTAs, and
+ * grayscale artwork. Zero hue — state reads through fill elevation,
+ * chromium, weight and opacity.
+ *
+ * Presentation only. Queue / play / favorites logic and navigation
+ * (SurahDetailScreen, NowPlayingScreen) are untouched.
  */
 data class PlaylistDetailsScreen(val playlistId: String) : Screen {
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -61,248 +102,514 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
         }
         val favorites by FavoritesStore.favoriteTracks.collectAsState()
 
-        fun buildTracks(): List<TrackItem> = surahs.map { surah ->
-            TrackItem(
-                reciterSlug = reciter.slug,
-                reciterName = reciter.nameEn,
-                surahId = surah.id,
-                surahNameEn = surah.nameEn,
-                surahNameAr = surah.nameAr,
-                ayahNo = 0,
-                audioUrl = reciter.getFullSurahUrl(surah.id),
-                durationMs = surah.ayahsCount * 15_000L
-            )
+        // Playback state observation from AudioEngine (read-only, drives live row state).
+        val currentTrack by AudioEngine.currentTrack.collectAsState()
+        val isPlaying by AudioEngine.isPlaying.collectAsState()
+
+        val allTracks: List<TrackItem> = remember(surahs, reciter) {
+            surahs.map { surah ->
+                TrackItem(
+                    reciterSlug = reciter.slug,
+                    reciterName = reciter.nameEn,
+                    surahId = surah.id,
+                    surahNameEn = surah.nameEn,
+                    surahNameAr = surah.nameAr,
+                    ayahNo = 0,
+                    audioUrl = reciter.getFullSurahUrl(surah.id),
+                    durationMs = surah.ayahsCount * 15_000L
+                )
+            }
+        }
+        fun trackFor(surah: Surah): TrackItem? = allTracks.firstOrNull { it.surahId == surah.id }
+
+        // Kept fraction — drives the hero segmented meter (monochrome, no hue).
+        val keptCount = remember(surahs, allTracks, favorites) {
+            surahs.count { surah ->
+                val url = trackFor(surah)?.audioUrl
+                url != null && favorites.any { it.audioUrl == url }
+            }
+        }
+        val keptProgress: Float = remember(keptCount, surahs.size) {
+            if (surahs.isEmpty()) 0f else keptCount.toFloat() / surahs.size.toFloat()
         }
 
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black),
-            contentPadding = PaddingValues(bottom = 112.dp)
-        ) {
-            // Nav row
-            item {
-                Box(
-                    modifier = Modifier
-                        .padding(start = 8.dp, top = 8.dp)
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .clickable { navigator.pop() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-            // Cover art
-            item {
-                PlaylistCover(
-                    art = playlist.art,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .height(220.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                )
-            }
-            // Name + description
-            item {
-                Text(
-                    text = playlist.title,
-                    color = Color.White,
-                    fontSize = 27.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                )
-            }
-            item {
-                Text(
-                    text = playlist.description,
-                    color = MutedGrey,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
-            item {
-                Text(
-                    text = "${surahs.size} surahs • ${reciter.nameEn}",
-                    color = MutedGrey,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-            // Play-all + shuffle
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(50))
-                            .background(Color.White)
-                            .clickable {
-                                val tracks = buildTracks()
-                                if (tracks.isNotEmpty()) {
-                                    AudioEngine.playQueue(tracks, startIndex = 0)
-                                    rootNavigator.push(NowPlayingScreen())
+        NoirScreenRoot {
+            Scaffold(
+                containerColor = Color.Transparent,
+                topBar = {
+                    TopAppBar(
+                        title = {},
+                        navigationIcon = {
+                            IconButton(
+                                onClick = { navigator.pop() },
+                                modifier = Modifier.padding(start = 4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(GhaisNoir.Fill2)
+                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back",
+                                        tint = GhaisNoir.TextPrimary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
                             }
-                            .padding(vertical = 12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = "Play all",
-                            tint = Color.Black,
-                            modifier = Modifier.size(20.dp)
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Play All", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.10f))
-                            .border(1.dp, Color.White.copy(alpha = 0.14f), CircleShape)
-                            .clickable {
-                                val tracks = buildTracks().shuffled()
-                                if (tracks.isNotEmpty()) {
-                                    AudioEngine.playQueue(tracks, startIndex = 0)
-                                    rootNavigator.push(NowPlayingScreen())
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Shuffle,
-                            contentDescription = "Shuffle",
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                    )
                 }
-            }
-            // Surahs header
-            item {
-                Text(
-                    text = "Surahs in this playlist",
-                    color = Color.White,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-                )
-            }
-            // Surah rows
-            itemsIndexed(surahs, key = { _, s -> "pl_${playlist.id}_${s.id}" }) { index, surah ->
-                val tracks = buildTracks()
-                val track = tracks.firstOrNull { it.surahId == surah.id }
-                val isFavorite = track?.let { t -> favorites.any { it.audioUrl == t.audioUrl } } ?: false
-                Column(
+            ) { paddingValues ->
+                LazyColumn(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Color.White.copy(alpha = 0.04f))
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentPadding = PaddingValues(bottom = 120.dp) // room for MiniPlayer & dock
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { navigator.push(SurahDetailScreen(surah.id)) }
-                            .padding(horizontal = 12.dp, vertical = 10.dp)
-                    ) {
-                        Box(
+                    // Editorial header + hero plate
+                    item {
+                        Column(
                             modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.09f)),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
                         ) {
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // Editorial monochrome header (mirrors NoirProfileHeader).
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "CURATED PLAYLIST",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    letterSpacing = 1.2.sp
+                                )
+                                Text(
+                                    text = "${surahs.size} surahs",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Normal
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = surah.id.toString(),
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
+                                text = "Tonight's",
+                                style = GhaisTypography.displayEditorial,
+                                maxLines = 1
                             )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = surah.nameEn,
-                                color = Color.White,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
+                                text = playlist.title,
+                                style = GhaisTypography.displayEditorialBold,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Text(
-                                text = "${surah.ayahsCount} Ayahs • ${surah.revelationType}",
-                                color = MutedGrey,
-                                fontSize = 12.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Text(text = surah.nameAr, color = Color.White.copy(alpha = 0.85f), fontSize = 16.sp)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        IconButton(
-                            onClick = { track?.let { FavoritesStore.toggle(it) } },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
-                                tint = if (isFavorite) MaterialTheme.colorScheme.error else MutedGrey,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.10f))
-                                .clickable {
-                                    val start = tracks.indexOfFirst { it.surahId == surah.id }
-                                        .takeIf { it >= 0 } ?: 0
-                                    if (tracks.isNotEmpty()) {
-                                        AudioEngine.playQueue(tracks, startIndex = start)
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            // Hero plate: grayscale art + identity + stats +
+                            // kept meter + chrome/ghost actions.
+                            PlaylistNoirHeroPlate(
+                                playlist = playlist,
+                                reciterName = reciter.nameEn,
+                                surahCount = surahs.size,
+                                keptCount = keptCount,
+                                keptProgress = keptProgress,
+                                playEnabled = allTracks.isNotEmpty(),
+                                onPlayAll = {
+                                    if (allTracks.isNotEmpty()) {
+                                        AudioEngine.playQueue(allTracks, startIndex = 0)
                                         rootNavigator.push(NowPlayingScreen())
                                     }
                                 },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.PlayArrow,
-                                contentDescription = "Play ${surah.nameEn}",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
+                                onShuffle = {
+                                    val shuffled = allTracks.shuffled()
+                                    if (shuffled.isNotEmpty()) {
+                                        AudioEngine.playQueue(shuffled, startIndex = 0)
+                                        rootNavigator.push(NowPlayingScreen())
+                                    }
+                                }
+                            )
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            // Surahs section header (monochrome, count as ghost action).
+                            NoirSectionHeader(
+                                label = "Surahs in this playlist",
+                                actionLabel = "${surahs.size} Surahs",
+                                onAction = {}
                             )
                         }
                     }
-                    if (index < surahs.lastIndex) {
-                        HorizontalDivider(
-                            color = Color.White.copy(alpha = 0.07f),
-                            thickness = 0.5.dp,
-                            modifier = Modifier.padding(start = 62.dp)
+
+                    // Surah rows
+                    itemsIndexed(
+                        items = surahs,
+                        key = { _, s -> "pl_${playlist.id}_${s.id}" }
+                    ) { index, surah ->
+                        val track = trackFor(surah)
+                        val isFavorite =
+                            track?.let { t -> favorites.any { it.audioUrl == t.audioUrl } } ?: false
+                        val isCurrentSurah =
+                            currentTrack?.surahId == surah.id && currentTrack?.reciterSlug == reciter.slug
+                        val isCurrentSurahPlaying = isCurrentSurah && isPlaying
+
+                        PlaylistNoirSurahRow(
+                            surah = surah,
+                            isFavorite = isFavorite,
+                            isCurrentTrack = isCurrentSurah,
+                            isPlaying = isCurrentSurahPlaying,
+                            onToggleFavorite = { track?.let { FavoritesStore.toggle(it) } },
+                            onRowClick = { navigator.push(SurahDetailScreen(surah.id)) },
+                            onPlayClick = {
+                                val start = allTracks.indexOfFirst { it.surahId == surah.id }
+                                    .takeIf { it >= 0 } ?: 0
+                                if (allTracks.isNotEmpty()) {
+                                    AudioEngine.playQueue(allTracks, startIndex = start)
+                                    rootNavigator.push(NowPlayingScreen())
+                                }
+                            }
                         )
                     }
+
+                    item { Spacer(modifier = Modifier.height(4.dp)) }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
             }
-            item { Spacer(modifier = Modifier.height(4.dp)) }
         }
     }
+}
+
+/**
+ * Hero plate for the playlist (mirrors the reciter "resume plate" pattern):
+ * grayscale cover art with chromium ring + darkening scrim, identity text,
+ * stat chips, segmented kept meter, and chrome/ghost actions.
+ *
+ * Presentation only — all callbacks preserve the original screen logic.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PlaylistNoirHeroPlate(
+    playlist: MoodPlaylist,
+    reciterName: String,
+    surahCount: Int,
+    keptCount: Int,
+    keptProgress: Float,
+    playEnabled: Boolean,
+    onPlayAll: () -> Unit,
+    onShuffle: () -> Unit
+) {
+    NoirHeroCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Grayscale art plate: chromium ring + scrim so it reads engraved.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(176.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .border(1.dp, GhaisNoir.SpecularTop, RoundedCornerShape(20.dp))
+            ) {
+                PlaylistCover(
+                    art = playlist.art,
+                    modifier = Modifier.fillMaxSize()
+                )
+                // Darkening scrim: keeps the plate recessed instead of glowing.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.25f))
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = "PLAYLIST",
+                color = GhaisNoir.TextTertiary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.2.sp
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = playlist.title,
+                color = GhaisNoir.TextPrimary,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = playlist.description,
+                color = GhaisNoir.TextSecondary,
+                fontSize = 13.sp,
+                lineHeight = 19.sp
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "$surahCount surahs • $reciterName",
+                color = GhaisNoir.TextTertiary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Stats as non-interactive NoirStatChip wells (zero hue).
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                NoirStatChip(text = "$surahCount Surahs")
+                NoirStatChip(text = reciterName)
+                NoirStatChip(text = "$keptCount kept")
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Segmented kept meter (engraved track, chrome fill).
+            NoirSegmentedProgress(progress = keptProgress, trackHeight = 8.dp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "$keptCount of $surahCount kept",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.sp
+                )
+                Text(
+                    text = "${(keptProgress * 100).toInt()}% kept",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Primary CTA: chromium play-all pill.
+            ChromePillButton(
+                text = "Play All",
+                onClick = onPlayAll,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = playEnabled,
+                leadingIcon = Icons.Default.PlayArrow
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Secondary action as ghost pill.
+            GhostPillButton(
+                text = "Shuffle",
+                onClick = onShuffle,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+/**
+ * Single Surah row as a [NoirListRow]: clay icon-well, dual text, and a
+ * monochrome trailing cluster (favorite affordance + chromium play disc).
+ */
+@Composable
+private fun PlaylistNoirSurahRow(
+    surah: Surah,
+    isFavorite: Boolean,
+    isCurrentTrack: Boolean,
+    isPlaying: Boolean,
+    onToggleFavorite: () -> Unit,
+    onRowClick: () -> Unit,
+    onPlayClick: () -> Unit
+) {
+    val durationText = remember(surah.ayahsCount) {
+        formatSurahDuration(surah.ayahsCount)
+    }
+    val stateSuffix = when {
+        isPlaying -> " • Playing"
+        isCurrentTrack -> " • Queued"
+        isFavorite -> " • Kept"
+        else -> ""
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 5.dp)
+    ) {
+        NoirListRow(
+            title = "${surah.id}. ${surah.nameEn}",
+            subtitle = "${surah.nameAr} • ${surah.ayahsCount} Ayahs • $durationText$stateSuffix",
+            icon = Icons.Default.MusicNote,
+            chevron = false,
+            onClick = onRowClick,
+            trailing = {
+                PlaylistRowTrailing(
+                    isFavorite = isFavorite,
+                    isCurrentTrack = isCurrentTrack,
+                    isPlaying = isPlaying,
+                    onToggleFavorite = onToggleFavorite,
+                    onPlayClick = onPlayClick
+                )
+            }
+        )
+    }
+}
+
+/**
+ * Monochrome trailing cluster: favorite affordance + chromium play disc.
+ * Live state reads through chromium fill and the white equalizer — never hue.
+ */
+@Composable
+private fun RowScope.PlaylistRowTrailing(
+    isFavorite: Boolean,
+    isCurrentTrack: Boolean,
+    isPlaying: Boolean,
+    onToggleFavorite: () -> Unit,
+    onPlayClick: () -> Unit
+) {
+    // Favorite affordance — monochrome ramp only (kept = full white).
+    IconButton(
+        onClick = onToggleFavorite,
+        modifier = Modifier.size(34.dp)
+    ) {
+        Icon(
+            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+            contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+            tint = if (isFavorite) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+
+    Spacer(modifier = Modifier.width(6.dp))
+
+    // Play disc: chromium while live, clay well otherwise.
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .background(
+                if (isCurrentTrack) GhaisNoir.chromeFill() else GhaisNoir.wellFill(),
+                GhaisShapes.well
+            )
+            .border(
+                1.dp,
+                if (isCurrentTrack) Color.White.copy(alpha = 0.4f) else GhaisNoir.BorderCard,
+                GhaisShapes.well
+            )
+            .noirClickable(onPlayClick),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isPlaying) {
+            ActiveNoirEqualizer()
+        } else {
+            Icon(
+                imageVector = if (isCurrentTrack) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = if (isCurrentTrack) "Resume" else "Play",
+                tint = if (isCurrentTrack) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Animated live equalizer bars in pure white (monochrome live meter).
+ */
+@Composable
+private fun ActiveNoirEqualizer(
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "PlaylistEq")
+
+    val h1 by infiniteTransition.animateFloat(
+        initialValue = 6f,
+        targetValue = 19f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(420, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "eqBar1"
+    )
+    val h2 by infiniteTransition.animateFloat(
+        initialValue = 18f,
+        targetValue = 7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(550, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "eqBar2"
+    )
+    val h3 by infiniteTransition.animateFloat(
+        initialValue = 8f,
+        targetValue = 21f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(360, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "eqBar3"
+    )
+    val h4 by infiniteTransition.animateFloat(
+        initialValue = 17f,
+        targetValue = 6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(480, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "eqBar4"
+    )
+
+    Row(
+        modifier = modifier.height(24.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.5.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(h1.dp)
+                .background(GhaisNoir.TextPrimary, CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(h2.dp)
+                .background(GhaisNoir.TextPrimary, CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(h3.dp)
+                .background(GhaisNoir.TextPrimary, CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(h4.dp)
+                .background(GhaisNoir.TextPrimary, CircleShape)
+        )
+    }
+}
+
+/**
+ * Helper to compute formatted duration from ayah count (e.g. 7 ayahs -> "1:45").
+ */
+private fun formatSurahDuration(ayahsCount: Int): String {
+    val totalSeconds = ayahsCount * 15
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "$minutes:${seconds.toString().padStart(2, '0')}"
 }

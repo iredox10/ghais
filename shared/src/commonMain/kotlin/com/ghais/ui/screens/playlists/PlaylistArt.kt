@@ -24,7 +24,12 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Artistic gradient covers for each playlist card (reference design).
+ * Artistic monochrome covers for each playlist card — strict Noir Glass.
+ *
+ * Zero hue: every background is a grayscale ramp (R == G == B) and every
+ * motif is drawn in alpha-white line work, so covers read as engraved tiles
+ * rather than colored stickers. Motifs stay distinct per playlist (rings /
+ * petals / moon / rays / burst) through geometry and alpha, never color.
  * Pure Compose Canvas — no image assets needed.
  */
 @Composable
@@ -53,16 +58,20 @@ fun PlaylistCover(art: PlaylistArt, modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Grayscale cover ramps only — each playlist keeps its own elevation so cards
+ * stay distinguishable, with depth from lightness rather than hue.
+ */
 private fun coverBackground(art: PlaylistArt): Brush = when (art) {
     PlaylistArt.FAVOURITES -> Brush.verticalGradient(listOf(Color(0xFF232326), Color(0xFF101012)))
-    PlaylistArt.FOCUS_WORK -> Brush.verticalGradient(listOf(Color(0xFF2E7CF6), Color(0xFF081A3A)))
-    PlaylistArt.BEAUTIFUL -> Brush.verticalGradient(listOf(Color(0xFFF43F8C), Color(0xFF4A0E2E)))
-    PlaylistArt.SLEEP -> Brush.verticalGradient(listOf(Color(0xFF1B2A6B), Color(0xFF05070F)))
-    PlaylistArt.DUAA_RUQIA -> Brush.verticalGradient(listOf(Color(0xFF5E8F5A), Color(0xFF1E3320)))
-    PlaylistArt.EMOTIONAL -> Brush.verticalGradient(listOf(Color(0xFF5B3DF5), Color(0xFF120B33)))
-    PlaylistArt.STUDY -> Brush.verticalGradient(listOf(Color(0xFF1E3A5F), Color(0xFF0A1424)))
-    PlaylistArt.TAHAJJUD -> Brush.verticalGradient(listOf(Color(0xFF2A1B4E), Color(0xFF0F0A1E)))
-    PlaylistArt.SUNRISE -> Brush.verticalGradient(listOf(Color(0xFF6B4A1B), Color(0xFF241505)))
+    PlaylistArt.FOCUS_WORK -> Brush.verticalGradient(listOf(Color(0xFF26262B), Color(0xFF0B0B0D)))
+    PlaylistArt.BEAUTIFUL -> Brush.verticalGradient(listOf(Color(0xFF2A2A2E), Color(0xFF0E0E10)))
+    PlaylistArt.SLEEP -> Brush.verticalGradient(listOf(Color(0xFF1C1C20), Color(0xFF08080A)))
+    PlaylistArt.DUAA_RUQIA -> Brush.verticalGradient(listOf(Color(0xFF222226), Color(0xFF0C0C0E)))
+    PlaylistArt.EMOTIONAL -> Brush.verticalGradient(listOf(Color(0xFF2E2E34), Color(0xFF0A0A0C)))
+    PlaylistArt.STUDY -> Brush.verticalGradient(listOf(Color(0xFF202027), Color(0xFF0B0B0D)))
+    PlaylistArt.TAHAJJUD -> Brush.verticalGradient(listOf(Color(0xFF18181C), Color(0xFF070708)))
+    PlaylistArt.SUNRISE -> Brush.verticalGradient(listOf(Color(0xFF242428), Color(0xFF0D0D0F)))
 }
 
 @Composable
@@ -123,10 +132,10 @@ private fun FlowerArt() {
 @Composable
 private fun SleepArt() {
     Canvas(modifier = Modifier.fillMaxSize()) {
-        // moon glow, lower-left
+        // moon glow, lower-left — monochrome white wash, never blue.
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(Color(0xFF6E8BFF).copy(alpha = 0.55f), Color.Transparent),
+                colors = listOf(Color.White.copy(alpha = 0.30f), Color.Transparent),
                 center = Offset(size.width * 0.30f, size.height * 0.62f),
                 radius = size.width * 0.75f
             ),
