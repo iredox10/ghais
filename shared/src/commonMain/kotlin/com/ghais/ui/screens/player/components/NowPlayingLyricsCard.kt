@@ -4,7 +4,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -21,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Pause
@@ -36,9 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,15 +49,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
 /**
- * Synchronized Ayah Lyrics Card adhering to the Stitch Apple Glassmorphism design:
- * - Frosted liquid glass card container with subtle ambient sheens
- * - Card header with Subtitles icon, uppercase tracking, and glowing 'Sync Active' pill
- * - Active Recited Ayah section with left emerald glow indicator bar, radiant emerald Arabic verse,
- *   phonetic transliteration, and English translation
- * - Upcoming Ayah preview with muted opacity
+ * Synchronized Ayah Lyrics Card — Noir Glass (monochrome Carbon Glass).
+ *
+ * - Card: elevated glass fill + ghost border + top specular hairline.
+ * - Ambient sheens: white-only radial glows (zero hue).
+ * - Active ayah: engraved inset section, white gradient indicator bar,
+ *   arabic in [TextPrimary], transliteration in [TextTertiary] italic,
+ *   translation in [TextSecondary].
+ * - Signature unchanged (used by NowPlayingScreen: arabicVerse + modifier).
  */
 @Composable
 fun NowPlayingLyricsCard(
@@ -77,11 +78,12 @@ fun NowPlayingLyricsCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xCC181D1A))
-            .border(1.dp, Color(0x24FFFFFF), RoundedCornerShape(24.dp))
+            .clip(GhaisShapes.cardNoir)
+            .background(GhaisNoir.cardFill())
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardNoir)
+            .topSpecular()
     ) {
-        // Ambient liquid sheen corner glows
+        // Ambient monochrome corner sheens (white only, zero hue)
         Box(
             modifier = Modifier
                 .size(100.dp)
@@ -89,7 +91,7 @@ fun NowPlayingLyricsCard(
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            GhaisColors.Primary.copy(alpha = 0.12f),
+                            GhaisNoir.AmbientGlow,
                             Color.Transparent
                         )
                     )
@@ -102,7 +104,7 @@ fun NowPlayingLyricsCard(
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFF14B8A6).copy(alpha = 0.08f),
+                            GhaisNoir.Fill1,
                             Color.Transparent
                         )
                     )
@@ -110,7 +112,7 @@ fun NowPlayingLyricsCard(
         )
 
         Column(modifier = Modifier.padding(18.dp)) {
-            // Header: Subtitles icon + SYNCHRONIZED AYAH LYRICS + Sync Active Pill
+            // Header: Subtitles icon + SYNCHRONIZED AYAH LYRICS + Sync ghost pill
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -120,7 +122,7 @@ fun NowPlayingLyricsCard(
                     Icon(
                         imageVector = Icons.Default.Subtitles,
                         contentDescription = "Subtitles",
-                        tint = GhaisColors.Primary,
+                        tint = GhaisNoir.TextSecondary,
                         modifier = Modifier.size(17.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -129,59 +131,59 @@ fun NowPlayingLyricsCard(
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.3.sp,
-                        color = GhaisColors.Primary
+                        color = GhaisNoir.TextSecondary
                     )
                 }
 
-                // Sync Active glass pill with glowing indicator dot
+                // Sync Active ghost pill with white indicator dot
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(Color(0x1AFFFFFF))
-                        .border(1.dp, Color(0x1FFFFFFF), RoundedCornerShape(50))
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
                         .padding(horizontal = 9.dp, vertical = 3.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .size(6.dp)
                             .clip(CircleShape)
-                            .background(GhaisColors.Primary)
+                            .background(GhaisNoir.TextPrimary)
                     )
                     Spacer(modifier = Modifier.width(5.dp))
                     Text(
                         text = "Sync Active",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color.White.copy(alpha = 0.9f)
+                        color = GhaisNoir.TextSecondary
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Active Recited Ayah Highlight Section
+            // Active Recited Ayah — engraved inset section
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0x0AFFFFFF))
-                    .border(1.dp, GhaisColors.Primary.copy(alpha = 0.22f), RoundedCornerShape(16.dp))
+                    .clip(GhaisShapes.row)
+                    .background(GhaisNoir.insetFill())
+                    .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.row)
                     .padding(14.dp)
             ) {
-                // Left emerald glow indicator bar
+                // Left monochrome indicator bar (white gradient)
                 Box(
                     modifier = Modifier
                         .width(3.5.dp)
                         .height(72.dp)
                         .align(Alignment.CenterStart)
-                        .clip(RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp))
+                        .clip(CircleShape)
                         .background(
                             brush = Brush.verticalGradient(
                                 listOf(
-                                    Color(0xFF6FFBBE),
-                                    GhaisColors.Primary,
-                                    Color(0xFF10B981)
+                                    GhaisNoir.TextPrimary,
+                                    GhaisNoir.TextSecondary,
+                                    GhaisNoir.TextTertiary
                                 )
                             )
                         )
@@ -192,12 +194,12 @@ fun NowPlayingLyricsCard(
                         .fillMaxWidth()
                         .padding(start = 10.dp)
                 ) {
-                    // Arabic verse with grand typography & Apple Music emerald glow
+                    // Arabic verse — primary rung of the text ladder
                     Text(
                         text = arabicVerse,
                         fontSize = 26.sp,
                         fontWeight = FontWeight.Bold,
-                        color = GhaisColors.Primary,
+                        color = GhaisNoir.TextPrimary,
                         textAlign = TextAlign.End,
                         lineHeight = 44.sp,
                         modifier = Modifier.fillMaxWidth()
@@ -205,23 +207,23 @@ fun NowPlayingLyricsCard(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Phonetic transliteration
+                    // Phonetic transliteration — tertiary italic
                     Text(
                         text = transliteration,
                         fontSize = 12.5.sp,
                         fontStyle = FontStyle.Italic,
-                        color = Color(0xCCB0F0D6),
+                        color = GhaisNoir.TextTertiary,
                         lineHeight = 17.sp
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // English translation
+                    // English translation — secondary
                     Text(
                         text = translation,
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color.White.copy(alpha = 0.95f),
+                        color = GhaisNoir.TextSecondary,
                         lineHeight = 19.sp
                     )
                 }
@@ -229,7 +231,7 @@ fun NowPlayingLyricsCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Upcoming Ayah (Previewed softly in muted translucent white)
+            // Upcoming Ayah (previewed softly in muted white)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -241,14 +243,14 @@ fun NowPlayingLyricsCard(
                     fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 1.2.sp,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = GhaisNoir.TextTertiary
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = upcomingArabic,
                     fontSize = 19.sp,
                     fontWeight = FontWeight.Normal,
-                    color = Color.White.copy(alpha = 0.75f),
+                    color = GhaisNoir.TextSecondary,
                     textAlign = TextAlign.End,
                     lineHeight = 30.sp,
                     modifier = Modifier.fillMaxWidth()
@@ -256,7 +258,7 @@ fun NowPlayingLyricsCard(
                 Text(
                     text = upcomingTranslation,
                     fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.55f),
+                    color = GhaisNoir.TextTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -266,14 +268,11 @@ fun NowPlayingLyricsCard(
 }
 
 /**
- * High Fidelity Glowing Emerald Progress Scrubber:
- * - 28 simulated acoustic waveform visualizer bars
- * - Played waveform bars in glowing emerald (#4EDEA3) with ambient glow
- * - Active scrubber indicator pill cursor in white with emerald bloom
- * - Unplayed waveform bars in frosted translucent white
- * - Apple linear micro-track scrubber bar with glowing progress fill
- * - Smooth touch/drag seeking interaction
- * - Timestamps: Elapsed time on left, remaining time with graphic_eq icon on right
+ * Waveform + Micro-Track Progress Scrubber — Noir Glass monochrome.
+ *
+ * - Played bars: solid white; cursor thumb: chrome pill; unplayed: faint white.
+ * - Linear track: engraved inset with chrome fill. Timestamps on text ladder.
+ * - Signature unchanged.
  */
 @Composable
 fun NowPlayingScrubber(
@@ -318,10 +317,9 @@ fun NowPlayingScrubber(
                 },
             contentAlignment = Alignment.Center
         ) {
-            val totalWidthPx = constraints.maxWidth.toFloat()
             val activeIndex = (clampedProgress * (barCount - 1)).toInt()
 
-            // Waveform visualizer bars
+            // Waveform visualizer bars — grayscale only
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -334,24 +332,24 @@ fun NowPlayingScrubber(
                     val isCurrent = index == activeIndex
 
                     if (isCurrent) {
-                        // Glowing white cursor thumb pill
+                        // Chrome cursor thumb pill
                         Box(
                             modifier = Modifier
                                 .width(5.dp)
                                 .height(26.dp)
                                 .clip(CircleShape)
-                                .background(Color.White)
-                                .border(1.dp, GhaisColors.Primary, CircleShape)
+                                .background(GhaisNoir.chromeFill())
+                                .border(1.dp, GhaisNoir.SpecularTop.copy(alpha = 0.5f), CircleShape)
                         )
                     } else {
-                        // Standard waveform bar
+                        // Standard waveform bar: white played / ghost unplayed
                         Box(
                             modifier = Modifier
                                 .width(3.5.dp)
                                 .height(ampDp.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    if (isPlayed) GhaisColors.Primary
+                                    if (isPlayed) GhaisNoir.TextPrimary
                                     else Color.White.copy(alpha = 0.18f)
                                 )
                         )
@@ -362,33 +360,27 @@ fun NowPlayingScrubber(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Apple Linear Micro Track Scrubber Bar
+        // Engraved Micro Track with chrome fill
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(3.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.12f))
+                .background(GhaisNoir.insetFill())
+                .border(1.dp, GhaisNoir.InsetBorder, CircleShape)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth(clampedProgress)
                     .fillMaxHeight()
                     .clip(CircleShape)
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            listOf(
-                                GhaisColors.PrimaryContainer,
-                                GhaisColors.Primary
-                            )
-                        )
-                    )
+                    .background(GhaisNoir.chromeFill())
             )
         }
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        // Timestamps
+        // Timestamps — text ladder
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -398,7 +390,7 @@ fun NowPlayingScrubber(
                 text = elapsedText,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = 0.65f)
+                color = GhaisNoir.TextSecondary
             )
 
             Row(
@@ -408,14 +400,14 @@ fun NowPlayingScrubber(
                 Icon(
                     imageVector = Icons.Default.GraphicEq,
                     contentDescription = "Audio Playing",
-                    tint = GhaisColors.Primary,
+                    tint = GhaisNoir.TextTertiary,
                     modifier = Modifier.size(13.dp)
                 )
                 Text(
                     text = totalText,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color.White.copy(alpha = 0.65f)
+                    color = GhaisNoir.TextSecondary
                 )
             }
         }
@@ -423,10 +415,13 @@ fun NowPlayingScrubber(
 }
 
 /**
- * Primary Emerald Playback Controls:
- * - Frosted glass buttons for Shuffle, Previous, Next, and Repeat
- * - Central Hero Emerald Play/Pause button with radiant glowing aura, inner rim, and obsidian icon
- * - Repeat toggle with infinity loop indicator
+ * Playback Controls — Noir Glass monochrome.
+ *
+ * - Side buttons: ghost wells (Shuffle / Previous / Next / Repeat), active
+ *   toggles read bright white, inactive dim tertiary.
+ * - Hero Play/Pause: chrome disc with near-black glyph + neutral shadow
+ *   (no colored ambient/spot glow). Repeat "∞" badge in OnChrome.
+ * - Signature unchanged.
  */
 @Composable
 fun NowPlayingControlsBar(
@@ -447,43 +442,43 @@ fun NowPlayingControlsBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Shuffle Recitation Mode (Frosted glass button)
+        // Shuffle Recitation Mode (ghost well)
         Box(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(Color(0x14FFFFFF))
-                .border(1.dp, Color(0x1FFFFFFF), CircleShape)
-                .clickable { onShuffleToggle() },
+                .background(GhaisNoir.wellFill())
+                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                .noirClickable { onShuffleToggle() },
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Shuffle,
                 contentDescription = "Shuffle Recitation Mode",
-                tint = if (isShuffle) GhaisColors.Primary else Color.White.copy(alpha = 0.65f),
+                tint = if (isShuffle) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
                 modifier = Modifier.size(20.dp)
             )
         }
 
-        // Previous Ayah Button (Frosted glass button)
+        // Previous Ayah Button (ghost well)
         Box(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(Color(0x14FFFFFF))
-                .border(1.dp, Color(0x1FFFFFFF), CircleShape)
-                .clickable { onPrevious() },
+                .background(GhaisNoir.wellFill())
+                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                .noirClickable { onPrevious() },
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.SkipPrevious,
                 contentDescription = "Previous Ayah",
-                tint = Color.White.copy(alpha = 0.9f),
+                tint = GhaisNoir.TextPrimary,
                 modifier = Modifier.size(28.dp)
             )
         }
 
-        // Central Hero Play / Pause Button with Radiant Emerald Glow
+        // Central Hero Play / Pause — chrome disc, near-black glyph
         val playScale by animateFloatAsState(
             targetValue = if (isPlaying) 1.0f else 0.97f,
             animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
@@ -500,63 +495,59 @@ fun NowPlayingControlsBar(
                 .shadow(
                     elevation = 16.dp,
                     shape = CircleShape,
-                    ambientColor = GhaisColors.Primary,
-                    spotColor = GhaisColors.Primary
+                    ambientColor = Color.Black.copy(alpha = 0.5f),
+                    spotColor = Color.Black.copy(alpha = 0.5f)
                 )
                 .clip(CircleShape)
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            Color(0xFF6FFBBE),
-                            GhaisColors.Primary,
-                            Color(0xFF10B981)
-                        )
-                    )
-                )
-                .border(1.5.dp, Color(0x66FFFFFF), CircleShape)
-                .clickable { onPlayPause() },
+                .background(GhaisNoir.chromeFill())
+                .border(1.5.dp, Color.White.copy(alpha = 0.4f), CircleShape)
+                .noirClickable { onPlayPause() },
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                 contentDescription = if (isPlaying) "Pause Recitation" else "Play Recitation",
-                tint = Color(0xFF003824),
+                tint = GhaisNoir.OnChrome,
                 modifier = Modifier.size(36.dp)
             )
         }
 
-        // Next Ayah Button (Frosted glass button)
+        // Next Ayah Button (ghost well)
         Box(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(Color(0x14FFFFFF))
-                .border(1.dp, Color(0x1FFFFFFF), CircleShape)
-                .clickable { onNext() },
+                .background(GhaisNoir.wellFill())
+                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                .noirClickable { onNext() },
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.SkipNext,
                 contentDescription = "Next Ayah",
-                tint = Color.White.copy(alpha = 0.9f),
+                tint = GhaisNoir.TextPrimary,
                 modifier = Modifier.size(28.dp)
             )
         }
 
-        // Memorization Repeat Mode Toggle (Frosted glass button with infinity indicator)
+        // Memorization Repeat Mode Toggle (ghost well)
         Box(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(Color(0x14FFFFFF))
-                .border(1.dp, Color(0x1FFFFFFF), CircleShape)
-                .clickable { onRepeatToggle() },
+                .background(GhaisNoir.wellFill())
+                .border(
+                    1.dp,
+                    if (isRepeat) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                    CircleShape
+                )
+                .noirClickable { onRepeatToggle() },
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = if (isRepeat) Icons.Default.RepeatOne else Icons.Default.Repeat,
                 contentDescription = "Repeat Mode",
-                tint = if (isRepeat) GhaisColors.Primary else Color.White.copy(alpha = 0.65f),
+                tint = if (isRepeat) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
                 modifier = Modifier.size(20.dp)
             )
             if (isRepeat) {
@@ -564,7 +555,7 @@ fun NowPlayingControlsBar(
                     text = "∞",
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
-                    color = GhaisColors.Primary,
+                    color = GhaisNoir.TextSecondary,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(end = 6.dp, bottom = 4.dp)
