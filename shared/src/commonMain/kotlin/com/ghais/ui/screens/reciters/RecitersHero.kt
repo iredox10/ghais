@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mosque
@@ -31,15 +30,17 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
-private val PureBlack = Color(0xFF000000)
-private val DarkCard = Color(0xFF1C1C1E)
-private val MutedGrey = Color(0xFF9A9AA0)
-private val LinkBlue = Color(0xFF4C8DFF)
-
-private val HeroGradientTop = Color(0xFF2E7CF6).copy(alpha = 0.5f)
-private val HeroGradientBottom = Color(0xFF0A1F44)
-
+/**
+ * Noir Glass reciters hero — strict monochrome.
+ *
+ * Depth recipe: alpha-white card fill + ghost border + bright TOP-ONLY
+ * specular. Atmosphere is white-on-black only (ambient glow + engraved
+ * rings); zero hue. Search is an engraved inset pill.
+ */
 @Composable
 fun RecitersHero(
     searchQuery: String,
@@ -47,20 +48,18 @@ fun RecitersHero(
     countText: String
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        // Hero block: full-width 250dp, rounded 32dp, horizontal 16dp margins
+        // Hero block: full-width 250dp, large noir radius, horizontal 16dp margins
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .height(250.dp)
-                .clip(RoundedCornerShape(32.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(HeroGradientTop, HeroGradientBottom)
-                    )
-                )
+                .clip(GhaisShapes.cardLarge)
+                .background(GhaisNoir.cardFill())
+                .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardLarge)
+                .topSpecular(inset = 30.dp)
         ) {
-            // Layered radial glows (blue + violet, alpha 0.35)
+            // Ambient top glow — diffused white light, monochrome only
             Box(
                 modifier = Modifier
                     .size(230.dp)
@@ -70,7 +69,7 @@ fun RecitersHero(
                     .background(
                         Brush.radialGradient(
                             colors = listOf(
-                                LinkBlue.copy(alpha = 0.35f),
+                                GhaisNoir.AmbientGlow,
                                 Color.Transparent
                             )
                         )
@@ -85,24 +84,31 @@ fun RecitersHero(
                     .background(
                         Brush.radialGradient(
                             colors = listOf(
-                                Color(0xFF8B5CF6).copy(alpha = 0.35f),
+                                GhaisNoir.AmbientGlow,
                                 Color.Transparent
                             )
                         )
                     )
             )
 
-            // Giant translucent Mosque icon, centered
+            // Giant engraved Mosque glyph, centered — dimmed white, no hue
             Icon(
                 imageVector = Icons.Filled.Mosque,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.12f),
+                tint = GhaisNoir.TextDisabled,
                 modifier = Modifier
                     .size(160.dp)
                     .align(Alignment.Center)
             )
 
-            // Bottom-up BLACK gradient scrim for readability
+            // Diagonal glass sheen swept across the hero
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(GhaisNoir.sheen())
+            )
+
+            // Bottom-up BLACK scrim for readability (monochrome)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -110,7 +116,7 @@ fun RecitersHero(
                         Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                PureBlack.copy(alpha = 0.85f)
+                                Color.Black.copy(alpha = 0.85f)
                             )
                         )
                     )
@@ -126,36 +132,36 @@ fun RecitersHero(
                 Column {
                     Text(
                         text = "Reciters",
-                        color = Color.White,
+                        color = GhaisNoir.TextPrimary,
                         fontSize = 32.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = (-0.5).sp
                     )
                     Text(
                         text = countText,
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = GhaisNoir.TextSecondary,
                         fontSize = 13.sp
                     )
                 }
             }
         }
 
-        // Search pill below hero
+        // Engraved search pill below hero (carved-in recessed surface)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .padding(top = 16.dp)
-                .clip(RoundedCornerShape(50))
-                .background(Color.White.copy(alpha = 0.07f))
-                .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(50))
+                .clip(GhaisShapes.pill)
+                .background(GhaisNoir.insetFill())
+                .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.pill)
                 .padding(horizontal = 14.dp, vertical = 11.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "Search",
-                tint = MutedGrey,
+                tint = GhaisNoir.TextTertiary,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(10.dp))
@@ -164,14 +170,14 @@ fun RecitersHero(
                 onValueChange = onSearchChange,
                 singleLine = true,
                 textStyle = TextStyle(
-                    color = Color.White,
+                    color = GhaisNoir.TextPrimary,
                     fontSize = 15.sp
                 ),
                 decorationBox = { inner ->
                     if (searchQuery.isEmpty()) {
                         Text(
                             text = "Search reciters...",
-                            color = MutedGrey,
+                            color = GhaisNoir.TextDisabled,
                             fontSize = 15.sp
                         )
                     }
