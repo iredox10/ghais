@@ -44,6 +44,11 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -90,8 +95,9 @@ import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.screens.home.NoirStatChip
-import com.ghais.ui.screens.player.components.NowPlayingLyricsCard
 import com.ghais.ui.screens.player.components.NowPlayingVolumePanel
+import com.ghais.ui.screens.reciters.NoirReciterAvatar
+import com.ghais.ui.screens.reciters.photoForSlug
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 
@@ -132,17 +138,22 @@ class NowPlayingScreen : Screen {
         val progress by AudioEngine.progress.collectAsState()
         val currentPositionMs by AudioEngine.currentPositionMs.collectAsState()
         val durationMs by AudioEngine.durationMs.collectAsState()
+        val speed by AudioEngine.playbackSpeed.collectAsState()
+        val volume by AudioEngine.volume.collectAsState()
         val queue by AudioEngine.queue.collectAsState()
         val currentIndex by AudioEngine.currentIndex.collectAsState()
         val playbackState by AudioEngine.playbackState.collectAsState()
         val sleepTimerState by com.ghais.player.SleepTimer.state.collectAsState()
+        val favorites by FavoritesStore.favoriteTracks.collectAsState()
         val repeatMode = playbackState.settings.repeatMode
 
         var showSleepTimer by remember { mutableStateOf(false) }
         var showQueue by remember { mutableStateOf(false) }
         var showAmbient by remember { mutableStateOf(false) }
+        var showVolume by remember { mutableStateOf(false) }
         val mixer = remember { AmbientMixer }
         val ambientChannels by mixer.channels.collectAsState()
+        val ambientVolume by mixer.masterAmbientVolume.collectAsState()
         val selectedAmbientType = ambientChannels.firstOrNull { it.isEnabled }?.type
         val hasAmbientVideo = selectedAmbientType?.videoKeys()?.isNotEmpty() == true
 
@@ -150,6 +161,7 @@ class NowPlayingScreen : Screen {
         val title = track?.surahNameEn ?: "Ar-Rahman"
         val surahNameAr = track?.surahNameAr ?: "الرحمن"
         val reciterName = track?.reciterName ?: "Mishary Rashid Alafasy"
+        val isFav = track?.let { t -> favorites.any { it.audioUrl == t.audioUrl } } == true
 
         val canSkipNext = remember(queue, currentIndex, repeatMode, track) {
             if (track == null || queue.isEmpty()) false
@@ -297,78 +309,169 @@ class NowPlayingScreen : Screen {
                 // Video-first: clear the middle so the ambient video breathes.
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Minimal identity floating over the video.
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                // Minimal identity: qari photo + titles + like, floating over video.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(
-                            8.dp,
-                            Alignment.CenterHorizontally
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = title,
-                            color = GhaisNoir.TextPrimary,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-                        if (surahNameAr.isNotBlank()) {
+                    NoirReciterAvatar(
+                        photoUrl = track?.let { photoForSlug(it.reciterSlug) },
+                        nameEn = reciterName,
+                        size = 46.dp,
+                        shape = CircleShape,
+                        monogramSize = 20.sp,
+                        ring = isPlaying
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = surahNameAr,
-                                color = GhaisNoir.TextSecondary,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1
+                                text = title,
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
+                            if (surahNameAr.isNotBlank()) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = surahNameAr,
+                                    color = GhaisNoir.TextSecondary,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1
+                                )
+                            }
                         }
+                        Text(
+                            text = reciterName,
+                            color = GhaisNoir.TextTertiary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(if (isFav) GhaisNoir.Fill4 else GhaisNoir.Fill1)
+                            .border(
+                                1.dp,
+                                if (isFav) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
+                                CircleShape
+                            )
+                            .noirClickable { track?.let { FavoritesStore.toggle(it) } },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Star,
+                            contentDescription = "Like",
+                            tint = if (isFav) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Background sound as explicit text — a new concept, so it reads
+                // as a labeled row users can find and understand.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                        .noirClickable { showAmbient = true }
+                        .padding(horizontal = 16.dp, vertical = 11.dp)
+                ) {
                     Text(
-                        text = reciterName,
+                        text = "Background sound",
                         color = GhaisNoir.TextTertiary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = selectedAmbientType?.displayName() ?: "Off",
+                        color = GhaisNoir.TextPrimary,
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "›",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Minimal transport: prev / play / next only.
+                // Minimal transport: speed / prev / play / next / repeat.
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 52.dp, height = 44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(GhaisNoir.Fill1)
+                            .border(1.dp, GhaisNoir.BorderGhost, RoundedCornerShape(12.dp))
+                            .noirClickable {
+                                val idx = PlayerSpeeds.indexOf(speed).takeIf { it >= 0 } ?: 0
+                                AudioEngine.setPlaybackSpeed(PlayerSpeeds[(idx + 1) % PlayerSpeeds.size])
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = formatSpeedLabel(speed),
+                            color = GhaisNoir.TextSecondary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
                     NoirTransportWell(
                         icon = Icons.Filled.FastRewind,
                         contentDescription = "Previous",
                         enabled = canSkipPrevious,
                         onClick = { AudioEngine.skipPrevious() },
-                        iconSize = 28.dp
+                        iconSize = 26.dp
                     )
-                    Spacer(modifier = Modifier.width(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     ChromeFab(
                         icon = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         onClick = { AudioEngine.togglePlayPause() },
-                        size = 76.dp,
+                        size = 68.dp,
                         contentDescription = if (isPlaying) "Pause" else "Play"
                     )
-                    Spacer(modifier = Modifier.width(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     NoirTransportWell(
                         icon = Icons.Filled.FastForward,
                         contentDescription = "Next",
                         enabled = canSkipNext,
                         onClick = { AudioEngine.skipNext() },
-                        iconSize = 28.dp
+                        iconSize = 26.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    val repeatActive = repeatMode != RepeatMode.OFF
+                    NoirUtilityWell(
+                        icon = if (repeatMode == RepeatMode.SURAH) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                        contentDescription = "Repeat",
+                        active = repeatActive,
+                        tint = if (repeatActive) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                        onClick = { AudioEngine.setRepeatMode(nextRepeatMode(repeatMode)) }
                     )
                 }
 
@@ -492,7 +595,7 @@ class NowPlayingScreen : Screen {
 
                 Spacer(modifier = Modifier.height(22.dp))
 
-                // Overflow: background video, sleep timer, queue — tiny ghost wells.
+                // Overflow: volume (expandable), queue, sleep — tiny ghost wells.
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(
                         14.dp,
@@ -502,11 +605,18 @@ class NowPlayingScreen : Screen {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     NoirUtilityWell(
-                        icon = Icons.Filled.Movie,
-                        contentDescription = "Background",
-                        active = selectedAmbientType != null,
+                        icon = if (volume > 0f) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
+                        contentDescription = "Volume",
+                        active = showVolume,
+                        tint = if (volume > 0f) GhaisNoir.TextTertiary else GhaisNoir.TextDisabled,
+                        onClick = { showVolume = !showVolume }
+                    )
+                    NoirUtilityWell(
+                        icon = Icons.Filled.QueueMusic,
+                        contentDescription = "Queue",
+                        active = false,
                         tint = GhaisNoir.TextTertiary,
-                        onClick = { showAmbient = true }
+                        onClick = { showQueue = true }
                     )
                     NoirUtilityWell(
                         icon = Icons.Filled.Bedtime,
@@ -515,12 +625,19 @@ class NowPlayingScreen : Screen {
                         tint = GhaisNoir.TextTertiary,
                         onClick = { showSleepTimer = true }
                     )
-                    NoirUtilityWell(
-                        icon = Icons.Filled.QueueMusic,
-                        contentDescription = "Queue",
-                        active = false,
-                        tint = GhaisNoir.TextTertiary,
-                        onClick = { showQueue = true }
+                }
+
+                AnimatedVisibility(
+                    visible = showVolume,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    NowPlayingVolumePanel(
+                        quranVolume = volume,
+                        onQuranVolumeChange = { mixer.setQuranVolume(it) },
+                        ambientVolume = ambientVolume,
+                        onAmbientVolumeChange = { mixer.setMasterAmbientVolume(it) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 12.dp)
                     )
                 }
 
@@ -595,6 +712,8 @@ private fun NoirUtilityWell(
         }
     }
 }
+
+private val PlayerSpeeds = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 0.75f)
 
 private fun formatMs(ms: Long): String {
     val s = (ms.coerceAtLeast(0L) / 1000).toInt()
