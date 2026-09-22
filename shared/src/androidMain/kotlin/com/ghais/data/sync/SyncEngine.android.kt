@@ -45,7 +45,9 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  * Flow: DISABLED when unconfigured/signed-out; else SYNCING, then per
  * collection pull-if-empty + push-always, each in its own try/catch (first
- * failure wins for [lastError]). `lastSyncedAt` is set on full success only.
+ * failure wins for [lastError]). Push skips only when local state is still
+ * empty but the cloud holds a snapshot (fresh login), so an empty local
+ * never clobbers the restore source. `lastSyncedAt` is set on full success only.
  * All network runs on Dispatchers.IO. Failures go to Log.e("GhaisSync").
  */
 actual object SyncEngine {
@@ -560,7 +562,63 @@ actual object SyncEngine {
 
     // ------------------------------------------------------------------ stats
 
-    private suspend fun pushStats(db: Databases, userId: String) {
+    /**
+     * Pulls the cloud `listening_stats` doc (docId = [userId]) when local stats
+     * are still at fresh-install defaults, so a fresh login can adopt the
+     * cloud snapshot instead of starting from zero.
+     *
+     * Returns true when the cloud holds a usable snapshot (caller must then
+     * skip pushing, otherwise local zeros would overwrite it). Returns false
+     * when local stats are already non-zero (never overwrite those) or the
+     * cloud has nothing, so push proceeds.
+     *
+     * `minutes_today` date semantics: [UserUsageRepository] derives it from
+     * seconds-listened-today for the CURRENT epoch day (`now/86400000`) and
+     * resets on day rollover, so a cloud `minutes_today` is only valid when
+     * cloud `updated_at` falls on today's epoch day — otherwise it restores
+     * as 0. `days_streak`/`total_seconds`/uniques carry over as-is.
+     *
+     * Adopt is currently GUARDED, not applied: [UserUsageRepository] exposes
+     * no restore/import API (private `_stats`/keys; `setOwner` only reloads
+     * from disk), and this file may not grow new deps or touch other files.
+     * So the snapshot is validated + logged and the zero-push is skipped to
+     * protect the cloud copy. Follow-up: add
+     * `UserUsageRepository.restoreStats(...)` (day-rollover aware) and call it
+     * here.
+     */
+    private suspend fun pullStatsIfEmpty(db: Databases, userId: String): Boolean {
+        if (!isLocalStatsEmpty()) return false
+        val doc = getDocument(db, STATS, userId) ?: return false
+        val data = doc.data
+        val total = asLong(data["total_seconds"]) ?: 0L
+        val streak = asInt(data["days_streak"]) ?: 1
+        val uniquesReciters = asInt(data["unique_reciters"]) ?: 0
+        val uniquesSurahs = asInt(data["unique_surahs"]) ?: 0
+        val updatedAt = asLong(data["updated_at"])
+        var minutes = asInt(data["minutes_today"]) ?: 0
+        if (updatedAt == null || !sameEpochDay(updatedAt, System.currentTimeMillis())) {
+            minutes = 0
+        }
+        if (total <= 0L && streak <= 1 && minutes <= 0 && uniquesReciters <= 0 && uniquesSurahs <= 0) {
+            return false // cloud snapshot itself is empty; let push converge
+        }
+        Log.i(
+            TAG,
+            "stats pull: cloud total=${total}s streak=$streak minutesToday=$minutes " +
+                "reciters=$uniquesReciters surahs=$uniquesSurahs" +
+                (if (updatedAt != null) " updatedAt=$updatedAt" else "") +
+                " — no UserUsageRepository restore API yet; keeping local zeros, push skipped."
+        )
+        return true
+    }
+
+    private suspend fun pushStats(db: Databases, userId: String, cloudHasData: Boolean) {
+        if (cloudHasData && isLocalStatsEmpty()) {
+            // Fresh login whose cloud snapshot couldn't be applied locally yet:
+            // don't overwrite it with zeros.
+            Log.i(TAG, "pushStats skipped (local empty, cloud has data).")
+            return
+        }
         val s = UserUsageRepository.stats.value
         val data: Map<String, Any?> = mapOf(
             "user_id" to userId,
@@ -572,6 +630,22 @@ actual object SyncEngine {
             "updated_at" to System.currentTimeMillis(),
         )
         upsert(db, STATS, userId, data)
+    }
+
+    /**
+     * True when local stats are still at fresh-install defaults
+     * (`daysStreak = 1`, `minutesToday = 0`, `totalSeconds = 0`, uniques of 1
+     * are just the `"mishary"`/`"18"` placeholders [UserUsageRepository]
+     * seeds when storage is empty). Anything beyond that counts as real local
+     * activity that pull must never overwrite.
+     */
+    private fun isLocalStatsEmpty(): Boolean {
+        val s = UserUsageRepository.stats.value
+        return s.totalSecondsListened <= 0L &&
+            s.minutesToday <= 0 &&
+            s.daysStreak <= 1 &&
+            s.uniqueRecitersCount <= 1 &&
+            s.uniqueSurahsCount <= 1
     }
 
     // --------------------------------------------------------------- schedules
@@ -715,6 +789,47 @@ actual object SyncEngine {
         "$playlistDocId-$position".take(36)
 
     // ---------------------------------------------------------------- helpers
+
+    /**
+     * 404-safe single-document read (single-doc-per-user collections:
+     * [PLAYBACK], [STATS]). Null when the doc/collection doesn't exist yet;
+     * other failures throw into the per-collection `runCollection` guard.
+     */
+    private suspend fun getDocument(
+        db: Databases,
+        collection: String,
+        documentId: String,
+    ): io.appwrite.models.Document<Map<String, Any>>? {
+        return try {
+            db.getDocument(DB_ID, collection, documentId)
+        } catch (e: AppwriteException) {
+            if (e.code == 404) {
+                Log.w(TAG, "Document '$collection/$documentId' not found; skipping.")
+                null
+            } else {
+                throw e
+            }
+        }
+    }
+
+    /** Lenient number coercion: Appwrite decodes numerics as [Number], but tolerate numeric strings. */
+    private fun asLong(v: Any?): Long? = when (v) {
+        is Number -> v.toLong()
+        is String -> v.trim().toLongOrNull() ?: v.trim().toDoubleOrNull()?.toLong()
+        else -> null
+    }
+
+    private fun asInt(v: Any?): Int? = when (v) {
+        is Number -> v.toInt()
+        is String -> v.trim().toIntOrNull() ?: v.trim().toDoubleOrNull()?.toInt()
+        else -> null
+    }
+
+    /** Same epoch-day check (`millis/86400000`, mirroring UserUsageRepository's day math). */
+    private fun sameEpochDay(aMs: Long, bMs: Long): Boolean {
+        if (aMs <= 0L || bMs <= 0L) return false
+        return aMs / 86_400_000L == bMs / 86_400_000L
+    }
 
     private suspend fun listForUser(
         db: Databases,
