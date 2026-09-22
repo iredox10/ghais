@@ -1,12 +1,18 @@
 package com.ghais.ui.components.noir
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Canvas as DrawCanvas
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -26,32 +32,59 @@ import kotlin.random.Random
 private const val GRAIN_STEP_PX = 3
 private const val GRAIN_DOT_PX = 1f
 
-/** Full-screen film-grain overlay. Place LAST in the screen root Box. */
+/**
+ * Full-screen film-grain overlay. Place LAST in the screen root Box.
+ *
+ * Performance: the dot field (~300k dots at 3px step) is rendered ONCE into
+ * an offscreen bitmap per size bucket; every frame (including the 4Hz
+ * playback-position recompositions) is a single drawImage. Never draw the
+ * dots inline — that drops frames on every progress tick.
+ */
 @Composable
 fun NoirGrainOverlay(modifier: Modifier = Modifier) {
-    // Deterministic seed so recompositions don't shimmer.
+    // Deterministic seed so rebuilds don't shimmer.
     val seedPoints = remember { generateGrainField() }
-    Canvas(modifier = modifier.fillMaxSize()) {
-        val step = GRAIN_STEP_PX * density
-        val half = (size.width / step).toInt().coerceAtLeast(1)
-        val rows = (size.height / step).toInt().coerceAtLeast(1)
-        val total = half * rows
-        val alpha = GhaisNoir.GrainAlpha
-        var i = 0
-        while (i < total) {
-            val h = seedPoints[i % seedPoints.size]
-            val x = (i % half) * step + ((h ushr 16) % 100) / 100f * step
-            val y = (i / half) * step + ((h ushr 8) % 100) / 100f * step
-            val light = (h and 1) == 0
-            drawCircle(
-                color = if (light) Color.White.copy(alpha = alpha)
-                else Color.Black.copy(alpha = alpha),
-                radius = GRAIN_DOT_PX * density,
-                center = Offset(x, y)
-            )
-            i++
+    val density = LocalDensity.current
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val w = constraints.maxWidth.coerceAtLeast(1)
+        val h = constraints.maxHeight.coerceAtLeast(1)
+        val tile = remember(w, h) {
+            renderGrainTile(w, h, seedPoints, density.density)
         }
+        Image(
+            bitmap = tile,
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.fillMaxSize()
+        )
     }
+}
+
+private fun renderGrainTile(
+    w: Int,
+    h: Int,
+    seedPoints: IntArray,
+    density: Float
+): ImageBitmap {
+    val bmp = ImageBitmap(w, h)
+    val canvas = DrawCanvas(bmp)
+    val step = GRAIN_STEP_PX * density
+    val half = (w / step).toInt().coerceAtLeast(1)
+    val rows = (h / step).toInt().coerceAtLeast(1)
+    val total = half * rows
+    val alpha = GhaisNoir.GrainAlpha
+    val radius = GRAIN_DOT_PX * density
+    val lightPaint = Paint().apply { color = Color.White.copy(alpha = alpha) }
+    val darkPaint = Paint().apply { color = Color.Black.copy(alpha = alpha) }
+    var i = 0
+    while (i < total) {
+        val s = seedPoints[i % seedPoints.size]
+        val x = (i % half) * step + ((s ushr 16) % 100) / 100f * step
+        val y = (i / half) * step + ((s ushr 8) % 100) / 100f * step
+        canvas.drawCircle(Offset(x, y), radius, if ((s and 1) == 0) lightPaint else darkPaint)
+        i++
+    }
+    return bmp
 }
 
 private fun generateGrainField(): IntArray {
