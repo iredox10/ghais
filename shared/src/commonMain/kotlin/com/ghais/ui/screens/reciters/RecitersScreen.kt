@@ -183,11 +183,6 @@ class RecitersScreen : Tab {
     }
 }
 
-/** True-grayscale filter — portraits stay recognisable, strictly monochrome. */
-private val NoirReciterGrayscale: ColorFilter by lazy {
-    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-}
-
 private val NoirReelCardShape = RoundedCornerShape(28.dp)
 private val NoirAvatarShape = RoundedCornerShape(24.dp)
 
