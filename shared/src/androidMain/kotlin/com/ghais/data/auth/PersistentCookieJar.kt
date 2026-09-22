@@ -19,12 +19,26 @@ internal class PersistentCookieJar(
     private val memory = LinkedHashMap<String, Cookie>()
 
     init {
+        val now = System.currentTimeMillis()
+        val expiredKeys = mutableListOf<String>()
         prefs.all.forEach { (key, value) ->
             if (!key.startsWith(KEY_PREFIX) || value !is String) return@forEach
-            decode(value)?.let { memory[key.removePrefix(KEY_PREFIX) + "|" + it.name] = it }
+            val cookie = decode(value)
+            if (cookie == null || cookie.expiresAt < now) {
+                // Undecodable or expired entries can never be sent; drop the
+                // expired ones from disk so they don't reload every launch.
+                if (cookie != null) expiredKeys += key
+                return@forEach
+            }
+            // Store under the full prefs key so it matches saveFromResponse
+            // (KEY_PREFIX + host + "|" + name); the old code rebuilt a
+            // different key here (host|name|name), leaving a stale duplicate
+            // in memory that loadForRequest would return twice.
+            memory[key] = cookie
         }
-        // Drop expired cookies loaded from disk.
-        memory.values.removeAll { it.expiresAt < System.currentTimeMillis() }
+        if (expiredKeys.isNotEmpty()) {
+            prefs.edit().apply { expiredKeys.forEach { remove(it) } }.apply()
+        }
     }
 
     @Synchronized
@@ -46,7 +60,14 @@ internal class PersistentCookieJar(
     @Synchronized
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
         val now = System.currentTimeMillis()
-        return memory.values.filter { it.expiresAt >= now && it.matches(url) }
+        // Evict expired cookies so memory doesn't grow and disk doesn't
+        // re-serve them after a restart (init only cleans once at load).
+        val expiredKeys = memory.entries.filter { it.value.expiresAt < now }.map { it.key }
+        if (expiredKeys.isNotEmpty()) {
+            expiredKeys.forEach { memory.remove(it) }
+            prefs.edit().apply { expiredKeys.forEach { remove(it) } }.apply()
+        }
+        return memory.values.filter { it.matches(url) }
     }
 
     /** Wipes all stored cookies (call on sign-out). */
