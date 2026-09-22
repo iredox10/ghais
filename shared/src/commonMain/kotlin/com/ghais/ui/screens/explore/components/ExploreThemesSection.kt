@@ -2,10 +2,7 @@ package com.ghais.ui.screens.explore.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Balance
@@ -17,14 +14,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
+/**
+ * Noir Glass segmented switcher — strict monochrome.
+ *
+ * Engraved inset track (carved-in black gradient + 5% rim); the selected
+ * segment is an extruded chrome pill (white gradient, near-black label),
+ * resting segments are transparent with 38% labels. State reads through
+ * fill elevation + weight, never hue.
+ */
 @Composable
 fun ExploreSegmentedSwitcher(
     selectedTab: Int = 0,
@@ -37,52 +45,68 @@ fun ExploreSegmentedSwitcher(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
-            .heightIn(min = 48.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(DarkObsidian)
-            .border(0.5.dp, HairlineSubtleBorder, RoundedCornerShape(14.dp))
+            .clip(GhaisShapes.row)
+            .background(GhaisNoir.insetFill())
+            .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.row)
             .padding(4.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             tabs.forEachIndexed { index, title ->
                 val isSelected = index == selectedTab
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 40.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .then(
-                            if (isSelected) {
-                                Modifier
-                                    .background(Color.White.copy(alpha = 0.12f))
-                                    .border(
-                                        width = 0.5.dp,
-                                        brush = HairlineSpecularBorder,
-                                        shape = RoundedCornerShape(10.dp)
-                                    )
-                            } else {
-                                Modifier.background(Color.Transparent)
-                            }
+                if (isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 40.dp)
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.chromeFill())
+                            .border(1.dp, Color.White.copy(alpha = 0.35f), GhaisShapes.pill)
+                            .noirClickable { onSelectTab(index) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = title,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = GhaisNoir.OnChrome
                         )
-                        .clickable { onSelectTab(index) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = title,
-                        fontSize = 13.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                        color = if (isSelected) OffWhiteText else SystemGrey
-                    )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 40.dp)
+                            .clip(GhaisShapes.pill)
+                            .background(Color.Transparent)
+                            .noirClickable { onSelectTab(index) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = title,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = GhaisNoir.TextTertiary
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+/**
+ * Noir Glass curated-themes bento — strict monochrome.
+ *
+ * Header follows the shared [NoirSectionHeader] rhythm (bright label + ghost
+ * "View All" action); tiles use the elevated card recipe (gradient fill +
+ * ghost border + top-only specular + diagonal sheen). Watermarks and badges
+ * are white-alpha washes — zero hue anywhere.
+ */
 @Composable
 fun CuratedThemesGrid(
     onThemeClick: (String) -> Unit = {},
@@ -93,62 +117,21 @@ fun CuratedThemesGrid(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
-        // Section Header with Glowing Dot Indicator and 48dp touch target on "View All"
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "Curated Themes",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = OffWhiteText,
-                    letterSpacing = (-0.4).sp
-                )
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(GhaisColors.Primary)
-                )
-            }
+        NoirSectionHeader(
+            label = "Curated Themes",
+            actionLabel = "View All",
+            onAction = { onThemeClick("all") }
+        )
 
-            // "View All" Button with 48dp minimum touch target
-            Box(
-                modifier = Modifier
-                    .heightIn(min = 48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { onThemeClick("all") },
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .border(0.5.dp, HairlineSubtleBorder, RoundedCornerShape(12.dp))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "View All",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = GhaisColors.Primary
-                    )
-                }
-            }
-        }
+        Text(
+            text = "Faith, law, comfort & stories",
+            fontSize = 12.sp,
+            color = GhaisNoir.TextSecondary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
+        )
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // 2x2 Editorial Glass Bento Grid
+        // 2x2 bento grid.
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            // Row 1: Meccan & Medinan
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -157,13 +140,7 @@ fun CuratedThemesGrid(
                     title = "Meccan",
                     subtitle = "86 Surahs • Faith & Soul",
                     badgeText = "Origins",
-                    badgeColor = GhaisColors.Primary,
                     watermarkIcon = Icons.Default.Mosque,
-                    gradientColors = listOf(
-                        Color(0xFF0D2E22),
-                        Color(0xFF0F1A16),
-                        DarkObsidian
-                    ),
                     modifier = Modifier.weight(1f),
                     onClick = { onThemeClick("meccan") }
                 )
@@ -172,19 +149,12 @@ fun CuratedThemesGrid(
                     title = "Medinan",
                     subtitle = "28 Surahs • Society & Laws",
                     badgeText = "Guidance",
-                    badgeColor = GhaisColors.Secondary,
                     watermarkIcon = Icons.Default.Balance,
-                    gradientColors = listOf(
-                        Color(0xFF2E220D),
-                        Color(0xFF1C1710),
-                        DarkObsidian
-                    ),
                     modifier = Modifier.weight(1f),
                     onClick = { onThemeClick("medinan") }
                 )
             }
 
-            // Row 2: Healing & Ruqyah & Stories of Prophets
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -193,13 +163,7 @@ fun CuratedThemesGrid(
                     title = "Healing & Ruqyah",
                     subtitle = "Calm, Ease & Comfort",
                     badgeText = "Inner Peace",
-                    badgeColor = Color(0xFF68DBA9),
                     watermarkIcon = Icons.Default.Spa,
-                    gradientColors = listOf(
-                        Color(0xFF142B24),
-                        Color(0xFF101C18),
-                        DarkObsidian
-                    ),
                     modifier = Modifier.weight(1f),
                     onClick = { onThemeClick("ruqyah") }
                 )
@@ -208,13 +172,7 @@ fun CuratedThemesGrid(
                     title = "Stories of Prophets",
                     subtitle = "Yusuf, Musa, Ibrahim",
                     badgeText = "Narratives",
-                    badgeColor = Color(0xFFFFDD78),
                     watermarkIcon = Icons.Default.AutoStories,
-                    gradientColors = listOf(
-                        Color(0xFF2B2114),
-                        Color(0xFF1A1510),
-                        DarkObsidian
-                    ),
                     modifier = Modifier.weight(1f),
                     onClick = { onThemeClick("stories") }
                 )
@@ -228,9 +186,7 @@ private fun ThemeCard(
     title: String,
     subtitle: String,
     badgeText: String,
-    badgeColor: Color,
     watermarkIcon: ImageVector,
-    gradientColors: List<Color>,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
@@ -238,51 +194,20 @@ private fun ThemeCard(
         modifier = modifier
             .height(116.dp)
             .heightIn(min = 48.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(brush = Brush.linearGradient(gradientColors))
-            .border(
-                width = 0.5.dp,
-                brush = HairlineSpecularBorder,
-                shape = RoundedCornerShape(18.dp)
-            )
-            .clickable { onClick() }
+            .clip(GhaisShapes.cardNoir)
+            .background(GhaisNoir.cardFill())
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardNoir)
+            .topSpecular()
+            .noirClickable(onClick)
     ) {
-        // Diagonal glass sheen overlay
+        // Diagonal glass sheen sweep (monochrome only).
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.10f),
-                            Color.Transparent,
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.04f)
-                        )
-                    )
-                )
+                .matchParentSize()
+                .background(GhaisNoir.sheen())
         )
 
-        // Top specular hairline inside the card
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(0.75.dp)
-                .padding(horizontal = 20.dp)
-                .offset(y = 5.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.30f),
-                            Color.Transparent
-                        )
-                    )
-                )
-                .align(Alignment.TopCenter)
-        )
-
-        // Watermark Icon in bottom-right corner with subtle opacity
+        // Watermark glyph in bottom-right — white wash, never tinted.
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -291,16 +216,16 @@ private fun ThemeCard(
             Icon(
                 imageVector = watermarkIcon,
                 contentDescription = null,
-                tint = badgeColor.copy(alpha = 0.10f),
+                tint = Color.White.copy(alpha = 0.08f),
                 modifier = Modifier.size(72.dp)
             )
         }
 
-        // Foreground content
+        // Foreground content.
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp),
+                .padding(14.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
@@ -308,31 +233,31 @@ private fun ThemeCard(
                     text = title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = OffWhiteText,
+                    color = GhaisNoir.TextPrimary,
                     letterSpacing = (-0.2).sp
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
                     fontSize = 11.sp,
-                    color = SystemGrey,
+                    color = GhaisNoir.TextSecondary,
                     maxLines = 1
                 )
             }
 
-            // Glass Pill Badge
+            // Ghost pill badge — informational only, no press affordance.
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(DarkObsidian.copy(alpha = 0.70f))
-                    .border(0.5.dp, badgeColor.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                    .clip(GhaisShapes.pill)
+                    .background(GhaisNoir.Fill2)
+                    .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                    .padding(horizontal = 9.dp, vertical = 4.dp)
             ) {
                 Text(
                     text = badgeText,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = badgeColor
+                    color = GhaisNoir.TextSecondary
                 )
             }
         }

@@ -2,7 +2,6 @@ package com.ghais.ui.screens.explore.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -13,7 +12,6 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
@@ -21,7 +19,6 @@ import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -29,13 +26,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -48,7 +46,12 @@ import com.ghais.player.AudioEngine
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
 enum class SurahSortType(val label: String, val icon: ImageVector) {
     MUSHAF("Standard Mushaf Order", Icons.Default.FormatListNumbered),
@@ -71,6 +74,19 @@ private val CHRONOLOGICAL_ORDER = listOf(
     59, 24, 22, 63, 58, 49, 66, 64, 61, 62,
     48, 5, 9, 110
 )
+
+/** Short pill labels for the sort strip (full sentence kept in the sheet). */
+private fun SurahSortType.shortLabel(): String = when (this) {
+    SurahSortType.MUSHAF -> "Mushaf"
+    SurahSortType.CHRONOLOGICAL -> "Chronological"
+    SurahSortType.LENGTH -> "Length"
+    SurahSortType.ALPHABETICAL -> "A–Z"
+}
+
+/** True-grayscale filter — qari portraits stay recognisable, strictly monochrome. */
+private val NoirGrayscale: ColorFilter by lazy {
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,78 +114,69 @@ fun ExploreDirectorySection(
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // Section Header Row with Sort Dropdown Trigger
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            // "Surah Directory" + Count Pill Badge
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "Surah Directory",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = GhaisColors.TextPrimary
-                )
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(GhaisColors.SurfaceHigh.copy(alpha = 0.8f))
-                        .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = "${surahs.size}",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GhaisColors.Primary
-                    )
-                }
-            }
+        // Section header — shared Noir rhythm (bright label + ghost action).
+        NoirSectionHeader(
+            label = "Surah Directory • ${surahs.size}",
+            actionLabel = sortType.shortLabel(),
+            onAction = { showSortModal = true },
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp)
+        )
 
-            // Sort Menu Button (Glass Pill)
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(GhaisColors.SurfaceLow.copy(alpha = 0.85f))
-                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
-                    .clickable { showSortModal = true }
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = when (sortType) {
-                        SurahSortType.MUSHAF -> "Mushaf Order"
-                        SurahSortType.CHRONOLOGICAL -> "Chronological"
-                        SurahSortType.LENGTH -> "Length"
-                        SurahSortType.ALPHABETICAL -> "Alphabetical"
-                    },
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = GhaisColors.TextSecondary
-                )
-                Icon(
-                    imageVector = Icons.Default.ExpandMore,
-                    contentDescription = "Sort Options",
-                    tint = GhaisColors.Primary,
-                    modifier = Modifier.size(16.dp)
-                )
+        Spacer(modifier = Modifier.height(2.dp))
+
+        // Sort strip — chrome pill (selected) / ghost pill (resting).
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(SurahSortType.entries) { option ->
+                val isSelected = option == sortType
+                if (isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.chromeFill())
+                            .border(1.dp, Color.White.copy(alpha = 0.35f), GhaisShapes.pill)
+                            .noirClickable { sortType = option }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = option.shortLabel(),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = GhaisNoir.OnChrome
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                            .noirClickable { sortType = option }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = option.shortLabel(),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = GhaisNoir.TextSecondary
+                        )
+                    }
+                }
             }
         }
 
-        // Surah Items List with Glass Cards
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Surah rows — NoirListRow recipe (soft fill + ghost border + top specular).
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             sortedSurahs.forEach { surah ->
                 val isBookmarked = bookmarkedSurahIds.contains(surah.id)
@@ -206,16 +213,17 @@ fun ExploreDirectorySection(
             }
         }
 
-        // Popular Qaris Section (Master Reciter Strip)
+        // Popular Qaris strip (grayscale reel).
         PopularQarisStrip(onReciterClick = onReciterClick)
     }
 
-    // Interactive Sort Modal Sheet
+    // Sort sheet — Noir canvas + ghost rows, state reads through fill elevation.
     if (showSortModal) {
         ModalBottomSheet(
             onDismissRequest = { showSortModal = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = GhaisColors.SurfaceContainer,
+            containerColor = GhaisNoir.CanvasTop,
+            scrimColor = GhaisNoir.Scrim,
             dragHandle = null
         ) {
             Column(
@@ -224,7 +232,6 @@ fun ExploreDirectorySection(
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Modal Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -232,57 +239,58 @@ fun ExploreDirectorySection(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.FormatListNumbered,
-                            contentDescription = null,
-                            tint = GhaisColors.Primary,
-                            modifier = Modifier.size(20.dp)
+                        IconWell(
+                            icon = Icons.Default.FormatListNumbered,
+                            size = 40.dp,
+                            iconSize = 20.dp,
+                            contentDescription = null
                         )
                         Text(
                             text = "Sort Surahs",
-                            fontSize = 18.sp,
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
-                            color = GhaisColors.TextPrimary
+                            color = GhaisNoir.TextPrimary
                         )
                     }
 
-                    IconButton(
-                        onClick = { showSortModal = false },
+                    Box(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(CircleShape)
-                            .background(GhaisColors.SurfaceHigh)
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                            .noirClickable { showSortModal = false },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = GhaisColors.TextSecondary,
+                            tint = GhaisNoir.TextSecondary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
                 }
 
-                // Options list
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SurahSortType.entries.forEach { option ->
                         val isSelected = option == sortType
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(GhaisShapes.row)
                                 .background(
-                                    if (isSelected) GhaisColors.SurfaceHighest
-                                    else Color.Transparent
+                                    if (isSelected) GhaisNoir.cardFillActive()
+                                    else GhaisNoir.cardFillSoft()
                                 )
                                 .border(
                                     1.dp,
-                                    if (isSelected) GhaisColors.Primary.copy(alpha = 0.35f)
-                                    else Color.White.copy(alpha = 0.05f),
-                                    RoundedCornerShape(12.dp)
+                                    if (isSelected) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                                    GhaisShapes.row
                                 )
-                                .clickable {
+                                .topSpecular(inset = 22.dp)
+                                .noirClickable {
                                     sortType = option
                                     showSortModal = false
                                 }
@@ -292,29 +300,39 @@ fun ExploreDirectorySection(
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Icon(
-                                    imageVector = option.icon,
+                                IconWell(
+                                    icon = option.icon,
+                                    size = 36.dp,
+                                    iconSize = 18.dp,
                                     contentDescription = null,
-                                    tint = if (isSelected) GhaisColors.Primary else GhaisColors.TextSecondary,
-                                    modifier = Modifier.size(20.dp)
+                                    tint = if (isSelected) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary
                                 )
                                 Text(
                                     text = option.label,
                                     fontSize = 13.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) GhaisColors.Primary else GhaisColors.TextPrimary
+                                    color = if (isSelected) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary
                                 )
                             }
 
                             if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Selected",
-                                    tint = GhaisColors.Primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .background(GhaisNoir.chromeFill(), CircleShape)
+                                        .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = GhaisNoir.OnChrome,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -340,64 +358,47 @@ fun SurahDirectoryItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(GhaisColors.SurfaceLow.copy(alpha = 0.7f))
+            .clip(GhaisShapes.row)
+            .background(GhaisNoir.cardFillSoft(), GhaisShapes.row)
             .border(
                 1.dp,
-                if (isFirst) GhaisColors.Primary.copy(alpha = 0.25f)
-                else Color.White.copy(alpha = 0.06f),
-                RoundedCornerShape(16.dp)
+                if (isFirst) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                GhaisShapes.row
             )
-            .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .topSpecular(inset = 22.dp)
+            .noirClickable(onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // Left Column: Index Disc + Title & Meta
+        // Left: number well + dual text (NoirListRow recipe).
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f)
         ) {
-            // Rub el Hizb / Squircle Number Disc
+            // Engraved number well — state reads through border brightness, never hue.
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .then(
-                        if (isFirst) {
-                            Modifier
-                                .background(Color(0xFF10B981).copy(alpha = 0.15f))
-                                .border(1.dp, GhaisColors.Primary.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                        } else {
-                            Modifier
-                                .background(GhaisColors.SurfaceHigh.copy(alpha = 0.7f))
-                                .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(12.dp))
-                        }
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(GhaisNoir.wellFill())
+                    .border(
+                        1.dp,
+                        if (isFirst) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                        RoundedCornerShape(14.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                // Rotated Diamond Accent
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .rotate(45f)
-                        .background(
-                            if (isFirst) GhaisColors.Primary.copy(alpha = 0.1f)
-                            else Color.White.copy(alpha = 0.03f)
-                        )
-                )
-
                 Text(
                     text = surah.id.toString().padStart(2, '0'),
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = if (isFirst) FontWeight.Bold else FontWeight.SemiBold,
-                    color = if (isFirst) GhaisColors.Primary else GhaisColors.TextPrimary
+                    color = GhaisNoir.TextPrimary
                 )
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Details Column
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -405,47 +406,44 @@ fun SurahDirectoryItem(
                 ) {
                     Text(
                         text = surah.nameEn,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GhaisColors.TextPrimary
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GhaisNoir.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
 
-                    // Revelation Badge (Makki = Emerald, Madani = Amber)
+                    // Revelation ghost chip — informational only (Makki / Madani).
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(
-                                if (isMeccan) Color(0xFF10B981).copy(alpha = 0.12f)
-                                else Color(0xFFFFB95F).copy(alpha = 0.12f)
-                            )
-                            .border(
-                                1.dp,
-                                if (isMeccan) GhaisColors.Primary.copy(alpha = 0.3f)
-                                else GhaisColors.Secondary.copy(alpha = 0.3f),
-                                RoundedCornerShape(6.dp)
-                            )
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = if (isMeccan) "Makki" else "Madani",
-                            fontSize = 9.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (isMeccan) GhaisColors.Primary else GhaisColors.Secondary
+                            color = GhaisNoir.TextSecondary
                         )
                     }
                 }
 
+                Spacer(modifier = Modifier.height(2.dp))
+
                 Text(
-                    text = "${surah.meaning} • ${surah.ayahsCount} Verses",
+                    text = "${surah.meaning} • ${surah.ayahsCount} verses",
                     fontSize = 12.sp,
-                    color = GhaisColors.TextSecondary,
-                    modifier = Modifier.padding(top = 2.dp),
-                    maxLines = 1
+                    color = GhaisNoir.TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
 
-        // Right side: Arabic Calligraphy + Action Buttons
+        // Right: Arabic + monochrome circular affordances.
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -454,51 +452,49 @@ fun SurahDirectoryItem(
                 text = surah.nameAr,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isFirst) GhaisColors.Primary else GhaisColors.TextPrimary.copy(alpha = 0.95f),
+                color = GhaisNoir.TextPrimary.copy(alpha = 0.95f),
                 textAlign = TextAlign.Right,
                 modifier = Modifier.padding(end = 4.dp)
             )
 
-            // Play Circular Glass Button
+            // Play ghost button.
             Box(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(GhaisColors.SurfaceHigh.copy(alpha = 0.8f))
-                    .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape)
-                    .clickable { onPlayClick() },
+                    .background(GhaisNoir.Fill1)
+                    .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                    .noirClickable(onClick = onPlayClick),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Play Surah ${surah.nameEn}",
-                    tint = GhaisColors.TextPrimary,
+                    tint = GhaisNoir.TextPrimary,
                     modifier = Modifier.size(18.dp)
                 )
             }
 
-            // Bookmark Circular Glass Button
+            // Bookmark — active reads through stronger wash + bright rim.
             Box(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
                     .background(
-                        if (isBookmarked) GhaisColors.Secondary.copy(alpha = 0.12f)
-                        else Color.Transparent
+                        if (isBookmarked) GhaisNoir.Fill4 else Color.Transparent
                     )
                     .border(
                         1.dp,
-                        if (isBookmarked) GhaisColors.Secondary.copy(alpha = 0.3f)
-                        else Color.White.copy(alpha = 0.06f),
+                        if (isBookmarked) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
                         CircleShape
                     )
-                    .clickable { onBookmarkClick() },
+                    .noirClickable(onClick = onBookmarkClick),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                     contentDescription = "Bookmark",
-                    tint = if (isBookmarked) GhaisColors.Secondary else GhaisColors.TextTertiary,
+                    tint = if (isBookmarked) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -515,45 +511,25 @@ fun PopularQarisStrip(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 22.dp, bottom = 12.dp)
+            .padding(top = 20.dp, bottom = 12.dp)
     ) {
-        // Section Header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "Popular Qaris",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = GhaisColors.TextPrimary
-                )
-                Text(
-                    text = "World-renowned Quranic voices",
-                    fontSize = 12.sp,
-                    color = GhaisColors.TextSecondary
-                )
-            }
+        NoirSectionHeader(
+            label = "Popular Qaris • ${qaris.size}",
+            actionLabel = "Explore",
+            onAction = { onReciterClick("explore") },
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
 
-            Text(
-                text = "Explore",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = GhaisColors.Primary,
-                modifier = Modifier.clickable { onReciterClick("explore") }
-            )
-        }
+        Text(
+            text = "World-renowned Quranic voices",
+            fontSize = 12.sp,
+            color = GhaisNoir.TextSecondary,
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 12.dp)
+        )
 
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Horizontal Reciters Row
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             items(qaris) { qari ->
                 val isFeatured = qari.slug == "mishary"
@@ -561,54 +537,49 @@ fun PopularQarisStrip(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .width(72.dp)
-                        .clickable { onReciterClick(qari.slug) }
+                        .noirClickable { onReciterClick(qari.slug) }
                 ) {
                     Box(modifier = Modifier.size(60.dp)) {
-                        AsyncImage(
-                            model = qari.photoUrl,
-                            contentDescription = qari.name,
-                            contentScale = ContentScale.Crop,
+                        Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .clip(CircleShape)
-                                .then(
-                                    if (isFeatured) {
-                                        Modifier.border(
-                                            2.dp,
-                                            Brush.sweepGradient(
-                                                listOf(
-                                                    GhaisColors.Primary,
-                                                    Color(0xFF68DBA9),
-                                                    Color.White.copy(alpha = 0.4f),
-                                                    GhaisColors.Primary
-                                                )
-                                            ),
-                                            CircleShape
-                                        )
-                                    } else {
-                                        Modifier.border(
-                                            1.5.dp,
-                                            Color.White.copy(alpha = 0.15f),
-                                            CircleShape
-                                        )
-                                    }
-                                )
-                                .background(GhaisColors.SurfaceHigh)
-                        )
+                                .background(GhaisNoir.wellFill())
+                                .border(
+                                    if (isFeatured) 2.dp else 1.dp,
+                                    if (isFeatured) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = qari.photoUrl,
+                                contentDescription = qari.name,
+                                contentScale = ContentScale.Crop,
+                                colorFilter = NoirGrayscale,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            // Darkening scrim keeps the portrait recessed, never glowing.
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(Color.Black.copy(alpha = 0.35f))
+                            )
+                        }
 
-                        // Verified checkmark badge
+                        // Verified dot — chrome disc, near-black glyph (zero hue).
                         Box(
                             modifier = Modifier
                                 .size(16.dp)
                                 .align(Alignment.BottomEnd)
-                                .clip(CircleShape)
-                                .background(GhaisColors.Primary),
+                                .background(GhaisNoir.chromeFill(), CircleShape)
+                                .border(1.5.dp, GhaisNoir.NoirBlack, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Verified",
-                                tint = GhaisColors.OnPrimary,
+                                tint = GhaisNoir.OnChrome,
                                 modifier = Modifier.size(10.dp)
                             )
                         }
@@ -620,8 +591,9 @@ fun PopularQarisStrip(
                         text = qari.name,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = GhaisColors.TextPrimary,
-                        maxLines = 1
+                        color = GhaisNoir.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
