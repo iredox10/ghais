@@ -13,8 +13,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,13 +33,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Cast
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
@@ -60,6 +60,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -77,16 +80,41 @@ import kotlin.math.roundToInt
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.seed.GhaisAssets
+import com.ghais.domain.model.RepeatMode
 import com.ghais.player.AmbientMixer
 import com.ghais.player.AudioEngine
 import com.ghais.player.displayName
 import com.ghais.player.videoKeys
+import com.ghais.ui.components.noir.ChromeFab
+import com.ghais.ui.components.noir.NoirHeroCard
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.screens.home.NoirStatChip
 import com.ghais.ui.screens.player.components.NowPlayingLyricsCard
 import com.ghais.ui.screens.player.components.NowPlayingVolumePanel
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
-private val MutedGrey = Color(0xFF9A9AA0)
 private val Speeds = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 0.75f)
 
+/**
+ * True-grayscale filter — reciter artwork stays recognisable while remaining
+ * strictly monochrome (mirrors the Home NoirArtworkWell recipe).
+ */
+private val NoirGrayscale: ColorFilter by lazy {
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+}
+
+/**
+ * Now Playing — strict Noir Glass monochrome.
+ *
+ * Presentation only. Screen signature, drag-to-dismiss, AudioEngine / queue /
+ * repeat / sleep / favorite wiring, sheet wiring and navigation are untouched.
+ * Zero hue: canvas #050506 + glow + grain, grayscale artwork with scrim and
+ * chromium ring, chrome/ghost controls, NoirSegmentedProgress meter language,
+ * text ladder 100 / 62 / 38 / 24%.
+ */
 class NowPlayingScreen : Screen {
     @Composable
     override fun Content() {
@@ -167,14 +195,11 @@ class NowPlayingScreen : Screen {
 
         val totalMs = if (durationMs > 0L) durationMs
             else (track?.durationMs?.takeIf { it > 0L } ?: 0L)
-        val elapsedText = formatMs(currentPositionMs)
-        val remainingText = if (totalMs > 0L) "-${formatMs((totalMs - currentPositionMs).coerceAtLeast(0L))}" else "--:--"
+        // Time labels derive from the scrub-aware active position below.
 
-        Box(
+        NoirScreenRoot(
             modifier = Modifier
-                .fillMaxSize()
                 .offset { IntOffset(0, dragOffsetY.roundToInt()) }
-                .background(Color(0xFF05050C))
                 .pointerInput(Unit) {
                     detectVerticalDragGestures(
                         onDragStart = {
@@ -237,29 +262,28 @@ class NowPlayingScreen : Screen {
                     )
                 }
         ) {
+            // Ambient video stays wired, but drowned in monochrome scrims so the
+            // screen reads zero-hue even while a soundscape plays.
             AmbientVideoView(selectedType = selectedAmbientType, modifier = Modifier.fillMaxSize())
             if (hasAmbientVideo) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.55f))
+                        .background(GhaisNoir.NoirBlack.copy(alpha = 0.72f))
                 )
             }
-            // Deep blue glow rising from the bottom (reference look)
+            // Bottom legibility grade — monochrome melt into the canvas.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(340.dp)
                     .align(Alignment.BottomCenter)
                     .background(
-                        Brush.radialGradient(
+                        Brush.verticalGradient(
                             colors = listOf(
-                                Color(0xFF1E4FD8).copy(alpha = 0.38f),
-                                Color(0xFF1E4FD8).copy(alpha = 0.10f),
-                                Color.Transparent
-                            ),
-                            center = androidx.compose.ui.geometry.Offset(200f, 900f),
-                            radius = 700f
+                                Color.Transparent,
+                                GhaisNoir.NoirBlack.copy(alpha = 0.85f)
+                            )
                         )
                     )
             )
@@ -267,7 +291,7 @@ class NowPlayingScreen : Screen {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 28.dp),
+                    .padding(horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(14.dp))
@@ -291,46 +315,43 @@ class NowPlayingScreen : Screen {
                                 .width(48.dp)
                                 .height(5.dp)
                                 .clip(RoundedCornerShape(50))
-                                .background(Color.White.copy(alpha = 0.35f))
+                                .background(GhaisNoir.TextDisabled)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // Background sound pill (accessible touch target >= 48dp)
+                // Background sound pill — ghost language; active = elevated fill
+                // + specular ring + primary text (zero hue, no gold).
                 val ambientButtonText = selectedAmbientType?.displayName() ?: "Background sound"
                 val isAmbientActive = selectedAmbientType != null
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .heightIn(min = 48.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(
-                            if (isAmbientActive) Color(0xFFD4A853).copy(alpha = 0.14f)
-                            else Color.White.copy(alpha = 0.08f)
-                        )
+                        .clip(GhaisShapes.pill)
+                        .background(if (isAmbientActive) GhaisNoir.Fill4 else GhaisNoir.Fill2)
                         .border(
                             1.dp,
-                            if (isAmbientActive) Color(0xFFD4A853).copy(alpha = 0.5f)
-                            else Color.White.copy(alpha = 0.14f),
-                            RoundedCornerShape(50)
+                            if (isAmbientActive) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                            GhaisShapes.pill
                         )
-                        .clickable { showAmbient = true }
+                        .noirClickable { showAmbient = true }
                         .padding(horizontal = 20.dp, vertical = 11.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.ExpandMore,
                         contentDescription = ambientButtonText,
-                        tint = if (isAmbientActive) Color(0xFFD4A853) else Color.White,
+                        tint = if (isAmbientActive) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = ambientButtonText,
-                        color = if (isAmbientActive) Color(0xFFD4A853) else Color.White,
+                        color = if (isAmbientActive) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = if (isAmbientActive) FontWeight.SemiBold else FontWeight.Medium
                     )
                 }
 
@@ -345,39 +366,57 @@ class NowPlayingScreen : Screen {
                     Spacer(modifier = Modifier.weight(1f))
                 }
 
-                // Track row: photo + title/reciter + star
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    AsyncImage(
-                        model = track?.let { photoForSlug(it.reciterSlug) }
-                            ?: GhaisAssets.LogoUrl,
-                        contentDescription = reciterName,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(62.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF1C1C1E))
-                    )
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = queuePositionText,
-                            color = Color(0xFFD4A853),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
+                // Hero plate: grayscale artwork well + identity + favorite.
+                NoirHeroCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Grayscale artwork with scrim + chromium ring.
+                        Box(
+                            modifier = Modifier
+                                .size(196.dp)
+                                .clip(GhaisShapes.cardLarge)
+                                .background(GhaisNoir.wellFill())
+                                .border(1.dp, GhaisNoir.SpecularTop, GhaisShapes.cardLarge)
+                                .topSpecular(inset = 30.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = track?.let { photoForSlug(it.reciterSlug) }
+                                    ?: GhaisAssets.LogoUrl,
+                                contentDescription = reciterName,
+                                contentScale = ContentScale.Crop,
+                                colorFilter = NoirGrayscale,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            // Darkening scrim: keeps the plate recessed, never glowing.
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(Color.Black.copy(alpha = 0.35f))
+                            )
+                            // Diagonal glass sheen swept across the plate.
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(GhaisNoir.sheen())
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        NoirStatChip(text = queuePositionText.uppercase())
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
                                 text = title,
-                                color = Color.White,
+                                color = GhaisNoir.TextPrimary,
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
@@ -387,47 +426,62 @@ class NowPlayingScreen : Screen {
                             if (surahNameAr.isNotBlank()) {
                                 Text(
                                     text = surahNameAr,
-                                    color = Color.White.copy(alpha = 0.7f),
+                                    color = GhaisNoir.TextSecondary,
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Medium,
                                     maxLines = 1
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(3.dp))
-                        Text(
-                            text = reciterName,
-                            color = MutedGrey,
-                            fontSize = 17.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(52.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.07f))
-                            .clickable { track?.let { FavoritesStore.toggle(it) } },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Star,
-                            contentDescription = "Favorite",
-                            tint = if (isFav) Color.White else Color.White.copy(alpha = 0.45f),
-                            modifier = Modifier.size(27.dp)
-                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = reciterName,
+                                color = GhaisNoir.TextSecondary,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Normal,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isFav) GhaisNoir.Fill4 else GhaisNoir.Fill2
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (isFav) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                                        CircleShape
+                                    )
+                                    .noirClickable { track?.let { FavoritesStore.toggle(it) } },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Star,
+                                    contentDescription = "Favorite",
+                                    tint = if (isFav) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(22.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Controls: speed | prev | play | next | sleep
-                PlayerControls(
+                // Transport: chrome play FAB, ghost wells, monochrome state.
+                NoirTransportRow(
                     isPlaying = isPlaying,
                     speed = speed,
                     canSkipPrevious = canSkipPrevious,
                     canSkipNext = canSkipNext,
+                    repeatMode = repeatMode,
                     isSleepTimerActive = sleepTimerState.isActive,
                     onTogglePlayPause = { AudioEngine.togglePlayPause() },
                     onPrevious = { AudioEngine.skipPrevious() },
@@ -436,14 +490,14 @@ class NowPlayingScreen : Screen {
                         val idx = Speeds.indexOf(currentSpd).takeIf { it >= 0 } ?: 0
                         AudioEngine.setPlaybackSpeed(Speeds[(idx + 1) % Speeds.size])
                     },
-                    onSleepTimerClick = { showSleepTimer = true },
-                    repeatMode = repeatMode,
-                    onRepeatClick = { AudioEngine.setRepeatMode(nextRepeatMode(repeatMode)) }
+                    onRepeatClick = { AudioEngine.setRepeatMode(nextRepeatMode(repeatMode)) },
+                    onSleepTimerClick = { showSleepTimer = true }
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
-                // Progress bar / touch scrubber (tap & horizontal scrub with live preview)
+                // Progress scrubber (tap & horizontal scrub with live preview) —
+                // NoirSegmentedProgress language: engraved track + chrome fill.
                 var isScrubbing by remember { mutableStateOf(false) }
                 var scrubFraction by remember { mutableStateOf(0f) }
 
@@ -476,7 +530,7 @@ class NowPlayingScreen : Screen {
                                     scrubFraction = (down.position.x / widthPx).coerceIn(0f, 1f)
                                     isScrubbing = true
 
-                                    var pointerId = down.id
+                                    val pointerId = down.id
                                     while (true) {
                                         val event = awaitPointerEvent()
                                         val change = event.changes.firstOrNull { it.id == pointerId } ?: break
@@ -498,25 +552,28 @@ class NowPlayingScreen : Screen {
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        // Track background
+                        // Engraved track (mirrors NoirSegmentedProgress).
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(5.dp)
-                                .clip(RoundedCornerShape(50))
-                                .background(Color.White.copy(alpha = 0.16f))
+                                .height(8.dp)
+                                .clip(CircleShape)
+                                .background(GhaisNoir.insetFill())
+                                .border(1.dp, GhaisNoir.InsetBorder, CircleShape)
                         ) {
-                            // Active progress fill
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth(activeProgress)
-                                    .height(5.dp)
-                                    .clip(RoundedCornerShape(50))
-                                    .background(Color.White)
-                            )
+                            // Chrome fill.
+                            if (activeProgress > 0f) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(activeProgress)
+                                        .height(8.dp)
+                                        .clip(CircleShape)
+                                        .background(GhaisNoir.chromeFill())
+                                )
+                            }
                         }
 
-                        // Scrubber thumb (visible during scrubbing/drag)
+                        // Chrome thumb (visible during scrubbing/drag).
                         if (isScrubbing) {
                             val thumbOffset = ((width - 14.dp) * activeProgress).coerceAtLeast(0.dp)
                             Box(
@@ -529,24 +586,35 @@ class NowPlayingScreen : Screen {
                                         .padding(start = thumbOffset)
                                         .size(14.dp)
                                         .clip(CircleShape)
-                                        .background(Color.White)
+                                        .background(GhaisNoir.chromeFill())
+                                        .border(1.dp, GhaisNoir.NoirBlack, CircleShape)
                                 )
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    Text(text = activeElapsedText, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = activeElapsedText,
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                     Spacer(modifier = Modifier.weight(1f))
-                    Text(text = activeRemainingText, color = MutedGrey, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        text = activeRemainingText,
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(26.dp))
+                Spacer(modifier = Modifier.height(22.dp))
 
-                // Bottom utility row
+                // Bottom utility row — ghost wells; active = elevated + primary.
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
@@ -554,47 +622,48 @@ class NowPlayingScreen : Screen {
                         .fillMaxWidth()
                         .padding(horizontal = 6.dp)
                 ) {
-                    IconButton(
-                        onClick = { showVolume = !showVolume },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (volume > 0f) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
-                            contentDescription = "Volume",
-                            tint = if (volume > 0f) MutedGrey else MutedGrey.copy(alpha = 0.5f),
-                            modifier = Modifier.size(30.dp)
-                        )
-                    }
+                    NoirUtilityWell(
+                        icon = if (volume > 0f) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
+                        contentDescription = "Volume",
+                        active = showVolume,
+                        tint = if (volume > 0f) GhaisNoir.TextSecondary else GhaisNoir.TextDisabled,
+                        onClick = { showVolume = !showVolume }
+                    )
+                    // Lyrics toggle — Arabic glyph well.
                     Box(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .clickable { showLyrics = !showLyrics },
+                            .background(if (showLyrics) GhaisNoir.Fill4 else GhaisNoir.Fill1)
+                            .border(
+                                1.dp,
+                                if (showLyrics) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
+                                CircleShape
+                            )
+                            .noirClickable { showLyrics = !showLyrics },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "ق",
-                            color = if (showLyrics) Color.White else MutedGrey.copy(alpha = 0.55f),
-                            fontSize = 28.sp,
+                            color = if (showLyrics) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Medium
                         )
                     }
-                    IconButton(onClick = { showAmbient = true }, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.Filled.Cast,
-                            contentDescription = "Soundscapes",
-                            tint = MutedGrey,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                    IconButton(onClick = { showQueue = true }, modifier = Modifier.size(48.dp)) {
-                        Icon(
-                            imageVector = Icons.Filled.QueueMusic,
-                            contentDescription = "Queue",
-                            tint = if (queue.isNotEmpty()) Color(0xFFD4A853) else MutedGrey,
-                            modifier = Modifier.size(30.dp)
-                        )
-                    }
+                    NoirUtilityWell(
+                        icon = Icons.Filled.Cast,
+                        contentDescription = "Soundscapes",
+                        active = isAmbientActive,
+                        tint = GhaisNoir.TextSecondary,
+                        onClick = { showAmbient = true }
+                    )
+                    NoirUtilityWell(
+                        icon = Icons.Filled.QueueMusic,
+                        contentDescription = "Queue",
+                        active = queue.isNotEmpty(),
+                        tint = if (queue.isNotEmpty()) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                        onClick = { showQueue = true }
+                    )
                 }
 
                 AnimatedVisibility(
@@ -617,6 +686,192 @@ class NowPlayingScreen : Screen {
             if (showSleepTimer) SleepTimerSheet(onDismiss = { showSleepTimer = false })
             if (showQueue) QueueSheet(onDismiss = { showQueue = false })
             if (showAmbient) AmbientMixerSheet(mixer = mixer, onDismissRequest = { showAmbient = false })
+        }
+    }
+}
+
+/**
+ * Noir transport row — local to this screen so the shared PlayerControls file
+ * (owned by another pass) stays untouched. Same callbacks and skip logic as
+ * the original call site: chrome FAB for play/pause, ghost wells elsewhere,
+ * state through fill elevation + opacity only.
+ */
+@Composable
+private fun NoirTransportRow(
+    isPlaying: Boolean,
+    speed: Float,
+    canSkipPrevious: Boolean,
+    canSkipNext: Boolean,
+    repeatMode: RepeatMode,
+    isSleepTimerActive: Boolean,
+    onTogglePlayPause: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onSpeedChange: (Float) -> Unit,
+    onRepeatClick: () -> Unit,
+    onSleepTimerClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        // Speed selector (generous touch target >= 48dp).
+        Box(
+            modifier = Modifier
+                .size(width = 52.dp, height = 48.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(GhaisNoir.Fill1)
+                .border(1.dp, GhaisNoir.BorderGhost, RoundedCornerShape(12.dp))
+                .noirClickable { onSpeedChange(speed) },
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = formatSpeed(speed),
+                color = GhaisNoir.TextSecondary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        NoirTransportWell(
+            icon = Icons.Filled.FastRewind,
+            contentDescription = "Previous",
+            enabled = canSkipPrevious,
+            onClick = onPrevious,
+            iconSize = 30.dp
+        )
+
+        ChromeFab(
+            icon = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+            onClick = onTogglePlayPause,
+            size = 72.dp,
+            contentDescription = if (isPlaying) "Pause" else "Play"
+        )
+
+        NoirTransportWell(
+            icon = Icons.Filled.FastForward,
+            contentDescription = "Next",
+            enabled = canSkipNext,
+            onClick = onNext,
+            iconSize = 30.dp
+        )
+
+        // Repeat + sleep share the trailing slot widths of the original row.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            val repeatActive = repeatMode != RepeatMode.OFF
+            IconButton(onClick = onRepeatClick, modifier = Modifier.size(48.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(if (repeatActive) GhaisNoir.Fill4 else GhaisNoir.Fill1)
+                        .border(
+                            1.dp,
+                            if (repeatActive) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (repeatMode == RepeatMode.SURAH) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                        contentDescription = when (repeatMode) {
+                            RepeatMode.SURAH -> "Repeat surah"
+                            RepeatMode.QUEUE -> "Repeat queue"
+                            else -> "Repeat off"
+                        },
+                        tint = if (repeatActive) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+            IconButton(onClick = onSleepTimerClick, modifier = Modifier.size(48.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(if (isSleepTimerActive) GhaisNoir.Fill4 else GhaisNoir.Fill1)
+                        .border(
+                            1.dp,
+                            if (isSleepTimerActive) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Bedtime,
+                        contentDescription = "Sleep timer",
+                        tint = if (isSleepTimerActive) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoirTransportWell(
+    icon: ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    iconSize: androidx.compose.ui.unit.Dp = 26.dp
+) {
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.size(56.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(CircleShape)
+                .background(if (enabled) GhaisNoir.Fill2 else GhaisNoir.Fill1)
+                .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = if (enabled) GhaisNoir.TextPrimary else GhaisNoir.TextDisabled,
+                modifier = Modifier.size(iconSize)
+            )
+        }
+    }
+}
+
+@Composable
+private fun NoirUtilityWell(
+    icon: ImageVector,
+    contentDescription: String,
+    active: Boolean,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(if (active) GhaisNoir.Fill4 else GhaisNoir.Fill1)
+                .border(
+                    1.dp,
+                    if (active) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
+                    CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = tint,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }
