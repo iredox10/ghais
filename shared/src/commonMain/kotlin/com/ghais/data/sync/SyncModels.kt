@@ -32,3 +32,10 @@ const val STATS = "listening_stats"
 
 /** Cloud collection holding one document per reminder schedule. */
 const val SCHEDULES = "schedules"
+
+/**
+ * Cloud collection holding one public document per reciter with aggregate
+ * counters (`reciter_stats{slug,followers_count,likes_count,updated_at}`).
+ * Read-only for clients (public read); written server-side. Doc id = slug.
+ */
+const val RECITER_STATS = "reciter_stats"

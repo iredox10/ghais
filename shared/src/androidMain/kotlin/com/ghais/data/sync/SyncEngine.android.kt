@@ -7,7 +7,9 @@ import com.ghais.data.auth.PersistentCookieJar
 import com.ghais.data.repository.CustomRoutinesStore
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
+import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.SchedulesStore
+import com.ghais.domain.model.Reciter
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
@@ -22,6 +24,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Android live implementation of the `SyncEngine` expect object declared in
@@ -76,6 +82,11 @@ actual object SyncEngine {
      */
     fun init(context: android.content.Context) {
         appContext = context.applicationContext
+        // Wire the public reciter_stats reader into FollowStore so the UI can
+        // display live follower counts (null = unknown = hidden).
+        if (FollowStore.countFetcher == null) {
+            FollowStore.countFetcher = { slug -> followerCount(slug) }
+        }
     }
 
     actual suspend fun syncNow() {
@@ -126,8 +137,22 @@ actual object SyncEngine {
                 pullFollowsIfEmpty(db, userId)
                 pushFollows(db, userId)
             }
-            runCollection(PLAYBACK) { pushPlayback(db, userId) }
-            runCollection(STATS) { pushStats(db, userId) }
+            // Best-effort follower-count refresh from public reciter_stats
+            // (covers login pull + debounced push after follow/unfollow; the
+            // server-side increment via Function lands on a later refresh).
+            try {
+                FollowStore.refreshCounts(FollowStore.followedSlugs.value)
+            } catch (e: Exception) {
+                Log.w(TAG, "follower count refresh failed", e)
+            }
+            runCollection(PLAYBACK) {
+                val cloudHasData = pullPlaybackIfEmpty(db, userId)
+                pushPlayback(db, userId, cloudHasData)
+            }
+            runCollection(STATS) {
+                val cloudHasData = pullStatsIfEmpty(db, userId)
+                pushStats(db, userId, cloudHasData)
+            }
             runCollection(SCHEDULES) { pushSchedules(db, userId) }
             runCollection(PLAYLISTS) { pushRoutines(db, userId) }
         }
@@ -170,22 +195,85 @@ actual object SyncEngine {
             val data = doc.data
             val surahId = (data["surah_id"] as? Number)?.toInt() ?: continue
             val ayahNo = (data["ayah_no"] as? Number)?.toInt() ?: 0
-            // NOTE: the server `likes` collection has no reciter_slug/audio_url
-            // attributes (see gaps): pulled items carry a synthetic audioUrl so
-            // FavoritesStore's audioUrl-identity dedup keeps working. They play
-            // only after the attribute gap is closed (see file KDoc/return).
-            val reciterSlug = data["reciter_slug"] as? String ?: ""
-            FavoritesStore.add(
-                TrackItem(
-                    reciterSlug = reciterSlug,
-                    reciterName = "",
-                    surahId = surahId,
-                    surahNameEn = "",
-                    surahNameAr = "",
-                    ayahNo = ayahNo,
-                    audioUrl = "appwrite://likes/${doc.id}",
+            // `reciter_slug` is optional server-side: older cloud docs (and a
+            // collection where the sibling hasn't added the attribute yet) lack
+            // it. When present and known, rebuild a FULLY playable TrackItem
+            // (reciter display name + real audio URL via QuranDataRepository /
+            // Reciter helpers, surah names via getSurahById). Otherwise keep the
+            // synthetic placeholder so FavoritesStore's audioUrl-identity dedup
+            // keeps working; such items play after the gap closes.
+            val rawSlug = (data["reciter_slug"] as? String)?.trim().orEmpty()
+            val playable = buildPlayableLike(rawSlug, surahId, ayahNo)
+            if (playable != null) {
+                FavoritesStore.add(playable)
+            } else {
+                FavoritesStore.add(
+                    TrackItem(
+                        reciterSlug = rawSlug,
+                        reciterName = "",
+                        surahId = surahId,
+                        surahNameEn = "",
+                        surahNameAr = "",
+                        ayahNo = ayahNo,
+                        audioUrl = "appwrite://likes/${doc.id}",
+                    )
                 )
-            )
+            }
+        }
+    }
+
+    /**
+     * Rebuilds a fully playable liked [TrackItem] from cloud fields, or null
+     * when the slug is blank/unknown or the surah is unknown (caller falls back
+     * to the synthetic `appwrite://likes/<docId>` placeholder).
+     *
+     * Ayah likes (`ayahNo > 0`) resolve via [Reciter.getAyahAudioUrl] (per-ayah
+     * EveryAyah MP3); full-surah likes via [Reciter.getFullSurahUrl]. The stored
+     * slug is the canonical [Reciter.slug] so doc IDs stay stable.
+     */
+    private fun buildPlayableLike(slug: String, surahId: Int, ayahNo: Int): TrackItem? {
+        if (slug.isBlank()) return null
+        val reciter = findReciterOrNull(slug) ?: return null
+        val surah = runCatching { QuranDataRepository.getSurahById(surahId) }.getOrNull()
+            ?: return null
+        val audioUrl = runCatching {
+            if (ayahNo > 0) reciter.getAyahAudioUrl(surahId, ayahNo)
+            else reciter.getFullSurahUrl(surahId)
+        }.getOrNull()?.takeIf { it.isNotBlank() } ?: return null
+        return TrackItem(
+            reciterSlug = reciter.slug,
+            reciterName = reciter.nameEn,
+            surahId = surah.id,
+            surahNameEn = surah.nameEn,
+            surahNameAr = surah.nameAr,
+            ayahNo = ayahNo,
+            audioUrl = audioUrl,
+        )
+    }
+
+    /**
+     * Null-returning twin of [QuranDataRepository.getReciterBySlug] (which falls
+     * back to Alafasy and never returns null): mirrors its smart-normalization
+     * predicate so "unknown" slugs are detectable and can use the synthetic
+     * fallback instead of misattributing to the fallback reciter.
+     */
+    private fun findReciterOrNull(slug: String): Reciter? {
+        val cleanSlug = slug.trim().lowercase()
+        if (cleanSlug.isEmpty()) return null
+        return runCatching { QuranDataRepository.getReciters() }.getOrNull()?.find { reciter ->
+            val rSlug = reciter.slug.lowercase()
+            rSlug == cleanSlug ||
+                (cleanSlug == "mishary" && rSlug == "alafasy") ||
+                (cleanSlug == "al-sudais" && rSlug == "sudais") ||
+                (cleanSlug == "al-muaiqly" && rSlug == "muaiqly") ||
+                (cleanSlug == "al-dossari" && rSlug == "dossari") ||
+                (cleanSlug == "abdul-basit" && rSlug.startsWith("abdulbaset")) ||
+                (cleanSlug == "abdulbasit" && rSlug.startsWith("abdulbaset")) ||
+                (cleanSlug == "shuraim" && rSlug == "shuraym") ||
+                (cleanSlug == "islam-sobhi" && rSlug.contains("islam")) ||
+                rSlug.replace("_", "-") == cleanSlug ||
+                rSlug.replace("-", "_") == cleanSlug ||
+                reciter.nameEn.lowercase().contains(cleanSlug)
         }
     }
 
@@ -193,6 +281,9 @@ actual object SyncEngine {
         val local = FavoritesStore.favoriteTracks.value
         val existing = listForUser(db, LIKES, userId) ?: return
         val localKeys = local.map { likeKey(it.surahId, it.ayahNo) }.toSet()
+        // Per-pass flag: cleared on the first unknown-attribute rejection so the
+        // rest of this pass goes slug-less; next pass retries with the slug.
+        var includeReciterSlug = true
         for (doc in existing) {
             val data = doc.data
             val key = likeKey(
@@ -208,17 +299,42 @@ actual object SyncEngine {
             }
         }
         for (track in local) {
-            // Only attributes present in appwrite/collections.json are sent;
-            // `reciter_slug` is intentionally omitted until the attribute is
-            // added server-side (unknown attributes are rejected).
-            val data: Map<String, Any?> = mapOf(
+            // `reciter_slug` (string 64, optional) is sent when the cloud
+            // collection has it; when the sibling hasn't added the attribute
+            // yet the server rejects unknown attributes, so fall back to a
+            // slug-less upsert once (flag) and keep syncing the other fields.
+            val full: Map<String, Any?> = mapOf(
                 "user_id" to userId,
                 "surah_id" to track.surahId,
                 "ayah_no" to track.ayahNo,
                 "level" to "like",
+                "reciter_slug" to track.reciterSlug,
             )
-            upsert(db, LIKES, likeDocId(userId, track.reciterSlug, track.surahId, track.ayahNo), data)
+            val docId = likeDocId(userId, track.reciterSlug, track.surahId, track.ayahNo)
+            if (includeReciterSlug) {
+                try {
+                    upsert(db, LIKES, docId, full)
+                    continue
+                } catch (e: Exception) {
+                    if (!isUnknownAttribute(e, "reciter_slug")) throw e
+                    Log.w(TAG, "likes.reciter_slug not provisioned yet; pushing without it.")
+                    includeReciterSlug = false
+                }
+            }
+            upsert(db, LIKES, docId, full - "reciter_slug")
         }
+    }
+
+    /**
+     * True when [e] looks like an "unknown attribute" rejection for [attr]
+     * (thrown by create/update when the cloud collection lacks the attribute).
+     * Checked defensively across Appwrite SDK message wordings; callers only
+     * pass attribute names they sent.
+     */
+    private fun isUnknownAttribute(e: Exception, attr: String): Boolean {
+        val msg = (e.message ?: "").lowercase()
+        if (!msg.contains(attr.lowercase())) return false
+        return msg.contains("unknown") || msg.contains("invalid") || msg.contains("not found")
     }
 
     private fun likeKey(surahId: Int, ayahNo: Int): String = "$surahId:$ayahNo"
@@ -228,11 +344,12 @@ actual object SyncEngine {
     private suspend fun pullFollowsIfEmpty(db: Databases, userId: String) {
         if (FollowStore.followedSlugs.value.isNotEmpty()) return
         val docs = listForUser(db, FOLLOWS, userId) ?: return
-        FollowStore.clear()
-        for (doc in docs) {
-            val slug = doc.data["reciter_slug"] as? String
-            if (!slug.isNullOrBlank()) FollowStore.follow(slug)
-        }
+        // Bulk replace: no per-slug count refresh (syncNow refreshes once).
+        val slugs = docs.mapNotNull { it.data["reciter_slug"] as? String }
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .toSet()
+        FollowStore.setAll(slugs)
     }
 
     private suspend fun pushFollows(db: Databases, userId: String) {
@@ -257,10 +374,135 @@ actual object SyncEngine {
         }
     }
 
-    // --------------------------------------------------------------- playback
+    // ------------------------------------------------------- reciter stats
+    //
+    // Public read-only counters (`reciter_stats{slug,followers_count,
+    // likes_count,updated_at}`, doc id = slug). Single-doc read per slug —
+    // never an N× fan-out over `follows`. Null on 404/any failure so the UI
+    // hides counts when unknown. Client never writes these docs.
 
-    private suspend fun pushPlayback(db: Databases, userId: String) {
+    /**
+     * Reads `followers_count` for [reciterSlug] from `reciter_stats`
+     * (direct doc id=slug first, `slug`-equal query limit 1 as fallback).
+     */
+    suspend fun followerCount(reciterSlug: String): Long? =
+        reciterStat(reciterSlug, "followers_count")
+
+    /** Reads `likes_count` for [reciterSlug] from `reciter_stats`. */
+    suspend fun likesCount(reciterSlug: String): Long? =
+        reciterStat(reciterSlug, "likes_count")
+
+    private suspend fun reciterStat(reciterSlug: String, field: String): Long? =
+        withContext(Dispatchers.IO) {
+            try {
+                val ctx = appContext ?: return@withContext null
+                if (!AppwriteConfig.isConfigured()) return@withContext null
+                val slug = reciterSlug.trim()
+                if (slug.isEmpty()) return@withContext null
+                val db = databases(ctx)
+                val data: Map<String, Any?>? = try {
+                    db.getDocument(DB_ID, RECITER_STATS, slug).data
+                } catch (e: Exception) {
+                    if (!isNotFound(e)) {
+                        Log.w(TAG, "reciter_stats get '$slug' failed; trying query", e)
+                    }
+                    try {
+                        db.listDocuments(
+                            DB_ID,
+                            RECITER_STATS,
+                            listOf(Query.equal("slug", slug), Query.limit(1)),
+                        ).documents.firstOrNull()?.data
+                    } catch (e2: Exception) {
+                        if (!isNotFound(e2)) {
+                            Log.w(TAG, "reciter_stats query '$slug' failed", e2)
+                        }
+                        null
+                    }
+                }
+                (data?.get(field) as? Number)?.toLong()
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+    // --------------------------------------------------------------- playback
+    //
+    // Pull-if-empty + push-always (push skips when local is still empty but
+    // cloud has data, so a fresh login never clobbers its restore source with
+    // an empty snapshot).
+
+    /**
+     * Pulls the cloud `playback_state` doc (docId = [userId]) when the local
+     * player is empty, and rebuilds the [TrackItem] for a paused restore.
+     *
+     * Returns true when the cloud holds a usable snapshot (caller must then
+     * skip pushing, otherwise the still-empty local state would overwrite
+     * it). Returns false when there is nothing to protect (local already
+     * playing, or no/empty cloud doc) so push proceeds.
+     *
+     * Parsing: `current_ref` is `"<slug>/<surahId>"`; `queue_json` is the
+     * single-track JSON array the pusher writes
+     * (`[{reciter_slug,surah_id,ayah_no,audio_url}]`) and is preferred because
+     * it also carries `ayah_no`. Names/duration resolve via
+     * [QuranDataRepository.getSurahById] + [Reciter.getAyahAudioUrl] /
+     * [Reciter.getFullSurahUrl] (duration stays unknown/0 until streaming).
+     *
+     * Restore is METADATA-ONLY (parse + validate + log): [AudioEngine] has no
+     * paused-load path — only [AudioEngine.playTrack]/[AudioEngine.playQueue]
+     * (both autoplay via `PlayerBridge.play`) plus `pause`/`seekTo` — so there
+     * is nothing that loads a track + seeks while staying paused. Follow-up:
+     * add `AudioEngine.prepareTrack(track, positionMs)` (load + seek, paused)
+     * and call it here instead of just logging.
+     */
+    private suspend fun pullPlaybackIfEmpty(db: Databases, userId: String): Boolean {
+        if (AudioEngine.currentTrack.value != null) return false
+        val doc = getDocument(db, PLAYBACK, userId) ?: return false
+        val data = doc.data
+        val ref = (data["current_ref"] as? String)?.trim().orEmpty()
+        if (ref.isEmpty()) return false // idle snapshot the pusher wrote; nothing to restore
+        val positionMs = asLong(data["position_ms"])?.coerceAtLeast(0L) ?: 0L
+        val updatedAt = asLong(data["updated_at"])
+        val queued = parseQueueFirst((data["queue_json"] as? String).orEmpty())
+        val refParts = parseCurrentRef(ref)
+        val slug = queued?.slug ?: refParts?.first ?: return true
+        val surahId = queued?.surahId ?: refParts?.second ?: return true
+        val ayahNo = queued?.ayahNo ?: 0
+        val reciter = findReciterOrNull(slug)
+        if (reciter == null) {
+            Log.w(TAG, "playback pull: unknown reciter slug '$slug'; keeping cloud snapshot.")
+            return true
+        }
+        val surah = runCatching { QuranDataRepository.getSurahById(surahId) }.getOrNull()
+        if (surah == null) {
+            Log.w(TAG, "playback pull: unknown surah $surahId; keeping cloud snapshot.")
+            return true
+        }
+        var audioUrl = queued?.audioUrl?.takeIf { it.isNotBlank() }.orEmpty()
+        if (audioUrl.isBlank()) {
+            audioUrl = runCatching {
+                if (ayahNo > 0) reciter.getAyahAudioUrl(surahId, ayahNo)
+                else reciter.getFullSurahUrl(surahId)
+            }.getOrNull().orEmpty()
+        }
+        if (audioUrl.isBlank()) return true
+        // Metadata-only: validated rebuild (no autoplay path to load it paused).
+        Log.i(
+            TAG,
+            "playback pull: cloud '${reciter.slug}/$surahId' ayah=$ayahNo pos=${positionMs}ms" +
+                (if (updatedAt != null) " updatedAt=$updatedAt" else "") +
+                " — metadata validated only; AudioEngine has no paused-load API yet."
+        )
+        return true
+    }
+
+    private suspend fun pushPlayback(db: Databases, userId: String, cloudHasData: Boolean) {
         val track = AudioEngine.currentTrack.value
+        if (track == null && cloudHasData) {
+            // Fresh login with metadata-only restore: the local player is still
+            // empty, so pushing would overwrite the cloud snapshot with ""/"[]".
+            Log.i(TAG, "pushPlayback skipped (local empty, cloud has data).")
+            return
+        }
         val positionMs = AudioEngine.currentPositionMs.value
         val ref = if (track != null) "${track.reciterSlug}/${track.surahId}" else ""
         val queueJson = if (track != null) {
@@ -273,9 +515,47 @@ actual object SyncEngine {
             "current_ref" to ref,
             "position_ms" to positionMs,
             "queue_json" to queueJson,
+            "updated_at" to System.currentTimeMillis(),
         )
         // Single doc per user, id = userId (matches user_state_unique index).
         upsert(db, PLAYBACK, userId, data)
+    }
+
+    /** First entry of the pusher-written single-track `queue_json` array, or null. */
+    private fun parseQueueFirst(queueJson: String): QueuedTrack? {
+        if (queueJson.isBlank()) return null
+        return try {
+            val obj = json.parseToJsonElement(queueJson).jsonArray.firstOrNull()?.jsonObject
+                ?: return null
+            val slug = obj["reciter_slug"]?.jsonPrimitive?.content?.trim().orEmpty()
+            val surahId = obj["surah_id"]?.jsonPrimitive?.intOrNull ?: return null
+            if (slug.isEmpty()) return null
+            QueuedTrack(
+                slug = slug,
+                surahId = surahId,
+                ayahNo = obj["ayah_no"]?.jsonPrimitive?.intOrNull ?: 0,
+                audioUrl = obj["audio_url"]?.jsonPrimitive?.content.orEmpty(),
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private data class QueuedTrack(
+        val slug: String,
+        val surahId: Int,
+        val ayahNo: Int,
+        val audioUrl: String,
+    )
+
+    /** Splits `"<slug>/<surahId>"` on the last `/` (slugs never contain `/`). */
+    private fun parseCurrentRef(ref: String): Pair<String, Int>? {
+        val idx = ref.lastIndexOf('/')
+        if (idx <= 0 || idx >= ref.length - 1) return null
+        val slug = ref.substring(0, idx).trim()
+        val surahId = ref.substring(idx + 1).trim().toIntOrNull() ?: return null
+        if (slug.isEmpty() || surahId <= 0) return null
+        return slug to surahId
     }
 
     // ------------------------------------------------------------------ stats

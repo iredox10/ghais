@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -72,6 +73,11 @@ fun NationReelBlock(
     onPlayReciter: (Reciter) -> Unit = {}
 ) {
     val followedSlugs by FollowStore.followedSlugs.collectAsState()
+    val followerCounts by FollowStore.followerCounts.collectAsState()
+    // Best-effort live counts for the visible slugs (unknown stays hidden).
+    LaunchedEffect(reciters) {
+        FollowStore.refreshCounts(reciters.map { it.slug })
+    }
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -122,7 +128,8 @@ fun NationReelBlock(
                     onClick = { onReciter(reciter.slug) },
                     onPlayClick = { onPlayReciter(reciter) },
                     isFollowing = reciter.slug in followedSlugs,
-                    onFollowClick = { FollowStore.toggle(reciter.slug) }
+                    onFollowClick = { FollowStore.toggle(reciter.slug) },
+                    followerCount = followerCounts[reciter.slug]
                 )
             }
         }
@@ -136,7 +143,8 @@ fun ReciterReelCard(
     onClick: () -> Unit,
     onPlayClick: () -> Unit = {},
     isFollowing: Boolean = false,
-    onFollowClick: () -> Unit = {}
+    onFollowClick: () -> Unit = {},
+    followerCount: Long? = null
 ) {
     val currentTrack by AudioEngine.currentTrack.collectAsState()
     val isPlaying by AudioEngine.isPlaying.collectAsState()
@@ -306,6 +314,17 @@ fun ReciterReelCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            // Live follower count — hidden while unknown (null).
+            if (followerCount != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = FollowStore.formatFollowerCount(followerCount),
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
