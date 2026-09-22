@@ -357,6 +357,12 @@
           "size": 32,
           "required": true,
           "default": "ayah"
+        },
+        {
+          "key": "reciter_slug",
+          "type": "string",
+          "size": 64,
+          "required": false
         }
       ],
       "indexes": [
@@ -403,6 +409,11 @@
           "type": "string",
           "size": 65535,
           "required": true
+        },
+        {
+          "key": "updated_at",
+          "type": "integer",
+          "required": false
         }
       ],
       "indexes": [
@@ -468,6 +479,294 @@
           "type": "key",
           "attributes": [
             "user_id"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "follows",
+      "name": "Reciter Follows",
+      "permissions": [
+        "read(\"users\")",
+        "create(\"users\")",
+        "update(\"users\")"
+      ],
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "user_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "reciter_slug",
+          "type": "string",
+          "size": 64,
+          "required": true
+        }
+      ],
+      "indexes": [
+        {
+          "key": "user_idx",
+          "type": "key",
+          "attributes": [
+            "user_id"
+          ]
+        },
+        {
+          "key": "reciter_slug_idx",
+          "type": "key",
+          "attributes": [
+            "reciter_slug"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "listening_stats",
+      "name": "Listening Stats",
+      "permissions": [
+        "read(\"users\")",
+        "create(\"users\")",
+        "update(\"users\")"
+      ],
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "user_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "total_seconds",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "key": "days_streak",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "key": "minutes_today",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "key": "unique_surahs",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "key": "unique_reciters",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "key": "updated_at",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "user_idx",
+          "type": "key",
+          "attributes": [
+            "user_id"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "schedules",
+      "name": "Recitation Schedules",
+      "permissions": [
+        "read(\"users\")",
+        "create(\"users\")",
+        "update(\"users\")"
+      ],
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "user_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "schedule_id",
+          "type": "string",
+          "size": 64,
+          "required": true
+        },
+        {
+          "key": "schedule_json",
+          "type": "string",
+          "size": 4096,
+          "required": false
+        },
+        {
+          "key": "enabled",
+          "type": "boolean",
+          "required": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "user_idx",
+          "type": "key",
+          "attributes": [
+            "user_id"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "history",
+      "name": "Listening History",
+      "permissions": [
+        "read(\"users\")",
+        "create(\"users\")",
+        "update(\"users\")"
+      ],
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "user_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "track_json",
+          "type": "string",
+          "size": 16384,
+          "required": false
+        },
+        {
+          "key": "played_at_ms",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "user_played_idx",
+          "type": "key",
+          "attributes": [
+            "user_id",
+            "played_at_ms"
+          ]
+        }
+      ]
+    },
+    {
+      "$id": "user_prefs",
+      "name": "User Preferences",
+      "permissions": [
+        "read(\"users\")",
+        "create(\"users\")",
+        "update(\"users\")"
+      ],
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "user_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "goal",
+          "type": "string",
+          "size": 64,
+          "required": false
+        },
+        {
+          "key": "daily_minutes",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "$id": "routine_backups",
+      "name": "Routine Backups",
+      "permissions": [
+        "read(\"users\")",
+        "create(\"users\")",
+        "update(\"users\")"
+      ],
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "user_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "routine_id",
+          "type": "string",
+          "size": 64,
+          "required": true
+        },
+        {
+          "key": "routine_json",
+          "type": "string",
+          "size": 8192,
+          "required": false
+        },
+        {
+          "key": "updated_at",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "$id": "reciter_stats",
+      "name": "Reciter Stats",
+      "permissions": [
+        "read(\"any\")",
+        "create(\"users\")",
+        "update(\"users\")"
+      ],
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "slug",
+          "type": "string",
+          "size": 64,
+          "required": true
+        },
+        {
+          "key": "followers_count",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "key": "likes_count",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "key": "updated_at",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "slug_unique",
+          "type": "unique",
+          "attributes": [
+            "slug"
           ]
         }
       ]
