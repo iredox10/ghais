@@ -488,7 +488,7 @@ private fun NoirLibraryTile(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                NoirLibraryArtwork(art = playlist.art, size = 76.dp)
+                NoirLibraryArtwork(art = playlist.art, plateSize = 76.dp)
             }
             Spacer(Modifier.height(14.dp))
             Text(
@@ -527,11 +527,11 @@ private fun NoirLibraryTile(
 @Composable
 private fun NoirLibraryArtwork(
     art: PlaylistArt,
-    size: androidx.compose.ui.unit.Dp
+    plateSize: androidx.compose.ui.unit.Dp
 ) {
     Box(
         modifier = Modifier
-            .size(size)
+            .size(plateSize)
             .clip(NoirLibraryArtShape)
             .background(GhaisNoir.wellFill())
             .border(1.dp, GhaisNoir.BorderCard, NoirLibraryArtShape),
@@ -542,7 +542,7 @@ private fun NoirLibraryArtwork(
                 imageVector = Icons.Filled.Star,
                 contentDescription = null,
                 tint = GhaisNoir.TextTertiary,
-                modifier = Modifier.size(size * 0.42f)
+                modifier = Modifier.size(plateSize * 0.42f)
             )
         } else {
             Canvas(modifier = Modifier.fillMaxSize()) {
