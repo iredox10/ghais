@@ -4,9 +4,11 @@ import io.appwrite.Client
 import io.appwrite.ID
 import io.appwrite.exceptions.AppwriteException
 import io.appwrite.services.Account
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -40,10 +42,10 @@ actual object AuthRepository {
     private fun accountOrThrow(): Account {
         account?.let { return it }
         check(AppwriteConfig.isConfigured()) {
-            "Appwrite is not configured: paste ENDPOINT and PROJECT_ID in AppwriteConfig."
+            "Service unavailable. Try again later."
         }
         val ctx = appContext
-            ?: throw IllegalStateException("AuthRepository.init(context) has not been called yet.")
+            ?: throw IllegalStateException("Service unavailable. Try again later.")
         val newAccount = Account(
             Client()
                 .setEndpoint(AppwriteConfig.ENDPOINT)
@@ -64,6 +66,9 @@ actual object AuthRepository {
     }
 
     actual suspend fun signUp(email: String, name: String, password: String): Result<Unit> {
+        validateEmail(email)?.let { return Result.failure(Exception(it)) }
+        if (name.isBlank()) return Result.failure(Exception("Enter your name."))
+        if (password.length < 8) return Result.failure(Exception("Password must be at least 8 characters."))
         return runCatching {
             val account = accountOrThrow()
             try {
@@ -79,10 +84,12 @@ actual object AuthRepository {
             } catch (e: AppwriteException) {
                 throw Exception(friendlyMessage(e))
             }
-        }
+        }.recoverCatching { e -> throw Exception(userMessage(e)) }
     }
 
     actual suspend fun signIn(email: String, password: String): Result<Unit> {
+        validateEmail(email)?.let { return Result.failure(Exception(it)) }
+        if (password.isEmpty()) return Result.failure(Exception("Enter your password."))
         return runCatching {
             val account = accountOrThrow()
             try {
@@ -92,7 +99,13 @@ actual object AuthRepository {
             } catch (e: AppwriteException) {
                 throw Exception(friendlyMessage(e))
             }
-        }
+        }.recoverCatching { e -> throw Exception(userMessage(e)) }
+    }
+
+    private fun validateEmail(email: String): String? {
+        if (email.isBlank()) return "Enter your email address."
+        val ok = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$").matches(email)
+        return if (ok) null else "Enter a valid email address."
     }
 
     /**
@@ -122,7 +135,7 @@ actual object AuthRepository {
             if (_session.value == null) {
                 throw Exception("Google sign-in failed, please try again.")
             }
-        }
+        }.recoverCatching { e -> throw Exception(userMessage(e)) }
     }
 
     /**
@@ -131,7 +144,7 @@ actual object AuthRepository {
      * the resulting session survives restarts. Throws with the server's
      * message on failure.
      */
-    private fun exchangeGoogleIdToken(idToken: String) {
+    private suspend fun exchangeGoogleIdToken(idToken: String) = withContext(Dispatchers.IO) {
         accountOrThrow()
         val jar = cookieJar
             ?: throw IllegalStateException("Auth storage is not ready yet, please retry.")
@@ -144,11 +157,9 @@ actual object AuthRepository {
             .build()
         http.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                val message = response.body.string()
-                    .let { Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(it)?.groupValues?.getOrNull(1) }
-                    ?.takeIf { it.isNotBlank() }
-                    ?: "Google sign-in failed (server ${response.code})."
-                throw Exception(message)
+                // Deliberately generic: raw server JSON and HTTP codes
+                // must never reach the user-facing error box.
+                throw Exception("Google sign-in failed, please try again.")
             }
         }
     }
@@ -160,7 +171,11 @@ actual object AuthRepository {
             } catch (e: AppwriteException) {
                 throw Exception(friendlyMessage(e))
             } finally {
-                cookieJar?.clear()
+                // cookieJar is set by accountOrThrow above, but if it threw
+                // (not configured / init missing) the jar would be null and
+                // stale cookies on disk would resurrect the session on next
+                // launch — fall back to a fresh jar so sign-out always wipes.
+                (cookieJar ?: appContext?.let { PersistentCookieJar(it) })?.clear()
                 _session.value = null
                 _authChecked.value = true
             }
@@ -186,12 +201,22 @@ actual object AuthRepository {
     }
 
     private fun friendlyMessage(e: AppwriteException): String {
-        val raw = e.message?.takeIf { it.isNotBlank() }
+        // Never surface raw server text or numeric codes: 400s carry
+        // 'Invalid ... param' jargon and catch-alls leak "(code NNN)".
         return when (e.code) {
+            400 -> "Check your details and try again."
             401 -> "Invalid email or password."
-            409 -> "An account with this email already exists."
+            404 -> "Service unavailable. Try again later."
+            409 -> "An account with this email already exists. Log in instead."
             429 -> "Too many attempts. Please wait and try again."
-            else -> raw ?: "Authentication failed${e.code?.let { " (code $it)" } ?: ""}."
+            503 -> "Service unavailable. Try again later."
+            else -> "Something went wrong. Please try again."
         }
+    }
+
+    /** Maps non-Appwrite failures (network, init order) to user-safe copy. */
+    private fun userMessage(e: Throwable): String = when (e) {
+        is java.io.IOException -> "No connection. Check your internet and try again."
+        else -> e.message?.takeIf { it.isNotBlank() } ?: "Something went wrong. Please try again."
     }
 }
