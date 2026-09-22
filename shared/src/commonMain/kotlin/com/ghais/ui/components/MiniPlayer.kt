@@ -89,7 +89,12 @@ fun MiniPlayer(
         else currentIndex < queue.size - 1
     }
 
-    val subtitleText = if (queue.size > 1 && currentIndex in queue.indices) {
+    val isAyah = track.ayahNo > 0
+    val displayTitle = if (isAyah) "${track.surahNameEn} • Ayah ${track.ayahNo}" else track.surahNameEn
+
+    val subtitleText = if (isAyah) {
+        "${track.reciterName} • Surah ${track.surahId} of 114"
+    } else if (queue.size > 1 && currentIndex in queue.indices) {
         "${track.reciterName} • Surah ${track.surahId} of 114 • Track ${currentIndex + 1} of ${queue.size}"
     } else {
         "${track.reciterName} • Surah ${track.surahId} of 114"
@@ -220,7 +225,7 @@ fun MiniPlayer(
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = track.surahNameEn,
+                                text = displayTitle,
                                 color = Color.White,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
