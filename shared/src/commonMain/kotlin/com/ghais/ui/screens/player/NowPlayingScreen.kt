@@ -457,33 +457,12 @@ class NowPlayingScreen : Screen {
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Minimal transport: speed / prev / play / next / repeat.
+                // Core transport never fades: prev / play / next only.
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(width = 52.dp, height = 44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(GhaisNoir.Fill1)
-                            .border(1.dp, GhaisNoir.BorderGhost, RoundedCornerShape(12.dp))
-                            .noirClickable {
-                                poke()
-                                val idx = PlayerSpeeds.indexOf(speed).takeIf { it >= 0 } ?: 0
-                                AudioEngine.setPlaybackSpeed(PlayerSpeeds[(idx + 1) % PlayerSpeeds.size])
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = formatSpeedLabel(speed),
-                            color = GhaisNoir.TextSecondary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
                     NoirTransportWell(
                         icon = Icons.Filled.FastRewind,
                         contentDescription = "Previous",
@@ -491,29 +470,20 @@ class NowPlayingScreen : Screen {
                         onClick = { poke(); AudioEngine.skipPrevious() },
                         iconSize = 26.dp
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(20.dp))
                     ChromeFab(
                         icon = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         onClick = { poke(); AudioEngine.togglePlayPause() },
                         size = 68.dp,
                         contentDescription = if (isPlaying) "Pause" else "Play"
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(20.dp))
                     NoirTransportWell(
                         icon = Icons.Filled.FastForward,
                         contentDescription = "Next",
                         enabled = canSkipNext,
                         onClick = { poke(); AudioEngine.skipNext() },
                         iconSize = 26.dp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    val repeatActive = repeatMode != RepeatMode.OFF
-                    NoirUtilityWell(
-                        icon = if (repeatMode == RepeatMode.SURAH) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-                        contentDescription = "Repeat",
-                        active = repeatActive,
-                        tint = if (repeatActive) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                        onClick = { poke(); AudioEngine.setRepeatMode(nextRepeatMode(repeatMode)) }
                     )
                 }
 
@@ -643,15 +613,36 @@ class NowPlayingScreen : Screen {
 
                 Spacer(modifier = Modifier.height(22.dp))
 
-                // Overflow: volume (expandable), queue, sleep — tiny ghost wells.
+                // Overflow: speed, volume (expandable), queue, sleep, repeat.
+                // Melts away with the idle fade — core transport above never does.
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(
-                        14.dp,
+                        12.dp,
                         Alignment.CenterHorizontally
                     ),
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 52.dp, height = 44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(GhaisNoir.Fill1)
+                            .border(1.dp, GhaisNoir.BorderGhost, RoundedCornerShape(12.dp))
+                            .noirClickable {
+                                poke()
+                                val idx = PlayerSpeeds.indexOf(speed).takeIf { it >= 0 } ?: 0
+                                AudioEngine.setPlaybackSpeed(PlayerSpeeds[(idx + 1) % PlayerSpeeds.size])
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = formatSpeedLabel(speed),
+                            color = GhaisNoir.TextSecondary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                     NoirUtilityWell(
                         icon = if (volume > 0f) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
                         contentDescription = "Volume",
@@ -672,6 +663,14 @@ class NowPlayingScreen : Screen {
                         active = sleepTimerState.isActive,
                         tint = GhaisNoir.TextTertiary,
                         onClick = { poke(); showSleepTimer = true }
+                    )
+                    val repeatActive = repeatMode != RepeatMode.OFF
+                    NoirUtilityWell(
+                        icon = if (repeatMode == RepeatMode.SURAH) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                        contentDescription = "Repeat",
+                        active = repeatActive,
+                        tint = if (repeatActive) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                        onClick = { poke(); AudioEngine.setRepeatMode(nextRepeatMode(repeatMode)) }
                     )
                 }
 
