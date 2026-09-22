@@ -117,19 +117,37 @@ actual object AuthRepository {
      */
     actual suspend fun signInWithGoogle(): Result<Unit> {
         return runCatching {
-            accountOrThrow()
+            val account = accountOrThrow()
             val activity = ActivityHolder.current()
                 ?: throw Exception("Google sign-in is not ready yet, please retry.")
+            // 1) Native: on-device ID token, no browser. Skipped when the
+            // Web client ID isn't configured — the browser fallback below
+            // doesn't need it.
             val webClientId = AppwriteConfig.GOOGLE_WEB_CLIENT_ID
-            if (webClientId.isBlank() || webClientId.contains("PASTE")) {
-                throw Exception("Google sign-in is not configured yet on this build.")
+            val nativeReady = webClientId.isNotBlank() && !webClientId.contains("PASTE")
+            if (nativeReady) {
+                val native = runCatching {
+                    val idToken = GoogleNativeAuth.getIdToken(activity, webClientId)
+                    exchangeGoogleIdToken(idToken)
+                }
+                if (native.isSuccess) {
+                    refreshSession()
+                    _authChecked.value = true
+                    if (_session.value != null) return@runCatching
+                } else if (native.exceptionOrNull() is androidx.credentials.exceptions.GetCredentialCancellationException) {
+                    throw Exception("Google sign-in cancelled.")
+                }
+                // Any other native failure (no device accounts, provider
+                // misconfiguration) falls through to the browser flow.
             }
-            val idToken = try {
-                GoogleNativeAuth.getIdToken(activity, webClientId)
-            } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
-                throw Exception("Google sign-in cancelled.")
+            // 2) Browser fallback: Appwrite OAuth2 in a Custom Tab. Works
+            // with zero device accounts and no SHA-1 registration.
+            val tokens = GoogleWebAuth.signIn(activity, account).getOrThrow()
+            try {
+                account.createSession(userId = tokens.userId, secret = tokens.secret)
+            } catch (e: AppwriteException) {
+                throw Exception(friendlyMessage(e))
             }
-            exchangeGoogleIdToken(idToken)
             refreshSession()
             _authChecked.value = true
             if (_session.value == null) {

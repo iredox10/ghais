@@ -47,8 +47,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        com.ghais.data.auth.GoogleWebAuth.onRedirect(intent.data)
+    }
+
     override fun onResume() {
         super.onResume()
+        // Resolves a pending browser OAuth handshake as cancelled when the
+        // user backed out of the tab without completing the redirect.
+        com.ghais.data.auth.GoogleWebAuth.onReturnedToApp()
         if (!askedOnce) {
             askedOnce = true
             requestNotificationPermission()
