@@ -346,6 +346,7 @@ class NowPlayingScreen : Screen {
                     enter = fadeIn(tween(350)) + slideInVertically(tween(350)) { it / 2 },
                     exit = fadeOut(tween(350)) + slideOutVertically(tween(350)) { it / 2 }
                 ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     // Minimal identity: qari photo + titles + like, floating over video.
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -450,6 +451,7 @@ class NowPlayingScreen : Screen {
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
+                }
                 }
                 }
 
