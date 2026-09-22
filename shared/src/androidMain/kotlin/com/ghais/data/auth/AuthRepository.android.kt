@@ -30,12 +30,60 @@ actual object AuthRepository {
     private val _authChecked = MutableStateFlow(false)
     actual val authChecked: StateFlow<Boolean> = _authChecked.asStateFlow()
 
+    private val _cachedSession = MutableStateFlow<AuthSession?>(null)
+
+    /**
+     * Last successfully refreshed session, persisted to disk for offline
+     * launch. Initialized from prefs in [init] (no network), updated on
+     * every successful [refreshSession], cleared on [signOut]. Unlike
+     * [session] (memory-only, nulled on any refresh failure), this survives
+     * offline 401s/failures — the UI layer decides offline mode.
+     */
+    actual val cachedSession: StateFlow<AuthSession?> = _cachedSession.asStateFlow()
+
     private var appContext: android.content.Context? = null
     private var account: Account? = null
     private var cookieJar: PersistentCookieJar? = null
 
+    private const val CACHED_PREFS = "ghais_appwrite_cookies"
+    private const val KEY_CACHED_USER_ID = "cached_session_userId"
+    private const val KEY_CACHED_EMAIL = "cached_session_email"
+    private const val KEY_CACHED_NAME = "cached_session_name"
+
+    private fun cachedPrefs(): android.content.SharedPreferences? =
+        appContext?.getSharedPreferences(CACHED_PREFS, android.content.Context.MODE_PRIVATE)
+
+    private fun readCachedSession(): AuthSession? {
+        val prefs = cachedPrefs() ?: return null
+        val userId = prefs.getString(KEY_CACHED_USER_ID, null)?.takeIf { it.isNotBlank() } ?: return null
+        val email = prefs.getString(KEY_CACHED_EMAIL, null) ?: ""
+        val name = prefs.getString(KEY_CACHED_NAME, null) ?: ""
+        return AuthSession(userId = userId, email = email, name = name)
+    }
+
+    private fun persistCachedSession(session: AuthSession) {
+        cachedPrefs()?.edit()
+            ?.putString(KEY_CACHED_USER_ID, session.userId)
+            ?.putString(KEY_CACHED_EMAIL, session.email)
+            ?.putString(KEY_CACHED_NAME, session.name)
+            ?.apply()
+        _cachedSession.value = session
+    }
+
+    private fun clearCachedSession() {
+        cachedPrefs()?.edit()
+            ?.remove(KEY_CACHED_USER_ID)
+            ?.remove(KEY_CACHED_EMAIL)
+            ?.remove(KEY_CACHED_NAME)
+            ?.apply()
+        _cachedSession.value = null
+    }
+
     fun init(context: android.content.Context) {
         appContext = context.applicationContext
+        // Disk only — no network. Surfaces the last known login instantly so
+        // an offline launch doesn't flash the login gate.
+        _cachedSession.value = readCachedSession()
     }
 
     @Synchronized
@@ -194,6 +242,7 @@ actual object AuthRepository {
                 // stale cookies on disk would resurrect the session on next
                 // launch — fall back to a fresh jar so sign-out always wipes.
                 (cookieJar ?: appContext?.let { PersistentCookieJar(it) })?.clear()
+                clearCachedSession()
                 _session.value = null
                 _authChecked.value = true
             }
@@ -205,14 +254,19 @@ actual object AuthRepository {
             val user = try {
                 accountOrThrow().get()
             } catch (_: Exception) {
+                // Offline / 401 failure: memory session stays null, but the
+                // disk cache (cachedSession) is deliberately left intact so
+                // the UI layer can decide offline mode.
                 _session.value = null
                 return
             }
-            _session.value = AuthSession(
+            val fresh = AuthSession(
                 userId = user.id,
                 email = user.email,
                 name = user.name,
             )
+            _session.value = fresh
+            persistCachedSession(fresh)
         } finally {
             _authChecked.value = true
         }
