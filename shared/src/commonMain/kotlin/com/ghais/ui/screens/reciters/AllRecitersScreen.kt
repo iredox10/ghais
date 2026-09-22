@@ -2,31 +2,27 @@ package com.ghais.ui.screens.reciters
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
@@ -39,8 +35,15 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
+import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirInsetField
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
 /**
  * Data representation for verified reciters shown in [AllRecitersScreen].
@@ -150,6 +153,21 @@ val ALL_VERIFIED_RECITERS = listOf(
     )
 )
 
+/** True-grayscale filter — portraits stay recognisable while strictly monochrome. */
+private val NoirGrayscale: ColorFilter by lazy {
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+}
+
+/**
+ * Noir Glass — strict monochrome redesign.
+ *
+ * Canvas #050506 via [NoirScreenRoot] (glow zone -> absolute black + grain).
+ * Surfaces are alpha-white (Fill2 -> FillDeep) + 1px [GhaisNoir.BorderCard] +
+ * 22% top-only specular. Text ladder 100/62/38/24%. Zero hue.
+ *
+ * Signature, search/filter logic and navigation preserved:
+ * `navigator.pop()` back, `rootNavigator.push(ReciterProfileScreen(slug))` on row tap.
+ */
 class AllRecitersScreen : Screen {
 
     @Composable
@@ -190,51 +208,59 @@ class AllRecitersScreen : Screen {
             }
         }
 
-        Scaffold(
-            containerColor = GhaisColors.PitchBlack
-        ) { paddingValues ->
+        NoirScreenRoot {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = paddingValues.calculateTopPadding())
-                    .background(GhaisColors.PitchBlack)
+                    .statusBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 12.dp)
             ) {
-                // Top Bar
+                // Top bar — IconWell back + title + monochrome count chip
                 AllRecitersTopBar(
                     totalCount = filteredReciters.size,
                     onBackClick = { navigator.pop() }
                 )
 
-                // Search Bar
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Search — engraved NoirInsetField
                 ReciterSearchBar(
                     query = searchQuery,
                     onQueryChange = { searchQuery = it }
                 )
 
-                // Filter Chips Row
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Filters — chrome pill (selected) / ghost pill (resting)
                 ReciterFilterChipsRow(
                     filters = filterOptions,
                     selectedFilter = selectedFilter,
                     onFilterSelected = { selectedFilter = it }
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // 2-Column Grid of Reciter Cards
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                // Section label — shared Noir rhythm (home + profile pattern)
+                NoirSectionHeader(
+                    label = "All reciters",
+                    actionLabel = "${filteredReciters.size} shown",
+                    onAction = {}
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // Biggest list — single-column Noir rows (was 2-col grid)
+                LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 8.dp,
-                        bottom = 120.dp // 120.dp bottom padding for MiniPlayer/dock
+                        top = 2.dp,
+                        bottom = 120.dp // MiniPlayer / dock clearance
                     ),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (filteredReciters.isEmpty()) {
-                        item(span = { GridItemSpan(2) }) {
+                        item {
                             EmptyRecitersState(query = searchQuery)
                         }
                     } else {
@@ -242,7 +268,7 @@ class AllRecitersScreen : Screen {
                             items = filteredReciters,
                             key = { it.slug }
                         ) { reciter ->
-                            ReciterGridCard(
+                            ReciterNoirRow(
                                 reciter = reciter,
                                 onClick = {
                                     rootNavigator.push(ReciterProfileScreen(reciter.slug))
@@ -257,8 +283,8 @@ class AllRecitersScreen : Screen {
 }
 
 /**
- * Top bar with Back button (`navigator.pop()`), Title "Verified Reciters" in bold white,
- * and reciter count badge ("10 Reciters" or dynamic count).
+ * Top bar: clay [IconWell] back affordance, bold white title,
+ * monochrome count chip (Fill2 wash + ghost hairline, 62% text).
  */
 @Composable
 private fun AllRecitersTopBar(
@@ -266,93 +292,62 @@ private fun AllRecitersTopBar(
     onBackClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Back Button
         Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF161822))
-                .border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
-                .clickable { onBackClick() },
+            modifier = Modifier.noirClickable(onClick = onBackClick),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
+            IconWell(
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                size = 40.dp,
+                iconSize = 20.dp,
+                contentDescription = "Back"
             )
         }
 
         Spacer(modifier = Modifier.width(14.dp))
 
-        // Title and Count Badge
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
+        Text(
+            text = "Verified Reciters",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = GhaisNoir.TextPrimary,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        // Monochrome count chip — informational, no press affordance.
+        Box(
+            modifier = Modifier
+                .clip(GhaisShapes.pill)
+                .background(GhaisNoir.Fill2)
+                .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                .padding(horizontal = 10.dp, vertical = 5.dp),
+            contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Verified Reciters",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+                text = "$totalCount",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = GhaisNoir.TextSecondary
             )
-
-            Spacer(modifier = Modifier.width(10.dp))
-
-            // Reciter count badge
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(GhaisColors.TrendingPurple.copy(alpha = 0.16f))
-                    .border(1.dp, GhaisColors.TrendingPurple.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 9.dp, vertical = 3.dp)
-            ) {
-                Text(
-                    text = "$totalCount Reciters",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = GhaisColors.TrendingPurple
-                )
-            }
         }
     }
 }
 
 /**
- * Search Bar with instant text filtering (by English name, Arabic name, or country)
- * in frosted dark glass with purple/white border.
+ * Search field in [NoirInsetField] style: engraved recessed surface
+ * (black 45% gradient + 5% rim), white cursor, 24% placeholder.
  */
 @Composable
 private fun ReciterSearchBar(
     query: String,
     onQueryChange: (String) -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF13151D).copy(alpha = 0.95f))
-            .border(
-                width = 1.dp,
-                brush = Brush.linearGradient(
-                    listOf(
-                        GhaisColors.TrendingPurple.copy(alpha = 0.45f),
-                        Color.White.copy(alpha = 0.15f),
-                        GhaisColors.TrendingPurple.copy(alpha = 0.30f)
-                    )
-                ),
-                shape = RoundedCornerShape(16.dp)
-            )
-            .padding(horizontal = 14.dp, vertical = 11.dp)
-    ) {
+    NoirInsetField(modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -360,7 +355,7 @@ private fun ReciterSearchBar(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "Search",
-                tint = if (query.isNotEmpty()) GhaisColors.TrendingPurple else Color(0xFF9CA3AF),
+                tint = if (query.isNotEmpty()) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
                 modifier = Modifier.size(20.dp)
             )
 
@@ -370,7 +365,7 @@ private fun ReciterSearchBar(
                 if (query.isEmpty()) {
                     Text(
                         text = "Search by reciter, Arabic name, country...",
-                        color = Color(0xFF6B7280),
+                        color = GhaisNoir.TextDisabled,
                         fontSize = 13.5.sp
                     )
                 }
@@ -378,29 +373,30 @@ private fun ReciterSearchBar(
                     value = query,
                     onValueChange = onQueryChange,
                     textStyle = TextStyle(
-                        color = Color.White,
+                        color = GhaisNoir.TextPrimary,
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Medium
                     ),
-                    cursorBrush = SolidColor(GhaisColors.TrendingPurple),
+                    cursorBrush = SolidColor(GhaisNoir.TextPrimary),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
 
             if (query.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
                         .size(22.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF262835))
-                        .clickable { onQueryChange("") },
+                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                        .background(GhaisNoir.Fill2, CircleShape)
+                        .noirClickable { onQueryChange("") },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Clear",
-                        tint = Color.White,
+                        tint = GhaisNoir.TextSecondary,
                         modifier = Modifier.size(12.dp)
                     )
                 }
@@ -410,8 +406,8 @@ private fun ReciterSearchBar(
 }
 
 /**
- * Filter chips row: "All", "Murattal", "Mujawwad", "Taraweeh", "Egypt", "Saudi Arabia"
- * with active chip in Trending Purple.
+ * Filter pills: selected = chrome gradient fill + near-black label
+ * (primary action); resting = Fill2 wash + ghost hairline + 62% label.
  */
 @Composable
 private fun ReciterFilterChipsRow(
@@ -420,189 +416,203 @@ private fun ReciterFilterChipsRow(
     onFilterSelected: (String) -> Unit
 ) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(filters) { filter ->
             val isSelected = selectedFilter == filter
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        if (isSelected) GhaisColors.TrendingPurple else Color(0xFF14161F)
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.chromeFill())
+                        .border(1.dp, Color.White.copy(alpha = 0.35f), GhaisShapes.pill)
+                        .noirClickable { onFilterSelected(filter) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = filter,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GhaisNoir.OnChrome
                     )
-                    .border(
-                        width = 1.dp,
-                        color = if (isSelected) GhaisColors.TrendingPurple else Color.White.copy(alpha = 0.10f),
-                        shape = RoundedCornerShape(20.dp)
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                        .noirClickable { onFilterSelected(filter) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = filter,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = GhaisNoir.TextSecondary
                     )
-                    .clickable { onFilterSelected(filter) }
-                    .padding(horizontal = 14.dp, vertical = 7.dp)
-            ) {
-                Text(
-                    text = filter,
-                    fontSize = 13.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) Color.White else Color(0xFF9CA3AF)
-                )
+                }
             }
         }
     }
 }
 
 /**
- * 2-column Reciter Card:
- * - Large circular avatar with subtle purple gradient border.
- * - Verified purple checkmark badge.
- * - Name in bold white, Arabic name, follower count.
- * - Style badge pill (e.g. "Murattal").
- * - Clicking navigates to `ReciterProfileScreen(reciter.slug)`.
+ * Reciter row in the [com.ghais.ui.components.noir.NoirListRow] language:
+ * soft card fill + 1px card border + 22% top-only specular, grayscale
+ * photo well with monogram fallback, dual text, ghost style chip,
+ * circular chevron affordance. Tapping navigates to
+ * `ReciterProfileScreen(reciter.slug)` (signature preserved).
  */
 @Composable
-private fun ReciterGridCard(
+private fun ReciterNoirRow(
     reciter: VerifiedReciter,
     onClick: () -> Unit
 ) {
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF12141C))
-            .border(
-                width = 1.dp,
-                brush = Brush.linearGradient(
-                    listOf(
-                        GhaisColors.TrendingPurple.copy(alpha = 0.22f),
-                        Color.White.copy(alpha = 0.08f),
-                        Color.Transparent
-                    )
-                ),
-                shape = RoundedCornerShape(20.dp)
-            )
-            .clickable { onClick() }
-            .padding(14.dp),
-        contentAlignment = Alignment.Center
+            .clip(GhaisShapes.row)
+            .background(GhaisNoir.cardFillSoft(), GhaisShapes.row)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.row)
+            .topSpecular(inset = 22.dp)
+            .noirClickable(onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        ReciterPhotoWell(reciter = reciter)
+
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp, end = 8.dp)
         ) {
-            // Large circular avatar with subtle purple gradient border + Verified badge
-            Box(
-                modifier = Modifier.size(86.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(86.dp)
-                        .clip(CircleShape)
-                        .border(
-                            width = 2.dp,
-                            brush = Brush.linearGradient(
-                                listOf(
-                                    GhaisColors.ElectricViolet,
-                                    GhaisColors.TrendingPurple,
-                                    GhaisColors.NeonLilac,
-                                    Color.White.copy(alpha = 0.35f)
-                                )
-                            ),
-                            shape = CircleShape
-                        )
-                        .background(Color(0xFF1B1D28), CircleShape)
-                ) {
-                    AsyncImage(
-                        model = reciter.photoUrl,
-                        contentDescription = reciter.nameEn,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                    )
-                }
-
-                // Verified purple checkmark badge
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .align(Alignment.BottomEnd)
-                        .clip(CircleShape)
-                        .background(GhaisColors.TrendingPurple)
-                        .border(2.dp, Color(0xFF12141C), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Verified",
-                        tint = Color.White,
-                        modifier = Modifier.size(12.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(11.dp))
-
-            // Name in bold white
             Text(
                 text = reciter.nameEn,
-                fontSize = 13.5.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                textAlign = TextAlign.Center,
+                color = GhaisNoir.TextPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-
-            Spacer(modifier = Modifier.height(3.dp))
-
-            // Arabic name
+            Spacer(Modifier.height(2.dp))
             Text(
                 text = reciter.nameAr,
+                color = GhaisNoir.TextSecondary,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFFD1D5DB),
-                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Normal,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Follower count
-            Text(
-                text = reciter.followers,
-                fontSize = 11.sp,
-                color = Color(0xFF9CA3AF),
-                textAlign = TextAlign.Center,
-                maxLines = 1
-            )
-
-            Spacer(modifier = Modifier.height(9.dp))
-
-            // Style badge pill (e.g. "Murattal")
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(GhaisColors.TrendingPurple.copy(alpha = 0.16f))
-                    .border(
-                        width = 0.8.dp,
-                        color = GhaisColors.TrendingPurple.copy(alpha = 0.40f),
-                        shape = RoundedCornerShape(12.dp)
+            Spacer(Modifier.height(5.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Ghost style chip — informational only.
+                Box(
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                        .padding(horizontal = 9.dp, vertical = 3.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = reciter.style,
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
-                    .padding(horizontal = 9.dp, vertical = 3.dp)
-            ) {
+                }
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = reciter.style,
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFE9D5FF)
+                    text = "${reciter.country} · ${reciter.followers}",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
+        }
+
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .border(1.dp, GhaisNoir.BorderGhost, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = GhaisNoir.TextTertiary,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }
 
 /**
- * Empty state when search or filter returns no reciters.
+ * Grayscale portrait in a clay well (home `NoirArtworkWell` pattern):
+ * desaturated photo + 35% black scrim so it reads engraved, monogram
+ * fallback in [IconWell] language, chrome verified dot (zero hue).
+ */
+@Composable
+private fun ReciterPhotoWell(reciter: VerifiedReciter) {
+    Box {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(GhaisNoir.wellFill())
+                .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            if (reciter.photoUrl.isNotBlank()) {
+                AsyncImage(
+                    model = reciter.photoUrl,
+                    contentDescription = reciter.nameEn,
+                    contentScale = ContentScale.Crop,
+                    colorFilter = NoirGrayscale,
+                    modifier = Modifier.fillMaxSize()
+                )
+                // Darkening scrim keeps the plate recessed instead of glowing.
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(Color.Black.copy(alpha = 0.35f))
+                )
+            } else {
+                Text(
+                    text = reciter.nameEn.firstOrNull()?.uppercase() ?: "Q",
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        // Verified dot — chrome disc, near-black glyph (was purple badge).
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .align(Alignment.BottomEnd)
+                .background(GhaisNoir.chromeFill(), CircleShape)
+                .border(2.dp, GhaisNoir.NoirBlack, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "Verified",
+                tint = GhaisNoir.OnChrome,
+                modifier = Modifier.size(11.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Empty state — clay [IconWell], 100% headline + 62% hint.
  */
 @Composable
 private fun EmptyRecitersState(query: String) {
@@ -612,26 +622,19 @@ private fun EmptyRecitersState(query: String) {
             .padding(vertical = 48.dp, horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF161824)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = null,
-                tint = Color(0xFF6B7280),
-                modifier = Modifier.size(32.dp)
-            )
-        }
+        IconWell(
+            icon = Icons.Default.Search,
+            size = 64.dp,
+            iconSize = 30.dp,
+            contentDescription = null,
+            tint = GhaisNoir.TextTertiary
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = if (query.isNotBlank()) "No reciters found for \"$query\"" else "No reciters found",
-            color = Color.White,
+            color = GhaisNoir.TextPrimary,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
@@ -641,7 +644,7 @@ private fun EmptyRecitersState(query: String) {
 
         Text(
             text = "Try searching by name, Arabic spelling, or country",
-            color = Color(0xFF9CA3AF),
+            color = GhaisNoir.TextSecondary,
             fontSize = 13.sp,
             textAlign = TextAlign.Center
         )
