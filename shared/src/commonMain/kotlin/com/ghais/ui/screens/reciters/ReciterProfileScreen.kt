@@ -162,7 +162,9 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
             surahs.map { "${reciter.slug}/${it.id}" }
         }
         val allDone = allKeys.isNotEmpty() && allKeys.all { it in downloaded }
-        val downloadingCount = allKeys.count { dlProgress.containsKey(it) }
+        // Strict precedence: a completed key is never counted as downloading,
+        // so a stale progress entry can't resurrect the download affordance.
+        val downloadingCount = allKeys.count { it in dlProgress && it !in downloaded }
 
         NoirScreenRoot {
             Scaffold(
@@ -281,7 +283,9 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                     if (!allDone) {
                                         surahs.forEach { surah ->
                                             val key = "${reciter.slug}/${surah.id}"
-                                            if (key !in downloaded && !dlProgress.containsKey(key)) {
+                                            // Never restart finished/in-flight ones; failed keys
+                                            // need an explicit per-row RETRY, never a silent requeue.
+                                            if (key !in downloaded && !dlProgress.containsKey(key) && key !in failedKeys) {
                                                 QuranDownloads.download(
                                                     reciter.slug,
                                                     surah.id,
@@ -313,9 +317,14 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                             currentTrack?.surahId == surah.id && currentTrack?.reciterSlug == reciter.slug
                         val isCurrentSurahPlaying = isCurrentSurah && isPlaying
                         val downloadKey = "${reciter.slug}/${surah.id}"
+                        // Strict precedence: downloaded > downloading(progress) > failed > idle.
+                        // A completed key can never render the idle download affordance,
+                        // even if a stale progress/failed entry lingers for the same key.
                         val isDownloaded = downloadKey in downloaded
-                        val surahProgress: Float? = dlProgress[downloadKey]
-                        val isFailed = downloadKey in failedKeys
+                        val rawProgress: Float? = dlProgress[downloadKey]
+                        val surahProgress: Float? = if (isDownloaded) null else rawProgress
+                        val isDownloading = surahProgress != null
+                        val isFailed = !isDownloaded && !isDownloading && downloadKey in failedKeys
                         val audioUrl = reciter.getFullSurahUrl(surah.id)
 
                         ReciterNoirSurahRow(
@@ -326,11 +335,12 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                             downloadProgress = surahProgress,
                             isDownloadFailed = isFailed,
                             onDownloadClick = {
-                                if (isDownloaded) {
-                                    QuranDownloads.delete(reciter.slug, surah.id)
-                                } else {
-                                    QuranDownloads.download(reciter.slug, surah.id, audioUrl)
-                                }
+                                // Guard: finished keys stay finished (no re-download affordance),
+                                // in-flight keys ignore double-taps (no duplicate enqueue).
+                                // Failed/idle keys fall through to an explicit (re)try.
+                                if (isDownloaded) return@ReciterNoirSurahRow
+                                if (dlProgress.containsKey(downloadKey)) return@ReciterNoirSurahRow
+                                QuranDownloads.download(reciter.slug, surah.id, audioUrl)
                             },
                             onItemClick = {
                                 if (isCurrentSurahPlaying) {
@@ -492,13 +502,17 @@ private fun ReciterNoirHeroPlate(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Download-all pill: allDone renders the disabled "Downloaded" state
+            // (guarded no-op + active fill); partial-idle shows remaining count
+            // and never restarts finished ones (see onDownloadAll guard above).
             GhostPillButton(
                 text = when {
                     allDone -> "Downloaded"
                     downloadingCount > 0 -> "Downloading ($downloadingCount/$surahCount)"
+                    downloadedCount > 0 -> "Download ${surahCount - downloadedCount} remaining"
                     else -> "Download all"
                 },
-                onClick = onDownloadAll,
+                onClick = { if (!allDone) onDownloadAll() },
                 modifier = Modifier.fillMaxWidth(),
                 active = allDone
             )
@@ -592,10 +606,11 @@ private fun ReciterNoirSurahRow(
         formatSurahDuration(surah.ayahsCount)
     }
     val isDownloading = downloadProgress != null
+    // Strict precedence mirrors the caller: downloaded > downloading > failed > idle.
     val stateSuffix = when {
-        isDownloading -> " • Downloading…"
         isDownloaded -> " • Offline"
-        isDownloadFailed -> " • Tap to retry"
+        isDownloading -> " • Downloading…"
+        isDownloadFailed -> " • Failed — tap to retry"
         else -> ""
     }
 
@@ -624,8 +639,9 @@ private fun ReciterNoirSurahRow(
         )
 
         // Segmented determinate progress for active downloads (engraved track).
+        // Suppressed for downloaded rows so stale progress can't linger under Offline.
         val p = downloadProgress
-        if (p != null && p in 0f..1f) {
+        if (!isDownloaded && p != null && p in 0f..1f) {
             Spacer(modifier = Modifier.height(6.dp))
             NoirSegmentedProgress(
                 progress = p,
@@ -683,16 +699,26 @@ private fun RowScope.SurahRowTrailing(
                 }
             }
             isDownloadFailed -> {
-                IconButton(
-                    onClick = onDownloadClick,
-                    modifier = Modifier.size(34.dp)
+                // Failed is visually distinct (engraved well + specular hairline +
+                // primary glyph) with an explicit retry tap — never auto-downloaded.
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .background(GhaisNoir.wellFill(), CircleShape)
+                        .border(1.dp, GhaisNoir.SpecularTop, CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = "Download failed — tap to retry",
-                        tint = GhaisNoir.TextSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    IconButton(
+                        onClick = onDownloadClick,
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = "Download failed — tap to retry",
+                            tint = GhaisNoir.TextPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
             else -> {
