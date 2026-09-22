@@ -17,23 +17,42 @@ import kotlinx.coroutines.flow.StateFlow
  *   - listening_stats: docId = userId (single document per user)
  *   - follows: docId `"fol-<slug>"`
  *   - schedules: docId = `schedule.id`
+ *   - history: docId `"h-<slug>-<surahId>-<playedAtMs>"` (max 36 chars)
+ *   - routine_backups: docId `"rtn-<routineId>"`
+ *   - user_prefs: docId = userId (single document per user)
  * - **Fault isolation:** each collection is wrapped in its own try/catch in
- *   the android actual, so one missing collection (the NEW [FOLLOWS], [STATS],
- *   [SCHEDULES] collections may not exist yet — the user creates them manually)
- *   must not break the other collections.
- * - **Listening HISTORY stays local-only in v1** and is never uploaded: the
- *   per-day/per-ayah history log has no cloud collection by design. Only the
- *   aggregate [UserUsageRepository.stats][com.ghais.data.repository.UserUsageRepository]
- *   snapshot is pushed to [STATS].
+ *   the android actual, so one missing collection (provisioned `history` /
+ *   `user_prefs` / `routine_backups` / `reciter_stats` may not exist yet —
+ *   the user creates them manually) must not break the other collections.
+ * - **Listening HISTORY syncs to [HISTORY]**
+ *   (`history{user_id,track_json,played_at_ms}`, capped at 100 recent
+ *   entries): push uploads `track_json = Json.encodeToString(TrackItem)` per
+ *   entry with stable `h-…` doc ids and prunes cloud docs beyond the local
+ *   set; pull restores only into an empty local history, ordered by
+ *   `played_at_ms` desc (guarded: no `UserUsageRepository` restore API yet,
+ *   so pull validates + protects the cloud copy by skipping the empty-push).
+ *   The aggregate [UserUsageRepository.stats][com.ghais.data.repository.UserUsageRepository]
+ *   snapshot is pushed to [STATS] alongside it.
  *
  * ## Local-store → collection mapping
  * | Local source | Collection | Document shape |
  * |---|---|---|
  * | FavoritesStore | [LIKES] (`likes{user_id,surah_id,ayah_no,level,reciter_slug?}`) | one doc per liked track; `ayah_no = track.ayahNo`, `level = "like"`. Push includes `reciter_slug` (string 64, optional) with a slug-less fallback while the attribute is unprovisioned; pull rebuilds a fully playable TrackItem (reciter name + audio URL via QuranDataRepository/Reciter, surah names via getSurahById) when the slug is present and known, else a synthetic `appwrite://likes/<docId>` placeholder |
  * | FollowStore | [FOLLOWS] (`follows{user_id,reciter_slug}`) | one doc per followed reciter; docId `"fol-<slug>"` |
- * | UserUsageRepository.stats | [STATS] (`listening_stats{user_id,total_seconds,days_streak,minutes_today,unique_surahs,unique_reciters,updated_at}`) | single doc per user (docId = userId); aggregate snapshot only, history stays local. Pull adopts only when local stats are at fresh defaults (never overwrites non-zero local); `minutes_today` is valid only when cloud `updated_at` is today (else restores as 0). No UserUsageRepository restore API yet, so pull validates + protects the cloud copy by skipping the zero-push |
- * | AudioEngine.currentTrack + position | [PLAYBACK] (`playback_state{user_id,current_ref,position_ms,queue_json,updated_at}`) | single doc per user (docId = userId); `current_ref = "<slug>/<surahId>"`, `position_ms` = playback position, `queue_json` = single-track array. Pull rebuilds the TrackItem (names via getSurahById, URLs via Reciter helpers) when the player is empty; restore is metadata-only until AudioEngine gains a paused-load path (no autoplay) |
+ * | UserUsageRepository.stats | [STATS] (`listening_stats{user_id,total_seconds,days_streak,minutes_today,unique_surahs,unique_reciters,updated_at}`) | single doc per user (docId = userId); aggregate snapshot only (history syncs to [HISTORY] separately). Pull adopts only when local stats are at fresh defaults (never overwrites non-zero local); `minutes_today` is valid only when cloud `updated_at` is today (else restores as 0). No UserUsageRepository restore API yet, so pull validates + protects the cloud copy by skipping the zero-push |
+ * | AudioEngine.currentTrack + position | [PLAYBACK] (`playback_state{user_id,current_ref,position_ms,queue_json,updated_at}`) | single doc per user (docId = userId); `current_ref = "<slug>/<surahId>"`, `position_ms` = playback position, `queue_json` = single-track array. Pull validates the snapshot when the player is empty (names via getSurahById, URLs via Reciter helpers) but restore stays metadata-only until AudioEngine gains a paused-load path (no autoplay); push is skipped when local is empty but cloud holds data (fresh-login guard) |
  * | SchedulesStore | [SCHEDULES] (`schedules{user_id,schedule_id,schedule_json,enabled}`) | one doc per schedule; docId = `schedule.id`, `schedule_json = Json.encodeToString(schedule)` |
+ * | CustomRoutinesStore (ALL routines, private + public) | [ROUTINE_BACKUPS] (`routine_backups{user_id,routine_id,routine_json,updated_at}`) | one doc per routine; docId `"rtn-<routineId>"`, `routine_json = Json.encodeToString(routine)`. Separate from the public `playlists` publish flow (private routines never enter the catalog). Pull-if-empty is guarded (no CustomRoutinesStore restore API yet): validates + protects the cloud copy by skipping the empty-push |
+ * | OnboardingStore.goal + dailyGoalMinutes | [USER_PREFS] (`user_prefs{user_id,goal,daily_minutes}`) | single doc per user (docId = userId). Goal + daily minutes only — onboarding seen/done/step flags are never synced |
+ *
+ * Khatma plans (`khatma_plans{user_id,title,total_days,current_surah,current_ayah,percent}`)
+ * are NOT synced yet: the only local holder is `LibraryRepository`, an uninstantiated
+ * in-memory mock (`KhatmaScreen` renders static progress), so there is no readable local
+ * source. Follow-up: add a persisted `KhatmaStore` (Settings + StateFlow, like
+ * `SchedulesStore`), then wire push + pull-if-empty here.
+ * | CustomRoutinesStore (public only) | `playlists` + `playlist_items` | push-only publish to the public catalog; one `playlists` doc per public routine (docId `"rtn-<routineId>"`), items replaced wholesale. Private routines are never uploaded here — they are backed up to [ROUTINE_BACKUPS] instead |
+ * | FollowStore counts | [RECITER_STATS] (`reciter_stats{slug,followers_count,likes_count,updated_at}`) | public read-only (doc id = slug); client never writes. `SyncEngine.init` wires the reader into `FollowStore.countFetcher`; counts refresh best-effort after follows pull/push |
+ * | UserUsageRepository.history | [HISTORY] (`history{user_id,track_json,played_at_ms}`) | one doc per entry (docId `"h-<slug>-<surahId>-<playedAtMs>"`, max 36 chars); `track_json = Json.encodeToString(TrackItem)` rebuilt from the history entry via reciter/surah lookups. Push capped at 100 recent + prune of cloud docs beyond the local set; pull-if-empty ordered by `played_at_ms` desc is guarded (no restore API yet): validates + skips the empty-push |
  *
  * Platform work (Appwrite SDK calls, debounce, store wiring) lives in the
  * `androidMain`/`iosMain` actuals; this expect declaration keeps the common

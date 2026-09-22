@@ -29,8 +29,8 @@ import kotlinx.coroutines.launch
  * - **Offline→online catch-up:** when connectivity returns with an active
  *   session, run one pass (covers listening done while offline). Fires once
  *   per transition — never on login itself (the login pull owns that).
- * - **Debounced push:** any local change to favorites / follows / schedules /
- *   listening stats schedules a pass 8s out; rapid successive edits reset the
+ * - **Debounced push:** any local change to favorites / follows / routines /
+ *   schedules / listening stats schedules a pass 8s out; rapid successive edits reset the
  *   timer so bursts of toggles collapse into a single pass.
  *
  * Deliberately excludes `AudioEngine.currentTrack` / position (too chatty —
@@ -130,9 +130,10 @@ object SyncTriggers {
                 AuthRepository.session,
                 FavoritesStore.favoriteTracks,
                 FollowStore.followedSlugs,
+                CustomRoutinesStore.routines,
                 SchedulesStore.schedules,
                 UserUsageRepository.stats,
-            ) { _, _, _, _, _ -> }
+            ) { _, _, _, _, _, _ -> }
                 .debounce(8000)
                 .collect {
                     if (AuthRepository.session.value != null && NetworkMonitor.isOnline.value) {

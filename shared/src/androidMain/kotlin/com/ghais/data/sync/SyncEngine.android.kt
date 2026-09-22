@@ -4,13 +4,16 @@ import android.util.Log
 import com.ghais.data.auth.AppwriteConfig
 import com.ghais.data.auth.AuthRepository
 import com.ghais.data.auth.PersistentCookieJar
+import com.ghais.data.repository.CustomRoutine
 import com.ghais.data.repository.CustomRoutinesStore
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
+import com.ghais.data.repository.OnboardingStore
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.SchedulesStore
 import com.ghais.domain.model.Reciter
 import com.ghais.data.repository.UserUsageRepository
+import com.ghais.data.seed.JumpBackInItem
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import io.appwrite.Client
@@ -22,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.intOrNull
@@ -57,9 +61,10 @@ actual object SyncEngine {
     private const val PLAYLISTS = "playlists"
     private const val PLAYLIST_ITEMS = "playlist_items"
     private const val ROUTINE_DOC_PREFIX = "rtn-"
+    private const val HISTORY_CAP = 100
 
     // Database/collection ids come from the sibling-owned SyncModels.kt
-    // (same package: DB_ID, LIKES, PLAYBACK, FOLLOWS, STATS, SCHEDULES).
+    // (same package: DB_ID, LIKES, PLAYBACK, FOLLOWS, STATS, SCHEDULES, HISTORY).
     // Doc-ID schemes and document shapes follow the SyncEngine.kt KDoc table.
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -155,8 +160,20 @@ actual object SyncEngine {
                 val cloudHasData = pullStatsIfEmpty(db, userId)
                 pushStats(db, userId, cloudHasData)
             }
+            runCollection(HISTORY) {
+                val cloudHasData = pullHistoryIfEmpty(db, userId)
+                pushHistory(db, userId, cloudHasData)
+            }
             runCollection(SCHEDULES) { pushSchedules(db, userId) }
             runCollection(PLAYLISTS) { pushRoutines(db, userId) }
+            runCollection(ROUTINE_BACKUPS) {
+                val cloudHasData = pullRoutineBackupsIfEmpty(db, userId)
+                pushRoutineBackups(db, userId, cloudHasData)
+            }
+            runCollection(USER_PREFS) {
+                pullUserPrefsIfEmpty(db, userId)
+                pushUserPrefs(db, userId)
+            }
         }
         if (firstError == null) {
             _lastError.value = null
@@ -648,6 +665,172 @@ actual object SyncEngine {
             s.uniqueSurahsCount <= 1
     }
 
+    // ---------------------------------------------------------------- history
+    //
+    // Pull-if-empty + push-capped (push skips when local is still empty but
+    // cloud has data, so a fresh login never clobbers its restore source with
+    // an empty state — no-data-loss guard, same as playback/stats).
+    //
+    // Cloud shape: `history{user_id,track_json,played_at_ms}` (index on
+    // `user_id,played_at_ms`). `track_json = Json.encodeToString(TrackItem)`
+    // ([TrackItem] is `@Serializable`; rebuilt from the local
+    // [JumpBackInItem] via reciter/surah lookups so the JSON carries real
+    // display names + audio URL). Doc ids are stable per entry:
+    // `"h-<sanitizedSlug>-<surahId>-<playedAtMs>"` (max 36 chars). Push sends
+    // at most [HISTORY_CAP] recent entries and deletes cloud docs beyond the
+    // local set so reorders/removals converge.
+
+    /**
+     * Pulls the cloud `history` docs (ordered by `played_at_ms` desc) when
+     * local history is still empty, so a fresh login can adopt the cloud
+     * copy instead of starting from zero.
+     *
+     * Returns true when the cloud holds at least one usable snapshot (caller
+     * must then skip pushing, otherwise the still-empty local state would
+     * overwrite it). Returns false when local history is non-empty or the
+     * cloud has nothing usable, so push proceeds.
+     *
+     * Adopt is currently GUARDED, not applied: [UserUsageRepository] exposes
+     * no history restore/import API (private `_history`; `recordProgress` is
+     * private and driven only by [AudioEngine] polls), and this file may not
+     * grow new deps or touch other files. So the snapshot is validated +
+     * logged and the empty-push is skipped to protect the cloud copy.
+     * Follow-up: add `UserUsageRepository.restoreHistory(items)` (taking
+     * decoded `TrackItem` + `playedAtMs` pairs, most-recent-first, capped)
+     * and call it here.
+     */
+    private suspend fun pullHistoryIfEmpty(db: Databases, userId: String): Boolean {
+        if (UserUsageRepository.history.value.isNotEmpty()) return false
+        val docs = listHistoryForUser(db, userId) ?: return false
+        if (docs.isEmpty()) return false
+        var valid = 0
+        for (doc in docs) {
+            val trackJson = (doc.data["track_json"] as? String)?.trim().orEmpty()
+            if (trackJson.isEmpty()) continue
+            val playedAt = asLong(doc.data["played_at_ms"]) ?: continue
+            try {
+                json.decodeFromString<TrackItem>(trackJson)
+                if (playedAt > 0L) valid++
+            } catch (_: Exception) {
+            }
+        }
+        if (valid <= 0) return false // cloud snapshot itself is empty; let push converge
+        Log.i(
+            TAG,
+            "history pull: cloud has $valid entries (most recent playedAt=" +
+                "${asLong(docs.firstOrNull()?.data?.get("played_at_ms"))})" +
+                " — no UserUsageRepository restore API yet; keeping local empty, push skipped."
+        )
+        return true
+    }
+
+    private suspend fun pushHistory(db: Databases, userId: String, cloudHasData: Boolean) {
+        val local = UserUsageRepository.history.value.take(HISTORY_CAP)
+        if (local.isEmpty()) {
+            if (cloudHasData) {
+                // Fresh login whose cloud snapshot couldn't be applied locally
+                // yet: don't overwrite it with an empty state.
+                Log.i(TAG, "pushHistory skipped (local empty, cloud has data).")
+            }
+            return
+        }
+        val existing = listHistoryForUser(db, userId) ?: return
+        val now = System.currentTimeMillis()
+        val localIds = mutableSetOf<String>()
+        local.forEachIndexed { index, item ->
+            val track = buildHistoryTrack(item)
+            if (track == null) {
+                Log.w(
+                    TAG,
+                    "history push: skipping unresolvable entry " +
+                        "'${item.reciterSlug}/${item.surahId}'."
+                )
+                return@forEachIndexed
+            }
+            // Zero-timestamp entries are in-session items not yet reloaded from
+            // disk (PersistedHistoryItem stamps on save): stagger them so the
+            // local most-recent-first order survives the played_at_ms ranking.
+            val playedAt = item.lastPlayedTimestampMs.takeIf { it > 0L }
+                ?: (now - index)
+            val docId = historyDocId(track.reciterSlug, track.surahId, playedAt)
+            localIds.add(docId)
+            val data: Map<String, Any?> = mapOf(
+                "user_id" to userId,
+                "track_json" to json.encodeToString(track),
+                "played_at_ms" to playedAt,
+            )
+            upsert(db, HISTORY, docId, data)
+        }
+        for (doc in existing) {
+            if (doc.id !in localIds) {
+                try {
+                    db.deleteDocument(DB_ID, HISTORY, doc.id)
+                } catch (e: Exception) {
+                    Log.e(TAG, "delete stale history ${doc.id} failed", e)
+                }
+            }
+        }
+    }
+
+    /**
+     * Rebuilds a fully playable [TrackItem] from a local history entry, or
+     * null when the slug/surah is unknown (caller skips the entry). History
+     * entries are per-surah (no ayah granularity), so the URL is always the
+     * full-surah stream and names resolve via [QuranDataRepository].
+     */
+    private fun buildHistoryTrack(item: JumpBackInItem): TrackItem? {
+        val reciter = findReciterOrNull(item.reciterSlug) ?: return null
+        val surah = runCatching { QuranDataRepository.getSurahById(item.surahId) }.getOrNull()
+            ?: return null
+        val audioUrl = runCatching { reciter.getFullSurahUrl(surah.id) }.getOrNull()
+            ?.takeIf { it.isNotBlank() } ?: return null
+        return TrackItem(
+            reciterSlug = reciter.slug,
+            reciterName = reciter.nameEn,
+            surahId = surah.id,
+            surahNameEn = surah.nameEn,
+            surahNameAr = surah.nameAr,
+            ayahNo = 0,
+            audioUrl = audioUrl,
+            durationMs = item.durationMs,
+        )
+    }
+
+    /**
+     * 404-safe history list for [userId], ordered by `played_at_ms` desc and
+     * capped at [HISTORY_CAP] (matches the cloud `user_id,played_at_ms`
+     * index). Null when the collection doesn't exist yet; other failures
+     * throw into the per-collection `runCollection` guard.
+     */
+    private suspend fun listHistoryForUser(
+        db: Databases,
+        userId: String,
+    ): List<io.appwrite.models.Document<Map<String, Any>>>? {
+        return try {
+            db.listDocuments(
+                DB_ID,
+                HISTORY,
+                listOf(
+                    Query.equal("user_id", userId),
+                    Query.orderDesc("played_at_ms"),
+                    Query.limit(HISTORY_CAP),
+                ),
+            ).documents
+        } catch (e: AppwriteException) {
+            if (e.code == 404) {
+                Log.w(TAG, "Collection '$HISTORY' not found; skipping.")
+                null
+            } else {
+                throw e
+            }
+        }
+    }
+
+    private fun historyDocId(slug: String, surahId: Int, playedAtMs: Long): String {
+        val s = sanitizeId(slug).take(12)
+        return "h-$s-$surahId-$playedAtMs".take(36)
+    }
+
     // --------------------------------------------------------------- schedules
 
     private suspend fun pushSchedules(db: Databases, userId: String) {
@@ -787,6 +970,127 @@ actual object SyncEngine {
 
     private fun routineItemDocId(playlistDocId: String, position: Int): String =
         "$playlistDocId-$position".take(36)
+
+    // ------------------------------------------ routine backups (private)
+    //
+    // Private backup of ALL routines (public + private) to `routine_backups`
+    // (`routine_backups{user_id,routine_id,routine_json,updated_at}`, doc id
+    // `rtn-<routineId>` via [routineDocId]). This is separate from the public
+    // `playlists`/`playlist_items` publish flow above, which stays unchanged:
+    // private routines must never leak into the public catalog.
+    //
+    // Pull-if-empty is GUARDED, not applied: [CustomRoutinesStore] exposes no
+    // bulk restore/import API (`create()` regenerates ids/timestamps;
+    // `update()`/`delete()` need existing entries), so the snapshot is
+    // validated + logged and the empty-push is skipped to protect the cloud
+    // copy. Follow-up: add `CustomRoutinesStore.restoreAll(...)` and call it
+    // here (same pattern as the [STATS] follow-up above).
+
+    /**
+     * Validates the cloud `routine_backups` snapshot when local routines are
+     * still empty. Returns true when the cloud holds at least one parseable
+     * backup (caller must then skip pushing, otherwise the still-empty local
+     * state would overwrite it). Returns false when local routines exist or
+     * the cloud has nothing, so push proceeds.
+     */
+    private suspend fun pullRoutineBackupsIfEmpty(db: Databases, userId: String): Boolean {
+        if (CustomRoutinesStore.routines.value.isNotEmpty()) return false
+        val docs = listForUser(db, ROUTINE_BACKUPS, userId) ?: return false
+        var usable = 0
+        for (doc in docs) {
+            val raw = doc.data["routine_json"] as? String ?: continue
+            if (raw.isBlank()) continue
+            if (runCatching { json.decodeFromString<CustomRoutine>(raw) }.getOrNull() != null) {
+                usable++
+            }
+        }
+        if (usable <= 0) return false
+        Log.i(
+            TAG,
+            "routine_backups pull: $usable usable backup(s) in cloud" +
+                " — no CustomRoutinesStore restore API yet; keeping local empty, push skipped."
+        )
+        return true
+    }
+
+    private suspend fun pushRoutineBackups(db: Databases, userId: String, cloudHasData: Boolean) {
+        val local = CustomRoutinesStore.routines.value
+        if (local.isEmpty() && cloudHasData) {
+            // Fresh login whose cloud snapshot couldn't be applied locally yet:
+            // don't overwrite it with nothing.
+            Log.i(TAG, "pushRoutineBackups skipped (local empty, cloud has data).")
+            return
+        }
+        val existing = listForUser(db, ROUTINE_BACKUPS, userId) ?: return
+        val localIds = local.map { it.id }.toSet()
+        for (doc in existing) {
+            val routineId = doc.data["routine_id"] as? String ?: continue
+            if (routineId !in localIds) {
+                try {
+                    db.deleteDocument(DB_ID, ROUTINE_BACKUPS, doc.id)
+                } catch (e: Exception) {
+                    Log.e(TAG, "delete stale routine backup ${doc.id} failed", e)
+                }
+            }
+        }
+        // CustomRoutine is @Serializable: full fidelity via JSON string.
+        for (routine in local) {
+            val data: Map<String, Any?> = mapOf(
+                "user_id" to userId,
+                "routine_id" to routine.id,
+                "routine_json" to json.encodeToString(routine),
+                "updated_at" to System.currentTimeMillis(),
+            )
+            upsert(db, ROUTINE_BACKUPS, routineDocId(routine.id), data)
+        }
+    }
+
+    // ------------------------------------------------------------ user prefs
+    //
+    // Onboarding goals only: `user_prefs{user_id,goal,daily_minutes}`, single
+    // doc per user (docId = userId). Pull-if-empty adopts the cloud goal +
+    // daily minutes via [OnboardingStore.setGoal]/[setDailyGoalMinutes]; push
+    // uploads them. Onboarding seen/done/step flags are NEVER synced (they
+    // stay local-only; syncing them would replay or suppress onboarding on a
+    // fresh device).
+
+    /**
+     * Adopts the cloud `user_prefs` doc when local goals are still at fresh
+     * defaults (`goal == null`, `dailyGoalMinutes == 15`). Never overwrites a
+     * locally chosen goal or customized minutes.
+     */
+    private suspend fun pullUserPrefsIfEmpty(db: Databases, userId: String) {
+        if (OnboardingStore.goal.value != null) return
+        if (OnboardingStore.dailyGoalMinutes.value != 15) return
+        val doc = getDocument(db, USER_PREFS, userId) ?: return
+        val data = doc.data
+        val cloudGoal = (data["goal"] as? String)?.trim().orEmpty()
+        val cloudMinutes = asInt(data["daily_minutes"])
+        if (cloudGoal.isEmpty() && cloudMinutes == null) return
+        if (cloudGoal.isNotEmpty()) {
+            OnboardingStore.setGoal(cloudGoal)
+        }
+        if (cloudMinutes != null) {
+            // Setter coerces to 5..180.
+            OnboardingStore.setDailyGoalMinutes(cloudMinutes)
+        }
+        Log.i(
+            TAG,
+            "user_prefs pull: adopted goal='${cloudGoal.ifEmpty { "<none>" }}'" +
+                " dailyMinutes=${OnboardingStore.dailyGoalMinutes.value}."
+        )
+    }
+
+    private suspend fun pushUserPrefs(db: Databases, userId: String) {
+        val data: Map<String, Any?> = mapOf(
+            "user_id" to userId,
+            // `goal` is optional server-side: blank = no goal chosen yet
+            // (pull reads blank back as null).
+            "goal" to (OnboardingStore.goal.value ?: ""),
+            "daily_minutes" to OnboardingStore.dailyGoalMinutes.value,
+        )
+        upsert(db, USER_PREFS, userId, data)
+    }
 
     // ---------------------------------------------------------------- helpers
 

@@ -34,8 +34,28 @@ const val STATS = "listening_stats"
 const val SCHEDULES = "schedules"
 
 /**
+ * Cloud collection holding one document per history entry
+ * (`history{user_id,track_json,played_at_ms}`). Index on
+ * (`user_id`,`played_at_ms`); pull orders by `played_at_ms` desc.
+ */
+const val HISTORY = "history"
+
+/**
  * Cloud collection holding one public document per reciter with aggregate
  * counters (`reciter_stats{slug,followers_count,likes_count,updated_at}`).
  * Read-only for clients (public read); written server-side. Doc id = slug.
  */
 const val RECITER_STATS = "reciter_stats"
+
+/** Cloud collection holding a full-JSON backup of every routine (private + public). */
+const val ROUTINE_BACKUPS = "routine_backups"
+
+/** Cloud collection holding the single onboarding-goal document per user. */
+const val USER_PREFS = "user_prefs"
+
+/**
+ * Cloud collection holding khatma completion plans
+ * (`khatma_plans{user_id,title,total_days,current_surah,current_ayah,percent}`).
+ * NOT synced yet: no readable local store exists (see SyncEngine KDoc).
+ */
+const val KHATMA = "khatma_plans"
