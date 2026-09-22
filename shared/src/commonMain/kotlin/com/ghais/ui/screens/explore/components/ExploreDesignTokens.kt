@@ -1,28 +1,36 @@
 package com.ghais.ui.screens.explore.components
 
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import com.ghais.ui.theme.GhaisNoir
 
 /**
- * iOS HIG Dark Minimalist and Glassmorphic Design Tokens for Explore screens and components.
+ * Noir Glass tokens for Explore headers and components — strict monochrome.
+ *
+ * Legacy iOS-grey names are preserved as type-stable aliases so existing
+ * callers ([ExploreScreen][com.ghais.ui.screens.explore.ExploreScreen],
+ * ExploreThemesSection) keep compiling untouched. Every value now resolves
+ * to [GhaisNoir]: zero hue, alpha-white surfaces, monochrome text ladder,
+ * ghost/specular hairlines.
  */
-val PureBlack = Color(0xFF000000)
-val DarkObsidian = Color(0xFF0D0F12)
-val OffWhiteText = Color(0xFFF5F5F7)
-val SystemGrey = Color(0xFF8E8E93)
-val SystemGrey2 = Color(0xFF636366)
-val SystemGrey3 = Color(0xFF48484A)
+val PureBlack = GhaisNoir.NoirBlack
+val DarkObsidian = GhaisNoir.CanvasTop
+val OffWhiteText = GhaisNoir.TextPrimary
+val SystemGrey = GhaisNoir.TextSecondary
+val SystemGrey2 = GhaisNoir.TextTertiary
+val SystemGrey3 = GhaisNoir.TextDisabled
 
-val HairlineSpecularBorder = Brush.verticalGradient(
+/** Bright top-to-ghost vertical hairline for elevated glass edges. */
+val HairlineSpecularBorder: Brush = Brush.verticalGradient(
     listOf(
-        Color.White.copy(alpha = 0.28f),
-        Color.White.copy(alpha = 0.06f)
+        GhaisNoir.SpecularTop,
+        GhaisNoir.BorderGhost
     )
 )
 
-val HairlineSubtleBorder = Brush.verticalGradient(
+/** Faint ghost hairline for resting / unselected edges. */
+val HairlineSubtleBorder: Brush = Brush.verticalGradient(
     listOf(
-        Color.White.copy(alpha = 0.18f),
-        Color.White.copy(alpha = 0.04f)
+        GhaisNoir.BorderCard,
+        GhaisNoir.BorderGhost
     )
 )
