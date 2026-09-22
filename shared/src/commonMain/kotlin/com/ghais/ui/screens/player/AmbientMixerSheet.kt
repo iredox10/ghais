@@ -1,19 +1,18 @@
 package com.ghais.ui.screens.player
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.FlutterDash
@@ -42,25 +41,12 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import com.ghais.player.AmbientMixer
 import com.ghais.player.AmbientType
-
-// Keep old tokens for any external callers (PresetChip / AmbientChannelItem removed in redesign).
-val quranifyBackground = Color(0xFF0A0A0F)
-val quranifySurface = Color(0xFF141419)
-val quranifyCard = Color(0xFF1C1C24)
-val quranifyPrimary = Color(0xFFD4A853)
-val quranifySecondary = Color(0xFF4A8C6F)
-val quranifyTextPrimary = Color(0xFFF0EDE6)
-val quranifyTextSecondary = Color(0xFF8A8A96)
-val quranifyError = Color(0xFFCF6679)
-
-private val SheetBg = Color(0xFF1E1E1E)
-private val TileSelectedBg = Color(0xFF2E2E30)
-private val FieldBg = Color(0xFF2C2C2E)
-private val CircleBtnBg = Color(0xFF2C2C2E)
-private val ConfirmBg = Color(0xFFE8E8ED)
-private val BadgeGrey = Color(0xFF4A4A4C)
-private val BadgeLight = Color(0xFFC7C7CC)
-private val MutedPlaceholder = Color(0xFF6E6E73)
+import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirInsetField
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
 private data class SoundOption(
     val key: String,
@@ -123,132 +109,115 @@ fun AmbientMixerSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        containerColor = SheetBg,
-        scrimColor = Color.Black.copy(alpha = 0.5f),
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(top = 8.dp, bottom = 4.dp)
-                    .width(36.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color(0xFF48484A))
-            )
-        }
+        containerColor = GhaisNoir.CanvasTop,
+        scrimColor = GhaisNoir.Scrim,
+        dragHandle = null
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 32.dp)
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Header: X | title | confirm-check
+            // Header — sort-sheet recipe: IconWell + title, ghost close disc.
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    IconWell(
+                        icon = Icons.Filled.Waves,
+                        size = 40.dp,
+                        iconSize = 20.dp,
+                        contentDescription = null
+                    )
+                    Text(
+                        text = "Background sound",
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Start
+                    )
+                }
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
-                        .background(CircleBtnBg)
-                        .clickable { dismiss() },
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                        .noirClickable { dismiss() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Close,
                         contentDescription = "Close",
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp)
+                        tint = GhaisNoir.TextSecondary,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
-                Text(
-                    text = "Background sound",
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(1f)
-                )
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(ConfirmBg)
-                        .clickable { dismiss() },
-                    contentAlignment = Alignment.Center
+            }
+
+            // Search — engraved inset field, monochrome.
+            NoirInsetField {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = "Confirm",
-                        tint = Color.Black,
-                        modifier = Modifier.size(24.dp)
+                        imageVector = Icons.Filled.Search,
+                        contentDescription = "Search",
+                        tint = GhaisNoir.TextTertiary,
+                        modifier = Modifier.size(22.dp)
                     )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Search field
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(FieldBg)
-                    .padding(horizontal = 16.dp, vertical = 13.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Search,
-                    contentDescription = "Search",
-                    tint = MutedPlaceholder,
-                    modifier = Modifier.size(22.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                BasicTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    singleLine = true,
-                    textStyle = TextStyle(color = Color.White, fontSize = 17.sp),
-                    modifier = Modifier.weight(1f),
-                    decorationBox = { inner ->
-                        if (query.isEmpty()) {
-                            Text(
-                                text = "Thunder...",
-                                color = MutedPlaceholder,
-                                fontSize = 17.sp
+                    Spacer(modifier = Modifier.width(12.dp))
+                    BasicTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        singleLine = true,
+                        textStyle = TextStyle(color = GhaisNoir.TextPrimary, fontSize = 17.sp),
+                        modifier = Modifier.weight(1f),
+                        decorationBox = { inner ->
+                            if (query.isEmpty()) {
+                                Text(
+                                    text = "Thunder...",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 17.sp
+                                )
+                            }
+                            inner()
+                        }
+                    )
+                    if (query.isNotEmpty()) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .clip(CircleShape)
+                                .background(GhaisNoir.Fill4)
+                                .noirClickable { query = "" },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = "Clear",
+                                tint = GhaisNoir.TextSecondary,
+                                modifier = Modifier.size(14.dp)
                             )
                         }
-                        inner()
-                    }
-                )
-                if (query.isNotEmpty()) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(22.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF48484A))
-                            .clickable { query = "" },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Clear",
-                            tint = Color.White,
-                            modifier = Modifier.size(14.dp)
-                        )
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(visible, key = { it.key }) { option ->
                     SoundTile(
@@ -264,6 +233,8 @@ fun AmbientMixerSheet(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
@@ -274,11 +245,21 @@ private fun SoundTile(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    // Grid variant of the sort-sheet row recipe: active fill + chrome check when selected.
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(if (selected) TileSelectedBg else Color.Transparent)
-            .clickable { onClick() }
+            .clip(GhaisShapes.row)
+            .background(
+                if (selected) GhaisNoir.cardFillActive()
+                else GhaisNoir.cardFillSoft()
+            )
+            .border(
+                1.dp,
+                if (selected) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                GhaisShapes.row
+            )
+            .topSpecular(inset = 16.dp)
+            .noirClickable { onClick() }
             .padding(vertical = 16.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -286,31 +267,14 @@ private fun SoundTile(
             modifier = Modifier.size(64.dp),
             contentAlignment = Alignment.Center
         ) {
-            if (option.isNoSounds) {
-                // White circle with minus, like the screenshot
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(Color.White),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Remove,
-                        contentDescription = null,
-                        tint = SheetBg,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-            } else {
-                Icon(
-                    imageVector = option.icon,
-                    contentDescription = option.label,
-                    tint = Color.White,
-                    modifier = Modifier.size(40.dp)
-                )
-            }
-            // Top-end badge: check when selected, download when not yet downloaded
+            IconWell(
+                icon = option.icon,
+                size = 52.dp,
+                iconSize = 24.dp,
+                contentDescription = option.label,
+                tint = if (selected) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary
+            )
+            // Chrome check disc when selected — state reads through fill + chrome, never hue.
             if (selected) {
                 Box(
                     modifier = Modifier
@@ -318,13 +282,14 @@ private fun SoundTile(
                         .offset(x = 6.dp, y = (-6).dp)
                         .size(20.dp)
                         .clip(CircleShape)
-                        .background(BadgeLight),
+                        .background(GhaisNoir.chromeFill())
+                        .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Check,
                         contentDescription = null,
-                        tint = Color.Black,
+                        tint = GhaisNoir.OnChrome,
                         modifier = Modifier.size(13.dp)
                     )
                 }
@@ -333,9 +298,9 @@ private fun SoundTile(
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = option.label,
-            color = Color.White,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Normal,
+            color = if (selected) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
+            fontSize = 13.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             textAlign = TextAlign.Center
         )
     }
