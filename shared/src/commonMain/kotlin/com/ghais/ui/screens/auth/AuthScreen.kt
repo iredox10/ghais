@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -98,6 +100,8 @@ fun AuthScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -153,7 +157,7 @@ fun AuthScreenContent(
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "Backend not configured — paste endpoint in AppwriteConfig",
+                            text = "The service isn't set up yet. Please try again later.",
                             fontSize = 13.sp,
                             color = GhaisNoir.TextTertiary,
                         )
@@ -277,9 +281,10 @@ fun AuthScreenContent(
                     onClick = {
                         if (loading || googleLoading) return@ChromePillButton
                         errorMessage = null
+                        val wasSignup = isSignup
                         loading = true
                         scope.launch {
-                            val result = if (isSignup) {
+                            val result = if (wasSignup) {
                                 AuthRepository.signUp(
                                     email = email.trim(),
                                     name = name.trim(),
@@ -293,8 +298,11 @@ fun AuthScreenContent(
                             }
                             loading = false
                             result
-                                .onSuccess { onAuthenticated(isSignup) }
-                                .onFailure { errorMessage = it.message }
+                                .onSuccess { onAuthenticated(wasSignup) }
+                                .onFailure {
+                                    errorMessage = it.message?.takeIf { msg -> msg.isNotBlank() }
+                                        ?: "Authentication failed. Please try again."
+                                }
                         }
                     },
                     enabled = !loading && !googleLoading,
@@ -364,7 +372,10 @@ fun AuthScreenContent(
                                 googleLoading = false
                                 result
                                     .onSuccess { onAuthenticated(false) }
-                                    .onFailure { errorMessage = it.message }
+                                    .onFailure {
+                                        errorMessage = it.message?.takeIf { msg -> msg.isNotBlank() }
+                                            ?: "Authentication failed. Please try again."
+                                    }
                             }
                         })
                         .padding(horizontal = 22.dp, vertical = 14.dp),
