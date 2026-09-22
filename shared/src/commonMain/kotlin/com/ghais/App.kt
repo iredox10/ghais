@@ -50,6 +50,7 @@ fun App() {
     GhaisTheme {
         val session by AuthRepository.session.collectAsState()
         val checked by AuthRepository.authChecked.collectAsState()
+        val cachedSession by AuthRepository.cachedSession.collectAsState()
         val doneForUser by OnboardingStore.isDoneForCurrentUser.collectAsState()
         var forceOnboarding by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { AuthRepository.refreshSession() }
@@ -58,9 +59,17 @@ fun App() {
         // callback (completion lands in OnboardingStore internally); clearing the
         // replay latch is therefore observed via doneForUser.
         LaunchedEffect(doneForUser) { if (doneForUser) forceOnboarding = false }
+        // Offline gate: no internet → refreshSession fails → session null even
+        // for logged-in users. cachedSession is the last-known user from
+        // persistent storage; when set, enter main content in offline mode
+        // instead of bouncing to the login gate. MainScreen takes no offline
+        // flag (plain object), so entry is normal. SyncEngine stays idle via
+        // its NetworkMonitor gate in SyncTriggers; when connectivity returns
+        // and refresh succeeds, the session flow drives a seamless transition.
+        val offlineMode = checked && session == null && cachedSession != null
         if (!checked) {
             SplashScreen.Content()
-        } else if (session == null) {
+        } else if (session == null && !offlineMode) {
             // Full-screen gate above everything; MiniPlayer stays under the gate.
             // Auth is mandatory — no guest mode. Logged-out never sees onboarding;
             // returning here (e.g. sign-out) also clears any pending replay.

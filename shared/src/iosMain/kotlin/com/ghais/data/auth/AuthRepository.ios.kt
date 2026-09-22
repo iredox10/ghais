@@ -18,6 +18,10 @@ actual object AuthRepository {
     private val _authChecked = MutableStateFlow(false)
     actual val authChecked: StateFlow<Boolean> = _authChecked.asStateFlow()
 
+    // iOS has no persisted login yet — always null (offline gate never opens).
+    private val _cachedSession = MutableStateFlow<AuthSession?>(null)
+    actual val cachedSession: StateFlow<AuthSession?> = _cachedSession.asStateFlow()
+
     actual suspend fun signUp(email: String, name: String, password: String): Result<Unit> =
         Result.failure(Exception("Sign-up is not available on iOS yet — continue as guest."))
 

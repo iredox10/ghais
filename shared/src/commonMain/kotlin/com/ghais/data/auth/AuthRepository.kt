@@ -27,6 +27,15 @@ expect object AuthRepository {
     /** True once refreshSession() has completed at least once (session may still be null = signed out). False = restore not yet attempted; UI must show splash, never the auth gate. */
     val authChecked: StateFlow<Boolean>
 
+    /**
+     * Last-known signed-in user from persistent storage (survives restarts),
+     * independent of the last network refresh. Non-null while a login has not
+     * been explicitly signed out — lets the UI enter main content in offline
+     * mode when [session] is null only because the refresh failed without
+     * connectivity. Never null on a fresh install / after sign-out.
+     */
+    val cachedSession: StateFlow<AuthSession?>
+
     /** Registers a new account and immediately signs the user in. */
     suspend fun signUp(email: String, name: String, password: String): Result<Unit>
 
