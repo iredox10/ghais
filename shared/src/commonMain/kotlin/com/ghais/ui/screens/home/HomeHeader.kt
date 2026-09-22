@@ -1,5 +1,6 @@
 package com.ghais.ui.screens.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -10,8 +11,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,50 +22,123 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ghais.data.auth.AuthRepository
 import com.ghais.data.repository.UserUsageRepository
-import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
+import ghais.shared.generated.resources.Res
+import ghais.shared.generated.resources.ghais_mark
+import org.jetbrains.compose.resources.painterResource
 
 /**
  * Phase 4 — Noir Home header.
  *
- * Editorial two-line headline ("Return to" light / "Your Quran" bold) matching
- * the Profile screen's "Your Space" treatment. The chart action is a clay well
- * instead of the old flat #1C1C1E circle, and the Premium entry is a ghost pill
- * so chromium stays reserved for the primary Resume CTA.
+ * Logo left; search + analytics wells and the user avatar right (avatar opens
+ * the profile tab). Editorial headline below stays untouched.
  */
 @Composable
 fun HomeTopBar(
-    onPremiumClick: () -> Unit,
+    onProfileClick: () -> Unit,
+    onSearchClick: () -> Unit,
     onStatsClick: () -> Unit
 ) {
+    val session by AuthRepository.session.collectAsState()
+    val cached by AuthRepository.cachedSession.collectAsState()
+    val displayName = session?.name?.ifBlank { null }
+        ?: cached?.name?.ifBlank { null }
+        ?: ""
+    val monogram = displayName.firstOrNull { it.isLetter() }?.uppercase() ?: "G"
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        GhostPillButton(text = "Premium", onClick = onPremiumClick)
-
+        // Logo mark in a clay well.
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(44.dp)
                 .background(GhaisNoir.wellFill(), GhaisShapes.well)
-                .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.well)
-                .noirClickable(onStatsClick),
+                .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.well),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Filled.BarChart,
-                contentDescription = "Listening stats",
-                tint = GhaisNoir.TextPrimary,
-                modifier = Modifier.size(20.dp)
+            Image(
+                painter = painterResource(Res.drawable.ghais_mark),
+                contentDescription = "Ghais",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(30.dp)
             )
         }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HomeHeaderWell(
+                contentDescription = "Search",
+                onClick = onSearchClick
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = GhaisNoir.TextPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            HomeHeaderWell(
+                contentDescription = "Listening stats",
+                onClick = onStatsClick
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.BarChart,
+                    contentDescription = null,
+                    tint = GhaisNoir.TextPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            // User avatar → profile tab.
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(GhaisNoir.wellFill())
+                    .border(1.dp, GhaisNoir.SpecularTop, CircleShape)
+                    .noirClickable(onClick = onProfileClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = monogram,
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeHeaderWell(
+    contentDescription: String,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .background(GhaisNoir.wellFill(), GhaisShapes.well)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.well)
+            .noirClickable(onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
     }
 }
 

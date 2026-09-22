@@ -29,6 +29,7 @@ import com.ghais.ui.screens.playlists.PlaylistDetailsScreen
 import com.ghais.ui.screens.profile.ProfileScreen
 import com.ghais.ui.screens.reciters.FollowedRecitersScreen
 import com.ghais.ui.screens.reciters.ReciterProfileScreen
+import com.ghais.ui.screens.search.SearchScreen
 import com.ghais.ui.screens.stats.StatsScreen
 
 /**
@@ -65,7 +66,8 @@ object HomeScreen : Tab {
                 // -------------------------------------------------------------
                 item {
                     HomeTopBar(
-                        onPremiumClick = { tabNavigator.current = ProfileScreen },
+                        onProfileClick = { tabNavigator.current = ProfileScreen },
+                        onSearchClick = { rootNavigator?.push(SearchScreen()) },
                         onStatsClick = { rootNavigator?.push(StatsScreen) }
                     )
                     Spacer(Modifier.height(18.dp))
