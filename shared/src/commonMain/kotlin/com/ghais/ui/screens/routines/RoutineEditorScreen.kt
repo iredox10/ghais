@@ -2,7 +2,6 @@ package com.ghais.ui.screens.routines
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,17 +22,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -46,7 +43,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
@@ -55,10 +51,14 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.data.repository.CustomRoutinesStore
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.RoutineItem
-
-private val PureBlack = Color(0xFF000000)
-private val MutedGrey = Color(0xFF9A9AA0)
-private val LinkBlue = Color(0xFF4C8DFF)
+import com.ghais.ui.components.noir.ChromePillButton
+import com.ghais.ui.components.noir.NoirListRow
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.NoirSwitch
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
 class RoutineEditorScreen(val routineId: String? = null) : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -97,305 +97,280 @@ class RoutineEditorScreen(val routineId: String? = null) : Screen {
         }
         val canSave = title.isNotBlank()
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(PureBlack)
-        ) {
-            // Header: back + title
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
+        NoirScreenRoot {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Header: ghost back + title.
+                Row(
                     modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.35f))
-                        .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape)
-                        .clickable { navigator.pop() },
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = if (routineId != null) "Edit routine" else "New routine",
-                    color = Color.White,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = (-0.5).sp
-                )
-            }
-
-            LazyColumn(
-                contentPadding = PaddingValues(
-                    start = 16.dp,
-                    end = 16.dp,
-                    top = 6.dp,
-                    bottom = 112.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                item {
-                    GlassFieldLabel("Title")
-                    OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        placeholder = { Text("e.g. Morning adhkar recitations", color = MutedGrey) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = glassFieldColors()
-                    )
-                }
-
-                item {
-                    GlassFieldLabel("Description")
-                    OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        placeholder = { Text("What is this routine for?", color = MutedGrey) },
-                        minLines = 2,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = glassFieldColors()
-                    )
-                }
-
-                item {
-                    GlassFieldLabel("Reciter")
-                    ExposedDropdownMenuBox(
-                        expanded = reciterExpanded,
-                        onExpandedChange = { reciterExpanded = it }
-                    ) {
-                        OutlinedTextField(
-                            value = selectedReciterName,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = reciterExpanded)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = glassFieldColors()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = reciterExpanded,
-                            onDismissRequest = { reciterExpanded = false }
-                        ) {
-                            reciters.forEach { reciter ->
-                                DropdownMenuItem(
-                                    text = { Text(reciter.nameEn) },
-                                    onClick = {
-                                        selectedReciterSlug = reciter.slug
-                                        reciterExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    GlassFieldLabel("Surah")
-                    ExposedDropdownMenuBox(
-                        expanded = surahExpanded,
-                        onExpandedChange = { surahExpanded = it }
-                    ) {
-                        OutlinedTextField(
-                            value = selectedSurahLabel,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = surahExpanded)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = glassFieldColors()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = surahExpanded,
-                            onDismissRequest = { surahExpanded = false }
-                        ) {
-                            surahs.forEach { surah ->
-                                DropdownMenuItem(
-                                    text = { Text("${surah.id}. ${surah.nameEn}") },
-                                    onClick = {
-                                        selectedSurahId = surah.id
-                                        surahExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    val candidate = RoutineItem(
-                        reciterSlug = selectedReciterSlug,
-                        surahId = selectedSurahId
-                    )
-                    val isDuplicate = items.any {
-                        it.reciterSlug == candidate.reciterSlug && it.surahId == candidate.surahId
-                    }
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(50))
-                            .background(if (isDuplicate) MutedGrey.copy(alpha = 0.4f) else LinkBlue)
-                            .clickable(enabled = !isDuplicate) {
-                                items = items + candidate
-                            }
-                            .padding(vertical = 14.dp),
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                            .noirClickable { navigator.pop() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Filled.Add,
-                                contentDescription = "Add surah",
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isDuplicate) "Already added" else "Add surah",
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = GhaisNoir.TextPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = if (routineId != null) "Edit routine" else "New routine",
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-0.5).sp
+                    )
                 }
 
-                item {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "Surahs (${items.size})",
-                            color = Color.White,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold
+                LazyColumn(
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 6.dp,
+                        bottom = 112.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    item {
+                        GlassFieldLabel("Title")
+                        OutlinedTextField(
+                            value = title,
+                            onValueChange = { title = it },
+                            placeholder = { Text("e.g. Morning adhkar recitations", color = GhaisNoir.TextTertiary) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = GhaisShapes.row,
+                            colors = glassFieldColors()
                         )
-                        Spacer(modifier = Modifier.weight(1f))
-                        if (items.isNotEmpty()) {
-                            TextButton(onClick = { items = emptyList() }) {
+                    }
+
+                    item {
+                        GlassFieldLabel("Description")
+                        OutlinedTextField(
+                            value = description,
+                            onValueChange = { description = it },
+                            placeholder = { Text("What is this routine for?", color = GhaisNoir.TextTertiary) },
+                            minLines = 2,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = GhaisShapes.row,
+                            colors = glassFieldColors()
+                        )
+                    }
+
+                    item {
+                        GlassFieldLabel("Reciter")
+                        ExposedDropdownMenuBox(
+                            expanded = reciterExpanded,
+                            onExpandedChange = { reciterExpanded = it }
+                        ) {
+                            OutlinedTextField(
+                                value = selectedReciterName,
+                                onValueChange = {},
+                                readOnly = true,
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = reciterExpanded)
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                                shape = GhaisShapes.row,
+                                colors = glassFieldColors()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = reciterExpanded,
+                                onDismissRequest = { reciterExpanded = false }
+                            ) {
+                                reciters.forEach { reciter ->
+                                    DropdownMenuItem(
+                                        text = { Text(reciter.nameEn, color = GhaisNoir.TextPrimary) },
+                                        onClick = {
+                                            selectedReciterSlug = reciter.slug
+                                            reciterExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        GlassFieldLabel("Surah")
+                        ExposedDropdownMenuBox(
+                            expanded = surahExpanded,
+                            onExpandedChange = { surahExpanded = it }
+                        ) {
+                            OutlinedTextField(
+                                value = selectedSurahLabel,
+                                onValueChange = {},
+                                readOnly = true,
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = surahExpanded)
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                                shape = GhaisShapes.row,
+                                colors = glassFieldColors()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = surahExpanded,
+                                onDismissRequest = { surahExpanded = false }
+                            ) {
+                                surahs.forEach { surah ->
+                                    DropdownMenuItem(
+                                        text = { Text("${surah.id}. ${surah.nameEn}", color = GhaisNoir.TextPrimary) },
+                                        onClick = {
+                                            selectedSurahId = surah.id
+                                            surahExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        val candidate = RoutineItem(
+                            reciterSlug = selectedReciterSlug,
+                            surahId = selectedSurahId
+                        )
+                        val isDuplicate = items.any {
+                            it.reciterSlug == candidate.reciterSlug && it.surahId == candidate.surahId
+                        }
+                        if (isDuplicate) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(GhaisShapes.pill)
+                                    .background(GhaisNoir.Fill2)
+                                    .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                                    .padding(vertical = 15.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
-                                    text = "Clear all",
-                                    color = LinkBlue,
-                                    fontSize = 14.sp,
+                                    text = "Already added",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 15.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
+                        } else {
+                            ChromePillButton(
+                                text = "Add surah",
+                                onClick = { items = items + candidate },
+                                leadingIcon = Icons.Filled.Add,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
-                }
 
-                items(items, key = { "${it.reciterSlug}:${it.surahId}" }) { item ->
-                    val surah = surahs.find { it.id == item.surahId }
-                    val reciterName = reciters.find { it.slug == item.reciterSlug }?.nameEn
-                        ?: QuranDataRepository.getReciterBySlug(item.reciterSlug).nameEn
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color.White.copy(alpha = 0.05f))
-                            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
-                            .padding(horizontal = 14.dp, vertical = 10.dp)
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = surah?.let { "${it.id}. ${it.nameEn}" }
-                                    ?: "Surah ${item.surahId}",
-                                color = Color.White,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = reciterName,
-                                color = MutedGrey,
-                                fontSize = 13.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        IconButton(
-                            onClick = {
-                                items = items.filterNot {
-                                    it.reciterSlug == item.reciterSlug && it.surahId == item.surahId
-                                }
-                            },
-                            modifier = Modifier.size(40.dp)
+                    item {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.Close,
-                                contentDescription = "Remove",
-                                tint = MutedGrey,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                }
-
-                item {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color.White.copy(alpha = 0.05f))
-                            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Share publicly",
-                                color = Color.White,
-                                fontSize = 15.sp,
+                                text = "Surahs (${items.size})",
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold
                             )
-                            Text(
-                                text = "Let others discover this routine",
-                                color = MutedGrey,
-                                fontSize = 13.sp
-                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                            if (items.isNotEmpty()) {
+                                TextButton(onClick = { items = emptyList() }) {
+                                    Text(
+                                        text = "Clear all",
+                                        color = GhaisNoir.TextSecondary,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
                         }
-                        Switch(
-                            checked = isPublic,
-                            onCheckedChange = { isPublic = it },
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = LinkBlue,
-                                checkedThumbColor = Color.White
-                            )
+                    }
+
+                    items(items, key = { "${it.reciterSlug}:${it.surahId}" }) { item ->
+                        val surah = surahs.find { it.id == item.surahId }
+                        val reciterName = reciters.find { it.slug == item.reciterSlug }?.nameEn
+                            ?: QuranDataRepository.getReciterBySlug(item.reciterSlug).nameEn
+                        NoirListRow(
+                            title = surah?.let { "${it.id}. ${it.nameEn}" }
+                                ?: "Surah ${item.surahId}",
+                            subtitle = reciterName,
+                            icon = Icons.Filled.QueueMusic,
+                            chevron = false,
+                            trailing = {
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(GhaisNoir.Fill1)
+                                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                                        .noirClickable {
+                                            items = items.filterNot {
+                                                it.reciterSlug == item.reciterSlug && it.surahId == item.surahId
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Close,
+                                        contentDescription = "Remove",
+                                        tint = GhaisNoir.TextTertiary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
                         )
                     }
-                }
 
-                item {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(50))
-                            .background(if (canSave) LinkBlue else MutedGrey.copy(alpha = 0.4f))
-                            .clickable(enabled = canSave) {
+                    item {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(GhaisShapes.row)
+                                .background(GhaisNoir.cardFillSoft())
+                                .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.row)
+                                .topSpecular(inset = 22.dp)
+                                .padding(horizontal = 14.dp, vertical = 12.dp)
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Share publicly",
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Let others discover this routine",
+                                    color = GhaisNoir.TextSecondary,
+                                    fontSize = 13.sp
+                                )
+                            }
+                            NoirSwitch(
+                                checked = isPublic,
+                                onCheckedChange = { isPublic = it }
+                            )
+                        }
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        ChromePillButton(
+                            text = "Save routine",
+                            onClick = {
                                 val trimmedTitle = title.trim()
                                 val trimmedDescription = description.trim()
                                 if (existing != null) {
@@ -416,24 +391,18 @@ class RoutineEditorScreen(val routineId: String? = null) : Screen {
                                     )
                                 }
                                 navigator.pop()
-                            }
-                            .padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Save routine",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
+                            },
+                            enabled = canSave,
+                            modifier = Modifier.fillMaxWidth()
                         )
-                    }
-                    if (!canSave) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Give your routine a title to save it.",
-                            color = MutedGrey,
-                            fontSize = 13.sp
-                        )
+                        if (!canSave) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Give your routine a title to save it.",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
             }
@@ -445,20 +414,27 @@ class RoutineEditorScreen(val routineId: String? = null) : Screen {
 private fun GlassFieldLabel(text: String) {
     Text(
         text = text,
-        color = Color.White,
+        color = GhaisNoir.TextPrimary,
         fontSize = 15.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(bottom = 6.dp)
     )
 }
 
+/**
+ * Engraved noir field chrome: white cursor, specular focus rim, alpha-white wash.
+ */
 @Composable
 private fun glassFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = Color.White,
-    unfocusedTextColor = Color.White,
-    cursorColor = LinkBlue,
-    focusedBorderColor = LinkBlue,
-    unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
-    focusedContainerColor = Color.White.copy(alpha = 0.05f),
-    unfocusedContainerColor = Color.White.copy(alpha = 0.05f)
+    focusedTextColor = GhaisNoir.TextPrimary,
+    unfocusedTextColor = GhaisNoir.TextPrimary,
+    cursorColor = Color.White,
+    focusedBorderColor = GhaisNoir.SpecularTop,
+    unfocusedBorderColor = GhaisNoir.BorderCard,
+    focusedContainerColor = GhaisNoir.Fill2,
+    unfocusedContainerColor = GhaisNoir.Fill1,
+    focusedTrailingIconColor = GhaisNoir.TextSecondary,
+    unfocusedTrailingIconColor = GhaisNoir.TextTertiary,
+    focusedPlaceholderColor = GhaisNoir.TextTertiary,
+    unfocusedPlaceholderColor = GhaisNoir.TextTertiary
 )
