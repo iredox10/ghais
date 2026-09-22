@@ -81,6 +81,11 @@ object GoogleWebAuth {
         val secret = uri.getQueryParameter("secret")
         if (!userId.isNullOrBlank() && !secret.isNullOrBlank()) {
             deferred.complete(Result.success(OAuthTokens(userId, secret)))
+        } else if (!uri.getQueryParameter("error").isNullOrBlank()) {
+            // Provider-side failure (e.g. redirect_uri_mismatch when the
+            // Appwrite callback URL isn't registered in Google Cloud) — a
+            // real failure, not a user cancellation.
+            deferred.complete(Result.failure(Exception("Google sign-in failed, please try again.")))
         } else {
             deferred.complete(Result.failure(Exception("Google sign-in cancelled.")))
         }
