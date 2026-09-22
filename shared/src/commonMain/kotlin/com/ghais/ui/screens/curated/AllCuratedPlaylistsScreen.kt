@@ -2,7 +2,6 @@ package com.ghais.ui.screens.curated
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -19,15 +18,15 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
@@ -43,16 +42,37 @@ import coil3.compose.AsyncImage
 import com.ghais.data.seed.CuratedPlaylist
 import com.ghais.data.seed.QuranDataRepository
 import com.ghais.data.seed.GhaisAssets
-import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
+import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.theme.GhaisTypography
+
+/** True-grayscale filter — cover art stays recognisable while strictly monochrome. */
+private val NoirGrayscale: ColorFilter by lazy {
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+}
+
+private val NoirPlaylistCardShape = RoundedCornerShape(20.dp)
+private val NoirPlaylistArtShape = RoundedCornerShape(14.dp)
 
 /**
- * All Curated Playlists Screen.
- * Opened when the user clicks "See All" in the Curated for Peace section.
- * Designed in Black & White + Trending Purple palette.
+ * All Curated Playlists Screen — strict Noir Glass monochrome.
+ *
+ * Canvas #050506 via [NoirScreenRoot] (glow zone -> absolute black + grain).
+ * Surfaces are alpha-white (cardFillSoft) + 1px [GhaisNoir.BorderCard] +
+ * 22% top-only specular + diagonal sheen. Artwork is saturation-0 with a
+ * black scrim so it reads engraved. Text ladder 100/62/38/24%. Zero hue.
+ *
+ * Signature, filter logic and navigation preserved:
+ * `navigator.pop()` back, `rootNavigator.push(CuratedPlaylistDetailScreen(id))`
+ * on card tap, `AudioEngine.playQueue(...)` + `NowPlayingScreen` on play.
  */
 class AllCuratedPlaylistsScreen : Screen {
 
@@ -124,98 +144,106 @@ class AllCuratedPlaylistsScreen : Screen {
             }
         }
 
-        Scaffold(
-            containerColor = GhaisColors.PitchBlack
-        ) { paddingValues ->
-            Box(
+        NoirScreenRoot {
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = paddingValues.calculateTopPadding())
-                    .background(GhaisColors.PitchBlack)
+                    .statusBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 12.dp)
             ) {
-                // Ambient Top Aura: Electric Violet fading into deep Pitch Black
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(260.dp)
-                        .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    GhaisColors.TrendingPurple.copy(alpha = 0.20f),
-                                    GhaisColors.ElectricViolet.copy(alpha = 0.08f),
-                                    GhaisColors.PitchBlack.copy(alpha = 0.0f)
-                                ),
-                                center = Offset(250f, -40f),
-                                radius = 480f
-                            )
-                        )
+                // Top bar — IconWell back + title + monochrome count chip
+                CuratedCollectionsTopBar(
+                    totalCount = filteredPlaylists.size,
+                    onBackClick = { navigator.pop() }
                 )
 
-                Column(modifier = Modifier.fillMaxSize()) {
-                    // Top bar with Back button and Title "Curated Collections"
-                    CuratedCollectionsTopBar(
-                        totalCount = filteredPlaylists.size,
-                        onBackClick = { navigator.pop() }
-                    )
+                Spacer(modifier = Modifier.height(14.dp))
 
-                    // Search bar with instant text filtering
-                    CuratedSearchBar(
-                        query = searchQuery,
-                        onQueryChange = { searchQuery = it }
-                    )
+                // Editorial headline — light / bold two-line rhythm (home + reciters pattern)
+                Text(
+                    text = "Curated",
+                    style = GhaisTypography.displayEditorialSmall,
+                    maxLines = 1
+                )
+                Text(
+                    text = "Collections",
+                    style = GhaisTypography.displayEditorialBold.copy(fontSize = 30.sp, lineHeight = 36.sp),
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Handpicked journeys for every mood",
+                    color = GhaisNoir.TextSecondary,
+                    fontSize = 13.sp
+                )
 
-                    // Category chips row: "All", "Focus", "Peace", "Morning", "Night", "Healing"
-                    CategoryChipsRow(
-                        categories = categoryOptions,
-                        selectedCategory = selectedCategory,
-                        onCategorySelected = { selectedCategory = it }
-                    )
+                Spacer(modifier = Modifier.height(14.dp))
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                // Search — engraved inset field
+                CuratedSearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it }
+                )
 
-                    // 2-Column Grid of curated playlist cards with 120.dp bottom padding
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 8.dp,
-                            bottom = 120.dp // Requirement: 120.dp bottom padding
-                        ),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        if (filteredPlaylists.isEmpty()) {
-                            item(span = { GridItemSpan(2) }) {
-                                EmptyCuratedPlaylistsState(
-                                    query = searchQuery,
-                                    onResetFilters = {
-                                        searchQuery = ""
-                                        selectedCategory = "All"
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Category pills — chrome (selected) / ghost (resting)
+                CategoryChipsRow(
+                    categories = categoryOptions,
+                    selectedCategory = selectedCategory,
+                    onCategorySelected = { selectedCategory = it }
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Section label — shared Noir rhythm
+                NoirSectionHeader(
+                    label = "Playlists",
+                    actionLabel = "${filteredPlaylists.size} shown",
+                    onAction = {}
+                )
+
+                // 2-Column grid of Noir playlist cards with 120.dp bottom padding
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        top = 2.dp,
+                        bottom = 120.dp // MiniPlayer / dock clearance
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (filteredPlaylists.isEmpty()) {
+                        item(span = { GridItemSpan(2) }) {
+                            EmptyCuratedPlaylistsState(
+                                query = searchQuery,
+                                onResetFilters = {
+                                    searchQuery = ""
+                                    selectedCategory = "All"
+                                }
+                            )
+                        }
+                    } else {
+                        items(
+                            items = filteredPlaylists,
+                            key = { it.id }
+                        ) { playlist ->
+                            CuratedPlaylistCard(
+                                playlist = playlist,
+                                onCardClick = {
+                                    rootNavigator.push(CuratedPlaylistDetailScreen(playlist.id))
+                                },
+                                onPlayClick = {
+                                    // Enqueue full list of tracks for this curated playlist
+                                    val playlistTracks = QuranDataRepository.getCuratedTracksForPlaylist(playlist.id)
+                                    if (playlistTracks.isNotEmpty()) {
+                                        AudioEngine.playQueue(playlistTracks, startIndex = 0)
+                                        rootNavigator.push(NowPlayingScreen())
                                     }
-                                )
-                            }
-                        } else {
-                            items(
-                                items = filteredPlaylists,
-                                key = { it.id }
-                            ) { playlist ->
-                                CuratedPlaylistCard(
-                                    playlist = playlist,
-                                    onCardClick = {
-                                        rootNavigator.push(CuratedPlaylistDetailScreen(playlist.id))
-                                    },
-                                    onPlayClick = {
-                                        // Enqueue full list of tracks for this curated playlist
-                                        val playlistTracks = QuranDataRepository.getCuratedTracksForPlaylist(playlist.id)
-                                        if (playlistTracks.isNotEmpty()) {
-                                            AudioEngine.playQueue(playlistTracks, startIndex = 0)
-                                            rootNavigator.push(NowPlayingScreen())
-                                        }
-                                    }
-                                )
-                            }
+                                }
+                            )
                         }
                     }
                 }
@@ -225,8 +253,8 @@ class AllCuratedPlaylistsScreen : Screen {
 }
 
 /**
- * Top bar with Back button (`navigator.pop()`), Title "Curated Collections" in bold white,
- * and collection count pill badge.
+ * Top bar: clay [IconWell] back affordance, bold title,
+ * monochrome count chip (Fill2 wash + ghost hairline, 62% text).
  */
 @Composable
 private fun CuratedCollectionsTopBar(
@@ -234,147 +262,126 @@ private fun CuratedCollectionsTopBar(
     onBackClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Back Button
         Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF161822))
-                .border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
-                .clickable { onBackClick() },
+            modifier = Modifier.noirClickable(onClick = onBackClick),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
+            IconWell(
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                size = 40.dp,
+                iconSize = 20.dp,
+                contentDescription = "Back"
             )
         }
 
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
-        // Title: "Curated Collections" in bold white
         Text(
             text = "Curated Collections",
-            fontSize = 20.sp,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = GhaisNoir.TextPrimary,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
 
-        Spacer(modifier = Modifier.width(10.dp))
-
-        // Dynamic Count Badge
+        // Monochrome count chip — informational, no press affordance.
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(GhaisColors.TrendingPurple.copy(alpha = 0.16f))
-                .border(1.dp, GhaisColors.TrendingPurple.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                .padding(horizontal = 9.dp, vertical = 3.dp)
+                .clip(GhaisShapes.pill)
+                .background(GhaisNoir.Fill2)
+                .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                .padding(horizontal = 10.dp, vertical = 5.dp),
+            contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "$totalCount",
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = GhaisColors.TrendingPurple
+                color = GhaisNoir.TextSecondary
             )
         }
     }
 }
 
 /**
- * Search bar with instant text filtering (by playlist title, description, or mood tag)
- * in frosted dark glass container with Trending Purple / white micro-border.
+ * Search field in engraved inset style: carved-in recessed surface
+ * (black 45% gradient + 5% rim), white cursor, 24% placeholder.
  */
 @Composable
 private fun CuratedSearchBar(
     query: String,
     onQueryChange: (String) -> Unit
 ) {
-    Box(
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF13151D).copy(alpha = 0.95f))
-            .border(
-                width = 1.dp,
-                brush = Brush.linearGradient(
-                    listOf(
-                        GhaisColors.TrendingPurple.copy(alpha = 0.45f),
-                        Color.White.copy(alpha = 0.15f),
-                        GhaisColors.TrendingPurple.copy(alpha = 0.30f)
-                    )
-                ),
-                shape = RoundedCornerShape(16.dp)
-            )
-            .padding(horizontal = 14.dp, vertical = 11.dp)
+            .clip(GhaisShapes.row)
+            .background(GhaisNoir.insetFill())
+            .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.row)
+            .padding(horizontal = 16.dp, vertical = 13.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = "Search",
-                tint = if (query.isNotEmpty()) GhaisColors.TrendingPurple else Color(0xFF9CA3AF),
-                modifier = Modifier.size(20.dp)
-            )
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = "Search",
+            tint = if (query.isNotEmpty()) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+            modifier = Modifier.size(20.dp)
+        )
 
-            Spacer(modifier = Modifier.width(10.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
-            Box(modifier = Modifier.weight(1f)) {
-                if (query.isEmpty()) {
-                    Text(
-                        text = "Search playlists, moods, or tags...",
-                        color = Color(0xFF6B7280),
-                        fontSize = 13.5.sp
-                    )
-                }
-                BasicTextField(
-                    value = query,
-                    onValueChange = onQueryChange,
-                    textStyle = TextStyle(
-                        color = Color.White,
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.Medium
-                    ),
-                    cursorBrush = SolidColor(GhaisColors.TrendingPurple),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+        Box(modifier = Modifier.weight(1f)) {
+            if (query.isEmpty()) {
+                Text(
+                    text = "Search playlists, moods, or tags...",
+                    color = GhaisNoir.TextDisabled,
+                    fontSize = 13.5.sp
                 )
             }
+            BasicTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                textStyle = TextStyle(
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 13.5.sp,
+                    fontWeight = FontWeight.Medium
+                ),
+                cursorBrush = SolidColor(GhaisNoir.TextPrimary),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
-            if (query.isNotEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF262835))
-                        .clickable { onQueryChange("") },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Clear",
-                        tint = Color.White,
-                        modifier = Modifier.size(12.dp)
-                    )
-                }
+        if (query.isNotEmpty()) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(GhaisNoir.Fill2)
+                    .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                    .noirClickable { onQueryChange("") },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Clear",
+                    tint = GhaisNoir.TextSecondary,
+                    modifier = Modifier.size(12.dp)
+                )
             }
         }
     }
 }
 
 /**
- * Category chips row: "All", "Focus", "Peace", "Morning", "Night", "Healing"
- * with active chip highlighted in Trending Purple.
+ * Filter pills: selected = chrome gradient fill + near-black label
+ * (primary action); resting = Fill2 wash + card hairline + 62% label.
  */
 @Composable
 private fun CategoryChipsRow(
@@ -383,57 +390,58 @@ private fun CategoryChipsRow(
     onCategorySelected: (String) -> Unit
 ) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(categories) { category ->
             val isSelected = selectedCategory == category
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        if (isSelected) {
-                            Brush.horizontalGradient(
-                                listOf(
-                                    GhaisColors.ElectricViolet,
-                                    GhaisColors.TrendingPurple
-                                )
-                            )
-                        } else {
-                            SolidColor(Color(0xFF14161F))
-                        }
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.chromeFill())
+                        .border(1.dp, Color.White.copy(alpha = 0.35f), GhaisShapes.pill)
+                        .noirClickable { onCategorySelected(category) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = category,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GhaisNoir.OnChrome
                     )
-                    .border(
-                        width = 1.dp,
-                        color = if (isSelected) {
-                            Color(0xFFC084FC).copy(alpha = 0.5f)
-                        } else {
-                            Color.White.copy(alpha = 0.10f)
-                        },
-                        shape = RoundedCornerShape(20.dp)
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                        .noirClickable { onCategorySelected(category) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = category,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = GhaisNoir.TextSecondary
                     )
-                    .clickable { onCategorySelected(category) }
-                    .padding(horizontal = 14.dp, vertical = 7.dp)
-            ) {
-                Text(
-                    text = category,
-                    fontSize = 13.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) Color.White else Color(0xFF9CA3AF)
-                )
+                }
             }
         }
     }
 }
 
 /**
- * 2-column Grid Curated Playlist Card:
- * - Artwork image with rounded corners (16.dp) and frosted glass border.
- * - Mood tag pill in top-right.
- * - Circular floating play button in Trending Purple in bottom-right.
- * - Playlist title in bold white, description in muted grey.
- * - Track count and duration pill.
- * - Clicking the card pushes `CuratedPlaylistDetailScreen(playlist.id)` via `navigator.push(...)`.
+ * 2-column Noir playlist card:
+ * - cardFillSoft + 1px BorderCard + top-only specular + diagonal sheen.
+ * - Grayscale artwork in an engraved well + black scrim, mood tag pill
+ *   top-end, chrome play disc bottom-end.
+ * - Title 100%, subtitle 62%, meta pill ghost. Zero hue.
+ *
+ * Tapping the card pushes `CuratedPlaylistDetailScreen(playlist.id)`.
  */
 @Composable
 private fun CuratedPlaylistCard(
@@ -441,173 +449,163 @@ private fun CuratedPlaylistCard(
     onCardClick: () -> Unit,
     onPlayClick: () -> Unit
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF12141C))
-            .border(
-                width = 1.dp,
-                brush = Brush.linearGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.10f),
-                        GhaisColors.TrendingPurple.copy(alpha = 0.15f),
-                        Color.White.copy(alpha = 0.05f)
-                    )
-                ),
-                shape = RoundedCornerShape(20.dp)
-            )
-            .clickable { onCardClick() }
+            .clip(NoirPlaylistCardShape)
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, NoirPlaylistCardShape)
+            .topSpecular(inset = 18.dp)
+            .noirClickable(onClick = onCardClick)
             .padding(10.dp)
     ) {
-        // Artwork container with rounded corners (16.dp) and frosted glass border
+        // Diagonal glass sheen swept across the card (monochrome only).
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF181A24))
-                .border(
-                    width = 1.dp,
-                    brush = Brush.linearGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.20f),
-                            GhaisColors.TrendingPurple.copy(alpha = 0.35f),
-                            Color.White.copy(alpha = 0.08f)
+                .matchParentSize()
+                .background(GhaisNoir.sheen())
+        )
+
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Artwork well — grayscale image + darkening scrim, engraved read
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(NoirPlaylistArtShape)
+                    .background(GhaisNoir.wellFill())
+                    .border(1.dp, GhaisNoir.BorderCard, NoirPlaylistArtShape)
+            ) {
+                if (playlist.coverUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = playlist.coverUrl,
+                        contentDescription = playlist.title,
+                        contentScale = ContentScale.Crop,
+                        colorFilter = NoirGrayscale,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    // Darkening scrim keeps the plate recessed instead of glowing.
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = 0.35f))
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = playlist.title.firstOrNull()?.uppercase() ?: "C",
+                            color = GhaisNoir.TextPrimary,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold
                         )
-                    ),
-                    shape = RoundedCornerShape(16.dp)
+                    }
+                }
+
+                // Bottom scrim for control legibility (monochrome only).
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.55f)
+                                )
+                            )
+                        )
                 )
-        ) {
-            AsyncImage(
-                model = playlist.coverUrl,
-                contentDescription = playlist.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+
+                // Mood tag pill in top-end — smoked glass, 100% label.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .clip(GhaisShapes.pill)
+                        .background(Color.Black.copy(alpha = 0.55f))
+                        .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = playlist.tag,
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1
+                    )
+                }
+
+                // Chrome play disc in bottom-end — raised chrome, dark glyph.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(GhaisNoir.chromeFill())
+                        .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
+                        .noirClickable(onClick = onPlayClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "Play",
+                        tint = GhaisNoir.OnChrome,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Playlist title in 100% white
+            Text(
+                text = playlist.title,
+                color = GhaisNoir.TextPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
-            // Gradient shadow overlay at the bottom for high contrast
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.70f)
-                            )
-                        )
-                    )
+            Spacer(modifier = Modifier.height(3.dp))
+
+            // Description in 62% grey
+            Text(
+                text = playlist.subtitle,
+                color = GhaisNoir.TextSecondary,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
-            // Mood tag pill in top-right
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Track count and duration pill — ghost, informational only.
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xDD0B0C0E))
-                    .border(
-                        width = 1.dp,
-                        brush = Brush.horizontalGradient(
-                            listOf(
-                                GhaisColors.TrendingPurple.copy(alpha = 0.75f),
-                                Color.White.copy(alpha = 0.35f)
-                            )
-                        ),
-                        shape = CircleShape
-                    )
-                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                    .clip(GhaisShapes.pill)
+                    .background(GhaisNoir.Fill2)
+                    .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                    .padding(horizontal = 9.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = playlist.tag,
-                    color = Color.White,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold
+                    text = "${playlist.trackCount} tracks • ${playlist.durationText}",
+                    color = GhaisNoir.TextSecondary,
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1
                 )
             }
-
-            // Circular floating play button in Trending Purple in bottom-right
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(8.dp)
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(
-                        brush = Brush.linearGradient(
-                            listOf(
-                                GhaisColors.ElectricViolet,
-                                GhaisColors.TrendingPurple
-                            )
-                        )
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = Color.White.copy(alpha = 0.40f),
-                        shape = CircleShape
-                    )
-                    .clickable { onPlayClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = "Play",
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Playlist title in bold white
-        Text(
-            text = playlist.title,
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        Spacer(modifier = Modifier.height(3.dp))
-
-        // Description in muted grey
-        Text(
-            text = playlist.subtitle,
-            color = Color(0xFF9CA3AF),
-            fontSize = 12.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Track count and duration pill
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(Color.White.copy(alpha = 0.05f))
-                .border(
-                    width = 1.dp,
-                    color = Color.White.copy(alpha = 0.08f),
-                    shape = RoundedCornerShape(6.dp)
-                )
-                .padding(horizontal = 7.dp, vertical = 3.dp)
-        ) {
-            Text(
-                text = "${playlist.trackCount} tracks • ${playlist.durationText}",
-                color = Color(0xFFD1D5DB),
-                fontSize = 10.5.sp,
-                fontWeight = FontWeight.Medium
-            )
         }
     }
 }
 
 /**
- * Empty state displayed when search or category filter has no matches.
+ * Empty state — clay [IconWell], 100% headline + 62% hint,
+ * chrome reset pill (primary action).
  */
 @Composable
 private fun EmptyCuratedPlaylistsState(
@@ -620,26 +618,19 @@ private fun EmptyCuratedPlaylistsState(
             .padding(vertical = 48.dp, horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF161824)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = null,
-                tint = GhaisColors.TrendingPurple,
-                modifier = Modifier.size(32.dp)
-            )
-        }
+        IconWell(
+            icon = Icons.Default.Search,
+            size = 64.dp,
+            iconSize = 30.dp,
+            contentDescription = null,
+            tint = GhaisNoir.TextTertiary
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = if (query.isNotBlank()) "No playlists found for \"$query\"" else "No playlists found",
-            color = Color.White,
+            color = GhaisNoir.TextPrimary,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
@@ -649,7 +640,7 @@ private fun EmptyCuratedPlaylistsState(
 
         Text(
             text = "Try searching for a different mood, title, or resetting category filter",
-            color = Color(0xFF9CA3AF),
+            color = GhaisNoir.TextSecondary,
             fontSize = 13.sp,
             textAlign = TextAlign.Center
         )
@@ -658,15 +649,16 @@ private fun EmptyCuratedPlaylistsState(
 
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(GhaisColors.TrendingPurple.copy(alpha = 0.16f))
-                .border(1.dp, GhaisColors.TrendingPurple.copy(alpha = 0.40f), RoundedCornerShape(20.dp))
-                .clickable { onResetFilters() }
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .clip(GhaisShapes.pill)
+                .background(GhaisNoir.chromeFill())
+                .border(1.dp, Color.White.copy(alpha = 0.35f), GhaisShapes.pill)
+                .noirClickable(onClick = onResetFilters)
+                .padding(horizontal = 18.dp, vertical = 9.dp),
+            contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "Reset Filters",
-                color = Color.White,
+                color = GhaisNoir.OnChrome,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold
             )
