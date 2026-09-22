@@ -35,6 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -45,15 +47,20 @@ import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.domain.model.Reciter
 import com.ghais.player.AudioEngine
-import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
-private val DarkCard = Color(0xFF1C1C1E)
-private val MutedGrey = Color(0xFF9A9AA0)
-private val LinkBlue = Color(0xFF4C8DFF)
-
-private val CardShape = RoundedCornerShape(28.dp)
 private val AvatarShape = RoundedCornerShape(24.dp)
-private val Emerald = Color(0xFF30D158)
+
+/**
+ * Strict Noir Glass grayscale filter — portraits stay recognisable,
+ * zero accent hue. Mirrors NoirArtworkWell (home).
+ */
+private val NoirGrayscale: ColorFilter by lazy {
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+}
 
 @Composable
 fun NationReelBlock(
@@ -75,19 +82,30 @@ fun NationReelBlock(
         ) {
             Text(
                 text = nation,
-                color = Color.White,
+                color = GhaisNoir.TextPrimary,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.ExtraBold,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
             )
-            Text(
-                text = "See all",
-                color = LinkBlue,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clickable(onClick = onSeeAll)
-            )
+            // Monochrome ghost pill — replaces the old blue "See all" link.
+            Box(
+                modifier = Modifier
+                    .clip(GhaisShapes.pill)
+                    .background(GhaisNoir.Fill2)
+                    .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                    .noirClickable(onClick = onSeeAll)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "See all",
+                    color = GhaisNoir.TextSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
         Spacer(modifier = Modifier.height(12.dp))
         LazyRow(
@@ -125,21 +143,22 @@ fun ReciterReelCard(
     val isCurrentReciter = currentTrack?.reciterSlug == reciter.slug
     val activelyPlaying = isCurrentReciter && isPlaying
 
+    // Noir glass card: gradient fill + ghost border + top-only specular.
+    // Active playback reads through fill elevation + specular, never hue.
+    val cardFill = if (activelyPlaying) GhaisNoir.cardFillActive() else GhaisNoir.cardFill()
+    val cardBorder = if (activelyPlaying) GhaisNoir.SpecularTop else GhaisNoir.BorderCard
+
     Box(
         modifier = Modifier
             .width(180.dp)
             .height(254.dp)
-            .clip(CardShape)
-            .background(Color.White.copy(alpha = 0.05f))
-            .border(
-                1.dp,
-                if (activelyPlaying) GhaisColors.Primary.copy(alpha = 0.60f)
-                else Color.White.copy(alpha = 0.08f),
-                CardShape
-            )
+            .clip(GhaisShapes.cardNoir)
+            .background(cardFill)
+            .border(1.dp, cardBorder, GhaisShapes.cardNoir)
+            .topSpecular()
             .clickable(onClick = onClick)
     ) {
-        // Gradient scrim on card
+        // Monochrome bottom shade — keeps lower text legible, no hue.
         Box(
             modifier = Modifier
                 .matchParentSize()
@@ -147,10 +166,16 @@ fun ReciterReelCard(
                     Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color.Black.copy(alpha = 0.32f)
+                            Color.Black.copy(alpha = 0.28f)
                         )
                     )
                 )
+        )
+        // Diagonal glass sheen swept across the card.
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(GhaisNoir.sheen())
         )
         Column(
             modifier = Modifier
@@ -159,54 +184,58 @@ fun ReciterReelCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // Noir artwork well: clay well + grayscale portrait + recess scrim.
             Box(
                 modifier = Modifier.size(128.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (photoUrl != null) {
-                    AsyncImage(
-                        model = photoUrl,
-                        contentDescription = reciter.nameEn,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(AvatarShape)
-                            .background(DarkCard)
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(AvatarShape)
-                            .background(Color.White.copy(alpha = 0.10f)),
-                        contentAlignment = Alignment.Center
-                    ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(AvatarShape)
+                        .background(GhaisNoir.wellFill())
+                        .border(1.dp, GhaisNoir.BorderCard, AvatarShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (photoUrl != null) {
+                        AsyncImage(
+                            model = photoUrl,
+                            contentDescription = reciter.nameEn,
+                            contentScale = ContentScale.Crop,
+                            colorFilter = NoirGrayscale,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        // Darkening scrim: plate reads engraved, never glowing.
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(Color.Black.copy(alpha = 0.35f))
+                        )
+                    } else {
                         Text(
                             text = reciter.nameEn.take(1),
-                            color = Color.White,
+                            color = GhaisNoir.TextPrimary,
                             fontSize = 34.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                // Quick Play/Pause Action Pill
+                // Play / pause: chrome disc when actively playing, smoked glass otherwise.
+                val playFill = if (activelyPlaying) GhaisNoir.chromeFill()
+                else Brush.verticalGradient(
+                    listOf(Color.Black.copy(alpha = 0.70f), Color.Black.copy(alpha = 0.70f))
+                )
+                val playBorder = if (activelyPlaying) Color.White.copy(alpha = 0.40f)
+                else Color.White.copy(alpha = 0.25f)
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(6.dp)
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(
-                            if (activelyPlaying) GhaisColors.Primary
-                            else Color.Black.copy(alpha = 0.70f)
-                        )
-                        .border(
-                            1.dp,
-                            if (activelyPlaying) GhaisColors.Primary
-                            else Color.White.copy(alpha = 0.25f),
-                            CircleShape
-                        )
+                        .background(playFill)
+                        .border(1.dp, playBorder, CircleShape)
                         .clickable {
                             if (activelyPlaying) {
                                 AudioEngine.pause()
@@ -221,21 +250,21 @@ fun ReciterReelCard(
                     Icon(
                         imageVector = if (activelyPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         contentDescription = if (activelyPlaying) "Pause" else "Play",
-                        tint = if (activelyPlaying) Color.Black else Color.White,
+                        tint = if (activelyPlaying) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
 
-                // Follow badge — top-end overlapped on the avatar
+                // Follow badge — monochrome state via fill elevation, never emerald.
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .size(28.dp)
                         .clip(CircleShape)
-                        .background(DarkCard)
+                        .background(if (isFollowing) GhaisNoir.Fill4 else Color.Black.copy(alpha = 0.60f))
                         .border(
                             1.dp,
-                            Color.White.copy(alpha = 0.25f),
+                            if (isFollowing) GhaisNoir.SpecularTop else Color.White.copy(alpha = 0.25f),
                             CircleShape
                         )
                         .clickable(onClick = onFollowClick),
@@ -244,7 +273,7 @@ fun ReciterReelCard(
                     Icon(
                         imageVector = if (isFollowing) Icons.Filled.Check else Icons.Filled.PersonAdd,
                         contentDescription = if (isFollowing) "Following" else "Follow",
-                        tint = if (isFollowing) Emerald else Color.White,
+                        tint = GhaisNoir.TextPrimary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -253,7 +282,7 @@ fun ReciterReelCard(
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = reciter.nameEn,
-                color = Color.White,
+                color = GhaisNoir.TextPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -264,7 +293,7 @@ fun ReciterReelCard(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "${reciter.riwayah} • ${reciter.style}",
-                color = MutedGrey,
+                color = GhaisNoir.TextTertiary,
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -272,7 +301,7 @@ fun ReciterReelCard(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = reciter.nameAr,
-                color = Color.White.copy(alpha = 0.8f),
+                color = GhaisNoir.TextSecondary,
                 fontSize = 14.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
