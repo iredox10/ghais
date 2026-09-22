@@ -28,13 +28,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ghais.ui.components.noir.ChromePillButton
+import com.ghais.ui.theme.GhaisNoir
 
 @Composable
 fun BoxScope.AuroraBackdrop() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(GhaisNoir.NoirBlack)
     ) {
         Box(
             modifier = Modifier
@@ -44,7 +46,7 @@ fun BoxScope.AuroraBackdrop() {
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFF4EDEA3).copy(alpha = 0.10f),
+                            Color.White.copy(alpha = 0.07f),
                             Color.Transparent
                         )
                     )
@@ -78,6 +80,7 @@ fun BoxScope.AuroraBackdrop() {
     }
 }
 
+/** Legacy name kept — now a thin wrapper over the Noir chrome pill. */
 @Composable
 fun ChromeButton(
     text: String,
@@ -85,35 +88,10 @@ fun ChromeButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val pill = RoundedCornerShape(50.dp)
-    val dark = Color(0xFF0B0C0E)
-    Row(
-        modifier = modifier
-            .clip(pill)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFFF5F5F7),
-                        Color(0xFFC7C7CC)
-                    )
-                )
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 26.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = dark,
-            modifier = Modifier.size(16.dp)
-        )
-        Text(
-            text = text,
-            color = dark,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
+    ChromePillButton(
+        text = text,
+        onClick = onClick,
+        modifier = modifier,
+        leadingIcon = icon
+    )
 }

@@ -12,7 +12,6 @@ import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Tune
@@ -26,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
@@ -36,19 +34,19 @@ import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.sync.SyncEngine
 import com.ghais.data.sync.SyncStatus
 import com.ghais.player.QuranDownloads
+import com.ghais.ui.components.noir.NoirGrainOverlay
+import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.noirAmbientGlow
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.profile.glass.AuroraBackdrop
 import com.ghais.ui.screens.profile.glass.EditProfileDialogGlass
 import com.ghais.ui.screens.profile.glass.FeatureCard
 import com.ghais.ui.screens.profile.glass.GlassCardContainer
-import com.ghais.ui.screens.profile.glass.GlassDivider
-import com.ghais.ui.screens.profile.glass.GlassSectionLabel
 import com.ghais.ui.screens.profile.glass.ProfileIdentityPill
-import com.ghais.ui.screens.profile.glass.ProtonRow
 import com.ghais.ui.screens.profile.glass.ProtonSwitchRow
-import com.ghais.ui.screens.profile.glass.ProtonValueRow
 import com.ghais.ui.screens.profile.glass.SchedulesProtonSection
 import com.ghais.ui.screens.profile.glass.StorageHealthCard
+import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.screens.settings.AppSettingsScreen
 import com.ghais.ui.screens.stats.StatsScreen
 import com.russhwolf.settings.Settings
@@ -189,7 +187,8 @@ object ProfileScreen : Tab {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(GhaisNoir.NoirBlack)
+                .noirAmbientGlow()
         ) {
             AuroraBackdrop()
             LazyColumn(
@@ -197,7 +196,19 @@ object ProfileScreen : Tab {
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 120.dp)
             ) {
                 // -----------------------------------------------------------------
-                // 1. Cloud Sync feature card
+                // 0. Noir header — editorial greeting + ghost sync state
+                // -----------------------------------------------------------------
+                item {
+                    NoirProfileHeader(
+                        userName = session?.name?.ifBlank { null } ?: userName,
+                        syncText = syncSubtitle,
+                        onSync = { scope.launch { SyncEngine.syncNow() } }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // -----------------------------------------------------------------
+                // 1. Cloud Sync feature card (Dark Web Monitoring motif)
                 // -----------------------------------------------------------------
                 item {
                     FeatureCard(
@@ -222,10 +233,10 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 3. Storage Health
+                // 3. Storage Health (Password-Health motif)
                 // -----------------------------------------------------------------
                 item {
-                    GlassSectionLabel("Storage Health")
+                    NoirSectionHeader(label = "Storage Health")
                     val cachedSummary = if (cachedSurahCount == 1) {
                         "1 surah cached offline"
                     } else {
@@ -249,18 +260,18 @@ object ProfileScreen : Tab {
                 // 4. Library (badge rows)
                 // -----------------------------------------------------------------
                 item {
-                    GlassSectionLabel("Library")
+                    NoirSectionHeader(label = "Library")
                     GlassCardContainer {
-                        ProtonRow(
+                        com.ghais.ui.screens.profile.NoirLibraryRow(
                             icon = Icons.Filled.MusicNote,
                             title = "Favorite Verses & Surahs",
                             subtitle = "Bookmarked ayahs and cherished recitations",
                             countBadge = favoriteCount
                         )
 
-                        GlassDivider()
+                        NoirRowDivider()
 
-                        ProtonRow(
+                        com.ghais.ui.screens.profile.NoirLibraryRow(
                             icon = Icons.Filled.DownloadDone,
                             title = "Offline downloads",
                             subtitle = "$cachedSurahCount surahs cached • " + formatStorageBytes(storageSizeBytes),
@@ -274,15 +285,16 @@ object ProfileScreen : Tab {
                 // 5. Recitation schedules
                 // -----------------------------------------------------------------
                 item {
+                    NoirSectionHeader(label = "Schedules")
                     SchedulesProtonSection()
                     Spacer(modifier = Modifier.height(18.dp))
                 }
 
                 // -----------------------------------------------------------------
-                // 6. Preferences
+                // 6. Preferences (Sentinel-style)
                 // -----------------------------------------------------------------
                 item {
-                    GlassSectionLabel("Preferences")
+                    NoirSectionHeader(label = "Preferences")
                     GlassCardContainer {
                         ProtonSwitchRow(
                             icon = Icons.Filled.NotificationsActive,
@@ -295,9 +307,9 @@ object ProfileScreen : Tab {
                             }
                         )
 
-                        GlassDivider()
+                        NoirRowDivider()
 
-                        ProtonRow(
+                        com.ghais.ui.screens.profile.NoirSettingsRow(
                             icon = Icons.Filled.Tune,
                             title = "Settings",
                             subtitle = "Audio, reciter, appearance & downloads",
@@ -308,21 +320,21 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 7. Journey
+                // 7. Journey (Sentinel-style rows)
                 // -----------------------------------------------------------------
                 item {
-                    GlassSectionLabel("Journey")
+                    NoirSectionHeader(label = "Journey")
                     GlassCardContainer {
-                        ProtonRow(
+                        com.ghais.ui.screens.profile.NoirSettingsRow(
                             icon = Icons.Filled.Insights,
                             title = "Your stats",
                             subtitle = "Streaks, listening time & Khatmah journey",
                             onClick = { rootNavigator?.push(StatsScreen) }
                         )
 
-                        GlassDivider()
+                        NoirRowDivider()
 
-                        ProtonRow(
+                        com.ghais.ui.screens.profile.NoirSettingsRow(
                             icon = Icons.Filled.CloudDone,
                             title = "Sync",
                             subtitle = syncSubtitle,
@@ -333,21 +345,21 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 8. About
+                // 8. About (ghost value chips)
                 // -----------------------------------------------------------------
                 item {
-                    GlassSectionLabel("About")
+                    NoirSectionHeader(label = "About")
                     GlassCardContainer {
-                        ProtonValueRow(
+                        com.ghais.ui.screens.profile.NoirAboutRow(
                             icon = Icons.Filled.Language,
                             title = "App Version",
                             subtitle = "Production release channel",
                             value = "v1.0.0 (Build 2026.1)"
                         )
 
-                        GlassDivider()
+                        NoirRowDivider()
 
-                        ProtonValueRow(
+                        com.ghais.ui.screens.profile.NoirAboutRow(
                             icon = Icons.Filled.VerifiedUser,
                             title = "Audio Sources",
                             subtitle = "MP3Quran (242 reciters), Tanzil & EveryAyah",
@@ -358,20 +370,19 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 9. Log out (always visible — auth is mandatory)
+                // 9. Log out (ghost danger row — muted, no red)
                 // -----------------------------------------------------------------
                 item {
                     GlassCardContainer {
-                        ProtonRow(
-                            icon = Icons.Filled.Logout,
-                            title = "Log out",
+                        com.ghais.ui.screens.profile.NoirLogoutRow(
                             subtitle = session?.email ?: "Signed in",
-                            destructive = true,
                             onClick = { scope.launch { AuthRepository.signOut() } }
                         )
                     }
                 }
             }
+            // Film grain over everything (last = on top).
+            NoirGrainOverlay()
         }
 
         // ---------------------------------------------------------------------

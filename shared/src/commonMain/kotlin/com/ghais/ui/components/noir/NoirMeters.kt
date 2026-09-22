@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +51,7 @@ fun NoirSegmentedProgress(
     }
 }
 
-/** Section header: label + ghost "See All" action. */
+/** Section header: bright label + ghost "See All"-style action slot. */
 @Composable
 fun NoirSectionHeader(
     label: String,
@@ -59,15 +60,17 @@ fun NoirSectionHeader(
     onAction: (() -> Unit)? = null
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 4.dp, bottom = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
             color = GhaisNoir.TextPrimary,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold
         )
         if (actionLabel != null && onAction != null) {
             Text(
