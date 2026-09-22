@@ -6,7 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,12 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -48,17 +47,16 @@ import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.player.QuranDownloads
+import com.ghais.ui.components.noir.NoirCard
+import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.NoirSegmentedProgress
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.screens.home.NoirStatChip
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisTypography
 import kotlin.time.Clock
 
-private val PureBlack = Color(0xFF000000)
-private val MutedGrey = Color(0xFF9A9AA0)
-private val GlassFill = Color.White.copy(alpha = 0.05f)
-private val GlassBorder = Color.White.copy(alpha = 0.08f)
-private val AccentGreen = Color(0xFF4CAF7D)
-private val AccentBlue = Color(0xFF4C8DFF)
-private val FlameOrange = Color(0xFFFF9F43)
-
-private const val DAILY_GOAL_MINUTES = 30f
 private const val DAY_MS = 86_400_000L
 
 object StatsScreen : Screen {
@@ -128,14 +126,10 @@ object StatsScreen : Screen {
         val goalMin by com.ghais.data.repository.OnboardingStore.dailyGoalMinutes.collectAsState()
         val ringProgress = (stats.minutesToday / goalMin.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(PureBlack)
-        ) {
+        NoirScreenRoot {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                contentPadding = PaddingValues(
                     start = 20.dp,
                     end = 20.dp,
                     top = 16.dp,
@@ -145,26 +139,37 @@ object StatsScreen : Screen {
             ) {
                 item {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { navigator.pop() }) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(GhaisNoir.Fill2)
+                                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                                .noirClickable(onClick = { navigator.pop() }),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
-                                tint = Color.White
+                                tint = GhaisNoir.TextPrimary,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
-                        Column {
-                            Text(
-                                text = "Your Stats",
-                                color = Color.White,
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            Text(
-                                text = "Track your journey",
-                                color = MutedGrey,
-                                fontSize = 14.sp
-                            )
-                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(text = "Your", style = GhaisTypography.displayEditorial)
+                    Text(text = "Stats", style = GhaisTypography.displayEditorialBold)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Track your journey",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        NoirStatChip(text = "${favorites.size} Favorites")
+                        NoirStatChip(text = "${followed.size} Following")
+                        NoirStatChip(text = "${downloaded.size} Downloads")
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                 }
@@ -174,82 +179,60 @@ object StatsScreen : Screen {
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        GlassCard(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = totalHoursText,
-                                color = Color.White,
-                                fontSize = 32.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                            Text(text = "Listening time", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                            Text(
-                                text = if (stats.totalSecondsListened > 0L) "total" else "total • start listening",
-                                color = MutedGrey,
-                                fontSize = 12.sp
-                            )
-                        }
-                        GlassCard(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                        NoirCard(modifier = Modifier.weight(1f)) {
+                            Column {
                                 Text(
-                                    text = "${stats.daysStreak}",
-                                    color = Color.White,
+                                    text = totalHoursText,
+                                    color = GhaisNoir.TextPrimary,
                                     fontSize = 32.sp,
                                     fontWeight = FontWeight.ExtraBold
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Icon(
-                                    imageVector = Icons.Filled.LocalFireDepartment,
-                                    contentDescription = null,
-                                    tint = FlameOrange,
-                                    modifier = Modifier.size(24.dp)
+                                Text(
+                                    text = "Listening time",
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = if (stats.totalSecondsListened > 0L) "total" else "total • start listening",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 12.sp
                                 )
                             }
-                            Text(text = "Day streak", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                            Text(text = "days", color = MutedGrey, fontSize = 12.sp)
+                        }
+                        NoirCard(modifier = Modifier.weight(1f)) {
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "${stats.daysStreak}",
+                                        color = GhaisNoir.TextPrimary,
+                                        fontSize = 32.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(
+                                        imageVector = Icons.Filled.LocalFireDepartment,
+                                        contentDescription = null,
+                                        tint = GhaisNoir.TextTertiary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                Text(
+                                    text = "Day streak",
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(text = "days", color = GhaisNoir.TextTertiary, fontSize = 12.sp)
+                            }
                         }
                     }
                 }
 
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        GlassCard(modifier = Modifier.weight(1f)) {
-                            Text(text = "Top Qari", color = MutedGrey, fontSize = 12.sp)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            if (topQariName != null && topQari != null) {
-                                Text(
-                                    text = topQariName,
-                                    color = Color.White,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = "${topQari.value} plays",
-                                    color = MutedGrey,
-                                    fontSize = 12.sp
-                                )
-                            } else {
-                                Text(
-                                    text = "—",
-                                    color = Color.White,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "No plays yet",
-                                    color = MutedGrey,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                        GlassCard(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
+                    NoirCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            NoirSectionHeader(label = "Today's goal")
                             Canvas(modifier = Modifier.size(96.dp)) {
                                 val stroke = 10.dp.toPx()
                                 drawArc(
@@ -259,118 +242,191 @@ object StatsScreen : Screen {
                                     useCenter = false,
                                     style = Stroke(width = stroke, cap = StrokeCap.Round)
                                 )
-                                drawArc(
-                                    color = AccentGreen,
-                                    startAngle = -90f,
-                                    sweepAngle = 360f * ringProgress,
-                                    useCenter = false,
-                                    style = Stroke(width = stroke, cap = StrokeCap.Round)
-                                )
+                                if (ringProgress > 0f) {
+                                    drawArc(
+                                        brush = GhaisNoir.chromeFill(),
+                                        startAngle = -90f,
+                                        sweepAngle = 360f * ringProgress,
+                                        useCenter = false,
+                                        style = Stroke(width = stroke, cap = StrokeCap.Round)
+                                    )
+                                }
                             }
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "${stats.minutesToday} min",
-                                color = Color.White,
+                                color = GhaisNoir.TextPrimary,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold
                             )
-                            Text(text = "today's goal", color = MutedGrey, fontSize = 12.sp)
+                            Text(
+                                text = "of $goalMin min daily goal",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 12.sp
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            NoirSegmentedProgress(progress = ringProgress)
                         }
                     }
                 }
 
                 item {
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Text(text = "This week", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Text(text = "minutes per day", color = MutedGrey, fontSize = 12.sp)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        val maxVal = (weekMinutes.maxOrNull() ?: 0f).coerceAtLeast(1f)
-                        Canvas(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(120.dp)
-                        ) {
-                            val barCount = 7
-                            val gap = 8.dp.toPx()
-                            val barWidth = (size.width - gap * (barCount - 1)) / barCount
-                            val corner = 6.dp.toPx()
-                            weekMinutes.forEachIndexed { index, value ->
-                                val fraction = (value / maxVal).coerceIn(0f, 1f)
-                                val barHeight = (size.height * fraction).coerceAtLeast(if (value > 0f) 8.dp.toPx() else 4.dp.toPx())
-                                val left = index * (barWidth + gap)
-                                val top = size.height - barHeight
-                                drawRoundRect(
-                                    color = if (index == 6) AccentGreen else AccentBlue.copy(alpha = 0.75f),
-                                    topLeft = Offset(left, top),
-                                    size = Size(barWidth, barHeight),
-                                    cornerRadius = CornerRadius(corner, corner)
+                    NoirCard(modifier = Modifier.fillMaxWidth()) {
+                        Column {
+                            Text(
+                                text = "This week",
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "minutes per day",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 12.sp
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            val maxVal = (weekMinutes.maxOrNull() ?: 0f).coerceAtLeast(1f)
+                            Canvas(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(120.dp)
+                            ) {
+                                val barCount = 7
+                                val gap = 8.dp.toPx()
+                                val barWidth = (size.width - gap * (barCount - 1)) / barCount
+                                val corner = 6.dp.toPx()
+                                weekMinutes.forEachIndexed { index, value ->
+                                    val fraction = (value / maxVal).coerceIn(0f, 1f)
+                                    val barHeight = (size.height * fraction)
+                                        .coerceAtLeast(if (value > 0f) 8.dp.toPx() else 4.dp.toPx())
+                                    val left = index * (barWidth + gap)
+                                    val top = size.height - barHeight
+                                    drawRoundRect(
+                                        color = if (index == 6) {
+                                            Color.White
+                                        } else {
+                                            Color.White.copy(alpha = 0.28f)
+                                        },
+                                        topLeft = Offset(left, top),
+                                        size = Size(barWidth, barHeight),
+                                        cornerRadius = CornerRadius(corner, corner)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            val weekTotal = weekMinutes.sum()
+                            val weekGoal = (goalMin * 7f).coerceAtLeast(1f)
+                            NoirSegmentedProgress(
+                                progress = (weekTotal / weekGoal).coerceIn(0f, 1f)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = if (weekTotal > 0f) {
+                                    "${weekTotal.toInt()} min this week"
+                                } else {
+                                    "No activity yet this week"
+                                },
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    NoirCard(modifier = Modifier.fillMaxWidth()) {
+                        Column {
+                            Text(
+                                text = "Top Qari",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 12.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            if (topQariName != null && topQari != null) {
+                                Text(
+                                    text = topQariName,
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "${topQari.value} plays",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 12.sp
+                                )
+                            } else {
+                                Text(
+                                    text = "—",
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "No plays yet",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 12.sp
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        val totalWeek = weekMinutes.sum()
-                        Text(
-                            text = if (totalWeek > 0f) "${totalWeek.toInt()} min this week" else "No activity yet this week",
-                            color = MutedGrey,
-                            fontSize = 12.sp
-                        )
                     }
                 }
 
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        GlassCard(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = "${favorites.size}", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-                            Text(text = "Favorites", color = MutedGrey, fontSize = 12.sp)
-                        }
-                        GlassCard(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = "${followed.size}", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-                            Text(text = "Following", color = MutedGrey, fontSize = 12.sp)
-                        }
-                        GlassCard(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = "${downloaded.size}", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-                            Text(text = "Downloads", color = MutedGrey, fontSize = 12.sp)
-                        }
-                    }
-                }
-
-                item {
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Text(text = "Top Surahs", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        if (topSurahs.isEmpty()) {
-                            Text(text = "No surahs played yet", color = MutedGrey, fontSize = 13.sp)
-                        } else {
-                            topSurahs.forEachIndexed { index, entry ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "${index + 1}",
-                                        color = MutedGrey,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.width(20.dp)
-                                    )
-                                    Text(
-                                        text = entry.key,
-                                        color = Color.White,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.weight(1f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = "${entry.value} plays",
-                                        color = MutedGrey,
-                                        fontSize = 12.sp
-                                    )
+                    NoirCard(modifier = Modifier.fillMaxWidth()) {
+                        Column {
+                            Text(
+                                text = "Top Surahs",
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            if (topSurahs.isEmpty()) {
+                                Text(
+                                    text = "No surahs played yet",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 13.sp
+                                )
+                            } else {
+                                topSurahs.forEachIndexed { index, entry ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "${index + 1}",
+                                            color = GhaisNoir.TextTertiary,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.width(20.dp)
+                                        )
+                                        Text(
+                                            text = entry.key,
+                                            color = GhaisNoir.TextPrimary,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier.weight(1f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "${entry.value} plays",
+                                            color = GhaisNoir.TextTertiary,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                    if (index < topSurahs.lastIndex) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(1.dp)
+                                                .background(GhaisNoir.BorderGhost)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -379,21 +435,4 @@ object StatsScreen : Screen {
             }
         }
     }
-}
-
-@Composable
-private fun GlassCard(
-    modifier: Modifier = Modifier,
-    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(22.dp))
-            .background(GlassFill)
-            .border(1.dp, GlassBorder, RoundedCornerShape(22.dp))
-            .padding(16.dp),
-        horizontalAlignment = horizontalAlignment,
-        content = content
-    )
 }
