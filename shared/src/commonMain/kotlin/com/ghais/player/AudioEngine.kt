@@ -6,6 +6,7 @@ import com.ghais.data.seed.QuranData
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.RepeatMode
 import com.ghais.domain.model.TrackItem
+import com.ghais.domain.model.UNKNOWN_DURATION_MS
 import com.ghais.domain.model.isFullSurah
 import com.ghais.domain.model.resolvedDurationMs
 import kotlinx.coroutines.CoroutineScope
@@ -129,12 +130,16 @@ object AudioEngine {
                     val failed = _currentTrack.value
                     if (failed != null && consecutiveErrors < maxAutoSkipErrors) {
                         consecutiveErrors++
-                        val nextTrack = queueManager.playNext(forceAdvance = true)
-                        if (nextTrack != null) {
-                            startPlayback(nextTrack)
+                        if (_isAyahMode.value) {
+                            nextAyah()
                         } else {
-                            SleepTimer.onQueueEnded()
-                            stopPlayback()
+                            val nextTrack = queueManager.playNext(forceAdvance = true)
+                            if (nextTrack != null) {
+                                startPlayback(nextTrack)
+                            } else {
+                                SleepTimer.onQueueEnded()
+                                stopPlayback()
+                            }
                         }
                     } else if (failed != null) {
                         stopPlayback()
@@ -168,13 +173,20 @@ object AudioEngine {
     private val maxAutoSkipErrors: Int = 10
 
     fun playTrack(track: TrackItem, startPositionMs: Long = 0L) {
-        _isAyahMode.value = track.ayahNo > 0 && !track.isFullSurah
+        val isAyah = track.ayahNo > 0 && !track.isFullSurah
+        _isAyahMode.value = isAyah
+        val surahTrack = track.toSurahTrack()
         queueManager.clear()
-        queueManager.addToQueue(track)
+        queueManager.addToQueue(surahTrack)
         _queue.value = queueManager.queue
+        _currentIndex.value = queueManager.currentIndex
         pendingSeekMs = startPositionMs.coerceAtLeast(0L)
         pendingSeekTries = if (pendingSeekMs > 0L) 40 else 0
-        startPlayback(track)
+        if (isAyah) {
+            playAyah(track.surahId, track.ayahNo, track.reciterSlug, startPositionMs)
+        } else {
+            startPlayback(surahTrack)
+        }
     }
 
     fun playQueue(tracks: List<TrackItem>, startIndex: Int = 0, startPositionMs: Long = 0L) {
@@ -182,48 +194,64 @@ object AudioEngine {
             clear()
             return
         }
-        val firstTrack = tracks.getOrNull(startIndex) ?: tracks.firstOrNull()
-        if (firstTrack != null) {
-            _isAyahMode.value = firstTrack.ayahNo > 0 && !firstTrack.isFullSurah
-        }
-        queueManager.setQueue(tracks, startIndex)
-        _queue.value = queueManager.queue
-        val track = queueManager.currentTrack
-        if (track != null) {
-            pendingSeekMs = startPositionMs.coerceAtLeast(0L)
-            pendingSeekTries = if (pendingSeekMs > 0L) 40 else 0
-            startPlayback(track)
+        val targetTrack = tracks.getOrNull(startIndex) ?: tracks.first()
+        val isAyahList = targetTrack.ayahNo > 0 && !targetTrack.isFullSurah
+
+        if (isAyahList) {
+            _isAyahMode.value = true
+            val existingIndex = queueManager.queue.indexOfFirst { it.surahId == targetTrack.surahId }
+            if (existingIndex != -1) {
+                queueManager.skipToIndex(existingIndex)
+            } else {
+                val surahTracks = tracks.map { it.toSurahTrack() }.distinctBy { it.surahId }
+                val surahStartIndex = surahTracks.indexOfFirst { it.surahId == targetTrack.surahId }.coerceAtLeast(0)
+                queueManager.setQueue(surahTracks, surahStartIndex)
+            }
+            _queue.value = queueManager.queue
+            _currentIndex.value = queueManager.currentIndex
+            playAyah(targetTrack.surahId, targetTrack.ayahNo, targetTrack.reciterSlug, startPositionMs)
         } else {
-            stopPlayback()
+            _isAyahMode.value = false
+            queueManager.setQueue(tracks, startIndex)
+            _queue.value = queueManager.queue
+            _currentIndex.value = queueManager.currentIndex
+            val surah = queueManager.currentTrack
+            if (surah != null) {
+                pendingSeekMs = startPositionMs.coerceAtLeast(0L)
+                pendingSeekTries = if (pendingSeekMs > 0L) 40 else 0
+                startPlayback(surah)
+            } else {
+                stopPlayback()
+            }
         }
     }
 
     fun setAyahMode(enabled: Boolean) {
+        if (enabled == _isAyahMode.value) return
         if (enabled) {
+            _isAyahMode.value = true
             val current = _currentTrack.value
             if (current?.let { it.ayahNo <= 0 || it.isFullSurah } == true) {
                 val surahId = current.surahId
                 val reciterSlug = current.reciterSlug
-                val reciter = QuranDataRepository.getReciterBySlug(reciterSlug)
-                val (ayahTracks, totalAyahs) = buildAyahTracksForSurah(
-                    surahId = surahId,
-                    reciter = reciter,
-                    fallbackSurahNameEn = current.surahNameEn,
-                    fallbackSurahNameAr = current.surahNameAr,
-                    fallbackReciterName = current.reciterName
-                )
-                val progressFraction = progress.value
+                val totalAyahs = getAyahCountForSurah(surahId)
+                val progressFraction = _progress.value
                 val targetAyah = ((progressFraction * totalAyahs).toInt() + 1).coerceIn(1, totalAyahs)
-                val startIndex = targetAyah - 1
-                playQueue(ayahTracks, startIndex)
-                _isAyahMode.value = true
-            } else if ((_currentTrack.value?.ayahNo ?: 0) > 0) {
-                _isAyahMode.value = true
-            } else {
-                _isAyahMode.value = true
+                playAyah(surahId, targetAyah, reciterSlug)
             }
         } else {
             _isAyahMode.value = false
+            val current = _currentTrack.value
+            if (current != null && current.ayahNo > 0) {
+                val surahTrack = queueManager.currentTrack ?: current.toSurahTrack()
+                val totalAyahs = getAyahCountForSurah(current.surahId)
+                val progressFraction = if (totalAyahs > 1) (current.ayahNo - 1).toFloat() / totalAyahs.toFloat() else 0f
+                val knownDuration = surahTrack.resolvedDurationMs()
+                val startMs = if (knownDuration > 0L) (progressFraction * knownDuration).toLong() else 0L
+                pendingSeekMs = startMs
+                pendingSeekTries = if (pendingSeekMs > 0L) 40 else 0
+                startPlayback(surahTrack)
+            }
         }
     }
 
@@ -232,65 +260,161 @@ object AudioEngine {
     }
 
     fun playSurahInAyahMode(surahId: Int, reciterSlug: String? = null, startAyahNo: Int = 1) {
-        val current = _currentTrack.value
-        val targetSlug = reciterSlug ?: current?.reciterSlug
+        val targetSlug = reciterSlug ?: _currentTrack.value?.reciterSlug ?: queueManager.currentTrack?.reciterSlug ?: "mishary"
         val reciter = QuranDataRepository.getReciterBySlug(targetSlug)
-        val (ayahTracks, totalAyahs) = buildAyahTracksForSurah(
-            surahId = surahId,
-            reciter = reciter,
-            fallbackReciterName = current?.reciterName ?: ""
-        )
-        val startIndex = (startAyahNo - 1).coerceIn(0, (totalAyahs - 1).coerceAtLeast(0))
-        playQueue(ayahTracks, startIndex)
+        val totalAyahs = getAyahCountForSurah(surahId)
+        val validAyahNo = startAyahNo.coerceIn(1, totalAyahs.coerceAtLeast(1))
         _isAyahMode.value = true
+
+        val existingIndex = queueManager.queue.indexOfFirst { it.surahId == surahId }
+        if (existingIndex != -1) {
+            if (existingIndex != queueManager.currentIndex) {
+                queueManager.skipToIndex(existingIndex)
+            }
+        } else {
+            val surahs = QuranDataRepository.getSurahsForReciter(reciter)
+            val surahTracks = if (surahs.isNotEmpty()) {
+                surahs.map { s -> buildSurahTrack(s.id, reciter) }
+            } else {
+                listOf(buildSurahTrack(surahId, reciter))
+            }
+            val startIdx = surahTracks.indexOfFirst { it.surahId == surahId }.coerceAtLeast(0)
+            queueManager.setQueue(surahTracks, startIdx)
+        }
+        _queue.value = queueManager.queue
+        _currentIndex.value = queueManager.currentIndex
+
+        playAyah(surahId, validAyahNo, reciter.slug)
     }
 
-    private fun buildAyahTracksForSurah(
+    fun playAyah(
         surahId: Int,
-        reciter: Reciter,
-        fallbackSurahNameEn: String = "",
-        fallbackSurahNameAr: String = "",
-        fallbackReciterName: String = ""
-    ): Pair<List<TrackItem>, Int> {
-        val surah = QuranDataRepository.getSurahById(surahId)
-        val totalAyahs = surah?.ayahsCount ?: QuranData.SURAHS.firstOrNull { it.id == surahId }?.ayahsCount ?: 7
-        val surahNameEn = surah?.nameEn ?: fallbackSurahNameEn
-        val surahNameAr = surah?.nameAr ?: fallbackSurahNameAr
-        val reciterName = if (reciter.nameEn.isNotBlank()) reciter.nameEn else fallbackReciterName
+        ayahNo: Int,
+        reciterSlug: String? = null,
+        startPositionMs: Long = 0L
+    ) {
+        val targetSlug = reciterSlug ?: _currentTrack.value?.reciterSlug ?: queueManager.currentTrack?.reciterSlug ?: "mishary"
+        val reciter = QuranDataRepository.getReciterBySlug(targetSlug)
+        val totalAyahs = getAyahCountForSurah(surahId)
+        val validAyahNo = ayahNo.coerceIn(1, totalAyahs.coerceAtLeast(1))
+        _isAyahMode.value = true
 
-        val ayahTracks = (1..totalAyahs).map { ayahNo ->
-            val verse = QuranAyahRepository.getAyahImmediate(surahId, ayahNo)
-            TrackItem(
-                reciterSlug = reciter.slug,
-                reciterName = reciterName,
-                surahId = surahId,
-                surahNameEn = surahNameEn,
-                surahNameAr = surahNameAr,
-                ayahNo = ayahNo,
-                audioUrl = reciter.getAyahAudioUrl(surahId, ayahNo),
-                textUthmani = verse.textUthmani
-            )
+        val existingIndex = queueManager.queue.indexOfFirst { it.surahId == surahId }
+        if (existingIndex != -1) {
+            if (existingIndex != queueManager.currentIndex) {
+                queueManager.skipToIndex(existingIndex)
+            }
+        } else {
+            val surahs = QuranDataRepository.getSurahsForReciter(reciter)
+            val surahTracks = if (surahs.isNotEmpty()) {
+                surahs.map { s -> buildSurahTrack(s.id, reciter) }
+            } else {
+                listOf(buildSurahTrack(surahId, reciter))
+            }
+            val startIdx = surahTracks.indexOfFirst { it.surahId == surahId }.coerceAtLeast(0)
+            queueManager.setQueue(surahTracks, startIdx)
         }
-        return Pair(ayahTracks, totalAyahs)
+        _queue.value = queueManager.queue
+        _currentIndex.value = queueManager.currentIndex
+
+        val ayahTrack = buildAyahTrack(surahId, validAyahNo, reciter.slug, reciter.nameEn)
+        pendingSeekMs = startPositionMs.coerceAtLeast(0L)
+        pendingSeekTries = if (pendingSeekMs > 0L) 40 else 0
+        startPlayback(ayahTrack)
+    }
+
+    private fun TrackItem.toSurahTrack(): TrackItem {
+        if (this.ayahNo <= 0 || this.isFullSurah) return this
+        val reciter = QuranDataRepository.getReciterBySlug(this.reciterSlug)
+        return TrackItem(
+            reciterSlug = this.reciterSlug,
+            reciterName = this.reciterName,
+            surahId = this.surahId,
+            surahNameEn = this.surahNameEn,
+            surahNameAr = this.surahNameAr,
+            ayahNo = 0,
+            audioUrl = reciter.getFullSurahUrl(this.surahId),
+            textUthmani = "",
+            durationMs = UNKNOWN_DURATION_MS
+        )
+    }
+
+    private fun buildSurahTrack(surahId: Int, reciter: Reciter): TrackItem {
+        val surah = QuranDataRepository.getSurahById(surahId)
+        val surahNameEn = surah?.nameEn ?: QuranData.SURAHS.firstOrNull { it.id == surahId }?.nameEn ?: "Surah $surahId"
+        val surahNameAr = surah?.nameAr ?: QuranData.SURAHS.firstOrNull { it.id == surahId }?.nameAr ?: ""
+        val reciterName = if (reciter.nameEn.isNotBlank()) reciter.nameEn else reciter.slug
+        return TrackItem(
+            reciterSlug = reciter.slug,
+            reciterName = reciterName,
+            surahId = surahId,
+            surahNameEn = surahNameEn,
+            surahNameAr = surahNameAr,
+            ayahNo = 0,
+            audioUrl = reciter.getFullSurahUrl(surahId),
+            textUthmani = "",
+            durationMs = UNKNOWN_DURATION_MS
+        )
+    }
+
+    private fun buildAyahTrack(
+        surahId: Int,
+        ayahNo: Int,
+        reciterSlug: String?,
+        fallbackReciterName: String = ""
+    ): TrackItem {
+        val reciter = QuranDataRepository.getReciterBySlug(reciterSlug)
+        val surah = QuranDataRepository.getSurahById(surahId)
+        val surahNameEn = surah?.nameEn ?: QuranData.SURAHS.firstOrNull { it.id == surahId }?.nameEn ?: "Surah $surahId"
+        val surahNameAr = surah?.nameAr ?: QuranData.SURAHS.firstOrNull { it.id == surahId }?.nameAr ?: ""
+        val reciterName = if (reciter.nameEn.isNotBlank()) reciter.nameEn else fallbackReciterName
+        val verse = QuranAyahRepository.getAyahImmediate(surahId, ayahNo)
+        return TrackItem(
+            reciterSlug = reciter.slug,
+            reciterName = reciterName,
+            surahId = surahId,
+            surahNameEn = surahNameEn,
+            surahNameAr = surahNameAr,
+            ayahNo = ayahNo,
+            audioUrl = reciter.getAyahAudioUrl(surahId, ayahNo),
+            textUthmani = verse.textUthmani,
+            durationMs = UNKNOWN_DURATION_MS
+        )
+    }
+
+    private fun getAyahCountForSurah(surahId: Int): Int {
+        val surah = QuranDataRepository.getSurahById(surahId)
+        return surah?.ayahsCount ?: QuranData.SURAHS.firstOrNull { it.id == surahId }?.ayahsCount ?: 7
     }
 
     fun addToQueue(track: TrackItem) {
-        queueManager.addToQueue(track)
+        val surahTrack = track.toSurahTrack()
+        queueManager.addToQueue(surahTrack)
         _queue.value = queueManager.queue
         _currentIndex.value = queueManager.currentIndex
         if (_currentTrack.value == null && _playbackState.value.status == PlaybackStatus.IDLE) {
-            queueManager.currentTrack?.let { startPlayback(it) }
+            if (_isAyahMode.value) {
+                playAyah(surahTrack.surahId, 1, surahTrack.reciterSlug)
+            } else {
+                startPlayback(surahTrack)
+            }
         }
     }
 
     fun addToQueue(tracks: List<TrackItem>) {
         if (tracks.isEmpty()) return
         val wasEmpty = queueManager.queue.isEmpty()
-        queueManager.addAllToQueue(tracks)
+        val surahTracks = tracks.map { it.toSurahTrack() }.distinctBy { it.surahId }
+        queueManager.addAllToQueue(surahTracks)
         _queue.value = queueManager.queue
         _currentIndex.value = queueManager.currentIndex
         if (wasEmpty && _currentTrack.value == null && _playbackState.value.status == PlaybackStatus.IDLE) {
-            queueManager.currentTrack?.let { startPlayback(it) }
+            val firstSurah = queueManager.currentTrack ?: surahTracks.first()
+            if (_isAyahMode.value) {
+                playAyah(firstSurah.surahId, 1, firstSurah.reciterSlug)
+            } else {
+                startPlayback(firstSurah)
+            }
         }
     }
 
@@ -317,13 +441,8 @@ object AudioEngine {
     }
 
     fun resume() {
-        val track = queueManager.currentTrack ?: _currentTrack.value ?: return
-        if (_currentTrack.value?.audioUrl != track.audioUrl || _playbackState.value.status == PlaybackStatus.IDLE) {
-            startPlayback(track)
-            return
-        }
-        // After a transient error ExoPlayer sits in IDLE — bare play() is a no-op.
-        if (_playbackState.value.status == PlaybackStatus.ERROR) {
+        val track = _currentTrack.value ?: queueManager.currentTrack ?: return
+        if (_playbackState.value.status == PlaybackStatus.IDLE || _playbackState.value.status == PlaybackStatus.ERROR) {
             startPlayback(track)
             return
         }
@@ -388,36 +507,107 @@ object AudioEngine {
         }
     }
 
-    fun next() {
-        val nextTrack = queueManager.playNext(forceAdvance = true)
-        if (nextTrack != null) {
-            startPlayback(nextTrack)
+    fun next() = if (_isAyahMode.value) nextAyah() else skipNext()
+
+    fun nextAyah() {
+        val current = _currentTrack.value
+        if (current == null) {
+            val surah = queueManager.currentTrack ?: return
+            playAyah(surah.surahId, 1, surah.reciterSlug)
+            return
+        }
+        val surahId = current.surahId
+        val currentAyah = if (current.ayahNo > 0) current.ayahNo else 0
+        val totalAyahs = getAyahCountForSurah(surahId)
+        val reciterSlug = current.reciterSlug
+
+        if (currentAyah < totalAyahs) {
+            playAyah(surahId, currentAyah + 1, reciterSlug)
+        } else {
+            // Cross boundary into next Surah
+            val nextSurah = queueManager.playNext(forceAdvance = true)
+            if (nextSurah != null) {
+                _currentIndex.value = queueManager.currentIndex
+                playAyah(nextSurah.surahId, 1, nextSurah.reciterSlug)
+            } else {
+                SleepTimer.onQueueEnded()
+                stopPlayback()
+            }
+        }
+    }
+
+    fun skipNext() {
+        val nextSurah = queueManager.playNext(forceAdvance = true)
+        if (nextSurah != null) {
+            _currentIndex.value = queueManager.currentIndex
+            if (_isAyahMode.value) {
+                playAyah(nextSurah.surahId, 1, nextSurah.reciterSlug)
+            } else {
+                startPlayback(nextSurah)
+            }
         } else {
             SleepTimer.onQueueEnded()
             stopPlayback()
         }
     }
 
-    fun nextAyah() = next()
+    fun previous() = if (_isAyahMode.value) previousAyah() else skipPrevious()
 
-    fun skipNext() = next()
-
-    fun previous() {
-        if (_currentPositionMs.value > 3_000L && _currentTrack.value != null) {
+    fun previousAyah() {
+        val current = _currentTrack.value ?: return
+        if (_currentPositionMs.value > 3_000L) {
             seekTo(0L)
             return
         }
-        val prevTrack = queueManager.playPrevious(forceAdvance = true)
-        if (prevTrack != null) {
-            startPlayback(prevTrack)
+        val surahId = current.surahId
+        val currentAyah = current.ayahNo
+        val reciterSlug = current.reciterSlug
+
+        if (currentAyah > 1) {
+            playAyah(surahId, currentAyah - 1, reciterSlug)
         } else {
-            seekTo(0L)
+            // Cross boundary backwards: go to previous Surah, last Ayah
+            val prevSurah = queueManager.playPrevious(forceAdvance = true)
+            if (prevSurah != null) {
+                _currentIndex.value = queueManager.currentIndex
+                val prevTotalAyahs = getAyahCountForSurah(prevSurah.surahId)
+                playAyah(prevSurah.surahId, prevTotalAyahs, prevSurah.reciterSlug)
+            } else {
+                seekTo(0L)
+            }
         }
     }
 
-    fun previousAyah() = previous()
+    fun skipPrevious() {
+        val current = _currentTrack.value
+        if (_isAyahMode.value) {
+            if (current != null && (current.ayahNo > 1 || _currentPositionMs.value > 3_000L)) {
+                playAyah(current.surahId, 1, current.reciterSlug)
+                return
+            }
+        } else {
+            if (_currentPositionMs.value > 3_000L && current != null) {
+                seekTo(0L)
+                return
+            }
+        }
 
-    fun skipPrevious() = previous()
+        val prevSurah = queueManager.playPrevious(forceAdvance = true)
+        if (prevSurah != null) {
+            _currentIndex.value = queueManager.currentIndex
+            if (_isAyahMode.value) {
+                playAyah(prevSurah.surahId, 1, prevSurah.reciterSlug)
+            } else {
+                startPlayback(prevSurah)
+            }
+        } else {
+            if (_isAyahMode.value && current != null) {
+                playAyah(current.surahId, 1, current.reciterSlug)
+            } else {
+                seekTo(0L)
+            }
+        }
+    }
 
     fun canSkipNext(): Boolean {
         if (_currentTrack.value == null || _queue.value.isEmpty()) return false
@@ -432,9 +622,14 @@ object AudioEngine {
     }
 
     fun skipToIndex(index: Int) {
-        val track = queueManager.skipToIndex(index)
-        if (track != null) {
-            startPlayback(track)
+        val surahTrack = queueManager.skipToIndex(index)
+        if (surahTrack != null) {
+            _currentIndex.value = queueManager.currentIndex
+            if (_isAyahMode.value) {
+                playAyah(surahTrack.surahId, 1, _currentTrack.value?.reciterSlug ?: surahTrack.reciterSlug)
+            } else {
+                startPlayback(surahTrack)
+            }
         }
     }
 
@@ -449,7 +644,11 @@ object AudioEngine {
             clear()
         } else if (wasCurrent) {
             if (nextTrack != null) {
-                startPlayback(nextTrack)
+                if (_isAyahMode.value) {
+                    playAyah(nextTrack.surahId, 1, nextTrack.reciterSlug)
+                } else {
+                    startPlayback(nextTrack)
+                }
             } else {
                 stopPlayback()
             }
@@ -549,20 +748,61 @@ object AudioEngine {
         lastEndUrl = endedUrl
         lastEndAtMs = now
         consecutiveErrors = 0
-        val current = _currentTrack.value
-        val isFullSurah = current?.isFullSurah == true || (current != null && current.ayahNo <= 0)
         SleepTimer.onAyahEnded()
-        if (isFullSurah) {
-            SleepTimer.onSurahEnded()
-        }
         if (!_isPlaying.value) return
 
+        if (_isAyahMode.value) {
+            handleAyahTrackEnd()
+        } else {
+            handleSurahTrackEnd()
+        }
+    }
+
+    private fun handleAyahTrackEnd() {
+        val current = _currentTrack.value ?: return
+        val surahId = current.surahId
+        val currentAyah = current.ayahNo
+        val totalAyahs = getAyahCountForSurah(surahId)
+        val reciterSlug = current.reciterSlug
+
+        when (queueManager.repeatMode) {
+            RepeatMode.AYAH -> {
+                playAyah(surahId, currentAyah, reciterSlug)
+            }
+            RepeatMode.SURAH -> {
+                if (currentAyah < totalAyahs) {
+                    playAyah(surahId, currentAyah + 1, reciterSlug)
+                } else {
+                    SleepTimer.onSurahEnded()
+                    if (!_isPlaying.value) return
+                    playAyah(surahId, 1, reciterSlug)
+                }
+            }
+            RepeatMode.QUEUE, RepeatMode.OFF -> {
+                if (currentAyah < totalAyahs) {
+                    playAyah(surahId, currentAyah + 1, reciterSlug)
+                } else {
+                    SleepTimer.onSurahEnded()
+                    if (!_isPlaying.value) return
+                    val nextSurah = queueManager.playNext(forceAdvance = false)
+                    if (nextSurah != null) {
+                        _currentIndex.value = queueManager.currentIndex
+                        playAyah(nextSurah.surahId, 1, nextSurah.reciterSlug)
+                    } else {
+                        SleepTimer.onQueueEnded()
+                        stopPlayback()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun handleSurahTrackEnd() {
+        SleepTimer.onSurahEnded()
+        if (!_isPlaying.value) return
         val nextTrack = queueManager.playNext(forceAdvance = false)
         if (nextTrack != null) {
-            if (!isFullSurah && current != null && nextTrack.surahId != current.surahId) {
-                SleepTimer.onSurahEnded()
-            }
-            if (!_isPlaying.value) return
+            _currentIndex.value = queueManager.currentIndex
             startPlayback(nextTrack)
         } else {
             SleepTimer.onSurahEnded()
