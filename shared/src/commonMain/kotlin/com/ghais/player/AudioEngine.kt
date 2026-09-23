@@ -342,11 +342,10 @@ object AudioEngine {
         PlayerBridge.setPlaybackMetadata(trackDisplayTitle(loadTrack), loadTrack.reciterName)
         // Same offline-first resolution as startPlayback: a download completing
         // mid-preload does not swap the stream — offline applies next load.
-        val playbackUri = if (loadTrack.isFullSurah || loadTrack.ayahNo <= 0) {
+        // Ayah tracks resolve the same way so hifz playback works offline when
+        // the surah file is downloaded.
+        val playbackUri =
             QuranDownloads.localUri(loadTrack.reciterSlug, loadTrack.surahId) ?: loadTrack.audioUrl
-        } else {
-            loadTrack.audioUrl
-        }
         PlayerBridge.prepare(playbackUri, resumeAt)
     }
 
@@ -992,13 +991,11 @@ object AudioEngine {
         PlayerBridge.setSpeed(_playbackSpeed.value)
         PlayerBridge.setVolume(_volume.value)
         PlayerBridge.setPlaybackMetadata(trackDisplayTitle(track), track.reciterName)
-        // Prefer offline file when downloaded for full surahs; a download completing mid-play
-        // does not interrupt the current stream — offline applies from next startPlayback.
-        val playbackUri = if (track.isFullSurah || track.ayahNo <= 0) {
+        // Prefer offline file when downloaded (full surahs and ayah-mode alike);
+        // a download completing mid-play does not interrupt the current stream —
+        // offline applies from next startPlayback.
+        val playbackUri =
             QuranDownloads.localUri(track.reciterSlug, track.surahId) ?: track.audioUrl
-        } else {
-            track.audioUrl
-        }
         // Atomic resume: start position rides along with prepare, so early
         // seeks can't be dropped while buffering. The retry net below stays
         // as a backstop for mid-play item replacements.
