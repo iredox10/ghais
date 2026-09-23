@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ghais.data.repository.QuranDataRepository
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.noirClickable
@@ -63,6 +64,7 @@ fun QueueSheet(
     val queue by AudioEngine.queue.collectAsState()
     val currentIndex by AudioEngine.currentIndex.collectAsState()
     val currentTrack by AudioEngine.currentTrack.collectAsState()
+    val isAyahMode by AudioEngine.isAyahMode.collectAsState()
     val engineDurationMs by AudioEngine.durationMs.collectAsState()
 
     val coroutineScope = rememberCoroutineScope()
@@ -113,9 +115,9 @@ fun QueueSheet(
                         )
                         if (queue.isNotEmpty()) {
                             val posText = if (currentIndex in queue.indices) {
-                                "Track ${currentIndex + 1} of ${queue.size}"
+                                "Surah ${currentIndex + 1} of ${queue.size}"
                             } else {
-                                "${queue.size} tracks"
+                                "${queue.size} Surahs"
                             }
                             Text(
                                 text = posText,
@@ -198,9 +200,9 @@ fun QueueSheet(
                 ) {
                     itemsIndexed(
                         items = queue,
-                        key = { index, item -> "${item.audioUrl}_${item.surahId}_$index" }
+                        key = { index, item -> "surah_${item.surahId}_$index" }
                     ) { index, item ->
-                        val isActive = index == currentIndex || (currentIndex == -1 && currentTrack?.audioUrl == item.audioUrl)
+                        val isActive = index == currentIndex || (currentIndex == -1 && currentTrack?.surahId == item.surahId)
 
                         val itemDuration = if (isActive && engineDurationMs > 0L) {
                             engineDurationMs
@@ -261,7 +263,7 @@ fun QueueSheet(
                                     )
                                 } else {
                                     Text(
-                                        text = "${index + 1}",
+                                        text = "${item.surahId.takeIf { it > 0 } ?: (index + 1)}",
                                         color = GhaisNoir.TextSecondary,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.SemiBold
@@ -300,21 +302,26 @@ fun QueueSheet(
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    val surah = QuranDataRepository.getSurahById(item.surahId)
+                                    val totalAyahs = surah?.ayahsCount ?: 7
+                                    val subtitleText = if (isActive && isAyahMode) {
+                                        val currentAyahNo = currentTrack?.ayahNo?.takeIf { it > 0 } ?: 1
+                                        "${item.reciterName.ifBlank { "Quran Recitation" }} • Ayah $currentAyahNo of $totalAyahs • Playing"
+                                    } else {
+                                        listOfNotNull(
+                                            item.reciterName.ifBlank { "Quran Recitation" },
+                                            "$totalAyahs Ayahs",
+                                            formattedDuration.takeIf { it.isNotEmpty() }
+                                        ).joinToString(" • ")
+                                    }
                                     Text(
-                                        text = item.reciterName.ifBlank { "Quran Recitation" },
-                                        color = GhaisNoir.TextSecondary,
+                                        text = subtitleText,
+                                        color = if (isActive && isAyahMode) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
                                         fontSize = 12.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.weight(1f, fill = false)
                                     )
-                                    if (formattedDuration.isNotEmpty()) {
-                                        Text(
-                                            text = " • $formattedDuration",
-                                            color = GhaisNoir.TextTertiary,
-                                            fontSize = 12.sp
-                                        )
-                                    }
                                 }
                             }
                             Box(
