@@ -1,5 +1,6 @@
 package com.ghais.data.auth
 
+import com.ghais.data.sync.NetworkMonitor
 import io.appwrite.Client
 import io.appwrite.ID
 import io.appwrite.exceptions.AppwriteException
@@ -11,6 +12,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import javax.net.ssl.SSLException
+import kotlin.coroutines.cancellation.CancellationException
+import java.util.concurrent.TimeUnit
 
 /**
  * Android live implementation (Appwrite Kotlin SDK, JVM artifact).
@@ -22,6 +28,20 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * [AppwriteConfig.GOOGLE_WEB_CLIENT_ID], and matching native client ID(s)
  * registered in the Console.
  */
+/**
+ * Marker for intentionally user-safe messages. [AuthRepository.userMessage]
+ * passes through only these (plus mapped network/Appwrite cases) — every
+ * other throwable maps to generic copy so raw SDK/OkHttp/server text (e.g.
+ * JSON parse errors, "Expected URL", AppwriteException message) can never
+ * reach the error box via `e.message` passthrough.
+ *
+ * Top-level internal (not private) so [GoogleWebAuth] can fail with the same
+ * safe type; otherwise its "cancelled / timed out" copy would be flattened
+ * to generic by [AuthRepository.userMessage].
+ */
+internal class AuthUserException(message: String, cause: Throwable? = null) :
+    Exception(message, cause)
+
 actual object AuthRepository {
 
     private val _session = MutableStateFlow<AuthSession?>(null)
@@ -106,6 +126,9 @@ actual object AuthRepository {
                     cookieJar = jar
                     http = okhttp3.OkHttpClient.Builder()
                         .cookieJar(jar)
+                        .connectTimeout(15, TimeUnit.SECONDS)
+                        .readTimeout(20, TimeUnit.SECONDS)
+                        .writeTimeout(15, TimeUnit.SECONDS)
                         .build()
                 },
         )
@@ -117,6 +140,7 @@ actual object AuthRepository {
         validateEmail(email)?.let { return Result.failure(Exception(it)) }
         if (name.isBlank()) return Result.failure(Exception("Enter your name."))
         if (password.length < 8) return Result.failure(Exception("Password must be at least 8 characters."))
+        if (!NetworkMonitor.isOnline.value) return Result.failure(Exception("No internet connection. Connect and try again."))
         return runCatching {
             val account = accountOrThrow()
             try {
@@ -129,25 +153,38 @@ actual object AuthRepository {
                 account.createEmailPasswordSession(email = email, password = password)
                 refreshSession()
                 _authChecked.value = true
+                if (_session.value == null) {
+                    throw AuthUserException("Something went wrong. Please try again.")
+                }
             } catch (e: AppwriteException) {
-                throw Exception(friendlyMessage(e))
+                throw AuthUserException(friendlyMessage(e))
             }
-        }.recoverCatching { e -> throw Exception(userMessage(e)) }
+        }.recoverCatching { e ->
+            if (e is CancellationException) throw e
+            throw AuthUserException(userMessage(e))
+        }
     }
 
     actual suspend fun signIn(email: String, password: String): Result<Unit> {
         validateEmail(email)?.let { return Result.failure(Exception(it)) }
         if (password.isEmpty()) return Result.failure(Exception("Enter your password."))
+        if (!NetworkMonitor.isOnline.value) return Result.failure(Exception("No internet connection. Connect and try again."))
         return runCatching {
             val account = accountOrThrow()
             try {
                 account.createEmailPasswordSession(email = email, password = password)
                 refreshSession()
                 _authChecked.value = true
+                if (_session.value == null) {
+                    throw AuthUserException("Something went wrong. Please try again.")
+                }
             } catch (e: AppwriteException) {
-                throw Exception(friendlyMessage(e))
+                throw AuthUserException(friendlyMessage(e))
             }
-        }.recoverCatching { e -> throw Exception(userMessage(e)) }
+        }.recoverCatching { e ->
+            if (e is CancellationException) throw e
+            throw AuthUserException(userMessage(e))
+        }
     }
 
     private fun validateEmail(email: String): String? {
@@ -164,10 +201,11 @@ actual object AuthRepository {
      * Appwrite Console (Auth > Google > Native client IDs).
      */
     actual suspend fun signInWithGoogle(): Result<Unit> {
+        if (!NetworkMonitor.isOnline.value) return Result.failure(Exception("No internet connection. Connect and try again."))
         return runCatching {
             val account = accountOrThrow()
             val activity = ActivityHolder.current()
-                ?: throw Exception("Google sign-in is not ready yet, please retry.")
+                ?: throw AuthUserException("Google sign-in is not ready yet, please retry.")
             // 1) Native: on-device ID token, no browser. Skipped when the
             // Web client ID isn't configured — the browser fallback below
             // doesn't need it.
@@ -183,7 +221,7 @@ actual object AuthRepository {
                     _authChecked.value = true
                     if (_session.value != null) return@runCatching
                 } else if (native.exceptionOrNull() is androidx.credentials.exceptions.GetCredentialCancellationException) {
-                    throw Exception("Google sign-in cancelled.")
+                    throw AuthUserException("Google sign-in cancelled.")
                 }
                 // Any other native failure (no device accounts, provider
                 // misconfiguration) falls through to the browser flow.
@@ -194,39 +232,56 @@ actual object AuthRepository {
             try {
                 account.createSession(userId = tokens.userId, secret = tokens.secret)
             } catch (e: AppwriteException) {
-                throw Exception(friendlyMessage(e))
+                throw AuthUserException(friendlyMessage(e))
             }
             refreshSession()
             _authChecked.value = true
             if (_session.value == null) {
-                throw Exception("Google sign-in failed, please try again.")
+                throw AuthUserException("Google sign-in failed, please try again.")
             }
-        }.recoverCatching { e -> throw Exception(userMessage(e)) }
+        }.recoverCatching { e ->
+            if (e is CancellationException) throw e
+            throw AuthUserException(userMessage(e))
+        }
     }
 
     /**
      * Exchanges a Google ID token for an Appwrite session via
      * `POST /account/sessions/id-token`, sharing the persistent cookie jar so
-     * the resulting session survives restarts. Throws with the server's
-     * message on failure.
+     * the resulting session survives restarts. Throws [AuthUserException]
+     * with generic copy on failure — never the server's message.
      */
     private suspend fun exchangeGoogleIdToken(idToken: String) = withContext(Dispatchers.IO) {
         accountOrThrow()
         val jar = cookieJar
-            ?: throw IllegalStateException("Auth storage is not ready yet, please retry.")
-        val http = okhttp3.OkHttpClient.Builder().cookieJar(jar).build()
+            ?: throw AuthUserException("Auth storage is not ready yet, please retry.")
+        val http = okhttp3.OkHttpClient.Builder()
+            .cookieJar(jar)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .build()
         val body = "{\"provider\":\"google\",\"token\":\"$idToken\"}"
         val request = okhttp3.Request.Builder()
             .url("${AppwriteConfig.ENDPOINT}/account/sessions/id-token")
             .addHeader("X-Appwrite-Project", AppwriteConfig.PROJECT_ID)
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
-        http.newCall(request).execute().use { response ->
+        fun check(response: okhttp3.Response) {
             if (!response.isSuccessful) {
                 // Deliberately generic: raw server JSON and HTTP codes
                 // must never reach the user-facing error box.
-                throw Exception("Google sign-in failed, please try again.")
+                throw AuthUserException("Google sign-in failed, please try again.")
             }
+        }
+        try {
+            http.newCall(request).execute().use { response -> check(response) }
+        } catch (_: SocketTimeoutException) {
+            // One bounded retry on a stalled id-token exchange only; a
+            // fresh Call on the same client (same jar). A second timeout
+            // propagates to the native runCatching above and falls through
+            // to the browser flow (never surfaced raw).
+            http.newCall(request).execute().use { response -> check(response) }
         }
     }
 
@@ -235,7 +290,7 @@ actual object AuthRepository {
             try {
                 accountOrThrow().deleteSession(sessionId = "current")
             } catch (e: AppwriteException) {
-                throw Exception(friendlyMessage(e))
+                throw AuthUserException(friendlyMessage(e))
             } finally {
                 // cookieJar is set by accountOrThrow above, but if it threw
                 // (not configured / init missing) the jar would be null and
@@ -246,6 +301,14 @@ actual object AuthRepository {
                 _session.value = null
                 _authChecked.value = true
             }
+            // deleteSession returns Any in SDK 22; pin the Result to Unit.
+            Unit
+        }.recoverCatching { e ->
+            // Local state is already wiped by the finally above; only the
+            // surfaced message is mapped. Raw network errors (e.g. offline
+            // deleteSession IOException) must not reach the UI.
+            if (e is CancellationException) throw e
+            throw AuthUserException(userMessage(e))
         }
     }
 
@@ -286,9 +349,42 @@ actual object AuthRepository {
         }
     }
 
-    /** Maps non-Appwrite failures (network, init order) to user-safe copy. */
+    /**
+     * Maps non-Appwrite failures (network, init order) to user-safe copy.
+     *
+     * Only [AuthUserException] messages pass through (safe by construction —
+     * every throw site uses a fixed literal). Everything else maps to
+     * generic copy: raw `e.message` text (OkHttp errors, JSON parse details,
+     * Appwrite server text) must never reach the UI.
+     */
     private fun userMessage(e: Throwable): String = when (e) {
-        is java.io.IOException -> "No connection. Check your internet and try again."
-        else -> e.message?.takeIf { it.isNotBlank() } ?: "Something went wrong. Please try again."
+        // Never swallow structured cancellation: rethrow so runCatching
+        // can't convert it into a failure Result (defense in depth; the
+        // recoverCatching sites already rethrow first).
+        is CancellationException -> throw e
+        is AuthUserException -> e.message?.takeIf { it.isNotBlank() }
+            ?: "Something went wrong. Please try again."
+        // The SDK may wrap transport failures as AppwriteException with a
+        // null/zero code — unwrap to the causal IOException first so DNS /
+        // timeout / TLS failures still read as offline, never raw.
+        is AppwriteException -> {
+            val transport = generateSequence<Throwable>(e) { it.cause }
+                .firstOrNull { it is UnknownHostException || it is SocketTimeoutException || it is SSLException }
+            if (e.code == null || e.code == 0 || transport != null) {
+                offlineCopy()
+            } else {
+                friendlyMessage(e)
+            }
+        }
+        // Explicit network branches (all IOException subclasses, kept
+        // explicit so a future copy change can't silently re-leak them):
+        is UnknownHostException -> offlineCopy()
+        is SocketTimeoutException -> offlineCopy()
+        is SSLException -> offlineCopy()
+        is java.io.IOException -> offlineCopy()
+        is IllegalStateException -> "Service unavailable. Try again later."
+        else -> "Something went wrong. Please try again."
     }
+
+    private fun offlineCopy(): String = "No internet connection. Connect and try again."
 }

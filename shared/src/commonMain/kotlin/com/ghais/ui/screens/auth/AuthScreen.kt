@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import com.ghais.data.auth.AppwriteConfig
 import com.ghais.data.auth.AuthRepository
+import com.ghais.data.sync.NetworkMonitor
 import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.components.noir.NoirInsetField
@@ -93,6 +95,8 @@ fun AuthScreenContent(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
     var googleLoading by remember { mutableStateOf(false) }
+
+    val isOnline by NetworkMonitor.isOnline.collectAsState()
 
     val configured = AppwriteConfig.isConfigured()
 
@@ -257,6 +261,28 @@ fun AuthScreenContent(
             }
 
             Spacer(Modifier.height(20.dp))
+
+            // Slim non-blocking offline notice — ghost well, tertiary text.
+            // Buttons stay tappable; the repository preflight surfaces the friendly message.
+            if (!isOnline) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.wellFill())
+                        .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "You're offline — connect to log in",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+            }
 
             // Primary action — chrome CTA.
             if (loading) {
