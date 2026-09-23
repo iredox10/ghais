@@ -617,6 +617,13 @@ class QuranPlaybackService : MediaSessionService() {
 
     private fun startForegroundWithPlaceholder() {
         try {
+            // Never clobber Media3's rich media notification: on gapless
+            // track transitions this runs again while the full player (same
+            // id) is already up — reposting the bare placeholder here is
+            // what left users with the text-only card while playing.
+            // Post only when absent (fresh start = 10s-rule protection).
+            val nm = getSystemService(NotificationManager::class.java)
+            if (nm != null && nm.activeNotifications.any { it.id == PLACEHOLDER_NOTIFICATION_ID }) return
             val track = AudioEngine.currentTrack.value
             val initialTitle = track?.let { displayTitle(it.surahNameEn, it.ayahNo, it.isFullSurah) } ?: "Ghais"
             val initialSubtitle = track?.reciterName?.takeIf { it.isNotBlank() } ?: "Preparing recitation…"
