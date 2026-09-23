@@ -37,6 +37,62 @@ actual object PlayerBridge {
     private var pendingArtist: String? = null
     private var pendingArtworkUri: String? = null
 
+    /**
+     * Spotify-style resume-on-focus-gain: ExoPlayer auto-resumes transient
+     * focus loss itself, but a PERMANENT loss (WhatsApp status takes
+     * AUDIOFOCUS_GAIN) drops playWhenReady with no auto-resume. Remember the
+     * interruption and resume when focus returns — but only if the user
+     * still intends playback (AudioEngine.isPlaying) and didn't pause
+     * mid-interruption.
+     */
+    @Volatile
+    private var resumeOnFocusGain = false
+
+    private val audioFocusListener = android.media.AudioManager.OnAudioFocusChangeListener { change ->
+        when (change) {
+            android.media.AudioManager.AUDIOFOCUS_LOSS,
+            android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                if (AudioEngine.isPlaying.value) resumeOnFocusGain = true
+            }
+            android.media.AudioManager.AUDIOFOCUS_GAIN -> {
+                if (resumeOnFocusGain) {
+                    resumeOnFocusGain = false
+                    val p = exoPlayer
+                    if (AudioEngine.isPlaying.value && p != null && !p.isPlaying) {
+                        try { p.play() } catch (_: Exception) { }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun ensureFocusListener(context: android.content.Context) {
+        try {
+            val am = context.applicationContext
+                .getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+                ?: return
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val req = android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
+                    .setAudioAttributes(
+                        android.media.AudioAttributes.Builder()
+                            .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .build()
+                    )
+                    .setOnAudioFocusChangeListener(audioFocusListener)
+                    .build()
+                am.requestAudioFocus(req)
+            } else {
+                @Suppress("DEPRECATION")
+                am.requestAudioFocus(
+                    audioFocusListener,
+                    android.media.AudioManager.STREAM_MUSIC,
+                    android.media.AudioManager.AUDIOFOCUS_GAIN,
+                )
+            }
+        } catch (_: Exception) { }
+    }
+
     private val listener = object : androidx.media3.common.Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             val player = exoPlayer ?: return
@@ -59,6 +115,19 @@ actual object PlayerBridge {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             if (isPlaying) _errorMessage.value = null
         }
+
+        override fun onPlayWhenReadyChanged(
+            playWhenReady: Boolean,
+            reason: Int
+        ) {
+            // User/app pause (anything but a focus loss) cancels a pending
+            // focus resume — e.g. pausing mid-interruption must stay paused.
+            if (!playWhenReady &&
+                reason != androidx.media3.common.Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS
+            ) {
+                resumeOnFocusGain = false
+            }
+        }
     }
 
     private fun player(context: android.content.Context): androidx.media3.exoplayer.ExoPlayer {
@@ -77,6 +146,7 @@ actual object PlayerBridge {
                 .build()
             p.addListener(listener)
             exoPlayer = p
+            ensureFocusListener(context)
             startPolling()
         }
         return p
@@ -259,6 +329,7 @@ actual object PlayerBridge {
     }
 
     actual fun stop() {
+        resumeOnFocusGain = false
         try {
             exoPlayer?.stop()
             exoPlayer?.clearMediaItems()
