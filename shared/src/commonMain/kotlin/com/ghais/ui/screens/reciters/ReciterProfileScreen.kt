@@ -487,20 +487,22 @@ private fun ReciterNoirHeroPlate(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Download-all pill: allDone renders the disabled "Downloaded" state
-            // (guarded no-op + active fill); partial-idle shows remaining count
-            // and never restarts finished ones (see onDownloadAll guard above).
-            GhostPillButton(
-                text = when {
-                    allDone -> "Downloaded"
-                    downloadingCount > 0 -> "Downloading ($downloadingCount/$surahCount)"
-                    downloadedCount > 0 -> "Download ${surahCount - downloadedCount} remaining"
-                    else -> "Download all"
-                },
-                onClick = { if (!allDone) onDownloadAll() },
-                modifier = Modifier.fillMaxWidth(),
-                active = allDone
-            )
+            // Download-all pill: hidden when allDone (no dead affordance);
+            // active downloads keep the "Downloading (n/total)" progress state.
+            // Partial-idle shows remaining count and never restarts finished
+            // ones (see onDownloadAll guard above).
+            if (!allDone) {
+                Spacer(modifier = Modifier.height(8.dp))
+                GhostPillButton(
+                    text = when {
+                        downloadingCount > 0 -> "Downloading ($downloadingCount/$surahCount)"
+                        downloadedCount > 0 -> "Download ${surahCount - downloadedCount} remaining"
+                        else -> "Download all"
+                    },
+                    onClick = { if (!allDone) onDownloadAll() },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }
@@ -651,78 +653,68 @@ private fun RowScope.SurahRowTrailing(
     onDownloadClick: () -> Unit,
     onItemClick: () -> Unit
 ) {
-    // Per-surah download affordance — all states in the monochrome ramp.
-    Box(
-        modifier = Modifier.size(34.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        when {
-            isDownloaded -> {
-                IconButton(
-                    onClick = onDownloadClick,
-                    modifier = Modifier.size(34.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = "Downloaded — tap to delete",
-                        tint = GhaisNoir.TextPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
+    // Per-surah download affordance — downloaded rows render no slot so the
+    // play disc sits clean; failed/idle/downloading keep their affordances.
+    if (!isDownloaded) {
+        Box(
+            modifier = Modifier.size(34.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            when {
+                isDownloading -> {
+                    IconButton(
+                        onClick = {},
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = "Downloading",
+                            tint = GhaisNoir.TextTertiary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
-            }
-            isDownloading -> {
-                IconButton(
-                    onClick = {},
-                    modifier = Modifier.size(34.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = "Downloading",
-                        tint = GhaisNoir.TextTertiary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                isDownloadFailed -> {
+                    // Failed is visually distinct (engraved well + specular hairline +
+                    // primary glyph) with an explicit retry tap — never auto-downloaded.
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .background(GhaisNoir.wellFill(), CircleShape)
+                            .border(1.dp, GhaisNoir.SpecularTop, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconButton(
+                            onClick = onDownloadClick,
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = "Download failed — tap to retry",
+                                tint = GhaisNoir.TextPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
-            }
-            isDownloadFailed -> {
-                // Failed is visually distinct (engraved well + specular hairline +
-                // primary glyph) with an explicit retry tap — never auto-downloaded.
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .background(GhaisNoir.wellFill(), CircleShape)
-                        .border(1.dp, GhaisNoir.SpecularTop, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
+                else -> {
                     IconButton(
                         onClick = onDownloadClick,
                         modifier = Modifier.size(34.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Download,
-                            contentDescription = "Download failed — tap to retry",
-                            tint = GhaisNoir.TextPrimary,
+                            contentDescription = "Download",
+                            tint = GhaisNoir.TextTertiary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             }
-            else -> {
-                IconButton(
-                    onClick = onDownloadClick,
-                    modifier = Modifier.size(34.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = "Download",
-                        tint = GhaisNoir.TextTertiary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
         }
-    }
 
-    Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(6.dp))
+    }
 
     // Play disc: chromium while live, clay well otherwise.
     Box(
