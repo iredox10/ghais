@@ -11,6 +11,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -24,16 +26,22 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,13 +49,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.GhaisAssets
@@ -56,21 +71,25 @@ import com.ghais.domain.model.Surah
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
+import com.ghais.ui.components.noir.ChromePillButton
+import com.ghais.ui.components.noir.GhostPillButton
+import com.ghais.ui.components.noir.NoirHeroCard
 import com.ghais.ui.components.noir.NoirListRow
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.NoirSegmentedProgress
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.navigation.LocalRootNavigator
+import com.ghais.ui.screens.home.NoirStatChip
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.theme.GhaisTypography
 
 /**
- * Screen displaying the profile of a verified reciter, their minimal hero
- * identity ([ReciterHeroIdentity]), action controls ([ReciterHeroActions]),
- * a quiet offline count + thin library meter, and their full discography
- * of Surahs.
+ * Screen displaying the profile of a verified reciter, their metadata chips,
+ * action controls ("Play All", "Shuffle", "Follow", "Download all"), and their
+ * full discography of Surahs.
  *
  * Styled in strict Noir Glass monochrome: true-black canvas, alpha-white fills,
  * ghost hairlines with a top-only specular, chrome CTAs, and grayscale imagery.
@@ -80,6 +99,7 @@ import com.ghais.ui.theme.GhaisShapes
  */
 data class ReciterProfileScreen(val reciterSlug: String) : Screen {
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -148,10 +168,12 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
         // so a stale progress entry can't resurrect the download affordance.
         val downloadingCount = allKeys.count { it in dlProgress && it !in downloaded }
 
+        val listState = rememberLazyListState()
+        val density = LocalDensity.current
+        val collapsingVisible = listState.firstVisibleItemIndex > 0 ||
+            listState.firstVisibleItemScrollOffset > with(density) { 120.dp.toPx() }
+
         NoirScreenRoot {
-            val listState = rememberLazyListState()
-            val collapsingVisible =
-                listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 120
             Scaffold(
                 containerColor = Color.Transparent,
                 topBar = {
@@ -169,8 +191,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                         .padding(paddingValues),
                     contentPadding = PaddingValues(bottom = 120.dp) // 120.dp padding for MiniPlayer & dock
                 ) {
-                    // Minimal hero: sibling identity + quiet offline line +
-                    // thin meter + sibling actions.
+                    // Editorial header + hero plate
                     item {
                         Column(
                             modifier = Modifier
@@ -179,39 +200,57 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                         ) {
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            ReciterHeroIdentity(
-                                reciter = reciter,
-                                meta = meta
-                            )
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // ONE quiet line — no eyebrow, no chips, no meter captions.
-                            Text(
-                                text = "${surahs.size} Surahs • $downloadedCount offline",
-                                color = GhaisNoir.TextTertiary,
-                                fontSize = 12.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-
+                            // Editorial monochrome header (mirrors NoirProfileHeader).
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "VERIFIED RECITER",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    letterSpacing = 1.2.sp
+                                )
+                                // Live follower count — hidden while unknown.
+                                if (followerCount != null) {
+                                    Text(
+                                        text = FollowStore.formatFollowerCount(followerCount),
+                                        color = GhaisNoir.TextTertiary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Normal
+                                    )
+                                }
+                            }
                             Spacer(modifier = Modifier.height(8.dp))
-
-                            // Thin segmented library meter (engraved track, chrome fill).
-                            NoirSegmentedProgress(
-                                progress = libraryProgress,
-                                trackHeight = 4.dp
+                            Text(
+                                text = "The voice of",
+                                style = GhaisTypography.displayEditorial,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = reciter.nameEn,
+                                style = GhaisTypography.displayEditorialBold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
 
                             Spacer(modifier = Modifier.height(14.dp))
 
-                            ReciterHeroActions(
-                                playEnabled = allTracks.isNotEmpty(),
-                                allDone = allDone,
-                                downloadingCount = downloadingCount,
+                            // Hero plate: grayscale portrait + identity + stats +
+                            // library meter + chrome/ghost actions.
+                            ReciterNoirHeroPlate(
+                                reciter = reciter,
+                                meta = meta,
                                 surahCount = surahs.size,
                                 downloadedCount = downloadedCount,
+                                libraryProgress = libraryProgress,
+                                allDone = allDone,
+                                downloadingCount = downloadingCount,
                                 isFollowing = isFollowing,
+                                followerCount = followerCount,
+                                playEnabled = allTracks.isNotEmpty(),
                                 onPlayAll = {
                                     if (allTracks.isNotEmpty()) {
                                         AudioEngine.playQueue(allTracks, startIndex = 0)
@@ -302,6 +341,232 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * True-grayscale filter — reciter portraits stay recognisable while remaining
+ * strictly monochrome (mirrors the Home NoirArtworkWell recipe).
+ */
+private val NoirGrayscale: ColorFilter by lazy {
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+}
+
+/**
+ * Hero plate for the reciter (mirrors the Home "resume plate" pattern):
+ * grayscale portrait with chromium ring + monogram fallback, identity text,
+ * stat chips, segmented library meter, and chrome/ghost actions.
+ *
+ * Presentation only — all callbacks preserve the original screen logic.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ReciterNoirHeroPlate(
+    reciter: Reciter,
+    meta: ReciterDisplayMeta,
+    surahCount: Int,
+    downloadedCount: Int,
+    libraryProgress: Float,
+    allDone: Boolean,
+    downloadingCount: Int,
+    isFollowing: Boolean,
+    followerCount: Long?,
+    playEnabled: Boolean,
+    onPlayAll: () -> Unit,
+    onShuffle: () -> Unit,
+    onToggleFollow: () -> Unit,
+    onDownloadAll: () -> Unit
+) {
+    NoirHeroCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ReciterNoirAvatar(
+                    photoUrl = meta.photoUrl,
+                    nameEn = reciter.nameEn,
+                    size = 84.dp
+                )
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "RECITER",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.2.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = reciter.nameAr,
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        text = "$surahCount Surahs • $downloadedCount offline",
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Stats as non-interactive NoirStatChip wells (zero hue).
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                NoirStatChip(text = meta.country)
+                NoirStatChip(text = meta.riwayah)
+                NoirStatChip(text = meta.style)
+                // Live follower count — hidden while unknown.
+                if (followerCount != null) {
+                    NoirStatChip(text = FollowStore.formatFollowerCount(followerCount))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Segmented library meter (engraved track, chrome fill).
+            NoirSegmentedProgress(progress = libraryProgress, trackHeight = 8.dp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "$downloadedCount of $surahCount offline",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.sp
+                )
+                Text(
+                    text = "${(libraryProgress * 100).toInt()}% kept",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Primary CTA: chromium resume pill.
+            ChromePillButton(
+                text = "Play All",
+                onClick = onPlayAll,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = playEnabled,
+                leadingIcon = Icons.Default.PlayArrow
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Secondary actions as ghost pills — fill elevation carries state.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                GhostPillButton(
+                    text = "Shuffle",
+                    onClick = onShuffle,
+                    modifier = Modifier.weight(1f)
+                )
+                GhostPillButton(
+                    text = if (isFollowing) "Following" else "Follow",
+                    onClick = onToggleFollow,
+                    modifier = Modifier.weight(1f),
+                    active = isFollowing
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Download-all pill: allDone renders the disabled "Downloaded" state
+            // (guarded no-op + active fill); partial-idle shows remaining count
+            // and never restarts finished ones (see onDownloadAll guard above).
+            GhostPillButton(
+                text = when {
+                    allDone -> "Downloaded"
+                    downloadingCount > 0 -> "Downloading ($downloadingCount/$surahCount)"
+                    downloadedCount > 0 -> "Download ${surahCount - downloadedCount} remaining"
+                    else -> "Download all"
+                },
+                onClick = { if (!allDone) onDownloadAll() },
+                modifier = Modifier.fillMaxWidth(),
+                active = allDone
+            )
+        }
+    }
+}
+
+/**
+ * Grayscale portrait plate: clay well + chromium (specular) ring, darkening
+ * scrim so the photo reads engraved, monogram fallback mirroring the profile
+ * identity pill, and a chromium verified dot.
+ */
+@Composable
+private fun ReciterNoirAvatar(
+    photoUrl: String?,
+    nameEn: String,
+    size: Dp = 84.dp
+) {
+    Box(
+        modifier = Modifier.size(size),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(GhaisNoir.wellFill())
+                .border(1.dp, GhaisNoir.SpecularTop, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!photoUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = photoUrl,
+                    contentDescription = nameEn,
+                    contentScale = ContentScale.Crop,
+                    colorFilter = NoirGrayscale,
+                    modifier = Modifier.fillMaxSize()
+                )
+                // Darkening scrim: keeps the plate recessed instead of glowing.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.35f))
+                )
+            } else {
+                Text(
+                    text = nameEn.take(1).uppercase(),
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        // Chromium verified dot (chrome fill, near-black glyph).
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .align(Alignment.BottomEnd)
+                .background(GhaisNoir.chromeFill(), CircleShape)
+                .border(2.dp, GhaisNoir.NoirBlack, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "Verified Reciter",
+                tint = GhaisNoir.OnChrome,
+                modifier = Modifier.size(13.dp)
+            )
         }
     }
 }
@@ -578,10 +843,8 @@ private fun formatSurahDuration(ayahsCount: Int): String {
 
 /**
  * Helper metadata class for reciter profile presentation.
- *
- * Non-private: shared with sibling [ReciterHeroIdentity] in the same package.
  */
-data class ReciterDisplayMeta(
+private data class ReciterDisplayMeta(
     val photoUrl: String?,
     val country: String,
     val riwayah: String,
