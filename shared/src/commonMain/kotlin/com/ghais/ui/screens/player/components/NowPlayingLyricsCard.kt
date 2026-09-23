@@ -22,9 +22,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.RepeatOne
@@ -32,6 +35,7 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -45,6 +49,8 @@ import androidx.compose.runtime.setValue
 import com.ghais.data.repository.HifzMasteryStore
 import com.ghais.data.repository.MasteryStatus
 import com.ghais.player.AudioEngine
+import com.ghais.player.DownloadKeys
+import com.ghais.player.QuranDownloads
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -281,6 +287,19 @@ fun NowPlayingLyricsCard(
                     }
                 )
 
+                // Per-ayah offline toggle — hidden when the card has no
+                // reciter slug / stream URL to download from.
+                val ayahSlug = currentTrack?.reciterSlug?.takeIf { it.isNotBlank() }
+                val ayahAudioUrl = currentTrack?.audioUrl?.takeIf { it.isNotBlank() }
+                if (ayahSlug != null && ayahAudioUrl != null) {
+                    MinimalAyahDownloadWell(
+                        slug = ayahSlug,
+                        surahId = surahId,
+                        ayahNo = displayAyahNo,
+                        url = ayahAudioUrl
+                    )
+                }
+
                 if (repTarget != 1) {
                     val loopLabel = if (repTarget == -1) "∞ ($currentRep)"
                     else "${repTarget}x ($currentRep/$repTarget)"
@@ -504,6 +523,97 @@ private fun MinimalMasteryWell(
             tint = tint,
             modifier = Modifier.size(15.dp)
         )
+    }
+}
+
+/**
+ * Per-ayah download ghost well — offline toggle for the CURRENT ayah.
+ *
+ * States: idle (Download) → downloading (progress ring, taps ignored) →
+ * downloaded (Done, tap removes) / failed (Retry, tap retries).
+ * Wired to [QuranDownloads.downloadAyah]/[isAyahDownloaded]/[deleteAyah];
+ * in-flight/failed membership is read from the shared [QuranDownloads]
+ * flows using the per-ayah [DownloadKeys.ayahKey].
+ */
+@Composable
+private fun MinimalAyahDownloadWell(
+    slug: String,
+    surahId: Int,
+    ayahNo: Int,
+    url: String
+) {
+    val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
+    val dlProgress by QuranDownloads.progress.collectAsState()
+    val failedKeys by QuranDownloads.failedKeys.collectAsState()
+    val ayahKey = DownloadKeys.ayahKey(slug, surahId, ayahNo)
+    // Strict precedence: downloaded > downloading > failed > idle —
+    // a completed key never renders a stale progress/failed affordance.
+    val isDownloaded = ayahKey in downloadedKeys ||
+        QuranDownloads.isAyahDownloaded(slug, surahId, ayahNo)
+    val pending: Float? = if (isDownloaded) null else dlProgress[ayahKey]
+    val isDownloading = pending != null
+    val isFailed = !isDownloaded && !isDownloading && ayahKey in failedKeys
+
+    val border = when {
+        isDownloaded -> GhaisNoir.TextPrimary.copy(alpha = 0.7f)
+        else -> GhaisNoir.BorderCard
+    }
+    val tint = when {
+        isDownloaded -> GhaisNoir.TextPrimary
+        isFailed -> GhaisNoir.TextSecondary
+        else -> GhaisNoir.TextTertiary
+    }
+    val description = when {
+        isDownloaded -> "Ayah downloaded — tap to remove"
+        isDownloading -> "Downloading ayah"
+        isFailed -> "Ayah download failed — tap to retry"
+        else -> "Download ayah"
+    }
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(
+                if (isDownloaded) Brush.verticalGradient(
+                    listOf(GhaisNoir.Fill4, GhaisNoir.FillDeep)
+                ) else GhaisNoir.wellFill()
+            )
+            .border(1.dp, border, CircleShape)
+            .noirClickable {
+                when {
+                    isDownloaded -> QuranDownloads.deleteAyah(slug, surahId, ayahNo)
+                    isDownloading -> Unit // in-flight: ignore double-taps
+                    else -> QuranDownloads.downloadAyah(slug, surahId, ayahNo, url)
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            isDownloading -> CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                color = GhaisNoir.TextPrimary,
+                strokeWidth = 2.dp,
+                trackColor = GhaisNoir.Fill2
+            )
+            isDownloaded -> Icon(
+                imageVector = Icons.Default.Done,
+                contentDescription = description,
+                tint = tint,
+                modifier = Modifier.size(16.dp)
+            )
+            isFailed -> Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = description,
+                tint = tint,
+                modifier = Modifier.size(16.dp)
+            )
+            else -> Icon(
+                imageVector = Icons.Default.Download,
+                contentDescription = description,
+                tint = tint,
+                modifier = Modifier.size(16.dp)
+            )
+        }
     }
 }
 

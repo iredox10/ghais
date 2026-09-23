@@ -22,7 +22,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.School
@@ -56,6 +58,7 @@ import com.ghais.data.seed.EveryAyahReciters
 import com.ghais.domain.model.TrackItem
 import com.ghais.domain.model.UNKNOWN_DURATION_MS
 import com.ghais.player.AudioEngine
+import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
@@ -129,6 +132,13 @@ object MemorizationScreen : Tab {
 
         val currentTrack by AudioEngine.currentTrack.collectAsState()
         val isAyahMode by AudioEngine.isAyahMode.collectAsState()
+
+        // Download state observation from QuranDownloads (key = "$slug/$surahId").
+        // Rows target Al-Fatihah (surah 1) — the same surah the quick-play
+        // affordance launches — as the offline starter pack per reciter.
+        val downloaded by QuranDownloads.downloadedKeys.collectAsState()
+        val dlProgress by QuranDownloads.progress.collectAsState()
+        val failedKeys by QuranDownloads.failedKeys.collectAsState()
 
         val dailyGoalCount by HifzMasteryStore.dailyGoalCount.collectAsState()
         val todayReviewedCount by HifzMasteryStore.todayReviewedCount.collectAsState()
@@ -454,9 +464,31 @@ object MemorizationScreen : Tab {
                     ) { reciter ->
                         val isPlayingThisReciter = currentTrack?.reciterSlug == reciter.slug && isAyahMode
 
+                        // Strict precedence: downloaded > downloading(progress) > failed > idle.
+                        // A completed key can never render the idle download affordance,
+                        // even if a stale progress/failed entry lingers for the same key.
+                        val downloadKey = "${reciter.slug}/1"
+                        val isDownloaded = downloadKey in downloaded
+                        val rawProgress: Float? = dlProgress[downloadKey]
+                        val reciterProgress: Float? = if (isDownloaded) null else rawProgress
+                        val isDownloading = reciterProgress != null
+                        val isFailed = !isDownloaded && !isDownloading && downloadKey in failedKeys
+                        val starterAudioUrl = reciter.toReciter().getFullSurahUrl(1)
+
                         MemorizationReciterCard(
                             reciter = reciter,
                             isPlaying = isPlayingThisReciter,
+                            isDownloaded = isDownloaded,
+                            downloadProgress = reciterProgress,
+                            isDownloadFailed = isFailed,
+                            onDownloadClick = {
+                                // Guard: finished keys stay finished (no re-download affordance),
+                                // in-flight keys ignore double-taps (no duplicate enqueue).
+                                // Failed/idle keys fall through to an explicit (re)try.
+                                if (isDownloaded) return@MemorizationReciterCard
+                                if (dlProgress.containsKey(downloadKey)) return@MemorizationReciterCard
+                                QuranDownloads.download(reciter.slug, 1, starterAudioUrl)
+                            },
                             onPlayClick = { playReciterAyahMode(reciter, 1) },
                             onCardClick = { rootNavigator?.push(MemorizationReciterScreen(reciter.slug)) }
                         )
@@ -476,102 +508,203 @@ object MemorizationScreen : Tab {
 private fun MemorizationReciterCard(
     reciter: EveryAyahReciter,
     isPlaying: Boolean,
+    isDownloaded: Boolean = false,
+    downloadProgress: Float? = null,
+    isDownloadFailed: Boolean = false,
+    onDownloadClick: () -> Unit = {},
     onPlayClick: () -> Unit,
     onCardClick: () -> Unit
 ) {
+    // Strict precedence mirrors ReciterProfileScreen rows:
+    // downloaded > downloading(progress) > failed > idle.
+    val isDownloading = downloadProgress != null
+    val stateSuffix = when {
+        isDownloaded -> " • Offline"
+        isDownloading -> " • Downloading…"
+        isDownloadFailed -> " • Failed — tap to retry"
+        else -> ""
+    }
     NoirCard(
         modifier = Modifier.fillMaxWidth(),
         onClick = onCardClick
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            NoirReciterAvatar(
-                photoUrl = photoForSlug(reciter.slug),
-                nameEn = reciter.nameEn,
-                size = 58.dp,
-                shape = RoundedCornerShape(16.dp),
-                ring = isPlaying
-            )
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                NoirReciterAvatar(
+                    photoUrl = photoForSlug(reciter.slug),
+                    nameEn = reciter.nameEn,
+                    size = 58.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    ring = isPlaying
+                )
 
-            Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(14.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = reciter.nameEn,
+                            color = if (isPlaying) Color.White else GhaisNoir.TextPrimary,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+
+                        if (reciter.isTeacher) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(GhaisNoir.Fill3)
+                                    .border(0.5.dp, GhaisNoir.BorderCard, CircleShape)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "TEACHER",
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(2.dp))
+
                     Text(
-                        text = reciter.nameEn,
-                        color = if (isPlaying) Color.White else GhaisNoir.TextPrimary,
+                        text = reciter.nameAr,
+                        style = GhaisTypography.arabicBody,
+                        fontFamily = GhaisTypography.quranFont,
                         fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
+                        color = GhaisNoir.TextSecondary
                     )
 
-                    if (reciter.isTeacher) {
+                    Spacer(Modifier.height(2.dp))
+
+                    Text(
+                        text = "${reciter.style} • ${reciter.tempo}$stateSuffix",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(Modifier.width(8.dp))
+
+                // Per-row download well (Al-Fatihah starter pack): idle →
+                // downloading → downloaded → failed retry. Noir tokens only;
+                // state reads through fill elevation, chromium and opacity.
+                when {
+                    isDownloaded -> {
                         Box(
                             modifier = Modifier
+                                .size(38.dp)
                                 .clip(CircleShape)
-                                .background(GhaisNoir.Fill3)
-                                .border(0.5.dp, GhaisNoir.BorderCard, CircleShape)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .background(GhaisNoir.chromeFill())
+                                .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "TEACHER",
-                                color = GhaisNoir.TextPrimary,
-                                fontSize = 8.sp,
-                                fontWeight = FontWeight.Bold
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = "Downloaded for offline",
+                                tint = GhaisNoir.OnChrome,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    isDownloading -> {
+                        Box(
+                            modifier = Modifier.size(38.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Download,
+                                contentDescription = "Downloading",
+                                tint = GhaisNoir.TextTertiary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    isDownloadFailed -> {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(GhaisNoir.wellFill())
+                                .border(1.dp, GhaisNoir.SpecularTop, CircleShape)
+                                .noirClickable { onDownloadClick() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Download,
+                                contentDescription = "Download failed — tap to retry",
+                                tint = GhaisNoir.TextPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    else -> {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(GhaisNoir.Fill2)
+                                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                                .noirClickable { onDownloadClick() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Download,
+                                contentDescription = "Download Al-Fatihah for offline",
+                                tint = GhaisNoir.TextTertiary,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
                 }
 
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.width(8.dp))
 
-                Text(
-                    text = reciter.nameAr,
-                    style = GhaisTypography.arabicBody,
-                    fontFamily = GhaisTypography.quranFont,
-                    fontSize = 15.sp,
-                    color = GhaisNoir.TextSecondary
-                )
-
-                Spacer(Modifier.height(2.dp))
-
-                Text(
-                    text = "${reciter.style} • ${reciter.tempo}",
-                    color = GhaisNoir.TextTertiary,
-                    fontSize = 11.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                // Quick Play Button
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(if (isPlaying) Color.White else GhaisNoir.Fill2)
+                        .border(
+                            1.dp,
+                            if (isPlaying) Color.White else GhaisNoir.BorderCard,
+                            CircleShape
+                        )
+                        .noirClickable { onPlayClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "Play ${reciter.nameEn} in Ayah Mode",
+                        tint = if (isPlaying) Color.Black else GhaisNoir.TextPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
-            Spacer(Modifier.width(8.dp))
-
-            // Quick Play Button
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(if (isPlaying) Color.White else GhaisNoir.Fill2)
-                    .border(
-                        1.dp,
-                        if (isPlaying) Color.White else GhaisNoir.BorderCard,
-                        CircleShape
-                    )
-                    .noirClickable { onPlayClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = "Play ${reciter.nameEn} in Ayah Mode",
-                    tint = if (isPlaying) Color.Black else GhaisNoir.TextPrimary,
-                    modifier = Modifier.size(20.dp)
+            // Segmented determinate progress for active downloads (engraved track).
+            // Suppressed for downloaded rows so stale progress can't linger under Offline.
+            // Indeterminate (-1f) keeps the downloading glyph with no bar.
+            val p = downloadProgress
+            if (!isDownloaded && p != null && p in 0f..1f) {
+                Spacer(modifier = Modifier.height(10.dp))
+                NoirSegmentedProgress(
+                    progress = p,
+                    trackHeight = 4.dp
                 )
             }
         }
