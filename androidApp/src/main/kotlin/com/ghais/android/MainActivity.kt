@@ -27,6 +27,13 @@ class MainActivity : ComponentActivity() {
         com.ghais.player.AmbientVideoBridge.init(this)
         QuranDownloads.init(this)
         com.ghais.data.repository.ScheduleEngine.init(this)
+        // Re-arm alarms on every launch so schedules programmed with older
+        // APIs migrate to alarm-clock delivery (background FGS exemption).
+        try {
+            com.ghais.data.repository.ScheduleEngine.refresh(
+                com.ghais.data.repository.SchedulesStore.schedules.value
+            )
+        } catch (_: Exception) { }
         com.ghais.data.auth.AuthRepository.init(this)
         com.ghais.data.auth.ActivityHolder.register(this)
         com.ghais.data.sync.SyncEngine.init(this)

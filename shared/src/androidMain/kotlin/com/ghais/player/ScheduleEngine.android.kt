@@ -61,9 +61,12 @@ actual object ScheduleEngine {
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                     ) ?: continue
                     if (exactAllowed) {
-                        alarmManager.setExactAndAllowWhileIdle(
-                            AlarmManager.RTC_WAKEUP,
-                            triggerAt,
+                        // Alarm-clock (not setExact): the documented way to
+                        // start foreground audio from the background on
+                        // Android 12+ — setExact delivery does NOT grant the
+                        // FGS-start exemption, so playback would die silently.
+                        alarmManager.setAlarmClock(
+                            AlarmManager.AlarmClockInfo(triggerAt, null),
                             pi,
                         )
                     } else {
