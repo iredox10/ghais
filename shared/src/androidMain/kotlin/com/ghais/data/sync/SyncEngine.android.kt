@@ -157,7 +157,8 @@ actual object SyncEngine {
                 pushPlayback(db, userId, cloudHasData)
             }
             runCollection(STATS) {
-                pushStats(db, userId)
+                val cloudHasData = pullStatsIfEmpty(db, userId)
+                pushStats(db, userId, cloudHasData)
             }
             runCollection(HISTORY) {
                 val cloudHasData = pullHistoryIfEmpty(db, userId)
