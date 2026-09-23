@@ -199,7 +199,7 @@ class AllCuratedPlaylistsScreen : Screen {
 
                 // Section label — shared Noir rhythm
                 NoirSectionHeader(
-                    label = "Playlists",
+                    label = "Collections",
                     actionLabel = "${filteredPlaylists.size} shown",
                     onAction = {}
                 )
@@ -338,7 +338,7 @@ private fun CuratedSearchBar(
         Box(modifier = Modifier.weight(1f)) {
             if (query.isEmpty()) {
                 Text(
-                    text = "Search playlists, moods, or tags...",
+                    text = "Search collections, moods, or tags...",
                     color = GhaisNoir.TextDisabled,
                     fontSize = 13.5.sp
                 )
@@ -629,7 +629,7 @@ private fun EmptyCuratedPlaylistsState(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = if (query.isNotBlank()) "No playlists found for \"$query\"" else "No playlists found",
+            text = if (query.isNotBlank()) "No collections found for \"$query\"" else "No collections found",
             color = GhaisNoir.TextPrimary,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,

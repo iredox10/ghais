@@ -91,7 +91,7 @@ object LibraryScreen : Tab {
         get() = remember {
             TabOptions(
                 index = 3u,
-                title = "Playlists",
+                title = "Collections",
                 icon = null
             )
         }
@@ -152,7 +152,7 @@ object LibraryScreen : Tab {
                     }
                 } else {
                     item(span = { GridItemSpan(2) }) {
-                        NoirSectionHeader(label = "Playlists • ${filteredPlaylists.size}")
+                        NoirSectionHeader(label = "Collections • ${filteredPlaylists.size}")
                     }
                     item {
                         NoirRoutinesTile(
@@ -175,9 +175,8 @@ private val NoirLibraryTileShape = RoundedCornerShape(28.dp)
 private val NoirLibraryArtShape = RoundedCornerShape(22.dp)
 
 /**
- * Editorial two-line headline ("Your" light / "Library" bold) matching the
- * Home "Return to / Your Quran" and Explore "Explore / Collections"
- * treatment, with ghost count chips.
+ * Editorial two-line headline ("Your" light / "Collections" bold) matching
+ * the Home "Return to / Your Quran" treatment, with ghost count chips.
  */
 @Composable
 private fun NoirLibraryHeader(
@@ -191,20 +190,20 @@ private fun NoirLibraryHeader(
             maxLines = 1
         )
         Text(
-            text = "Library",
+            text = "Collections",
             style = GhaisTypography.displayEditorialBold,
             maxLines = 1
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = "Routines, playlists & recitations saved for you",
+            text = "Routines, collections & recitations saved for you",
             color = GhaisNoir.TextSecondary,
             fontSize = 13.sp
         )
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             NoirLibraryChip(
-                text = if (totalCount == 1) "1 playlist" else "$totalCount playlists"
+                text = if (totalCount == 1) "1 collection" else "$totalCount collections"
             )
             NoirLibraryChip(
                 text = if (visibleCount == 1) "1 shown" else "$visibleCount shown"
@@ -271,7 +270,7 @@ private fun NoirLibrarySearch(
             decorationBox = { inner ->
                 if (query.isEmpty()) {
                     Text(
-                        text = "Search routines & playlists...",
+                        text = "Search routines & collections...",
                         color = GhaisNoir.TextDisabled,
                         fontSize = 15.sp
                     )
@@ -677,7 +676,7 @@ private fun NoirLibraryEmpty() {
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "No playlists found",
+            text = "No collections found",
             fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold,
             color = GhaisNoir.TextPrimary,
@@ -694,8 +693,7 @@ private fun NoirLibraryEmpty() {
 }
 
 // ------------------------------------------------------------------
-// Local playlist metadata (mirrors the Explore mapping minus accent
-// hues — category/style only, all monochrome at render).
+// Local collection metadata (category/style only, all monochrome at render).
 // ------------------------------------------------------------------
 
 private fun libraryCategory(id: String): String = when (id) {

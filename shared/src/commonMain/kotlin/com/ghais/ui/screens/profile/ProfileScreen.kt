@@ -202,7 +202,7 @@ object ProfileScreen : Tab {
                 // 2. Library (badge rows)
                 // -----------------------------------------------------------------
                 item {
-                    NoirSectionHeader(label = "Library")
+                    NoirSectionHeader(label = "Collections")
                     GlassCardContainer {
                         com.ghais.ui.screens.profile.NoirLibraryRow(
                             icon = Icons.Filled.MusicNote,

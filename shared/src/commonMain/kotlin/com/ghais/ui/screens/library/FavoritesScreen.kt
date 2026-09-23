@@ -112,7 +112,7 @@ object FavoritesScreen : Screen {
                                 .padding(horizontal = 16.dp)
                         ) {
                             Text(
-                                text = "LIBRARY • SAVED",
+                                text = "COLLECTIONS • SAVED",
                                 color = GhaisNoir.TextTertiary,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,

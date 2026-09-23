@@ -32,7 +32,7 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 
 /**
- * Phase 4 — "Playlists".
+ * Phase 4 — "Collections".
  *
  * The three tiles used to be hue-coded (blue focus / violet sleep / flat grey).
  * They are now identical glass plates distinguished purely by claymorphic

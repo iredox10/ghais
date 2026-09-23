@@ -167,7 +167,7 @@ data class CuratedPlaylistDetailScreen(val playlistId: String) : Screen {
                             IconButton(
                                 onClick = {
                                     coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Playlist link copied to clipboard")
+                                        snackbarHostState.showSnackbar("Collection link copied to clipboard")
                                     }
                                 },
                                 modifier = Modifier.padding(end = 4.dp)
@@ -274,7 +274,7 @@ data class CuratedPlaylistDetailScreen(val playlistId: String) : Screen {
                                     isSavedToLibrary = !isSavedToLibrary
                                     coroutineScope.launch {
                                         snackbarHostState.showSnackbar(
-                                            if (isSavedToLibrary) "Saved to your Library" else "Removed from Library"
+                                            if (isSavedToLibrary) "Saved to your Collections" else "Removed from Collections"
                                         )
                                     }
                                 }

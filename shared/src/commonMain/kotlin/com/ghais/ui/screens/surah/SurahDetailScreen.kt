@@ -429,7 +429,7 @@ private fun SurahNoirHeroPlate(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Add,
-                        contentDescription = "Add to Playlist",
+                        contentDescription = "Add to Collection",
                         tint = GhaisNoir.TextPrimary,
                         modifier = Modifier.size(22.dp)
                     )

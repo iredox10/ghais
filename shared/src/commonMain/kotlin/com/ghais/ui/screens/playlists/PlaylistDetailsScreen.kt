@@ -189,7 +189,7 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "CURATED PLAYLIST",
+                                    text = "CURATED COLLECTION",
                                     color = GhaisNoir.TextTertiary,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.SemiBold,
@@ -245,7 +245,7 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
 
                             // Surahs section header (monochrome, count as ghost action).
                             NoirSectionHeader(
-                                label = "Surahs in this playlist",
+                                label = "Surahs in this collection",
                                 actionLabel = "${surahs.size} Surahs",
                                 onAction = {}
                             )
@@ -333,7 +333,7 @@ private fun PlaylistNoirHeroPlate(
             Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text = "PLAYLIST",
+                text = "COLLECTION",
                 color = GhaisNoir.TextTertiary,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,

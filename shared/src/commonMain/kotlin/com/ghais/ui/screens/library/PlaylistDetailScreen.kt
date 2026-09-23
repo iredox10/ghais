@@ -118,7 +118,7 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
                                 .padding(horizontal = 16.dp)
                         ) {
                             Text(
-                                text = "CURATED PLAYLIST",
+                                text = "CURATED COLLECTION",
                                 color = GhaisNoir.TextTertiary,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -158,7 +158,7 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
                                         Spacer(modifier = Modifier.width(14.dp))
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = "PLAYLIST",
+                                                text = "COLLECTION",
                                                 color = GhaisNoir.TextTertiary,
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.SemiBold,

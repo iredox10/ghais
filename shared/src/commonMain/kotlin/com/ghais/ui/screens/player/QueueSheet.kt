@@ -187,7 +187,7 @@ fun QueueSheet(
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "Play a surah or playlist to see the queue",
+                            text = "Play a surah or collection to see the queue",
                             color = GhaisNoir.TextSecondary,
                             fontSize = 14.sp
                         )
