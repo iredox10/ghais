@@ -66,7 +66,7 @@ object MainScreen : Screen {
                                 }
                             )
                         }
-                        GhaisBottomNavBar()
+                        NoirBottomDock()
                     }
                 }
             }
