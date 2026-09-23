@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.AyahVerse
+import com.ghais.data.repository.QuranDataRepository
 import com.ghais.domain.model.TrackItem
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
@@ -356,8 +357,15 @@ fun NowPlayingLyricsCard(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val isNextSurah = currentTrack != null && upcomingAyahVerse.surahId != currentTrack.surahId
+                            val nextSurahLabel = if (isNextSurah) {
+                                val surah = QuranDataRepository.getSurahById(upcomingAyahVerse.surahId)
+                                "NEXT SURAH: ${surah?.nameEn ?: "Surah ${upcomingAyahVerse.surahId}"}"
+                            } else {
+                                "NEXT: Ayah ${upcomingAyahVerse.ayahNo}"
+                            }
                             Text(
-                                text = "NEXT: Ayah ${upcomingAyahVerse.ayahNo}",
+                                text = nextSurahLabel,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 letterSpacing = 1.2.sp,

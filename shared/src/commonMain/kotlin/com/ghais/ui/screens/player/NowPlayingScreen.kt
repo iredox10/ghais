@@ -84,6 +84,7 @@ import kotlin.math.roundToInt
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.QuranAyahRepository
+import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.GhaisAssets
 import com.ghais.domain.model.RepeatMode
 import com.ghais.player.AmbientMixer
@@ -138,15 +139,35 @@ class NowPlayingScreen : Screen {
         val currentTrack by AudioEngine.currentTrack.collectAsState()
         val isPlaying by AudioEngine.isPlaying.collectAsState()
         val isAyahMode by AudioEngine.isAyahMode.collectAsState()
-        val currentVerse = remember(currentTrack) { currentTrack?.let { QuranAyahRepository.getAyahImmediate(it.surahId, it.ayahNo) } }
-        val upcomingVerse = remember(currentTrack) { currentTrack?.let { QuranAyahRepository.getAyahImmediate(it.surahId, it.ayahNo + 1) } }
+        val queue by AudioEngine.queue.collectAsState()
+        val currentIndex by AudioEngine.currentIndex.collectAsState()
+        val currentVerse = remember(currentTrack) { currentTrack?.let { QuranAyahRepository.getAyahImmediate(it.surahId, it.ayahNo.coerceAtLeast(1)) } }
+        val upcomingVerse = remember(currentTrack, queue, currentIndex) {
+            val track = currentTrack ?: return@remember null
+            val totalAyahs = QuranDataRepository.getSurahById(track.surahId)?.ayahsCount ?: 7
+            val currentAyah = track.ayahNo.coerceAtLeast(1)
+            if (currentAyah < totalAyahs) {
+                QuranAyahRepository.getAyahImmediate(track.surahId, currentAyah + 1)
+            } else {
+                // On last Ayah of Surah: determine next Surah from the Surah queue
+                val idx = if (currentIndex in queue.indices && queue[currentIndex].surahId == track.surahId) {
+                    currentIndex
+                } else {
+                    queue.indexOfFirst { it.surahId == track.surahId }
+                }
+                val nextSurah = if (idx != -1 && idx + 1 < queue.size) queue[idx + 1] else null
+                if (nextSurah != null) {
+                    QuranAyahRepository.getAyahImmediate(nextSurah.surahId, 1)
+                } else {
+                    null
+                }
+            }
+        }
         val progress by AudioEngine.progress.collectAsState()
         val currentPositionMs by AudioEngine.currentPositionMs.collectAsState()
         val durationMs by AudioEngine.durationMs.collectAsState()
         val speed by AudioEngine.playbackSpeed.collectAsState()
         val volume by AudioEngine.volume.collectAsState()
-        val queue by AudioEngine.queue.collectAsState()
-        val currentIndex by AudioEngine.currentIndex.collectAsState()
         val playbackState by AudioEngine.playbackState.collectAsState()
         val sleepTimerState by com.ghais.player.SleepTimer.state.collectAsState()
         val favorites by FavoritesStore.favoriteTracks.collectAsState()
@@ -352,9 +373,9 @@ class NowPlayingScreen : Screen {
                         currentAyahVerse = currentVerse,
                         upcomingAyahVerse = upcomingVerse,
                         isPlaying = isPlaying,
-                        onNextAyah = { AudioEngine.next() },
-                        onPreviousAyah = { AudioEngine.previous() },
-                        onToggleAyahMode = { AudioEngine.toggleAyahMode() },
+                        onNextAyah = { poke(); AudioEngine.nextAyah() },
+                        onPreviousAyah = { poke(); AudioEngine.previousAyah() },
+                        onToggleAyahMode = { poke(); AudioEngine.toggleAyahMode() },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 12.dp)
