@@ -1,20 +1,39 @@
 package com.ghais.ui.screens.reciters
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.ghais.ui.components.noir.ChromePillButton
-import com.ghais.ui.components.noir.GhostPillButton
+import com.ghais.ui.components.noir.ChromeFab
+import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
 /**
- * Reciter hero action cluster — Play All (chrome), Shuffle + Follow (ghost),
- * download-remaining (ghost). Noir tokens only; no captions.
+ * Reciter hero action cluster — minimal icon cluster.
+ * Centered 64dp chrome play circle + row of 3 ghost wells (48dp targets).
+ * Noir tokens only; active states via fill/specular, zero hue.
  */
 @Composable
 fun ReciterHeroActions(
@@ -31,42 +50,91 @@ fun ReciterHeroActions(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        ChromePillButton(
-            text = "Play All",
-            onClick = onPlayAll,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = playEnabled,
-            leadingIcon = Icons.Default.PlayArrow
+        ChromeFab(
+            icon = Icons.Default.PlayArrow,
+            onClick = { if (playEnabled) onPlayAll() },
+            modifier = Modifier.alpha(if (playEnabled) 1f else 0.45f),
+            size = 64.dp,
+            contentDescription = "Play all"
         )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            GhostPillButton(
-                text = "Shuffle",
-                onClick = onShuffle,
-                modifier = Modifier.weight(1f)
+            GhostActionWell(
+                icon = Icons.Default.Shuffle,
+                contentDescription = "Shuffle",
+                active = false,
+                onClick = onShuffle
             )
-            GhostPillButton(
-                text = if (isFollowing) "Following" else "Follow",
-                onClick = onToggleFollow,
-                modifier = Modifier.weight(1f),
-                active = isFollowing
+            GhostActionWell(
+                icon = if (isFollowing) Icons.Default.Check else Icons.Default.PersonAdd,
+                contentDescription = if (isFollowing) "Unfollow" else "Follow",
+                active = isFollowing,
+                onClick = onToggleFollow
+            )
+            GhostActionWell(
+                icon = if (allDone) Icons.Default.Done else Icons.Default.Download,
+                contentDescription = if (allDone) "Downloaded" else "Download remaining",
+                active = allDone,
+                onClick = { if (!allDone) onDownloadAll() },
+                progress = if (downloadingCount > 0 && surahCount > 0) {
+                    (downloadedCount.toFloat() / surahCount.toFloat()).coerceIn(0f, 1f)
+                } else {
+                    null
+                }
             )
         }
+    }
+}
 
-        GhostPillButton(
-            text = when {
-                allDone -> "Downloaded"
-                downloadingCount > 0 -> "Downloading ($downloadingCount/$surahCount)"
-                else -> "Download ${surahCount - downloadedCount} remaining"
-            },
-            onClick = { if (!allDone) onDownloadAll() },
-            modifier = Modifier.fillMaxWidth(),
-            active = allDone
+@Composable
+private fun GhostActionWell(
+    icon: ImageVector,
+    contentDescription: String,
+    active: Boolean,
+    onClick: () -> Unit,
+    progress: Float? = null
+) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(GhaisShapes.well)
+            .background(GhaisNoir.wellFill(), GhaisShapes.well)
+            .border(
+                1.dp,
+                if (active) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                GhaisShapes.well
+            )
+            .noirClickable(onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = if (active) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
+            modifier = Modifier.size(22.dp)
         )
+        if (progress != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .width(24.dp)
+                    .height(3.dp)
+                    .background(GhaisNoir.InsetFill, GhaisShapes.pill)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progress)
+                        .height(3.dp)
+                        .background(GhaisNoir.TextPrimary, GhaisShapes.pill)
+                )
+            }
+        }
     }
 }
