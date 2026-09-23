@@ -13,3 +13,6 @@ local.properties
 /iosApp/Pods
 *.zip
 .kotlin/
+
+# Appwrite CLI local state (project pointer, no secrets)
+appwrite.config.json
