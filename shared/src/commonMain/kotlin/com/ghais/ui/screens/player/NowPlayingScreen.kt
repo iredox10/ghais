@@ -36,6 +36,7 @@ import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.FastForward
@@ -43,11 +44,6 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QueueMusic
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.RepeatOne
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Star
@@ -87,6 +83,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FavoritesStore
+import com.ghais.data.repository.QuranAyahRepository
+import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.GhaisAssets
 import com.ghais.domain.model.RepeatMode
 import com.ghais.player.AmbientMixer
@@ -99,6 +97,7 @@ import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.screens.home.NoirStatChip
+import com.ghais.ui.screens.player.components.NowPlayingLyricsCard
 import com.ghais.ui.screens.player.components.NowPlayingVolumePanel
 import com.ghais.ui.screens.reciters.NoirReciterAvatar
 import com.ghais.ui.screens.reciters.photoForSlug
@@ -139,13 +138,36 @@ class NowPlayingScreen : Screen {
         }
         val currentTrack by AudioEngine.currentTrack.collectAsState()
         val isPlaying by AudioEngine.isPlaying.collectAsState()
+        val isAyahMode by AudioEngine.isAyahMode.collectAsState()
+        val queue by AudioEngine.queue.collectAsState()
+        val currentIndex by AudioEngine.currentIndex.collectAsState()
+        val currentVerse = remember(currentTrack) { currentTrack?.let { QuranAyahRepository.getAyahImmediate(it.surahId, it.ayahNo.coerceAtLeast(1)) } }
+        val upcomingVerse = remember(currentTrack, queue, currentIndex) {
+            val track = currentTrack ?: return@remember null
+            val totalAyahs = QuranDataRepository.getSurahById(track.surahId)?.ayahsCount ?: 7
+            val currentAyah = track.ayahNo.coerceAtLeast(1)
+            if (currentAyah < totalAyahs) {
+                QuranAyahRepository.getAyahImmediate(track.surahId, currentAyah + 1)
+            } else {
+                // On last Ayah of Surah: determine next Surah from the Surah queue
+                val idx = if (currentIndex in queue.indices && queue[currentIndex].surahId == track.surahId) {
+                    currentIndex
+                } else {
+                    queue.indexOfFirst { it.surahId == track.surahId }
+                }
+                val nextSurah = if (idx != -1 && idx + 1 < queue.size) queue[idx + 1] else null
+                if (nextSurah != null) {
+                    QuranAyahRepository.getAyahImmediate(nextSurah.surahId, 1)
+                } else {
+                    null
+                }
+            }
+        }
         val progress by AudioEngine.progress.collectAsState()
         val currentPositionMs by AudioEngine.currentPositionMs.collectAsState()
         val durationMs by AudioEngine.durationMs.collectAsState()
         val speed by AudioEngine.playbackSpeed.collectAsState()
         val volume by AudioEngine.volume.collectAsState()
-        val queue by AudioEngine.queue.collectAsState()
-        val currentIndex by AudioEngine.currentIndex.collectAsState()
         val playbackState by AudioEngine.playbackState.collectAsState()
         val sleepTimerState by com.ghais.player.SleepTimer.state.collectAsState()
         val favorites by FavoritesStore.favoriteTracks.collectAsState()
@@ -155,6 +177,7 @@ class NowPlayingScreen : Screen {
         var showQueue by remember { mutableStateOf(false) }
         var showAmbient by remember { mutableStateOf(false) }
         var showVolume by remember { mutableStateOf(false) }
+        var showTafseer by remember { mutableStateOf(false) }
 
         // Cinematic idle fade — mirrors Media3's controllerShowTimeoutMs:
         // 10s without interaction melts all chrome except video + transport.
@@ -165,7 +188,7 @@ class NowPlayingScreen : Screen {
         var isScrubbing by remember { mutableStateOf(false) }
         var scrubFraction by remember { mutableStateOf(0f) }
         val poke: () -> Unit = { idleTick++; controlsVisible = true }
-        val uiBusy = showSleepTimer || showQueue || showAmbient || showVolume || isScrubbing
+        val uiBusy = showSleepTimer || showQueue || showAmbient || showVolume || isScrubbing || isAyahMode
         androidx.compose.runtime.LaunchedEffect(controlsVisible, idleTick, uiBusy) {
             if (controlsVisible && !uiBusy) {
                 kotlinx.coroutines.delay(10_000L)
@@ -339,6 +362,27 @@ class NowPlayingScreen : Screen {
 
                 // Video-first: clear the middle so the ambient video breathes.
                 Spacer(modifier = Modifier.weight(1f))
+
+                // Synchronized Ayah Lyrics card — animated when Ayah mode is active.
+                AnimatedVisibility(
+                    visible = isAyahMode,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    NowPlayingLyricsCard(
+                        currentTrack = currentTrack,
+                        currentAyahVerse = currentVerse,
+                        upcomingAyahVerse = upcomingVerse,
+                        isPlaying = isPlaying,
+                        onNextAyah = { poke(); AudioEngine.nextAyah() },
+                        onPreviousAyah = { poke(); AudioEngine.previousAyah() },
+                        onToggleAyahMode = { poke(); AudioEngine.toggleAyahMode() },
+                        onOpenTafseer = { poke(); showTafseer = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                    )
+                }
 
                 // Identity + ambience melt away with the idle fade.
                 AnimatedVisibility(
@@ -613,11 +657,11 @@ class NowPlayingScreen : Screen {
 
                 Spacer(modifier = Modifier.height(22.dp))
 
-                // Overflow: speed, volume (expandable), queue, sleep, repeat.
+                // Overflow: speed, volume (expandable), ayah mode, queue, sleep, repeat.
                 // Melts away with the idle fade — core transport above never does.
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(
-                        12.dp,
+                        8.dp,
                         Alignment.CenterHorizontally
                     ),
                     verticalAlignment = Alignment.CenterVertically,
@@ -625,7 +669,7 @@ class NowPlayingScreen : Screen {
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(width = 52.dp, height = 44.dp)
+                            .size(width = 48.dp, height = 44.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(GhaisNoir.Fill1)
                             .border(1.dp, GhaisNoir.BorderGhost, RoundedCornerShape(12.dp))
@@ -639,7 +683,7 @@ class NowPlayingScreen : Screen {
                         Text(
                             text = formatSpeedLabel(speed),
                             color = GhaisNoir.TextSecondary,
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -649,6 +693,13 @@ class NowPlayingScreen : Screen {
                         active = showVolume,
                         tint = if (volume > 0f) GhaisNoir.TextTertiary else GhaisNoir.TextDisabled,
                         onClick = { poke(); showVolume = !showVolume }
+                    )
+                    NoirUtilityWell(
+                        icon = Icons.AutoMirrored.Filled.MenuBook,
+                        contentDescription = "Ayah Mode",
+                        active = isAyahMode,
+                        tint = if (isAyahMode) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                        onClick = { poke(); AudioEngine.toggleAyahMode() }
                     )
                     NoirUtilityWell(
                         icon = Icons.Filled.QueueMusic,
@@ -696,6 +747,7 @@ class NowPlayingScreen : Screen {
             if (showSleepTimer) SleepTimerSheet(onDismiss = { showSleepTimer = false })
             if (showQueue) QueueSheet(onDismiss = { showQueue = false })
             if (showAmbient) AmbientMixerSheet(mixer = mixer, onDismissRequest = { showAmbient = false })
+            if (showTafseer) TafseerSheet(onDismiss = { showTafseer = false })
         }
     }
 }

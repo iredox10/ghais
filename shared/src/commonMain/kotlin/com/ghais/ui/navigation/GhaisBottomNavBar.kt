@@ -56,13 +56,13 @@ private val DockGlassBottom = Color(0x59101012) // ~35% black — lighter at the
 fun GhaisBottomNavBar(modifier: Modifier = Modifier) {
     val tabNavigator = LocalTabNavigator.current
     val tabs = AppTab.entries
-    // Home + Reciters left of the FAB, remaining three right of it.
-    val tabsBeforeFab = 2
+    // Home, Reciters, Memorization left of FAB; Explore, Playlists, Profile right of FAB.
+    val tabsBeforeFab = 3
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp, top = 2.dp),
+            .padding(start = 12.dp, end = 12.dp, bottom = 12.dp, top = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         Surface(
@@ -97,7 +97,7 @@ fun GhaisBottomNavBar(modifier: Modifier = Modifier) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -142,7 +142,7 @@ private fun NoirDockButton(appTab: AppTab) {
     Box(
         modifier = Modifier
             .scale(scale)
-            .size(48.dp)
+            .size(42.dp)
             .clip(CircleShape)
             .background(Color.White.copy(alpha = bgAlpha))
             .then(
@@ -158,7 +158,7 @@ private fun NoirDockButton(appTab: AppTab) {
             Icon(
                 imageVector = appTab.icon,
                 contentDescription = appTab.title,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -178,7 +178,7 @@ private fun NoirCenterFab() {
     Box(
         modifier = Modifier
             .scale(scale)
-            .size(56.dp)
+            .size(52.dp)
             .clip(CircleShape)
             .background(GhaisNoir.chromeFill())
             .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
@@ -193,7 +193,7 @@ private fun NoirCenterFab() {
             imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
             contentDescription = if (isPlaying) "Pause" else "Play",
             tint = GhaisNoir.OnChrome,
-            modifier = Modifier.size(26.dp)
+            modifier = Modifier.size(24.dp)
         )
     }
 }

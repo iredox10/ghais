@@ -11,12 +11,20 @@ object QuranDataRepository {
 
     /**
      * Look up a reciter by slug with smart normalization and fallback to Mishary Rashid Alafasy.
+     * Prioritizes verified EveryAyah reciters to guarantee correct per-ayah audio playback.
      */
     fun getReciterBySlug(slug: String?): Reciter {
         if (slug.isNullOrBlank()) {
             return getFallbackReciter()
         }
         val cleanSlug = slug.trim().lowercase()
+
+        // 1. Check verified EveryAyah catalog first (contains exact EveryAyah audio folder mapping)
+        com.ghais.data.seed.EveryAyahReciters.findBySlug(cleanSlug)?.let {
+            return it.toReciter()
+        }
+
+        // 2. Check full MP3Quran reciter catalog
         return QuranData.RECITERS.find { reciter ->
             val rSlug = reciter.slug.lowercase()
             rSlug == cleanSlug ||
@@ -38,9 +46,16 @@ object QuranDataRepository {
      * Fallback reciter: Mishary Rashid Alafasy.
      */
     fun getFallbackReciter(): Reciter {
-        return QuranData.RECITERS.firstOrNull { it.slug == "alafasy" }
+        return com.ghais.data.seed.EveryAyahReciters.findBySlug("mishary")?.toReciter()
+            ?: QuranData.RECITERS.firstOrNull { it.slug == "alafasy" }
             ?: QuranData.RECITERS.first()
     }
+
+    /**
+     * Returns verified EveryAyah reciters for memorization (Hifz).
+     */
+    fun getEveryAyahReciters(): List<Reciter> =
+        com.ghais.data.seed.EveryAyahReciters.ALL.map { it.toReciter() }
 
     /**
      * Returns all reciters.

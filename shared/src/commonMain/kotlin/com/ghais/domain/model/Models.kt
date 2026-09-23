@@ -39,7 +39,7 @@ data class Reciter(
     fun getAyahAudioUrl(surahId: Int, ayahNo: Int): String {
         val s = surahId.toString().padStart(3, '0')
         val a = ayahNo.toString().padStart(3, '0')
-        val folder = audioFolder.ifEmpty { "Alafasy_64kbps" }
+        val folder = audioFolder.ifEmpty { resolveEveryAyahFolder(slug) }
         return "https://everyayah.com/data/$folder/$s$a.mp3"
     }
 
@@ -76,6 +76,51 @@ data class Reciter(
             "ahmed-alajamy", "alajamy", "ajamy" -> "https://server10.mp3quran.net/ajm/$pad.mp3"
             else -> "https://server8.mp3quran.net/afs/$pad.mp3"
         }
+    }
+}
+
+/**
+ * Resolves the EveryAyah audio folder for a given reciter slug.
+ * Maps known reciter slugs to their corresponding EveryAyah folder.
+ */
+fun resolveEveryAyahFolder(slug: String, defaultFolder: String = "Alafasy_128kbps"): String {
+    val normalized = slug.trim().lowercase().replace('_', '-')
+    return when (normalized) {
+        "alafasy", "mishary" -> "Alafasy_128kbps"
+        "abdul-basit", "basit" -> "Abdul_Basit_Murattal_64kbps"
+        "abdul-basit-mujawwad" -> "Abdul_Basit_Mujawwad_128kbps"
+        "al-minshawi", "minshawi" -> "Minshawy_Murattal_128kbps"
+        "minshawi-mujawwad" -> "Minshawy_Mujawwad_192kbps"
+        "minshawi-teacher" -> "Minshawy_Teacher_128kbps"
+        "al-husary", "husary" -> "Husary_128kbps"
+        "husary-muallim" -> "Husary_Muallim_128kbps"
+        "husary-mujawwad" -> "Husary_128kbps_Mujawwad"
+        "ayman-sowaid", "ayman-suwayd" -> "Ayman_Sowaid_64kbps"
+        "al-sudais", "sudais" -> "Abdurrahmaan_As-Sudais_192kbps"
+        "al-muaiqly", "muaiqly" -> "MaherAlMuaiqly128kbps"
+        "saad-alghamdi", "alghamdi", "ghamdi" -> "Ghamadi_40kbps"
+        "saud-shuraim", "shuraim" -> "Saood_ash-Shuraym_128kbps"
+        "al-dossari", "dossari" -> "Yasser_Ad-Dussary_128kbps"
+        "hudhaify", "al-hudhaify", "huthaify", "ali-bin-abdulrahman-al-huthaify" -> "Hudhaify_128kbps"
+        "abdullah-al-juhany", "al-juhany", "juhany" -> "Abdullaah_3awwaad_Al-Juhaynee_128kbps"
+        "abu-bakr-al-shatri", "shatri" -> "Abu_Bakr_Ash-Shaatree_128kbps"
+        "ahmed-alajamy", "alajamy", "ajamy" -> "Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net"
+        "ali-jaber" -> "Ali_Jaber_64kbps"
+        "fares-abbad", "abbad" -> "Fares_Abbad_64kbps"
+        "hani-ar-rifai", "rifai" -> "Hani_Rifai_192kbps"
+        "muhammad-ayyub", "ayyub" -> "Muhammad_Ayyoub_128kbps"
+        "muhammad-jibreel", "jibreel" -> "Muhammad_Jibreel_128kbps"
+        "nasser-alqatami", "nasser-al-qatami", "qatami" -> "Nasser_Alqatami_128kbps"
+        "mohammad-al-tablawi", "tablawi" -> "Mohammad_al_Tablaway_128kbps"
+        "salah-al-budair", "budair" -> "Salah_Al_Budair_128kbps"
+        "ibrahim-al-akhdar", "akhdar" -> "Ibrahim_Akhdar_32kbps"
+        "abdullah-basfar", "basfar" -> "Abdullah_Basfar_192kbps"
+        "abdullah-matroud", "matroud" -> "Abdullah_Matroud_128kbps"
+        "yasser-salama", "yasser-salamah", "salama", "salamah" -> "Yasser_Salamah_128kbps"
+        "mahmoud-ali-al-banna", "banna" -> "mahmoud_ali_al_banna_32kbps"
+        "mustafa-ismail" -> "Mustafa_Ismail_48kbps"
+        "khalifa-al-tunaiji", "tunaiji" -> "khalefa_al_tunaiji_64kbps"
+        else -> defaultFolder
     }
 }
 
@@ -147,4 +192,13 @@ enum class RepeatMode {
     SURAH,
     QUEUE
 }
+
+@Serializable
+data class HifzRange(
+    val surahId: Int,
+    val startAyah: Int,
+    val endAyah: Int,
+    val targetLoops: Int = 1,
+    val currentLoop: Int = 1
+)
 

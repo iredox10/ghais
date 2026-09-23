@@ -157,8 +157,7 @@ actual object SyncEngine {
                 pushPlayback(db, userId, cloudHasData)
             }
             runCollection(STATS) {
-                val cloudHasData = pullStatsIfEmpty(db, userId)
-                pushStats(db, userId, cloudHasData)
+                pushStats(db, userId)
             }
             runCollection(HISTORY) {
                 val cloudHasData = pullHistoryIfEmpty(db, userId)
@@ -475,12 +474,16 @@ actual object SyncEngine {
      */
     private suspend fun pullPlaybackIfEmpty(db: Databases, userId: String): Boolean {
         if (AudioEngine.currentTrack.value != null) return false
-        val doc = getDocument(db, PLAYBACK, userId) ?: return false
+        val doc = try {
+            db.getDocument(DB_ID, PLAYBACK, userId)
+        } catch (_: Exception) {
+            null
+        } ?: return false
         val data = doc.data
         val ref = (data["current_ref"] as? String)?.trim().orEmpty()
         if (ref.isEmpty()) return false // idle snapshot the pusher wrote; nothing to restore
-        val positionMs = asLong(data["position_ms"])?.coerceAtLeast(0L) ?: 0L
-        val updatedAt = asLong(data["updated_at"])
+        val positionMs = (data["position_ms"] as? Number)?.toLong()?.coerceAtLeast(0L) ?: 0L
+        val updatedAt = (data["updated_at"] as? Number)?.toLong()
         val queued = parseQueueFirst((data["queue_json"] as? String).orEmpty())
         val refParts = parseCurrentRef(ref)
         val slug = queued?.slug ?: refParts?.first ?: return true

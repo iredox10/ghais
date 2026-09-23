@@ -25,6 +25,7 @@ class MainActivity : ComponentActivity() {
         com.ghais.player.PlayerBridge.init(this)
         com.ghais.player.AmbientPlayerBridge.init(this)
         com.ghais.player.AmbientVideoBridge.init(this)
+        com.ghais.player.VoiceRecorderBridge.init(this)
         QuranDownloads.init(this)
         com.ghais.data.repository.ScheduleEngine.init(this)
         // Re-arm alarms on every launch so schedules programmed with older

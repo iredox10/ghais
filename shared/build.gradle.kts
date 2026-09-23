@@ -55,6 +55,10 @@ kotlin {
             implementation(libs.multiplatform.settings.no.arg)
         }
         
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
+        
         androidMain.dependencies {
             // Appwrite Kotlin SDK is JVM-only: Android gets the live SDK,
             // iOS uses a stub until a Native HTTP path lands.

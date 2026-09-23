@@ -47,8 +47,8 @@ class QueueManager {
     fun playNext(forceAdvance: Boolean = false): TrackItem? {
         if (_queue.isEmpty()) return null
 
-        if (forceAdvance && repeatMode == RepeatMode.AYAH) {
-            // Force skip forward past current ayah even in AYAH repeat mode
+        if (forceAdvance && (repeatMode == RepeatMode.AYAH || repeatMode == RepeatMode.SURAH)) {
+            // Force skip forward past current surah even in AYAH or SURAH repeat mode
             if (currentIndex + 1 < _queue.size) {
                 currentIndex++
                 return currentTrack
@@ -109,8 +109,8 @@ class QueueManager {
     fun playPrevious(forceAdvance: Boolean = false): TrackItem? {
         if (_queue.isEmpty()) return null
 
-        if (forceAdvance && repeatMode == RepeatMode.AYAH) {
-            // Force skip backward past current ayah even in AYAH repeat mode
+        if (forceAdvance && (repeatMode == RepeatMode.AYAH || repeatMode == RepeatMode.SURAH)) {
+            // Force skip backward past current surah even in AYAH or SURAH repeat mode
             if (currentIndex - 1 >= 0) {
                 currentIndex--
                 return currentTrack
