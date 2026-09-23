@@ -49,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -127,6 +128,13 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                     durationMs = surah.ayahsCount * 15_000L
                 )
             }
+        }
+
+        // Playback-only queue: excludes surahs the reciter never recorded so
+        // known-404 URLs never enqueue. The surahs list display / downloads
+        // stay complete — only playback queues filter through here.
+        val playableTracks: List<TrackItem> = remember(reciter, allTracks) {
+            allTracks.filter { reciter.isSurahAvailable(it.surahId) }
         }
 
         val meta = remember(reciter) {
@@ -250,16 +258,16 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                 downloadingCount = downloadingCount,
                                 isFollowing = isFollowing,
                                 followerCount = followerCount,
-                                playEnabled = allTracks.isNotEmpty(),
+                                playEnabled = playableTracks.isNotEmpty(),
                                 onPlayAll = {
-                                    if (allTracks.isNotEmpty()) {
-                                        AudioEngine.playQueue(allTracks, startIndex = 0)
+                                    if (playableTracks.isNotEmpty()) {
+                                        AudioEngine.playQueue(playableTracks, startIndex = 0)
                                         rootNavigator.push(NowPlayingScreen())
                                     }
                                 },
                                 onShuffle = {
-                                    if (allTracks.isNotEmpty()) {
-                                        AudioEngine.playQueue(allTracks.shuffled(), startIndex = 0)
+                                    if (playableTracks.isNotEmpty()) {
+                                        AudioEngine.playQueue(playableTracks.shuffled(), startIndex = 0)
                                         rootNavigator.push(NowPlayingScreen())
                                     }
                                 },
@@ -311,6 +319,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                         val isDownloading = surahProgress != null
                         val isFailed = !isDownloaded && !isDownloading && downloadKey in failedKeys
                         val audioUrl = reciter.getFullSurahUrl(surah.id)
+                        val isAvailable = reciter.isSurahAvailable(surah.id)
 
                         ReciterNoirSurahRow(
                             surah = surah,
@@ -319,6 +328,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                             isDownloaded = isDownloaded,
                             downloadProgress = surahProgress,
                             isDownloadFailed = isFailed,
+                            isAvailable = isAvailable,
                             onDownloadClick = {
                                 // Guard: finished keys stay finished (no re-download affordance),
                                 // in-flight keys ignore double-taps (no duplicate enqueue).
@@ -333,8 +343,16 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                 } else if (isCurrentSurah) {
                                     AudioEngine.resume()
                                 } else {
-                                    AudioEngine.playQueue(allTracks, startIndex = index)
-                                    rootNavigator.push(NowPlayingScreen())
+                                    // Index-safe: rows are indexed in `surahs` but the
+                                    // queue is `playableTracks` (filtered) — map via
+                                    // surahId so an unrecorded row never enqueues a
+                                    // known-404 URL (tap becomes a no-op for it).
+                                    val queueIndex =
+                                        playableTracks.indexOfFirst { it.surahId == surah.id }
+                                    if (queueIndex != -1) {
+                                        AudioEngine.playQueue(playableTracks, startIndex = queueIndex)
+                                        rootNavigator.push(NowPlayingScreen())
+                                    }
                                 }
                             }
                         )
@@ -587,14 +605,19 @@ private fun ReciterNoirSurahRow(
     isDownloaded: Boolean = false,
     downloadProgress: Float? = null,
     isDownloadFailed: Boolean = false,
+    isAvailable: Boolean = true,
     onDownloadClick: () -> Unit = {}
 ) {
     val durationText = remember(surah.ayahsCount) {
         formatSurahDuration(surah.ayahsCount)
     }
     val isDownloading = downloadProgress != null
-    // Strict precedence mirrors the caller: downloaded > downloading > failed > idle.
+    // Unavailable takes precedence: the file was never recorded, so no
+    // downloaded/downloading/failed state can apply — file can't exist.
+    // Strict precedence for AVAILABLE surahs is untouched:
+    // downloaded > downloading > failed > idle.
     val stateSuffix = when {
+        !isAvailable -> " • Not recorded"
         isDownloaded -> " • Offline"
         isDownloading -> " • Downloading…"
         isDownloadFailed -> " • Failed — tap to retry"
@@ -604,6 +627,7 @@ private fun ReciterNoirSurahRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .alpha(if (isAvailable) 1f else 0.5f)
             .padding(horizontal = 16.dp, vertical = 5.dp)
     ) {
         NoirListRow(
@@ -611,7 +635,8 @@ private fun ReciterNoirSurahRow(
             subtitle = "${surah.nameAr} • ${surah.ayahsCount} Ayahs • $durationText$stateSuffix",
             icon = Icons.Default.MusicNote,
             chevron = false,
-            onClick = onItemClick,
+            // Unrecorded rows are dimmed + non-clickable (tertiary read via alpha).
+            onClick = if (isAvailable) onItemClick else null,
             trailing = {
                 SurahRowTrailing(
                     isCurrentTrack = isCurrentTrack,
@@ -619,6 +644,7 @@ private fun ReciterNoirSurahRow(
                     isDownloaded = isDownloaded,
                     isDownloading = isDownloading,
                     isDownloadFailed = isDownloadFailed,
+                    isAvailable = isAvailable,
                     onDownloadClick = onDownloadClick,
                     onItemClick = onItemClick
                 )
@@ -651,8 +677,36 @@ private fun RowScope.SurahRowTrailing(
     isDownloading: Boolean,
     isDownloadFailed: Boolean,
     onDownloadClick: () -> Unit,
-    onItemClick: () -> Unit
+    onItemClick: () -> Unit,
+    isAvailable: Boolean = true
 ) {
+    // Unrecorded surahs: no file can exist, so the download slot is hidden
+    // entirely (no dead affordance). Available-surah logic below untouched.
+    if (!isAvailable) {
+        // Play disc only: dimmed (tertiary), non-clickable — no live state.
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .background(
+                    GhaisNoir.wellFill(),
+                    GhaisShapes.well
+                )
+                .border(
+                    1.dp,
+                    GhaisNoir.BorderCard,
+                    GhaisShapes.well
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = "Not recorded",
+                tint = GhaisNoir.TextTertiary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        return
+    }
     // Per-surah download affordance — downloaded rows render no slot so the
     // play disc sits clean; failed/idle/downloading keep their affordances.
     if (!isDownloaded) {
