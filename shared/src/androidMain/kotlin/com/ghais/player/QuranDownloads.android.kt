@@ -22,21 +22,23 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Android actual: downloads per-surah mp3s with HttpURLConnection into
- * `<filesDir>/quran/<slug>/<surahId>.mp3` and persists the downloaded key
- * set via multiplatform Settings.
+ * Android actual: downloads per-surah mp3s (plus per-ayah hifz mp3s) with
+ * HttpURLConnection into `<filesDir>/quran/<slug>/<surahId>.mp3` and
+ * `<filesDir>/quran/<slug>/<surahId>-<ayahNo>.mp3` respectively, and persists
+ * the downloaded key set via multiplatform Settings.
  *
  * Note: multiplatform-settings 1.3.0 has no StringSet API, so the set is
  * stored as a newline-joined String under the same "ghais_downloaded" key.
  *
- * Canonical key form (engine-level): `"<slug.trim().lowercase()>/<surahId>"`.
- * All entry points ([isDownloaded], [progressOf], [download], [delete],
- * [localUri]) normalize via [canonicalKey] before touching flows, the
- * in-flight guard, the persisted index, or the filesystem, so callers passing
- * e.g. `"Alafasy"`, `" alafasy "` or `"ALAFASY"` all resolve to the same
- * download, file (`<files>/quran/alafasy/<id>.mp3`), and index entry. Raw
- * persisted entries from older builds are normalized on load; malformed
- * entries are dropped during reconciliation.
+ * Canonical key forms (engine-level): `"<slug.trim().lowercase()>/<surahId>"`
+ * for surahs, `"<slug.trim().lowercase()>/<surahId>/<ayahNo>"` for ayahs.
+ * All entry points normalize via [canonicalKey]/[canonicalAyahKey] before
+ * touching flows, the in-flight guard, the persisted index, or the filesystem,
+ * so callers passing e.g. `"Alafasy"`, `" alafasy "` or `"ALAFASY"` all resolve
+ * to the same download, file (`<files>/quran/alafasy/<id>.mp3` or
+ * `<files>/quran/alafasy/<id>-<ayah>.mp3`), and index entry. Raw persisted
+ * entries from older builds are normalized on load; malformed entries are
+ * dropped during reconciliation.
  */
 actual object QuranDownloads {
     private const val TAG = "QuranDownloads"
@@ -60,15 +62,29 @@ actual object QuranDownloads {
     private fun canonicalKey(slug: String, surahId: Int): String =
         "${canonicalSlug(slug)}/$surahId"
 
-    // Normalizes a raw persisted/index key; null when malformed (no "/" or
-    // non-numeric id or blank slug) so reconciliation can drop it.
+    private fun canonicalAyahKey(slug: String, surahId: Int, ayahNo: Int): String =
+        "${canonicalSlug(slug)}/$surahId/$ayahNo"
+
+    // Normalizes a raw persisted/index key; null when malformed so
+    // reconciliation can drop it. Accepts both surah keys ("<slug>/<id>") and
+    // ayah keys ("<slug>/<surahId>/<ayahNo>"); slugs are trimmed/lowercased and
+    // ids must be numeric.
     private fun normalizePersistedKey(raw: String): String? {
-        val slash = raw.lastIndexOf('/')
-        if (slash <= 0 || slash == raw.length - 1) return null
-        val slug = raw.substring(0, slash).trim().lowercase()
-        if (slug.isEmpty()) return null
-        val id = raw.substring(slash + 1).trim().toIntOrNull() ?: return null
-        return "$slug/$id"
+        val parts = raw.split('/')
+        if (parts.size == 2) {
+            val slug = parts[0].trim().lowercase()
+            if (slug.isEmpty()) return null
+            val id = parts[1].trim().toIntOrNull() ?: return null
+            return "$slug/$id"
+        }
+        if (parts.size == 3) {
+            val slug = parts[0].trim().lowercase()
+            if (slug.isEmpty()) return null
+            val surahId = parts[1].trim().toIntOrNull() ?: return null
+            val ayahNo = parts[2].trim().toIntOrNull() ?: return null
+            return "$slug/$surahId/$ayahNo"
+        }
+        return null
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -136,10 +152,14 @@ actual object QuranDownloads {
     private fun fileFor(ctx: Context, slug: String, surahId: Int): File =
         File(ctx.filesDir, "quran/${canonicalSlug(slug)}/$surahId.mp3")
 
-    // Scans `<files>/quran/<slug>/<surahId>.mp3` on disk and returns the set
-    // of canonical keys whose file exists and is non-empty. Ignores "*.part"
-    // files, stray files, and malformed names. Zero-byte mp3s are treated as
-    // missing (deleted opportunistically) so they are never adopted.
+    private fun fileFor(ctx: Context, slug: String, surahId: Int, ayahNo: Int): File =
+        File(ctx.filesDir, "quran/${canonicalSlug(slug)}/$surahId-$ayahNo.mp3")
+
+    // Scans `<files>/quran/<slug>/{<surahId>.mp3,<surahId>-<ayahNo>.mp3}` on
+    // disk and returns the set of canonical keys whose file exists and is
+    // non-empty. Ignores "*.part" files, stray files, and malformed names.
+    // Zero-byte mp3s are treated as missing (deleted opportunistically) so they
+    // are never adopted.
     private fun scanDiskKeys(ctx: Context): Set<String> {
         val dir = baseDir(ctx)
         if (!dir.exists()) return emptySet()
@@ -149,7 +169,6 @@ actual object QuranDownloads {
                 if (!slugDir.isDirectory) return@forEach
                 slugDir.listFiles()?.forEach { f ->
                     if (!f.isFile || !f.name.endsWith(".mp3")) return@forEach
-                    val id = f.name.removeSuffix(".mp3").toIntOrNull() ?: return@forEach
                     if (f.length() <= 0L) {
                         try {
                             f.delete()
@@ -157,7 +176,16 @@ actual object QuranDownloads {
                         }
                         return@forEach
                     }
-                    found += "${canonicalSlug(slugDir.name)}/$id"
+                    val stem = f.name.removeSuffix(".mp3")
+                    val dash = stem.indexOf('-')
+                    if (dash < 0) {
+                        val id = stem.toIntOrNull() ?: return@forEach
+                        found += "${canonicalSlug(slugDir.name)}/$id"
+                    } else {
+                        val surahId = stem.substring(0, dash).toIntOrNull() ?: return@forEach
+                        val ayahNo = stem.substring(dash + 1).toIntOrNull() ?: return@forEach
+                        found += "${canonicalSlug(slugDir.name)}/$surahId/$ayahNo"
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -245,7 +273,21 @@ actual object QuranDownloads {
 
     actual fun download(slug: String, surahId: Int, url: String) {
         val ctx = contextOrNull() ?: return
-        val key = canonicalKey(slug, surahId)
+        enqueueDownload(ctx, canonicalKey(slug, surahId), url, fileFor(ctx, slug, surahId))
+    }
+
+    actual fun isAyahDownloaded(slug: String, surahId: Int, ayahNo: Int): Boolean =
+        _downloadedKeys.value.contains(canonicalAyahKey(slug, surahId, ayahNo))
+
+    actual fun downloadAyah(slug: String, surahId: Int, ayahNo: Int, url: String) {
+        val ctx = contextOrNull() ?: return
+        enqueueDownload(ctx, canonicalAyahKey(slug, surahId, ayahNo), url, fileFor(ctx, slug, surahId, ayahNo))
+    }
+
+    // Shared download machinery for surah + ayah keys: engine-level
+    // idempotency (already-downloaded / in-flight no-ops), progress/failed
+    // flow updates, .part temp file + atomic rename, persisted index update.
+    private fun enqueueDownload(ctx: Context, key: String, url: String, finalFile: File) {
         // Engine-level idempotency: no caller can trigger a re-download for a
         // key that is already downloaded or actively downloading.
         if (_downloadedKeys.value.contains(key)) {
@@ -259,7 +301,6 @@ actual object QuranDownloads {
         _failedKeys.value = _failedKeys.value - key
         _progress.value = _progress.value + (key to -1f)
         val job = scope.launch(Dispatchers.IO) {
-            val finalFile = fileFor(ctx, slug, surahId)
             val partFile = File(finalFile.parent, "${finalFile.name}.part")
             var success = false
             try {
@@ -335,7 +376,18 @@ actual object QuranDownloads {
     }
 
     actual fun delete(slug: String, surahId: Int) {
-        val key = canonicalKey(slug, surahId)
+        val ctx = contextOrNull()
+        deleteKey(canonicalKey(slug, surahId), ctx?.let { fileFor(it, slug, surahId) })
+    }
+
+    actual fun deleteAyah(slug: String, surahId: Int, ayahNo: Int) {
+        val ctx = contextOrNull()
+        deleteKey(canonicalAyahKey(slug, surahId, ayahNo), ctx?.let { fileFor(it, slug, surahId, ayahNo) })
+    }
+
+    // Shared delete: cancels in-flight work, clears transient + persisted
+    // state for the key, then removes the final + .part files (when known).
+    private fun deleteKey(key: String, finalFile: File?) {
         jobs.remove(key)?.cancel()
         inFlight.remove(key)
         // Clear all transient + persisted state for the key, then remove files.
@@ -345,10 +397,8 @@ actual object QuranDownloads {
             _downloadedKeys.value = _downloadedKeys.value - key
             persist()
         }
-        val ctx = contextOrNull()
-        if (ctx != null) {
+        if (finalFile != null) {
             try {
-                val finalFile = fileFor(ctx, slug, surahId)
                 finalFile.delete()
                 File(finalFile.parent, "${finalFile.name}.part").delete()
             } catch (e: Exception) {
@@ -359,9 +409,16 @@ actual object QuranDownloads {
 
     actual fun localUri(slug: String, surahId: Int): String? {
         val ctx = contextOrNull() ?: return null
-        val key = canonicalKey(slug, surahId)
+        return localUriForKey(canonicalKey(slug, surahId), fileFor(ctx, slug, surahId))
+    }
+
+    actual fun localAyahUri(slug: String, surahId: Int, ayahNo: Int): String? {
+        val ctx = contextOrNull() ?: return null
+        return localUriForKey(canonicalAyahKey(slug, surahId, ayahNo), fileFor(ctx, slug, surahId, ayahNo))
+    }
+
+    private fun localUriForKey(key: String, file: File): String? {
         if (!_downloadedKeys.value.contains(key)) return null
-        val file = fileFor(ctx, slug, surahId)
         if (!file.exists() || file.length() <= 0L) return null
         return "file://${file.absolutePath}"
     }

@@ -27,8 +27,9 @@ import platform.Foundation.stringByDeletingLastPathComponent
 /**
  * iOS actual — functional baseline with NSURLSession (no delegates).
  *
- * Files live in `<home>/Documents/quran/<slug>/<surahId>.mp3`, the
- * downloaded key set is persisted via NSUserDefaults, and progress stays
+ * Files live in `<home>/Documents/quran/<slug>/<surahId>.mp3` for full surahs
+ * and `<home>/Documents/quran/<slug>/<surahId>-<ayahNo>.mp3` for single ayahs,
+ * the downloaded key set is persisted via NSUserDefaults, and progress stays
  * at -1f (indeterminate) while a download is in flight.
  */
 actual object QuranDownloads {
@@ -85,6 +86,9 @@ actual object QuranDownloads {
     private fun fileFor(slug: String, surahId: Int): String =
         "${baseDir()}/$slug/$surahId.mp3"
 
+    private fun fileFor(slug: String, surahId: Int, ayahNo: Int): String =
+        "${baseDir()}/$slug/$surahId-$ayahNo.mp3"
+
     private fun readPersisted(): Set<String> {
         val defaults = NSUserDefaults.standardUserDefaults
         val arr = defaults.stringArrayForKey(key(PREF_KEY))
@@ -125,7 +129,19 @@ actual object QuranDownloads {
         _progress.value[DownloadKeys.key(slug, surahId)]
 
     actual fun download(slug: String, surahId: Int, url: String) {
-        val key = DownloadKeys.key(slug, surahId)
+        startDownload(DownloadKeys.key(slug, surahId), url, fileFor(slug, surahId))
+    }
+
+    actual fun isAyahDownloaded(slug: String, surahId: Int, ayahNo: Int): Boolean =
+        _downloadedKeys.value.contains(DownloadKeys.ayahKey(slug, surahId, ayahNo))
+
+    actual fun downloadAyah(slug: String, surahId: Int, ayahNo: Int, url: String) {
+        startDownload(DownloadKeys.ayahKey(slug, surahId, ayahNo), url, fileFor(slug, surahId, ayahNo))
+    }
+
+    // Shared NSURLSession machinery for surah + ayah keys (indeterminate -1f
+    // progress, persisted index update on success).
+    private fun startDownload(key: String, url: String, path: String) {
         synchronized(lock) {
             if (_downloadedKeys.value.contains(key) || !inFlight.add(key)) return
         }
@@ -142,7 +158,6 @@ actual object QuranDownloads {
                         _failedKeys.value = _failedKeys.value + key
                         _progress.value = _progress.value - key
                     } else {
-                        val path = fileFor(slug, surahId)
                         val dir = path.stringByDeletingLastPathComponent
                         NSFileManager.defaultManager.createDirectoryAtPath(dir, true, null, null)
                         val ok = data.writeToFile(path, true) &&
@@ -191,7 +206,16 @@ actual object QuranDownloads {
     }
 
     actual fun delete(slug: String, surahId: Int) {
-        val key = DownloadKeys.key(slug, surahId)
+        deleteKey(DownloadKeys.key(slug, surahId), fileFor(slug, surahId))
+    }
+
+    actual fun deleteAyah(slug: String, surahId: Int, ayahNo: Int) {
+        deleteKey(DownloadKeys.ayahKey(slug, surahId, ayahNo), fileFor(slug, surahId, ayahNo))
+    }
+
+    // Shared delete: cancels in-flight work, clears transient + persisted
+    // state for the key, then removes the file (when known).
+    private fun deleteKey(key: String, path: String) {
         synchronized(lock) {
             try {
                 tasks.remove(key)?.cancel()
@@ -206,16 +230,22 @@ actual object QuranDownloads {
             persist()
         }
         try {
-            NSFileManager.defaultManager.removeItemAtPath(fileFor(slug, surahId), null)
+            NSFileManager.defaultManager.removeItemAtPath(path, null)
         } catch (_: Exception) {
         }
     }
 
     actual fun localUri(slug: String, surahId: Int): String? {
+        return localUriForKey(DownloadKeys.key(slug, surahId), fileFor(slug, surahId))
+    }
+
+    actual fun localAyahUri(slug: String, surahId: Int, ayahNo: Int): String? {
+        return localUriForKey(DownloadKeys.ayahKey(slug, surahId, ayahNo), fileFor(slug, surahId, ayahNo))
+    }
+
+    private fun localUriForKey(key: String, path: String): String? {
         return try {
-            val key = DownloadKeys.key(slug, surahId)
             if (!_downloadedKeys.value.contains(key)) return null
-            val path = fileFor(slug, surahId)
             if (!NSFileManager.defaultManager.fileExistsAtPath(path)) return null
             NSURL.fileURLWithPath(path).absoluteString
         } catch (_: Exception) {

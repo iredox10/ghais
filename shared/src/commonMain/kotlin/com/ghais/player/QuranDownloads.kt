@@ -1,24 +1,29 @@
 /**
- * Quran MP3 downloads contract for per-(reciter, surah) offline playback.
+ * Quran MP3 downloads contract for per-(reciter, surah) offline playback
+ * plus per-(reciter, surah, ayah) hifz audio.
  *
- * Key scheme: keys are per-(reciter, surah) identifiers formatted as `"<slug>/<surahId>"`
- * (see [DownloadKeys.key]).
+ * Key scheme: per-(reciter, surah) keys are `"<slug>/<surahId>"`
+ * (see [DownloadKeys.key]); per-ayah keys are `"<slug>/<surahId>/<ayahNo>"`
+ * (see [DownloadKeys.ayahKey]).
  *
- * File layout: `<files>/quran/<slug>/<surahId>.mp3`, where `<files>` is the
- * platform app-files directory.
+ * File layout: `<files>/quran/<slug>/<surahId>.mp3` for full surahs,
+ * `<files>/quran/<slug>/<surahId>-<ayahNo>.mp3` for single ayahs, where
+ * `<files>` is the platform app-files directory.
  *
  * Thread-safety / idempotency: implementations must be thread-safe. Duplicate
- * [QuranDownloads.download] calls for the same key are no-ops while a download
- * is already in flight. [QuranDownloads.delete] cancels any in-flight download
- * for the key and removes any partial file.
+ * [QuranDownloads.download]/[QuranDownloads.downloadAyah] calls for the same
+ * key are no-ops while a download is already in flight. [QuranDownloads.delete]/
+ * [QuranDownloads.deleteAyah] cancels any in-flight download for the key and
+ * removes any partial file.
  */
 package com.ghais.player
 
 import kotlinx.coroutines.flow.StateFlow
 
-/** Key format helpers for per-(reciter,surah) downloads. */
+/** Key format helpers for per-(reciter,surah) and per-(reciter,surah,ayah) downloads. */
 object DownloadKeys {
     fun key(slug: String, surahId: Int): String = "$slug/$surahId"
+    fun ayahKey(slug: String, surahId: Int, ayahNo: Int): String = "$slug/$surahId/$ayahNo"
 }
 
 expect object QuranDownloads {
@@ -43,6 +48,11 @@ expect object QuranDownloads {
     fun delete(slug: String, surahId: Int)
     /** Local playback URI (file://...) or null when not downloaded. */
     fun localUri(slug: String, surahId: Int): String?
+    fun isAyahDownloaded(slug: String, surahId: Int, ayahNo: Int): Boolean
+    fun downloadAyah(slug: String, surahId: Int, ayahNo: Int, url: String)
+    fun deleteAyah(slug: String, surahId: Int, ayahNo: Int)
+    /** Local playback URI (file://...) for a single ayah, or null when not downloaded. */
+    fun localAyahUri(slug: String, surahId: Int, ayahNo: Int): String?
     suspend fun storageBytes(): Long
     suspend fun clearAll()
 }
