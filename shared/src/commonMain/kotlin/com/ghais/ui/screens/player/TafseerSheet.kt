@@ -69,7 +69,7 @@ import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
-import com.ghais.ui.util.toArabicDigits
+import com.ghais.ui.util.AyahEndMark
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -402,16 +402,28 @@ fun TafseerSheet(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Text(
-                        text = "${entry.arabicText} ۝${toArabicDigits(entry.ayahNo)}",
-                        fontFamily = GhaisTypography.quranFont,
-                        color = GhaisNoir.TextPrimary,
-                        fontSize = 24.sp,
-                        lineHeight = 44.sp,
-                        textAlign = TextAlign.Right,
-                        fontWeight = FontWeight.Normal,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Text(
+                            text = entry.arabicText,
+                            fontFamily = GhaisTypography.quranFont,
+                            color = GhaisNoir.TextPrimary,
+                            fontSize = 24.sp,
+                            lineHeight = 48.sp,
+                            textAlign = TextAlign.Right,
+                            fontWeight = FontWeight.Normal,
+                            modifier = Modifier.weight(1f).padding(vertical = 2.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        AyahEndMark(
+                            number = entry.ayahNo,
+                            ornamentSize = 24.sp,
+                            digitSize = 11.sp,
+                            tint = GhaisNoir.TextPrimary
+                        )
+                    }
                 }
             }
 

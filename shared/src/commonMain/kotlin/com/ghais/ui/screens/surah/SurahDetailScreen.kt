@@ -301,7 +301,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                                     text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
                                     color = GhaisNoir.TextPrimary,
                                     fontSize = 26.sp,
-                                    lineHeight = 48.sp,
+                                    lineHeight = 52.sp,
                                     textAlign = TextAlign.Center,
                                     fontFamily = GhaisTypography.quranFont
                                 )

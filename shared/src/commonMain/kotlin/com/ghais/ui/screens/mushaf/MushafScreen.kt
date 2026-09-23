@@ -42,6 +42,7 @@ import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
+import com.ghais.ui.util.AyahEndMark
 import com.ghais.ui.util.toArabicDigits
 import kotlin.math.PI
 import kotlin.math.cos
@@ -667,7 +668,7 @@ private fun SurahHeaderBanner() {
                         Text(
                             text = "سُورَةُ الكَهْفِ",
                             fontSize = 32.sp,
-                            lineHeight = 56.sp,
+                            lineHeight = 64.sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = GhaisTypography.quranFont,
                             color = GhaisNoir.TextPrimary
@@ -706,7 +707,7 @@ private fun SurahHeaderBanner() {
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = GhaisTypography.quranFont,
                 color = GhaisNoir.TextPrimary,
-                lineHeight = 48.sp,
+                lineHeight = 52.sp,
                 textAlign = TextAlign.Center
             )
             Text(
@@ -1274,16 +1275,28 @@ private fun TafsirDialog(
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = ayah.textUthmani + (ayah.tajweedPart ?: "") + " ۝${toArabicDigits(ayah.ayahNumber)}",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    fontFamily = GhaisTypography.quranFont,
-                    color = GhaisNoir.TextPrimary,
-                    textAlign = TextAlign.End,
-                    lineHeight = 34.sp,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Text(
+                        text = ayah.textUthmani + (ayah.tajweedPart ?: ""),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = GhaisTypography.quranFont,
+                        color = GhaisNoir.TextPrimary,
+                        textAlign = TextAlign.End,
+                        lineHeight = 36.sp,
+                        modifier = Modifier.weight(1f).padding(vertical = 2.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    AyahEndMark(
+                        number = ayah.ayahNumber,
+                        ornamentSize = 20.sp,
+                        digitSize = 10.sp,
+                        tint = GhaisNoir.TextPrimary
+                    )
+                }
                 Spacer(modifier = Modifier.height(10.dp))
                 HorizontalDivider(color = GhaisNoir.BorderGhost)
                 Spacer(modifier = Modifier.height(10.dp))
