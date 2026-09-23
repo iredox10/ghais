@@ -535,6 +535,7 @@ private fun MemorizationReciterCard(
                 Text(
                     text = reciter.nameAr,
                     style = GhaisTypography.arabicBody,
+                    fontFamily = GhaisTypography.quranFont,
                     fontSize = 15.sp,
                     color = GhaisNoir.TextSecondary
                 )

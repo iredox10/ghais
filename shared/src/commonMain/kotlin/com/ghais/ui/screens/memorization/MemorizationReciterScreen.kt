@@ -236,6 +236,7 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                                         Text(
                                             text = reciter.nameAr,
                                             style = GhaisTypography.arabicBody,
+                                            fontFamily = GhaisTypography.quranFont,
                                             fontSize = 20.sp,
                                             color = GhaisNoir.TextPrimary
                                         )

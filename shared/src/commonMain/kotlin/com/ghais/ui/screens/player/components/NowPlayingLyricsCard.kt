@@ -62,6 +62,7 @@ import com.ghais.domain.model.TrackItem
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisTypography
 import com.ghais.ui.theme.GhaisShapes
 
 /**
@@ -376,10 +377,11 @@ fun NowPlayingLyricsCard(
                         .fillMaxWidth()
                         .padding(start = 12.dp)
                 ) {
-                    // Arabic verse — prominent Uthmani text (100% white, RTL)
+                    // Arabic verse — KFGQPC Hafs Uthmani text (100% white, RTL)
                     if (activeArabic.isNotBlank()) {
                         Text(
                             text = activeArabic,
+                            fontFamily = GhaisTypography.quranFont,
                             fontSize = 25.sp,
                             fontWeight = FontWeight.Bold,
                             color = GhaisNoir.TextPrimary,
