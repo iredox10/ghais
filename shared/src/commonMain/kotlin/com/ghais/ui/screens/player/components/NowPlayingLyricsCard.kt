@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
@@ -36,8 +37,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import com.ghais.data.repository.HifzMasteryStore
+import com.ghais.player.AudioEngine
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,11 +86,22 @@ fun NowPlayingLyricsCard(
     onNextAyah: (() -> Unit)? = null,
     onPreviousAyah: (() -> Unit)? = null,
     onToggleAyahMode: (() -> Unit)? = null,
+    onOpenTafseer: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val repTarget by AudioEngine.ayahRepetitionTarget.collectAsState()
+    val currentRep by AudioEngine.currentAyahRepetition.collectAsState()
+    val isGapActive by AudioEngine.isRecitationGapActive.collectAsState()
+    val gapCountdown by AudioEngine.recitationGapCountdown.collectAsState()
+    val hifzRange by AudioEngine.hifzRange.collectAsState()
+
     val displayAyahNo = currentTrack?.ayahNo?.takeIf { it > 0 }
         ?: currentAyahVerse?.ayahNo
         ?: 1
+
+    val surahId = currentTrack?.surahId ?: currentAyahVerse?.surahId ?: 1
+    val masteryMap by HifzMasteryStore.masteryMap.collectAsState()
+    val currentStatus = masteryMap[surahId to displayAyahNo] ?: HifzMasteryStore.getStatus(surahId, displayAyahNo)
 
     val surahName = currentTrack?.surahNameEn?.takeIf { it.isNotBlank() }
         ?: currentAyahVerse?.surahId?.let { "Surah $it" }
@@ -137,6 +152,14 @@ fun NowPlayingLyricsCard(
         )
 
         Column(modifier = Modifier.padding(18.dp)) {
+            if (hifzRange != null) {
+                RangeLoopBadge(
+                    range = hifzRange!!,
+                    onDismiss = { AudioEngine.clearHifzRange() },
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+            }
+
             // Header: AYAH badge + Surah name + (optional Prev Ayah) + Sync indicator + Toggle/Dismiss button
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -260,6 +283,63 @@ fun NowPlayingLyricsCard(
                         }
                     }
                 }
+            }
+
+            // Hifz Action Toolbar: Repetition Pill + Quick Mastery Status Pill + Tafseer Drawer Button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AyahRepetitionPill(
+                    repetitionTarget = repTarget,
+                    currentRepetition = currentRep,
+                    onTargetSelected = { AudioEngine.setAyahRepetitionTarget(it) }
+                )
+
+                QuickMasteryPill(
+                    status = currentStatus,
+                    onCycle = {
+                        HifzMasteryStore.cycleStatus(surahId, displayAyahNo)
+                        HifzMasteryStore.recordAyahReviewed(surahId, displayAyahNo)
+                    }
+                )
+
+                if (onOpenTafseer != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                            .noirClickable { onOpenTafseer() }
+                            .padding(horizontal = 9.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                            contentDescription = "Tafseer",
+                            tint = GhaisNoir.TextSecondary,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Tafseer",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = GhaisNoir.TextPrimary
+                        )
+                    }
+                }
+            }
+
+            if (isGapActive) {
+                Spacer(modifier = Modifier.height(10.dp))
+                RecitationGapBanner(
+                    countdownSeconds = gapCountdown,
+                    onSkip = { AudioEngine.skipRecitationGap() }
+                )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -421,6 +501,12 @@ fun NowPlayingLyricsCard(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(14.dp))
+            VoiceCompareSection(
+                surahId = surahId,
+                ayahNo = displayAyahNo
+            )
         }
     }
 }

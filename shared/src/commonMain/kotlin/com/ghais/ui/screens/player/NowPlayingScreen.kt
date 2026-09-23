@@ -177,6 +177,7 @@ class NowPlayingScreen : Screen {
         var showQueue by remember { mutableStateOf(false) }
         var showAmbient by remember { mutableStateOf(false) }
         var showVolume by remember { mutableStateOf(false) }
+        var showTafseer by remember { mutableStateOf(false) }
 
         // Cinematic idle fade — mirrors Media3's controllerShowTimeoutMs:
         // 10s without interaction melts all chrome except video + transport.
@@ -376,6 +377,7 @@ class NowPlayingScreen : Screen {
                         onNextAyah = { poke(); AudioEngine.nextAyah() },
                         onPreviousAyah = { poke(); AudioEngine.previousAyah() },
                         onToggleAyahMode = { poke(); AudioEngine.toggleAyahMode() },
+                        onOpenTafseer = { poke(); showTafseer = true },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 12.dp)
@@ -745,6 +747,7 @@ class NowPlayingScreen : Screen {
             if (showSleepTimer) SleepTimerSheet(onDismiss = { showSleepTimer = false })
             if (showQueue) QueueSheet(onDismiss = { showQueue = false })
             if (showAmbient) AmbientMixerSheet(mixer = mixer, onDismissRequest = { showAmbient = false })
+            if (showTafseer) TafseerSheet(onDismiss = { showTafseer = false })
         }
     }
 }
