@@ -20,7 +20,7 @@ import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.navigation.LocalRootNavigator
-import com.ghais.ui.screens.explore.ExploreScreen
+import com.ghais.ui.screens.curated.AllCuratedPlaylistsScreen
 import com.ghais.ui.screens.history.HistoryScreen
 import com.ghais.ui.screens.library.FavoritesScreen
 import com.ghais.ui.screens.library.LibraryScreen
@@ -92,7 +92,7 @@ object HomeScreen : Tab {
                 // -------------------------------------------------------------
                 item {
                     HomeSectionHeader(
-                        title = "Playlists",
+                        title = "Collections",
                         onSeeAll = { tabNavigator.current = LibraryScreen }
                     )
                     HomePlaylistsRow(
@@ -121,7 +121,7 @@ object HomeScreen : Tab {
                 item {
                     HomeSectionHeader(
                         title = "Listen by routine",
-                        onSeeAll = { tabNavigator.current = ExploreScreen }
+                        onSeeAll = { rootNavigator?.push(AllCuratedPlaylistsScreen()) }
                     )
                     HomeRoutineRow(onMode = { mode ->
                         val playlistId = when (mode) {

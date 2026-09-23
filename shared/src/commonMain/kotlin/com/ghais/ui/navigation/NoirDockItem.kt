@@ -107,10 +107,11 @@ fun DockTabItem(
         Text(
             text = tab.title,
             color = labelColor,
-            fontSize = 10.sp,
+            fontSize = 9.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            letterSpacing = (-0.2).sp
         )
     }
 }

@@ -29,7 +29,7 @@ private val DockGlassTop = Color(0x8C141416) // ~55% black — content ghosts th
 private val DockGlassBottom = Color(0x59101012) // ~35% black — lighter at the base
 
 /**
- * Noir floating pill dock: all 6 [AppTab] entries in a single row, no center FAB.
+ * Noir floating pill dock: all [AppTab] entries in a single row, no center FAB.
  *
  * Container language mirrors GhaisBottomNavBar (floating pill, fillMaxWidth max
  * 520dp, 76dp, navDock shape, glass gradient + BorderCard + topSpecular + sheen).
