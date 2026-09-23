@@ -298,6 +298,16 @@ class QuranPlaybackService : MediaSessionService() {
                 return super.onStartCommand(intent, flags, startId)
             }
         }
+        // Re-assert foreground on every playback start. If the service
+        // outlived its notification (playback stopped -> Media3 dismissed
+        // it), a fresh startForegroundService() restarts the 10s
+        // ForegroundServiceDidNotStartInTime clock with no notification
+        // posted yet — slow buffering then kills the app. Posting the
+        // placeholder synchronously here resets that clock; Media3 replaces
+        // it with the real media notification once playback starts.
+        if (intent?.action == null || intent.action == ACTION_PLAY || intent.action == ACTION_TOGGLE) {
+            startForegroundWithPlaceholder()
+        }
         when (intent?.action) {
             ACTION_TOGGLE -> AudioEngine.togglePlayPause()
             ACTION_PLAY -> AudioEngine.resume()
