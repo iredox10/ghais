@@ -209,7 +209,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                                 text = surah.nameAr,
                                 color = GhaisNoir.TextPrimary,
                                 fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Normal,
                                 fontFamily = GhaisTypography.quranFont,
                                 modifier = Modifier.padding(end = 16.dp)
                             )
@@ -403,7 +403,7 @@ private fun SurahNoirHeroPlate(
                         text = surahNameAr,
                         color = GhaisNoir.TextPrimary,
                         fontSize = 30.sp,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.Normal,
                         fontFamily = GhaisTypography.quranFont,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis

@@ -669,7 +669,7 @@ private fun SurahHeaderBanner() {
                             text = "سُورَةُ الكَهْفِ",
                             fontSize = 32.sp,
                             lineHeight = 64.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Normal,
                             fontFamily = GhaisTypography.quranFont,
                             color = GhaisNoir.TextPrimary
                         )
@@ -704,7 +704,7 @@ private fun SurahHeaderBanner() {
             Text(
                 text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
                 fontSize = 26.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Normal,
                 fontFamily = GhaisTypography.quranFont,
                 color = GhaisNoir.TextPrimary,
                 lineHeight = 52.sp,
@@ -754,8 +754,8 @@ private fun NoirInfoPill(icon: ImageVector, text: String, emphasized: Boolean = 
  * wash) + card border + top-only specular, chromium edge strip while live,
  * engraved number well, chrome/ghost action cluster.
  *
- * Tajweed distinction is weight-only (SemiBold vs Normal) at 100% white —
- * zero hue, never below the 85% legibility floor.
+ * Tajweed distinction is color-only at 100% white — QCF Hafs ships a single
+ * Regular file, so all uthmani spans stay Normal (no synthetic bold).
  */
 @Composable
 private fun AyahBlock(
@@ -902,14 +902,14 @@ private fun AyahBlock(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Uthmani text — 100% white; tajweed = SemiBold at 100% (weight only).
+            // Uthmani text — 100% white, all Normal (single Regular file).
             val arabicAnnotated = buildAnnotatedString {
                 val base = GhaisNoir.TextPrimary
                 val ayahRosette = " ۝${toArabicDigits(ayah.ayahNumber)} "
 
                 if (isTajweed && ayah.tajweedPart != null) {
                     if (ayah.tajweedPrefix) {
-                        withStyle(SpanStyle(color = base, fontWeight = FontWeight.SemiBold)) {
+                        withStyle(SpanStyle(color = base, fontWeight = FontWeight.Normal)) {
                             append(ayah.tajweedPart)
                         }
                         withStyle(SpanStyle(color = base)) {
@@ -919,7 +919,7 @@ private fun AyahBlock(
                         withStyle(SpanStyle(color = base)) {
                             append(ayah.textUthmani)
                         }
-                        withStyle(SpanStyle(color = base, fontWeight = FontWeight.SemiBold)) {
+                        withStyle(SpanStyle(color = base, fontWeight = FontWeight.Normal)) {
                             append(ayah.tajweedPart)
                         }
                     }
@@ -935,7 +935,7 @@ private fun AyahBlock(
                 withStyle(
                     SpanStyle(
                         color = GhaisNoir.TextPrimary,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Normal,
                         fontSize = (arabicFontSize * 0.75f).sp
                     )
                 ) {
@@ -1156,7 +1156,7 @@ private fun MushafPageViewCard(
                 Text(
                     text = "سُورَةُ الكَهْفِ",
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Normal,
                     fontFamily = GhaisTypography.quranFont,
                     color = GhaisNoir.TextPrimary
                 )
@@ -1172,15 +1172,15 @@ private fun MushafPageViewCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Continuous uthmani — selected ayah bold, rest normal, all 100% white.
+            // Continuous uthmani — all Normal (single Regular file; no synthetic bold).
             val pageText = buildAnnotatedString {
                 ayahs.forEach { ayah ->
                     val isSelected = ayah.ayahNumber == activeAyah
-                    val weight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                    val weight = if (isSelected) FontWeight.Normal else FontWeight.Normal
 
                     if (isTajweed && ayah.tajweedPart != null) {
                         if (ayah.tajweedPrefix) {
-                            withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = FontWeight.Bold)) {
+                            withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = FontWeight.Normal)) {
                                 append(ayah.tajweedPart)
                             }
                             withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = weight)) {
@@ -1190,7 +1190,7 @@ private fun MushafPageViewCard(
                             withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = weight)) {
                                 append(ayah.textUthmani)
                             }
-                            withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = FontWeight.Bold)) {
+                            withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = FontWeight.Normal)) {
                                 append(ayah.tajweedPart)
                             }
                         }
@@ -1206,7 +1206,7 @@ private fun MushafPageViewCard(
                     withStyle(
                         SpanStyle(
                             color = GhaisNoir.TextPrimary,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Normal
                         )
                     ) {
                         append(" ۝${toArabicDigits(ayah.ayahNumber)} ")
@@ -1282,7 +1282,7 @@ private fun TafsirDialog(
                     Text(
                         text = ayah.textUthmani + (ayah.tajweedPart ?: ""),
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Normal,
                         fontFamily = GhaisTypography.quranFont,
                         color = GhaisNoir.TextPrimary,
                         textAlign = TextAlign.End,
