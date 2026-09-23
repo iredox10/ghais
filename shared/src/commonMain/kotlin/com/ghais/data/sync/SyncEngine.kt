@@ -18,8 +18,9 @@ import kotlinx.coroutines.flow.StateFlow
  *   - follows: docId `"fol-<slug>"`
  *   - schedules: docId = `schedule.id`
  *   - history: docId `"h-<slug>-<surahId>-<playedAtMs>"` (max 36 chars)
- *   - routine_backups: docId `"rtn-<routineId>"`
- *   - user_prefs: docId = userId (single document per user)
+  *   - routine_backups: docId `"rtn-<routineId>"`
+  *   - user_prefs: docId = userId (single document per user)
+  *   - khatma_plans: docId `"khatma-<planId>"` (sanitized, max 36 chars)
  * - **Fault isolation:** each collection is wrapped in its own try/catch in
  *   the android actual, so one missing collection (provisioned `history` /
  *   `user_prefs` / `routine_backups` / `reciter_stats` may not exist yet —
@@ -44,12 +45,7 @@ import kotlinx.coroutines.flow.StateFlow
  * | SchedulesStore | [SCHEDULES] (`schedules{user_id,schedule_id,schedule_json,enabled}`) | one doc per schedule; docId = `schedule.id`, `schedule_json = Json.encodeToString(schedule)` |
  * | CustomRoutinesStore (ALL routines, private + public) | [ROUTINE_BACKUPS] (`routine_backups{user_id,routine_id,routine_json,updated_at}`) | one doc per routine; docId `"rtn-<routineId>"`, `routine_json = Json.encodeToString(routine)`. Separate from the public `playlists` publish flow (private routines never enter the catalog). Pull-if-empty is guarded (no CustomRoutinesStore restore API yet): validates + protects the cloud copy by skipping the empty-push |
  * | OnboardingStore.goal + dailyGoalMinutes | [USER_PREFS] (`user_prefs{user_id,goal,daily_minutes}`) | single doc per user (docId = userId). Goal + daily minutes only — onboarding seen/done/step flags are never synced |
- *
- * Khatma plans (`khatma_plans{user_id,title,total_days,current_surah,current_ayah,percent}`)
- * are NOT synced yet: the only local holder is `LibraryRepository`, an uninstantiated
- * in-memory mock (`KhatmaScreen` renders static progress), so there is no readable local
- * source. Follow-up: add a persisted `KhatmaStore` (Settings + StateFlow, like
- * `SchedulesStore`), then wire push + pull-if-empty here.
+ * | KhatmaStore.plans | [KHATMA] (`khatma_plans{user_id,title,total_days,current_surah,current_ayah,percent}`) | one doc per plan; docId `"khatma-<planId>"` (sanitized, max 36 chars), `percent = progressPercentage`. The collection carries no plan id / streak / date attributes, so pull derives the plan id back from the doc id, restores streak 0 with `startDateMs = lastProgressMs = now`, and derives `totalAyahsRead` from `percent * 6236`. Pull-if-empty restores via `KhatmaStore.restoreAll`, empty-push still skipped |
  * | CustomRoutinesStore (public only) | `playlists` + `playlist_items` | push-only publish to the public catalog; one `playlists` doc per public routine (docId `"rtn-<routineId>"`), items replaced wholesale. Private routines are never uploaded here — they are backed up to [ROUTINE_BACKUPS] instead |
  * | FollowStore counts | [RECITER_STATS] (`reciter_stats{slug,followers_count,likes_count,updated_at}`) | public read-only (doc id = slug); client never writes. `SyncEngine.init` wires the reader into `FollowStore.countFetcher`; counts refresh best-effort after follows pull/push |
  * | UserUsageRepository.history | [HISTORY] (`history{user_id,track_json,played_at_ms}`) | one doc per entry (docId `"h-<slug>-<surahId>-<playedAtMs>"`, max 36 chars); `track_json = Json.encodeToString(TrackItem)` rebuilt from the history entry via reciter/surah lookups. Push capped at 100 recent + prune of cloud docs beyond the local set; pull-if-empty ordered by `played_at_ms` desc restores via `UserUsageRepository.restoreHistory`, empty-push still skipped |

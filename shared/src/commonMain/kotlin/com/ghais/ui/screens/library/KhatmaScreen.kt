@@ -31,6 +31,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.ghais.data.repository.KhatmaStore
 import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
@@ -57,7 +60,19 @@ object KhatmaScreen : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val progress = 0.35f
+        // Live data source: the first (most recently started) persisted plan.
+        // Static literals below are kept as the empty-state fallback so the
+        // layout renders identically until the user creates a plan.
+        val plans by KhatmaStore.plans.collectAsState()
+        val plan = plans.firstOrNull()
+        val progress = plan?.progressPercentage ?: 0.35f
+        val streak = plan?.streak ?: 12
+        // A never-progressed plan has lastProgressMs = 0, which would skew
+        // KhatmaPlan.daysRemaining past targetDays — clamp to the target.
+        val remaining = plan?.let {
+            if (it.lastProgressMs <= 0L) it.targetDays else it.daysRemaining
+        } ?: 18
+        val portions = plan?.let { (it.progressPercentage * 114).toInt() } ?: 35
 
         NoirScreenRoot {
             Scaffold(
@@ -152,7 +167,7 @@ object KhatmaScreen : Screen {
                                             )
                                             Spacer(modifier = Modifier.height(3.dp))
                                             Text(
-                                                text = "12-day streak • 18 days remaining",
+                                                text = "$streak-day streak • $remaining days remaining",
                                                 color = GhaisNoir.TextSecondary,
                                                 fontSize = 12.sp,
                                                 maxLines = 1
@@ -167,8 +182,8 @@ object KhatmaScreen : Screen {
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        NoirStatChip(text = "12-day streak")
-                                        NoirStatChip(text = "18 days left")
+                                        NoirStatChip(text = "$streak-day streak")
+                                        NoirStatChip(text = "$remaining days left")
                                         NoirStatChip(text = "Est. Oct 15")
                                     }
 
@@ -181,7 +196,7 @@ object KhatmaScreen : Screen {
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Text(
-                                            text = "35 of 114 portions",
+                                            text = "$portions of 114 portions",
                                             color = GhaisNoir.TextTertiary,
                                             fontSize = 11.sp
                                         )
@@ -247,8 +262,8 @@ object KhatmaScreen : Screen {
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                StatBox("Streak", "12 Days", Icons.Filled.LocalFireDepartment, GhaisNoir.TextPrimary)
-                                StatBox("Remaining", "18 Days", null, GhaisNoir.TextPrimary)
+                                StatBox("Streak", "$streak Days", Icons.Filled.LocalFireDepartment, GhaisNoir.TextPrimary)
+                                StatBox("Remaining", "$remaining Days", null, GhaisNoir.TextPrimary)
                                 StatBox("Est. Finish", "Oct 15", null, GhaisNoir.TextPrimary)
                             }
                         }

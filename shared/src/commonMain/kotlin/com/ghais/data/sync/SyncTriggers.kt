@@ -4,6 +4,7 @@ import com.ghais.data.auth.AuthRepository
 import com.ghais.data.repository.CustomRoutinesStore
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
+import com.ghais.data.repository.KhatmaStore
 import com.ghais.data.repository.OnboardingStore
 import com.ghais.data.repository.ReciterSearchHistoryStore
 import com.ghais.data.repository.SchedulesStore
@@ -22,8 +23,8 @@ import kotlinx.coroutines.launch
  *
  * Owner binding: every session change rebinds all user-namespaced local
  * stores (`"local"` while signed out, else the user id) so each account sees
- * only its own favorites / follows / routines / schedules / stats /
- * onboarding / download index.
+ * only its own favorites / follows / routines / schedules / khatma plans /
+ * stats / onboarding / download index.
  *
  * Three triggers, all no-ops while signed out or offline:
  * - **Login pull:** shortly after a session appears, run one pull-then-push
@@ -32,7 +33,7 @@ import kotlinx.coroutines.launch
  *   session, run one pass (covers listening done while offline). Fires once
  *   per transition — never on login itself (the login pull owns that).
  * - **Debounced push:** any local change to favorites / follows / routines /
- *   schedules / listening stats schedules a pass 8s out; rapid successive edits reset the
+ *   schedules / khatma plans / listening stats schedules a pass 8s out; rapid successive edits reset the
  *   timer so bursts of toggles collapse into a single pass.
  *
  * Deliberately excludes `AudioEngine.currentTrack` / position (too chatty —
@@ -68,6 +69,7 @@ object SyncTriggers {
                 val localFollows = if (comingFromSignedOut) FollowStore.followedSlugs.value else emptySet()
                 val localRoutines = if (comingFromSignedOut) CustomRoutinesStore.routines.value else emptyList()
                 val localSchedules = if (comingFromSignedOut) SchedulesStore.schedules.value else emptyList()
+                val localKhatmaPlans = if (comingFromSignedOut) KhatmaStore.plans.value else emptyList()
                 val localGoal = if (comingFromSignedOut) OnboardingStore.goal.value else null
                 val localMinutes = if (comingFromSignedOut) OnboardingStore.dailyGoalMinutes.value else 15
                 UserUsageRepository.setOwner(owner)
@@ -75,6 +77,7 @@ object SyncTriggers {
                 FollowStore.setOwner(owner)
                 CustomRoutinesStore.setOwner(owner)
                 SchedulesStore.setOwner(owner)
+                KhatmaStore.setOwner(owner)
                 OnboardingStore.setOwner(owner)
                 ReciterSearchHistoryStore.setOwner(owner)
                 QuranDownloads.setOwner(owner)
@@ -94,6 +97,9 @@ object SyncTriggers {
                     }
                     if (SchedulesStore.schedules.value.isEmpty()) {
                         localSchedules.forEach { SchedulesStore.add(it) }
+                    }
+                    if (KhatmaStore.plans.value.isEmpty()) {
+                        localKhatmaPlans.forEach { KhatmaStore.add(it) }
                     }
                     if (localGoal != null && OnboardingStore.goal.value == null) {
                         OnboardingStore.setGoal(localGoal)
@@ -146,7 +152,8 @@ object SyncTriggers {
                     CustomRoutinesStore.routines,
                     SchedulesStore.schedules,
                     UserUsageRepository.stats,
-                ) { _, _, _ -> },
+                    KhatmaStore.plans,
+                ) { _, _, _, _ -> },
                 combine(
                     AudioEngine.currentTrack,
                     AudioEngine.isPlaying,
