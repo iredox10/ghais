@@ -694,13 +694,15 @@ class NowPlayingScreen : Screen {
                         tint = if (volume > 0f) GhaisNoir.TextTertiary else GhaisNoir.TextDisabled,
                         onClick = { poke(); showVolume = !showVolume }
                     )
-                    NoirUtilityWell(
-                        icon = Icons.AutoMirrored.Filled.MenuBook,
-                        contentDescription = "Ayah Mode",
-                        active = isAyahMode,
-                        tint = if (isAyahMode) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                        onClick = { poke(); AudioEngine.toggleAyahMode() }
-                    )
+                    if (isAyahMode) {
+                        NoirUtilityWell(
+                            icon = Icons.AutoMirrored.Filled.MenuBook,
+                            contentDescription = "Ayah Mode",
+                            active = true,
+                            tint = GhaisNoir.TextPrimary,
+                            onClick = { poke(); AudioEngine.toggleAyahMode() }
+                        )
+                    }
                     NoirUtilityWell(
                         icon = Icons.Filled.QueueMusic,
                         contentDescription = "Queue",

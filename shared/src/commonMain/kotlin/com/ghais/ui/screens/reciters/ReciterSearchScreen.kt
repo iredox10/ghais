@@ -112,9 +112,12 @@ class ReciterSearchScreen : Screen {
         }
 
         // Shared queue builder — mirrors RecitersScreen onPlayReciter.
+        // getSurahsForReciter is already availability-filtered; the explicit
+        // isSurahAvailable guard keeps us safe if that ever changes.
         fun playReciter(reciter: Reciter) {
             ReciterSearchHistoryStore.record(reciter.slug)
             val surahs = QuranDataRepository.getSurahsForReciter(reciter)
+                .filter { reciter.isSurahAvailable(it.id) }
             val tracks = surahs.map { surah ->
                 TrackItem(
                     reciterSlug = reciter.slug,

@@ -137,6 +137,7 @@ class RecitersScreen : Tab {
                                 onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) },
                                 onPlayReciter = { reciter ->
                                     val surahs = QuranDataRepository.getSurahsForReciter(reciter)
+                                        .filter { reciter.isSurahAvailable(it.id) }
                                     val tracks = surahs.map { surah ->
                                         TrackItem(
                                             reciterSlug = reciter.slug,

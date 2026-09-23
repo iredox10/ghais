@@ -166,6 +166,8 @@ fun CustomRoutine.toTrackItems(): List<TrackItem> {
     return items.mapNotNull { item ->
         val surah = surahs.find { it.id == item.surahId } ?: return@mapNotNull null
         val reciter = QuranDataRepository.getReciterBySlug(item.reciterSlug)
+        // Skip surahs this reciter has no audio for — never queue a known-404.
+        if (!reciter.isSurahAvailable(surah.id)) return@mapNotNull null
         TrackItem(
             reciterSlug = reciter.slug,
             reciterName = reciter.nameEn,

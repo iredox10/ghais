@@ -64,6 +64,13 @@ data class DetailedCuratedPlaylist(
  */
 fun RecitationTrack.toTrackItem(reciter: DetailedReciter): TrackItem {
     val reciterModel = com.ghais.data.repository.QuranDataRepository.getReciterBySlug(reciter.slug)
+    // When the reciter has no audio for this surah, keep the curated seed URL
+    // (known-good) instead of a recomputed URL that would 404. Indices untouched.
+    val resolvedUrl = if (reciterModel.isSurahAvailable(surahNumber)) {
+        reciterModel.getFullSurahUrl(surahNumber).ifEmpty { audioUrl }
+    } else {
+        audioUrl
+    }
     return TrackItem(
         reciterSlug = reciter.slug,
         reciterName = reciter.nameEn,
@@ -71,7 +78,7 @@ fun RecitationTrack.toTrackItem(reciter: DetailedReciter): TrackItem {
         surahNameEn = surahNameEn,
         surahNameAr = surahNameAr,
         ayahNo = 0,
-        audioUrl = reciterModel.getFullSurahUrl(surahNumber).ifEmpty { audioUrl },
+        audioUrl = resolvedUrl,
         textUthmani = "",
         durationMs = parseDurationStringToMs(duration)
     )
@@ -84,6 +91,13 @@ fun CuratedTrack.toTrackItem(reciterSlug: String = ""): TrackItem {
     val reciter = com.ghais.data.repository.QuranDataRepository.getReciterBySlug(
         if (reciterSlug.isNotBlank()) reciterSlug else reciterName
     )
+    // When the reciter has no audio for this surah, keep the curated seed URL
+    // (known-good) instead of a recomputed URL that would 404. Indices untouched.
+    val resolvedUrl = if (reciter.isSurahAvailable(surahNumber)) {
+        reciter.getFullSurahUrl(surahNumber).ifEmpty { audioUrl }
+    } else {
+        audioUrl
+    }
     return TrackItem(
         reciterSlug = reciter.slug,
         reciterName = reciterName,
@@ -91,7 +105,7 @@ fun CuratedTrack.toTrackItem(reciterSlug: String = ""): TrackItem {
         surahNameEn = surahNameEn,
         surahNameAr = surahNameAr,
         ayahNo = 0,
-        audioUrl = reciter.getFullSurahUrl(surahNumber).ifEmpty { audioUrl },
+        audioUrl = resolvedUrl,
         textUthmani = "",
         durationMs = parseDurationStringToMs(duration)
     )
@@ -752,6 +766,12 @@ object QuranDataRepository {
         val playlist = getCuratedPlaylistOrDefault(playlistId)
         return playlist.tracks.map { track ->
             val reciter = com.ghais.data.repository.QuranDataRepository.getReciterBySlug(track.reciterName)
+            // Unavailable surah -> keep the curated seed URL (known-good), never a 404.
+            val resolvedUrl = if (reciter.isSurahAvailable(track.surahNumber)) {
+                reciter.getFullSurahUrl(track.surahNumber)
+            } else {
+                track.audioUrl
+            }
             TrackItem(
                 reciterSlug = reciter.slug,
                 reciterName = track.reciterName,
@@ -759,7 +779,7 @@ object QuranDataRepository {
                 surahNameEn = track.surahNameEn,
                 surahNameAr = track.surahNameAr,
                 ayahNo = 0,
-                audioUrl = reciter.getFullSurahUrl(track.surahNumber),
+                audioUrl = resolvedUrl,
                 textUthmani = "",
                 durationMs = parseDurationStringToMs(track.duration)
             )

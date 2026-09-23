@@ -85,9 +85,12 @@ class SearchScreen : Screen {
         val searchResults = remember(query) { SearchEngine.search(query) }
 
         // Shared queue builder — unchanged playback logic, surah entry point varies.
+        // Filtered to surahs the reciter actually has audio for; entry falls
+        // back to the nearest available surah so we never queue a known-404.
         fun playSurahQueue(entrySurahId: Int, reciterSlug: String, reciterName: String) {
             val reciter = QuranDataRepository.getReciterBySlug(reciterSlug)
             val allSurahs = QuranDataRepository.getSurahs()
+                .filter { reciter.isSurahAvailable(it.id) }
             val allTracks = allSurahs.map { s ->
                 TrackItem(
                     reciterSlug = reciter.slug,
@@ -100,7 +103,12 @@ class SearchScreen : Screen {
                     durationMs = s.ayahsCount * 15_000L
                 )
             }
-            val startIndex = allTracks.indexOfFirst { it.surahId == entrySurahId }.coerceAtLeast(0)
+            if (allTracks.isEmpty()) return
+            val startIndex = allTracks.indexOfFirst { it.surahId == entrySurahId }
+                .takeIf { it >= 0 }
+                ?: allTracks.indices.minByOrNull {
+                    kotlin.math.abs(allTracks[it].surahId - entrySurahId)
+                } ?: 0
             AudioEngine.playQueue(allTracks, startIndex = startIndex)
             rootNavigator.push(NowPlayingScreen())
         }

@@ -368,6 +368,7 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                                                     AudioEngine.resume()
                                                 } else {
                                                     val surahs = QuranDataRepository.getSurahsForReciter(reciter)
+                                                        .filter { reciter.isSurahAvailable(it.id) }
                                                     val tracks = surahs.map { surah ->
                                                         TrackItem(
                                                             reciterSlug = reciter.slug,

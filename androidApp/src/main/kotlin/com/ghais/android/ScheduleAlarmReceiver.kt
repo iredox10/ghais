@@ -83,7 +83,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
             val from = min(schedule.fromSurah, schedule.toSurah)
             val to = max(schedule.fromSurah, schedule.toSurah)
             val tracks = QuranDataRepository.getSurahs()
-                .filter { it.id in from..to }
+                .filter { it.id in from..to && reciter.isSurahAvailable(it.id) }
                 .map { s ->
                     TrackItem(
                         reciterSlug = reciter.slug,

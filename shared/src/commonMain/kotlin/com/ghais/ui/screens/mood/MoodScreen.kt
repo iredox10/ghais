@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.ghais.data.repository.QuranDataRepository
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.ChromePillButton
@@ -229,19 +230,24 @@ data class MoodScreen(
                     initialMoodId = initialMoodId,
                     onClose = { navigator.pop() },
                     onMoodSelected = { mood ->
-                        AudioEngine.playTrack(
-                            TrackItem(
-                                reciterSlug = "mishary",
-                                reciterName = "Sheikh Mishary Rashid Alafasy",
-                                surahId = mood.surahId,
-                                surahNameEn = mood.surahNameEn,
-                                surahNameAr = mood.surahNameAr,
-                                ayahNo = 0,
-                                audioUrl = mood.audioUrl,
-                                durationMs = 300000L
+                        // Defensive: never queue a surah the reciter has no audio for.
+                        // Mishary carries the full catalog, so this is a no-op in practice.
+                        val reciter = QuranDataRepository.getReciterBySlug("mishary")
+                        if (reciter.isSurahAvailable(mood.surahId)) {
+                            AudioEngine.playTrack(
+                                TrackItem(
+                                    reciterSlug = "mishary",
+                                    reciterName = "Sheikh Mishary Rashid Alafasy",
+                                    surahId = mood.surahId,
+                                    surahNameEn = mood.surahNameEn,
+                                    surahNameAr = mood.surahNameAr,
+                                    ayahNo = 0,
+                                    audioUrl = mood.audioUrl,
+                                    durationMs = 300000L
+                                )
                             )
-                        )
-                        navigator.pop()
+                            navigator.pop()
+                        }
                     }
                 )
             }

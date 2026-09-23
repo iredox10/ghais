@@ -107,7 +107,9 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
         val isPlaying by AudioEngine.isPlaying.collectAsState()
 
         val allTracks: List<TrackItem> = remember(surahs, reciter) {
-            surahs.map { surah ->
+            // Skip surahs this reciter has no audio for — never queue a known-404.
+            // Display list (surahs) is untouched; only the queue is filtered.
+            surahs.filter { reciter.isSurahAvailable(it.id) }.map { surah ->
                 TrackItem(
                     reciterSlug = reciter.slug,
                     reciterName = reciter.nameEn,
