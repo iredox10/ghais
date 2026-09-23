@@ -41,6 +41,7 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.theme.GhaisTypography
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -667,6 +668,7 @@ private fun SurahHeaderBanner() {
                             fontSize = 32.sp,
                             lineHeight = 56.sp,
                             fontWeight = FontWeight.Bold,
+                            fontFamily = GhaisTypography.quranFont,
                             color = GhaisNoir.TextPrimary
                         )
                         Text(
@@ -701,6 +703,7 @@ private fun SurahHeaderBanner() {
                 text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
                 fontSize = 26.sp,
                 fontWeight = FontWeight.SemiBold,
+                fontFamily = GhaisTypography.quranFont,
                 color = GhaisNoir.TextPrimary,
                 lineHeight = 48.sp,
                 textAlign = TextAlign.Center
@@ -942,6 +945,7 @@ private fun AyahBlock(
                 text = arabicAnnotated,
                 fontSize = arabicFontSize.sp,
                 fontWeight = FontWeight.Normal,
+                fontFamily = GhaisTypography.quranFont,
                 textAlign = TextAlign.End,
                 lineHeight = (arabicFontSize * 2.1f).sp,
                 modifier = Modifier.fillMaxWidth()
@@ -1151,6 +1155,7 @@ private fun MushafPageViewCard(
                     text = "سُورَةُ الكَهْفِ",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
+                    fontFamily = GhaisTypography.quranFont,
                     color = GhaisNoir.TextPrimary
                 )
                 Text(
@@ -1210,6 +1215,7 @@ private fun MushafPageViewCard(
             Text(
                 text = pageText,
                 fontSize = (arabicFontSize - 2).sp,
+                fontFamily = GhaisTypography.quranFont,
                 lineHeight = ((arabicFontSize - 2) * 2.1f).sp,
                 textAlign = TextAlign.End,
                 modifier = Modifier
@@ -1271,6 +1277,7 @@ private fun TafsirDialog(
                     text = ayah.textUthmani + (ayah.tajweedPart ?: "") + " ۝${toArabicDigits(ayah.ayahNumber)}",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
+                    fontFamily = GhaisTypography.quranFont,
                     color = GhaisNoir.TextPrimary,
                     textAlign = TextAlign.End,
                     lineHeight = 34.sp,

@@ -68,6 +68,7 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.theme.GhaisTypography
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -402,6 +403,7 @@ fun TafseerSheet(
 
                     Text(
                         text = "${entry.arabicText} ۝${toArabicDigits(entry.ayahNo)}",
+                        fontFamily = GhaisTypography.quranFont,
                         color = GhaisNoir.TextPrimary,
                         fontSize = 24.sp,
                         lineHeight = 44.sp,
