@@ -5,6 +5,7 @@ import com.ghais.data.repository.CustomRoutinesStore
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.OnboardingStore
+import com.ghais.data.repository.ReciterSearchHistoryStore
 import com.ghais.data.repository.SchedulesStore
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.player.QuranDownloads
@@ -74,6 +75,7 @@ object SyncTriggers {
                 CustomRoutinesStore.setOwner(owner)
                 SchedulesStore.setOwner(owner)
                 OnboardingStore.setOwner(owner)
+                ReciterSearchHistoryStore.setOwner(owner)
                 QuranDownloads.setOwner(owner)
                 if (comingFromSignedOut) {
                     // Adopt pre-auth choices into the new account, but only
