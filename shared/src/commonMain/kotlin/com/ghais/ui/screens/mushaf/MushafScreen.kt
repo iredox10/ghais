@@ -42,6 +42,7 @@ import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
+import com.ghais.ui.util.toArabicDigits
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -1304,10 +1305,3 @@ private fun TafsirDialog(
     )
 }
 
-/**
- * Converts integer digits to classic Arabic numerals (١, ٢, ٣...)
- */
-private fun toArabicDigits(number: Int): String {
-    val digits = charArrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
-    return number.toString().map { digits[it - '0'] }.joinToString("")
-}

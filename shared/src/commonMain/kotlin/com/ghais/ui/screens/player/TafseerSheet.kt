@@ -69,6 +69,7 @@ import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
+import com.ghais.ui.util.toArabicDigits
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -759,13 +760,6 @@ private fun TafseerAyahBadge(number: Int) {
     }
 }
 
-/**
- * Converts western integer digits to classic Eastern Arabic numerals (١, ٢, ٣...).
- */
-private fun toArabicDigits(number: Int): String {
-    val digits = charArrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
-    return number.toString().map { digits[it - '0'] }.joinToString("")
-}
 
 /**
  * Smart resolver that blends explicit arguments, live audio player track metadata,
