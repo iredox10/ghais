@@ -1,6 +1,11 @@
 package com.ghais.ui.screens.reciters
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
@@ -44,6 +49,17 @@ fun photoForSlug(slug: String): String? {
 }
 
 /**
+ * Injectable single-slug cloud photo reader (public `reciters` collection,
+ * `image_url` per reciter — null on 404/any failure). Wired from platform
+ * code that owns the cloud client (android `SyncEngine.init` →
+ * `reciterImage`); null on platforms without one, where avatars simply stay
+ * on the local [photoForSlug] fallback.
+ *
+ * Mirrors `FollowStore.countFetcher`.
+ */
+var remotePhotoFetcher: (suspend (String) -> String?)? = null
+
+/**
  * Noir reciter artwork helpers — reference [com.ghais.ui.theme.GhaisNoir].
  *
  * All reciter photo/avatar rendering must go through [NoirReciterAvatar] (or
@@ -67,9 +83,15 @@ fun monogramForReciter(nameEn: String): String =
 /**
  * Grayscale reciter avatar in a clay well with monogram fallback.
  *
- * @param photoUrl nullable portrait URL; blank/null renders the monogram well.
+ * Cloud upgrade: when [slug] is provided and [remotePhotoFetcher] is wired,
+ * the local [photoUrl]/monogram renders instantly and the cloud portrait
+ * swaps in only on null→url (never blank, never flashes, never blocks the
+ * UI). [slug] defaults to null so existing callers are unaffected.
+ *
+ * @param photoUrl nullable local portrait URL; blank/null renders the monogram well.
  * @param nameEn English name used for the monogram + content description.
  * @param ring when true uses the bright chromium top-specular border, else the ghost card border.
+ * @param slug reciter slug used for the async cloud-photo lookup; null disables it.
  */
 @Composable
 fun NoirReciterAvatar(
@@ -80,9 +102,21 @@ fun NoirReciterAvatar(
     shape: Shape = RoundedCornerShape(22.dp),
     monogramSize: TextUnit = 28.sp,
     ring: Boolean = false,
+    slug: String? = null,
 ) {
+    var remoteUrl by remember(slug) { mutableStateOf<String?>(null) }
+    if (slug != null && remoteUrl == null) {
+        LaunchedEffect(slug) {
+            val fetched = try {
+                remotePhotoFetcher?.invoke(slug)
+            } catch (_: Exception) {
+                null
+            }
+            if (!fetched.isNullOrBlank()) remoteUrl = fetched
+        }
+    }
     NoirArtworkWell(
-        coverUrl = photoUrl.orEmpty(),
+        coverUrl = remoteUrl ?: photoUrl.orEmpty(),
         monogram = monogramForReciter(nameEn),
         shape = shape,
         modifier = modifier,

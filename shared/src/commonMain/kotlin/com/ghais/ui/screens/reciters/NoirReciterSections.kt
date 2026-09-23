@@ -9,13 +9,12 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.ui.components.noir.NoirSectionHeader
-import com.ghais.ui.screens.home.NoirArtworkWell
 
 /**
  * Noir reciter section chrome — reference [com.ghais.ui.theme.GhaisNoir].
  *
  * Thin reciter-specific wrappers over the shared primitives
- * ([NoirSectionHeader], [NoirArtworkWell]) so reciter screens share one label
+ * ([NoirSectionHeader], [NoirReciterAvatar]) so reciter screens share one label
  * rhythm and one grayscale artwork recipe with Home/Profile. No new
  * dependencies; no caller edits required (purely additive, backward-compatible).
  */
@@ -44,9 +43,12 @@ fun NoirReciterSectionHeader(
 }
 
 /**
- * Grayscale reciter artwork delegating to the shared home [NoirArtworkWell]:
- * saturation-0 photo in a clay well with monogram fallback and optional
- * chromium ring. Prefer this over raw AsyncImage in reciter rows/cards.
+ * Grayscale reciter artwork delegating to [NoirReciterAvatar] (single cloud/
+ * local resolution point): saturation-0 photo in a clay well with monogram
+ * fallback and optional chromium ring. Prefer this over raw AsyncImage in
+ * reciter rows/cards.
+ *
+ * @param slug reciter slug for the async cloud-photo lookup; null keeps the local [photoUrl] only.
  */
 @Composable
 fun NoirReciterArtwork(
@@ -57,14 +59,16 @@ fun NoirReciterArtwork(
     shape: Shape = RoundedCornerShape(22.dp),
     monogramSize: TextUnit = 28.sp,
     ring: Boolean = false,
+    slug: String? = null,
 ) {
-    NoirArtworkWell(
-        coverUrl = photoUrl.orEmpty(),
-        monogram = monogramForReciter(nameEn),
-        shape = shape,
+    NoirReciterAvatar(
+        photoUrl = photoUrl,
+        nameEn = nameEn,
         modifier = modifier,
         size = size,
+        shape = shape,
         monogramSize = monogramSize,
         ring = ring,
+        slug = slug,
     )
 }

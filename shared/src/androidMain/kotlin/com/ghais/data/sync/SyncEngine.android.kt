@@ -13,6 +13,7 @@ import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.SchedulesStore
 import com.ghais.domain.model.Reciter
 import com.ghais.data.repository.UserUsageRepository
+import com.ghais.ui.screens.reciters.remotePhotoFetcher
 import com.ghais.data.seed.JumpBackInItem
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
@@ -60,6 +61,7 @@ actual object SyncEngine {
 
     private const val PLAYLISTS = "playlists"
     private const val PLAYLIST_ITEMS = "playlist_items"
+    private const val RECITERS = "reciters"
     private const val ROUTINE_DOC_PREFIX = "rtn-"
     private const val HISTORY_CAP = 100
 
@@ -93,6 +95,11 @@ actual object SyncEngine {
         // display live follower counts (null = unknown = hidden).
         if (FollowStore.countFetcher == null) {
             FollowStore.countFetcher = { slug -> followerCount(slug) }
+        }
+        // Wire the public reciters photo reader into ReciterPhotos so avatars
+        // can upgrade to cloud portraits (null = local-only fallback).
+        if (remotePhotoFetcher == null) {
+            remotePhotoFetcher = { slug -> reciterImage(slug) }
         }
     }
 
@@ -439,6 +446,59 @@ actual object SyncEngine {
                     }
                 }
                 (data?.get(field) as? Number)?.toLong()
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+    // ------------------------------------------------------- reciter photos
+    //
+    // Cloud-hosted reciter portraits (`reciters` collection, per-reciter
+    // `image_url` editable from the admin panel, public read-only). The
+    // sibling provisions the collection in parallel, so 404/timeout/offline
+    // all degrade to null (local fallback) and never throw.
+
+    /**
+     * Reads `image_url` for [reciterSlug] from the `reciters` collection
+     * (`slug`-equal query, limit 1, `image_url` select). Returns the
+     * non-blank URL or null on ANY failure — never throws.
+     */
+    suspend fun reciterImage(reciterSlug: String): String? =
+        withContext(Dispatchers.IO) {
+            try {
+                val ctx = appContext ?: return@withContext null
+                if (!AppwriteConfig.isConfigured()) return@withContext null
+                val slug = reciterSlug.trim()
+                if (slug.isEmpty()) return@withContext null
+                val db = databases(ctx)
+                val data: Map<String, Any?>? = try {
+                    db.listDocuments(
+                        DB_ID,
+                        RECITERS,
+                        listOf(
+                            Query.equal("slug", slug),
+                            Query.limit(1),
+                            Query.select(listOf("image_url")),
+                        ),
+                    ).documents.firstOrNull()?.data
+                } catch (e: Exception) {
+                    if (!isNotFound(e)) {
+                        Log.w(TAG, "reciters image_url select query '$slug' failed; trying plain query", e)
+                    }
+                    try {
+                        db.listDocuments(
+                            DB_ID,
+                            RECITERS,
+                            listOf(Query.equal("slug", slug), Query.limit(1)),
+                        ).documents.firstOrNull()?.data
+                    } catch (e2: Exception) {
+                        if (!isNotFound(e2)) {
+                            Log.w(TAG, "reciters query '$slug' failed", e2)
+                        }
+                        null
+                    }
+                }
+                (data?.get("image_url") as? String)?.trim()?.takeIf { it.isNotEmpty() }
             } catch (_: Exception) {
                 null
             }
