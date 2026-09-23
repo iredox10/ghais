@@ -193,3 +193,12 @@ enum class RepeatMode {
     QUEUE
 }
 
+@Serializable
+data class HifzRange(
+    val surahId: Int,
+    val startAyah: Int,
+    val endAyah: Int,
+    val targetLoops: Int = 1,
+    val currentLoop: Int = 1
+)
+

@@ -3,6 +3,7 @@ package com.ghais.player
 import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.QuranData
+import com.ghais.domain.model.HifzRange
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.RepeatMode
 import com.ghais.domain.model.TrackItem
@@ -11,7 +12,9 @@ import com.ghais.domain.model.isFullSurah
 import com.ghais.domain.model.resolvedDurationMs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,6 +65,28 @@ object AudioEngine {
 
     private val _currentIndex = MutableStateFlow(-1)
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
+
+    // --- Hifz & Memorization StateFlows ---
+    private val _ayahRepetitionTarget = MutableStateFlow(1)
+    val ayahRepetitionTarget: StateFlow<Int> = _ayahRepetitionTarget.asStateFlow()
+
+    private val _currentAyahRepetition = MutableStateFlow(1)
+    val currentAyahRepetition: StateFlow<Int> = _currentAyahRepetition.asStateFlow()
+
+    private val _recitationGapSeconds = MutableStateFlow(0)
+    val recitationGapSeconds: StateFlow<Int> = _recitationGapSeconds.asStateFlow()
+
+    private val _isRecitationGapActive = MutableStateFlow(false)
+    val isRecitationGapActive: StateFlow<Boolean> = _isRecitationGapActive.asStateFlow()
+
+    private val _recitationGapCountdown = MutableStateFlow(0)
+    val recitationGapCountdown: StateFlow<Int> = _recitationGapCountdown.asStateFlow()
+
+    private val _hifzRange = MutableStateFlow<HifzRange?>(null)
+    val hifzRange: StateFlow<HifzRange?> = _hifzRange.asStateFlow()
+
+    private var gapJob: Job? = null
+    private var pendingGapAction: (() -> Unit)? = null
 
     init {
         PlayerBridge.setOnTrackEndListener { onBridgeTrackEnd() }
@@ -287,7 +312,125 @@ object AudioEngine {
         playAyah(surahId, validAyahNo, reciter.slug)
     }
 
+    // --- Hifz Internal Gap & Action Management ---
+    private fun cancelGap() {
+        gapJob?.cancel()
+        gapJob = null
+        pendingGapAction = null
+        _isRecitationGapActive.value = false
+        _recitationGapCountdown.value = 0
+    }
+
+    private fun executeWithRecitationGap(lastAyahDurationMs: Long, action: () -> Unit) {
+        cancelGap()
+
+        val gapSetting = _recitationGapSeconds.value
+        val gapDuration = when (gapSetting) {
+            0 -> 0
+            -1 -> {
+                if (lastAyahDurationMs > 0L) {
+                    ((lastAyahDurationMs + 999L) / 1000L).toInt().coerceAtLeast(1)
+                } else 3
+            }
+            else -> gapSetting.coerceAtLeast(0)
+        }
+
+        if (gapDuration <= 0 || !_isPlaying.value) {
+            action()
+            return
+        }
+
+        pendingGapAction = action
+        _isRecitationGapActive.value = true
+        _recitationGapCountdown.value = gapDuration
+
+        gapJob = scope.launch {
+            var remaining = gapDuration
+            while (remaining > 0) {
+                _recitationGapCountdown.value = remaining
+                if (!_isPlaying.value) {
+                    delay(200L)
+                    continue
+                }
+                delay(1000L)
+                remaining--
+            }
+            _recitationGapCountdown.value = 0
+            _isRecitationGapActive.value = false
+
+            if (_isPlaying.value) {
+                val pending = pendingGapAction
+                pendingGapAction = null
+                pending?.invoke()
+            }
+        }
+    }
+
+    // --- Public Hifz Control APIs ---
+    fun setAyahRepetitionTarget(target: Int) {
+        _ayahRepetitionTarget.value = when {
+            target == -1 -> -1
+            target < 1 -> 1
+            else -> target
+        }
+        _currentAyahRepetition.value = 1
+    }
+
+    fun setRecitationGapSeconds(seconds: Int) {
+        _recitationGapSeconds.value = when {
+            seconds == -1 -> -1
+            seconds < 0 -> 0
+            else -> seconds
+        }
+    }
+
+    fun setHifzRange(startAyah: Int, endAyah: Int, targetLoops: Int = 1) {
+        val currentSurahId = _currentTrack.value?.surahId ?: queueManager.currentTrack?.surahId ?: 1
+        setHifzRange(currentSurahId, startAyah, endAyah, targetLoops)
+    }
+
+    fun setHifzRange(surahId: Int, startAyah: Int, endAyah: Int, targetLoops: Int = 1) {
+        val start = minOf(startAyah, endAyah).coerceAtLeast(1)
+        val end = maxOf(startAyah, endAyah).coerceAtLeast(1)
+        _hifzRange.value = HifzRange(
+            surahId = surahId,
+            startAyah = start,
+            endAyah = end,
+            targetLoops = targetLoops,
+            currentLoop = 1
+        )
+        _currentAyahRepetition.value = 1
+        cancelGap()
+    }
+
+    fun clearHifzRange() {
+        _hifzRange.value = null
+    }
+
+    fun resetAyahRepetition() {
+        _currentAyahRepetition.value = 1
+    }
+
+    fun skipRecitationGap() {
+        if (_isRecitationGapActive.value) {
+            val pending = pendingGapAction
+            cancelGap()
+            pending?.invoke()
+        }
+    }
+
     fun playAyah(
+        surahId: Int,
+        ayahNo: Int,
+        reciterSlug: String? = null,
+        startPositionMs: Long = 0L
+    ) {
+        cancelGap()
+        _currentAyahRepetition.value = 1
+        playAyahInternal(surahId, ayahNo, reciterSlug, startPositionMs)
+    }
+
+    private fun playAyahInternal(
         surahId: Int,
         ayahNo: Int,
         reciterSlug: String? = null,
@@ -510,6 +653,8 @@ object AudioEngine {
     fun next() = if (_isAyahMode.value) nextAyah() else skipNext()
 
     fun nextAyah() {
+        cancelGap()
+        _currentAyahRepetition.value = 1
         val current = _currentTrack.value
         if (current == null) {
             val surah = queueManager.currentTrack ?: return
@@ -521,14 +666,24 @@ object AudioEngine {
         val totalAyahs = getAyahCountForSurah(surahId)
         val reciterSlug = current.reciterSlug
 
+        val range = _hifzRange.value
+        if (range != null && range.surahId == surahId) {
+            if (currentAyah < range.endAyah) {
+                playAyahInternal(surahId, currentAyah + 1, reciterSlug)
+            } else {
+                playAyahInternal(surahId, range.startAyah, reciterSlug)
+            }
+            return
+        }
+
         if (currentAyah < totalAyahs) {
-            playAyah(surahId, currentAyah + 1, reciterSlug)
+            playAyahInternal(surahId, currentAyah + 1, reciterSlug)
         } else {
             // Cross boundary into next Surah
             val nextSurah = queueManager.playNext(forceAdvance = true)
             if (nextSurah != null) {
                 _currentIndex.value = queueManager.currentIndex
-                playAyah(nextSurah.surahId, 1, nextSurah.reciterSlug)
+                playAyahInternal(nextSurah.surahId, 1, nextSurah.reciterSlug)
             } else {
                 SleepTimer.onQueueEnded()
                 stopPlayback()
@@ -537,6 +692,8 @@ object AudioEngine {
     }
 
     fun skipNext() {
+        cancelGap()
+        _currentAyahRepetition.value = 1
         val nextSurah = queueManager.playNext(forceAdvance = true)
         if (nextSurah != null) {
             _currentIndex.value = queueManager.currentIndex
@@ -554,6 +711,8 @@ object AudioEngine {
     fun previous() = if (_isAyahMode.value) previousAyah() else skipPrevious()
 
     fun previousAyah() {
+        cancelGap()
+        _currentAyahRepetition.value = 1
         val current = _currentTrack.value ?: return
         if (_currentPositionMs.value > 3_000L) {
             seekTo(0L)
@@ -563,15 +722,25 @@ object AudioEngine {
         val currentAyah = current.ayahNo
         val reciterSlug = current.reciterSlug
 
+        val range = _hifzRange.value
+        if (range != null && range.surahId == surahId) {
+            if (currentAyah > range.startAyah) {
+                playAyahInternal(surahId, currentAyah - 1, reciterSlug)
+            } else {
+                seekTo(0L)
+            }
+            return
+        }
+
         if (currentAyah > 1) {
-            playAyah(surahId, currentAyah - 1, reciterSlug)
+            playAyahInternal(surahId, currentAyah - 1, reciterSlug)
         } else {
             // Cross boundary backwards: go to previous Surah, last Ayah
             val prevSurah = queueManager.playPrevious(forceAdvance = true)
             if (prevSurah != null) {
                 _currentIndex.value = queueManager.currentIndex
                 val prevTotalAyahs = getAyahCountForSurah(prevSurah.surahId)
-                playAyah(prevSurah.surahId, prevTotalAyahs, prevSurah.reciterSlug)
+                playAyahInternal(prevSurah.surahId, prevTotalAyahs, prevSurah.reciterSlug)
             } else {
                 seekTo(0L)
             }
@@ -664,6 +833,10 @@ object AudioEngine {
 
     fun clear() {
         stopPlayback()
+        clearHifzRange()
+        _ayahRepetitionTarget.value = 1
+        _currentAyahRepetition.value = 1
+        _recitationGapSeconds.value = 0
         queueManager.clear()
         _queue.value = emptyList()
         _currentIndex.value = -1
@@ -717,6 +890,8 @@ object AudioEngine {
     }
 
     private fun stopPlayback() {
+        cancelGap()
+        _currentAyahRepetition.value = 1
         PlayerBridge.stop()
         progressJob?.cancel()
         pendingSeekMs = 0L
@@ -764,30 +939,83 @@ object AudioEngine {
         val currentAyah = current.ayahNo
         val totalAyahs = getAyahCountForSurah(surahId)
         val reciterSlug = current.reciterSlug
+        val lastDurationMs = effectiveDuration()
 
+        // 1. Ayah Repetition Logic (N-times)
+        val repTarget = _ayahRepetitionTarget.value
+        val shouldRepeatAyah = (repTarget == -1) || (_currentAyahRepetition.value < repTarget)
+
+        if (shouldRepeatAyah) {
+            _currentAyahRepetition.value += 1
+            executeWithRecitationGap(lastDurationMs) {
+                playAyahInternal(surahId, currentAyah, reciterSlug)
+            }
+            return
+        }
+
+        // Ayah repetition target reached -> reset counter to 1 and proceed
+        _currentAyahRepetition.value = 1
+
+        // 2. Bounded Range Loop Mode
+        val range = _hifzRange.value
+        if (range != null && range.surahId == surahId) {
+            if (currentAyah < range.endAyah) {
+                val nextAyah = (currentAyah + 1).coerceAtLeast(range.startAyah)
+                executeWithRecitationGap(lastDurationMs) {
+                    playAyahInternal(surahId, nextAyah, reciterSlug)
+                }
+            } else {
+                // At or beyond range endAyah
+                val canLoopRange = (range.targetLoops == -1) || (range.currentLoop < range.targetLoops)
+                if (canLoopRange) {
+                    _hifzRange.value = range.copy(currentLoop = range.currentLoop + 1)
+                    executeWithRecitationGap(lastDurationMs) {
+                        playAyahInternal(surahId, range.startAyah, reciterSlug)
+                    }
+                } else {
+                    executeWithRecitationGap(lastDurationMs) {
+                        SleepTimer.onQueueEnded()
+                        stopPlayback()
+                    }
+                }
+            }
+            return
+        }
+
+        // 3. Standard Queue / RepeatMode Logic (No HifzRange active)
         when (queueManager.repeatMode) {
             RepeatMode.AYAH -> {
-                playAyah(surahId, currentAyah, reciterSlug)
+                executeWithRecitationGap(lastDurationMs) {
+                    playAyahInternal(surahId, currentAyah, reciterSlug)
+                }
             }
             RepeatMode.SURAH -> {
                 if (currentAyah < totalAyahs) {
-                    playAyah(surahId, currentAyah + 1, reciterSlug)
+                    executeWithRecitationGap(lastDurationMs) {
+                        playAyahInternal(surahId, currentAyah + 1, reciterSlug)
+                    }
                 } else {
                     SleepTimer.onSurahEnded()
                     if (!_isPlaying.value) return
-                    playAyah(surahId, 1, reciterSlug)
+                    executeWithRecitationGap(lastDurationMs) {
+                        playAyahInternal(surahId, 1, reciterSlug)
+                    }
                 }
             }
             RepeatMode.QUEUE, RepeatMode.OFF -> {
                 if (currentAyah < totalAyahs) {
-                    playAyah(surahId, currentAyah + 1, reciterSlug)
+                    executeWithRecitationGap(lastDurationMs) {
+                        playAyahInternal(surahId, currentAyah + 1, reciterSlug)
+                    }
                 } else {
                     SleepTimer.onSurahEnded()
                     if (!_isPlaying.value) return
                     val nextSurah = queueManager.playNext(forceAdvance = false)
                     if (nextSurah != null) {
                         _currentIndex.value = queueManager.currentIndex
-                        playAyah(nextSurah.surahId, 1, nextSurah.reciterSlug)
+                        executeWithRecitationGap(lastDurationMs) {
+                            playAyahInternal(nextSurah.surahId, 1, nextSurah.reciterSlug)
+                        }
                     } else {
                         SleepTimer.onQueueEnded()
                         stopPlayback()
