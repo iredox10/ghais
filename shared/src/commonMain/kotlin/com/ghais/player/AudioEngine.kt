@@ -16,8 +16,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -58,7 +61,17 @@ object AudioEngine {
     private val _volume = MutableStateFlow(1.0f)
     val volume: StateFlow<Float> = _volume.asStateFlow()
 
-    val errorMessage: StateFlow<String?> = PlayerBridge.errorMessage
+    private val _engineError = MutableStateFlow<String?>(null)
+    /**
+     * Engine-surfaced error: friendly message when a full-surah queue exhausts
+     * from source errors, bridge message otherwise. Surfacing this (and keeping
+     * the current track) instead of stopPlayback() preserves the session and
+     * its notification.
+     */
+    val errorMessage: StateFlow<String?> =
+        combine(PlayerBridge.errorMessage, _engineError) { bridge, engine ->
+            engine ?: bridge
+        }.stateIn(scope, SharingStarted.Eagerly, PlayerBridge.errorMessage.value)
 
     private val _queue = MutableStateFlow<List<TrackItem>>(emptyList())
     val queue: StateFlow<List<TrackItem>> = _queue.asStateFlow()
@@ -162,20 +175,34 @@ object AudioEngine {
                             if (nextTrack != null) {
                                 startPlayback(nextTrack)
                             } else {
+                                // Queue exhausted from source errors: keep the session
+                                // (track + notification) alive with a friendly error
+                                // instead of stopPlayback(), which strands to IDLE
+                                // with no track and kills the notification.
                                 SleepTimer.onQueueEnded()
-                                stopPlayback()
+                                PlayerBridge.pause()
+                                _engineError.value = "Couldn't play this recitation"
                             }
                         }
                     } else if (failed != null) {
-                        stopPlayback()
+                        if (_isAyahMode.value) {
+                            stopPlayback()
+                        } else {
+                            // Too many consecutive source errors in full-surah mode:
+                            // same graceful landing — keep session, friendly error.
+                            PlayerBridge.pause()
+                            _engineError.value = "Couldn't play this recitation"
+                        }
                     }
                 } else if (error == null && _playbackState.value.status == PlaybackStatus.ERROR) {
                     consecutiveErrors = 0
+                    _engineError.value = null
                     _playbackState.update { state ->
                         state.copy(status = if (_isPlaying.value) PlaybackStatus.PLAYING else PlaybackStatus.PAUSED)
                     }
                 } else if (error == null) {
                     consecutiveErrors = 0
+                    _engineError.value = null
                 }
             }
         }
@@ -298,12 +325,18 @@ object AudioEngine {
             }
         } else {
             val surahs = QuranDataRepository.getSurahsForReciter(reciter)
+                .filter { reciter.isSurahAvailable(it.id) }
+            // Requested surah may be unavailable: fall back to the nearest
+            // available one so the queue never holds a known-404.
+            val effectiveSurahId = if (reciter.isSurahAvailable(surahId)) surahId
+            else nearestAvailableSurahId(reciter, surahId)
             val surahTracks = if (surahs.isNotEmpty()) {
                 surahs.map { s -> buildSurahTrack(s.id, reciter) }
             } else {
-                listOf(buildSurahTrack(surahId, reciter))
+                listOf(buildSurahTrack(effectiveSurahId, reciter))
             }
-            val startIdx = surahTracks.indexOfFirst { it.surahId == surahId }.coerceAtLeast(0)
+            val startIdx = surahTracks.indexOfFirst { it.surahId == effectiveSurahId }
+                .takeIf { it >= 0 } ?: 0
             queueManager.setQueue(surahTracks, startIdx)
         }
         _queue.value = queueManager.queue
@@ -449,12 +482,18 @@ object AudioEngine {
             }
         } else {
             val surahs = QuranDataRepository.getSurahsForReciter(reciter)
+                .filter { reciter.isSurahAvailable(it.id) }
+            // Requested surah may be unavailable: fall back to the nearest
+            // available one so the queue never holds a known-404.
+            val effectiveSurahId = if (reciter.isSurahAvailable(surahId)) surahId
+            else nearestAvailableSurahId(reciter, surahId)
             val surahTracks = if (surahs.isNotEmpty()) {
                 surahs.map { s -> buildSurahTrack(s.id, reciter) }
             } else {
-                listOf(buildSurahTrack(surahId, reciter))
+                listOf(buildSurahTrack(effectiveSurahId, reciter))
             }
-            val startIdx = surahTracks.indexOfFirst { it.surahId == surahId }.coerceAtLeast(0)
+            val startIdx = surahTracks.indexOfFirst { it.surahId == effectiveSurahId }
+                .takeIf { it >= 0 } ?: 0
             queueManager.setQueue(surahTracks, startIdx)
         }
         _queue.value = queueManager.queue
@@ -480,6 +519,12 @@ object AudioEngine {
             textUthmani = "",
             durationMs = UNKNOWN_DURATION_MS
         )
+    }
+
+    private fun nearestAvailableSurahId(reciter: Reciter, requestedId: Int): Int {
+        val ids = reciter.getAvailableSurahIds()
+        if (ids.isEmpty()) return requestedId.coerceIn(1, 114)
+        return ids.minByOrNull { kotlin.math.abs(it - requestedId) } ?: requestedId
     }
 
     private fun buildSurahTrack(surahId: Int, reciter: Reciter): TrackItem {
