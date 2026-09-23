@@ -80,22 +80,16 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
         val currentTrack by AudioEngine.currentTrack.collectAsState()
         val isEnginePlaying by AudioEngine.isPlaying.collectAsState()
 
-        // Track builder: per-ayah URL for the currently selected reciter.
-        fun buildTracks(): List<TrackItem> {
-            AudioEngine.setAyahMode(true)
-            return ayahs.map { ayah ->
-                TrackItem(
-                    reciterSlug = selectedReciter.slug,
-                    reciterName = selectedReciter.nameEn,
-                    surahId = surah.id,
-                    surahNameEn = surah.nameEn,
-                    surahNameAr = surah.nameAr,
-                    ayahNo = ayah.ayahNo,
-                    audioUrl = selectedReciter.getAyahAudioUrl(surah.id, ayah.ayahNo),
-                    textUthmani = ayah.textUthmani
-                )
-            }
-        }
+        fun buildAyahTrack(ayah: Ayah): TrackItem = TrackItem(
+            reciterSlug = selectedReciter.slug,
+            reciterName = selectedReciter.nameEn,
+            surahId = surah.id,
+            surahNameEn = surah.nameEn,
+            surahNameAr = surah.nameAr,
+            ayahNo = ayah.ayahNo,
+            audioUrl = selectedReciter.getAyahAudioUrl(surah.id, ayah.ayahNo),
+            textUthmani = ayah.textUthmani
+        )
 
         /** Same ayah currently loaded (regardless of play/pause or reciter switch) -> highlight. */
         fun isAyahActive(ayahNo: Int): Boolean {
@@ -110,27 +104,24 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                 t.reciterSlug == selectedReciter.slug && isEnginePlaying
         }
 
-        /** Per-ayah toggle: pause if playing; switch reciter if slug differs; resume if paused; else play queue. */
+        /** Per-ayah toggle: pause if playing; resume if paused; else play surah in ayah mode at selected ayah. */
         fun onAyahToggle(ayah: Ayah, index: Int) {
             if (isAyahPlaying(ayah.ayahNo)) {
                 AudioEngine.pause()
                 return
             }
-            AudioEngine.setAyahMode(true)
             val t = currentTrack
             if (t != null && t.surahId == surah.id && t.ayahNo == ayah.ayahNo &&
-                t.reciterSlug != selectedReciter.slug
+                t.reciterSlug == selectedReciter.slug
             ) {
-                // Reciter switched while this ayah is loaded -> restart same ayah with new reciter.
-                AudioEngine.playQueue(buildTracks(), index)
-                rootNavigator.push(NowPlayingScreen())
-                return
-            }
-            if (isAyahActive(ayah.ayahNo)) {
                 AudioEngine.resume()
                 return
             }
-            AudioEngine.playQueue(buildTracks(), index)
+            AudioEngine.playSurahInAyahMode(
+                surahId = surah.id,
+                reciterSlug = selectedReciter.slug,
+                startAyahNo = ayah.ayahNo
+            )
             rootNavigator.push(NowPlayingScreen())
         }
 
@@ -236,8 +227,11 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                                     expandedReciterMenu = false
                                 },
                                 onPlayAll = {
-                                    AudioEngine.setAyahMode(true)
-                                    AudioEngine.playQueue(buildTracks(), 0)
+                                    AudioEngine.playSurahInAyahMode(
+                                        surahId = surah.id,
+                                        reciterSlug = selectedReciter.slug,
+                                        startAyahNo = 1
+                                    )
                                     rootNavigator.push(NowPlayingScreen())
                                 },
                                 onAddToPlaylist = { /* Add to Playlist */ }
@@ -287,7 +281,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                             isFavorite = favorites.any { it.audioUrl == selectedReciter.getAyahAudioUrl(surah.id, ayah.ayahNo) },
                             onPlayClick = { onAyahToggle(ayah, index) },
                             onFavoriteClick = {
-                                FavoritesStore.toggle(buildTracks()[index])
+                                FavoritesStore.toggle(buildAyahTrack(ayah))
                             },
                             onShareClick = { /* Share */ }
                         )
