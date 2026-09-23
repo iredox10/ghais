@@ -36,6 +36,7 @@ import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
+import com.ghais.ui.util.toArabicDigits
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -99,7 +100,7 @@ fun AyahRow(
                 horizontalAlignment = Alignment.End
             ) {
                 Text(
-                    text = "${ayah.textUthmani} ۝",
+                    text = "${ayah.textUthmani} ۝${toArabicDigits(ayah.ayahNo)}",
                     modifier = Modifier.fillMaxWidth(),
                     color = GhaisNoir.TextPrimary,
                     fontSize = 22.sp,
@@ -301,3 +302,4 @@ fun MasteryStatusRing(
         }
     }
 }
+

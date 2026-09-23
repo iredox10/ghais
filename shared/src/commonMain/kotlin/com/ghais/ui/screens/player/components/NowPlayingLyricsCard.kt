@@ -64,6 +64,7 @@ import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisTypography
 import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.util.toArabicDigits
 
 /**
  * Synchronized Ayah Lyrics Card — Noir Glass (monochrome Carbon Glass).
@@ -280,10 +281,11 @@ fun NowPlayingLyricsCard(
                                     tint = GhaisNoir.TextSecondary,
                                     modifier = Modifier.size(15.dp)
                                 )
-                            }
-                        }
-                    }
-                }
+            }
+        }
+    }
+}
+
             }
 
             // Hifz Action Toolbar: Repetition Pill + Quick Mastery Status Pill + Tafseer Drawer Button
@@ -381,7 +383,7 @@ fun NowPlayingLyricsCard(
                     // with the end-of-ayah sign.
                     if (activeArabic.isNotBlank()) {
                         Text(
-                            text = "$activeArabic ۝",
+                            text = "$activeArabic ۝${toArabicDigits(displayAyahNo)}",
                             fontFamily = GhaisTypography.quranFont,
                             fontSize = 25.sp,
                             fontWeight = FontWeight.Bold,
@@ -479,7 +481,7 @@ fun NowPlayingLyricsCard(
                         if (upcomingAyahVerse.textUthmani.isNotBlank()) {
                             Spacer(modifier = Modifier.height(3.dp))
                             Text(
-                                text = "${upcomingAyahVerse.textUthmani} ۝",
+                                text = "${upcomingAyahVerse.textUthmani} ۝${toArabicDigits(upcomingAyahVerse.ayahNo)}",
                                 fontFamily = GhaisTypography.quranFont,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Normal,
