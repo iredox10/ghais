@@ -62,7 +62,7 @@ object HomeScreen : Tab {
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 120.dp)
             ) {
                 // -------------------------------------------------------------
-                // Editorial header — actions, headline, today's listening chips
+                // Top bar — actions only (headline removed)
                 // -------------------------------------------------------------
                 item {
                     HomeTopBar(
@@ -70,8 +70,6 @@ object HomeScreen : Tab {
                         onSearchClick = { rootNavigator?.push(SearchScreen()) },
                         onStatsClick = { rootNavigator?.push(StatsScreen) }
                     )
-                    Spacer(Modifier.height(18.dp))
-                    NoirHomeGreeting()
                     Spacer(Modifier.height(20.dp))
                 }
 
