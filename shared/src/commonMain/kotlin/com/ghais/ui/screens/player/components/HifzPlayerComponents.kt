@@ -551,7 +551,7 @@ fun VoiceCompareSection(
                                     modifier = Modifier
                                         .weight(1f)
                                         .clip(GhaisShapes.pill)
-                                        .background(if (sheikhActive) GhaisNoir.chromeFill() else GhaisNoir.Fill2)
+                                        .background(if (sheikhActive) GhaisNoir.chromeFill() else GhaisNoir.wellFill())
                                         .border(
                                             1.dp,
                                             if (sheikhActive) Color.White.copy(alpha = 0.5f) else GhaisNoir.BorderCard,
@@ -595,7 +595,7 @@ fun VoiceCompareSection(
                                     modifier = Modifier
                                         .weight(1f)
                                         .clip(GhaisShapes.pill)
-                                        .background(if (userActive) GhaisNoir.chromeFill() else GhaisNoir.Fill2)
+                                        .background(if (userActive) GhaisNoir.chromeFill() else GhaisNoir.wellFill())
                                         .border(
                                             1.dp,
                                             if (userActive) Color.White.copy(alpha = 0.5f) else GhaisNoir.BorderCard,

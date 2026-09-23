@@ -16,14 +16,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ghais.data.repository.HifzMasteryStore
+import com.ghais.data.repository.MasteryStatus
 import com.ghais.domain.model.Ayah
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
@@ -51,7 +57,9 @@ fun AyahRow(
     onFavoriteClick: () -> Unit,
     onShareClick: () -> Unit,
     /** True when this ayah is the current track (highlight stays even while paused). Defaults to [isPlaying] for backward compat. */
-    isActive: Boolean = isPlaying
+    isActive: Boolean = isPlaying,
+    masteryStatus: MasteryStatus? = null,
+    onMasteryClick: (() -> Unit)? = null
 ) {
     Column(
         modifier = Modifier
@@ -69,8 +77,19 @@ fun AyahRow(
                 .padding(horizontal = 14.dp, vertical = 14.dp),
             verticalAlignment = Alignment.Top
         ) {
-            // Engraved ayah-number well (monochrome star, number at 100%).
-            AyahBadge(number = ayah.ayahNo, active = isActive)
+            // Engraved ayah-number well + Hifz mastery status ring
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AyahBadge(number = ayah.ayahNo, active = isActive)
+                if (masteryStatus != null && onMasteryClick != null) {
+                    MasteryStatusRing(
+                        status = masteryStatus,
+                        onClick = onMasteryClick
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.width(12.dp))
 
@@ -209,5 +228,74 @@ fun AyahBadge(number: Int, active: Boolean = false) {
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold
         )
+    }
+}
+
+/**
+ * Three-tier mastery status ring:
+ * - NEW: subtle hairline outline circle
+ * - REVIEW_NEEDED: dashed outline circle with soft core
+ * - MASTERED: solid white disc with razor-thin ink-black checkmark
+ */
+@Composable
+fun MasteryStatusRing(
+    status: MasteryStatus,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .noirClickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.size(16.dp)) {
+            val strokeWidth = 1.6.dp.toPx()
+            val radius = (size.minDimension - strokeWidth) / 2f
+            when (status) {
+                MasteryStatus.NEW -> {
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.35f),
+                        radius = radius,
+                        style = Stroke(width = strokeWidth)
+                    )
+                }
+                MasteryStatus.REVIEW_NEEDED -> {
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.25f),
+                        radius = radius * 0.55f
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.85f),
+                        radius = radius,
+                        style = Stroke(
+                            width = strokeWidth,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 5f), 0f)
+                        )
+                    )
+                }
+                MasteryStatus.MASTERED -> {
+                    drawCircle(
+                        color = Color.White,
+                        radius = radius
+                    )
+                    val checkPath = Path().apply {
+                        moveTo(size.width * 0.28f, size.height * 0.50f)
+                        lineTo(size.width * 0.44f, size.height * 0.68f)
+                        lineTo(size.width * 0.72f, size.height * 0.34f)
+                    }
+                    drawPath(
+                        path = checkPath,
+                        color = Color.Black,
+                        style = Stroke(
+                            width = 2.dp.toPx(),
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round
+                        )
+                    )
+                }
+            }
+        }
     }
 }
