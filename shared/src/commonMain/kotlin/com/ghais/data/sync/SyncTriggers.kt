@@ -8,6 +8,7 @@ import com.ghais.data.repository.OnboardingStore
 import com.ghais.data.repository.ReciterSearchHistoryStore
 import com.ghais.data.repository.SchedulesStore
 import com.ghais.data.repository.UserUsageRepository
+import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -130,7 +131,10 @@ object SyncTriggers {
         }
 
         // Debounced push: any local change schedules a sync 8s out
-        // (reset on new change via debounce).
+        // (reset on new change via debounce). currentTrack/isPlaying are
+        // included so pause + track changes upload playback_state — the
+        // position ticker (currentPositionMs) stays excluded as too chatty.
+        // A paused position is frozen, so the delayed read is still exact.
         scope.launch {
             combine(
                 combine(
@@ -143,7 +147,11 @@ object SyncTriggers {
                     SchedulesStore.schedules,
                     UserUsageRepository.stats,
                 ) { _, _, _ -> },
-            ) { _, _ -> }
+                combine(
+                    AudioEngine.currentTrack,
+                    AudioEngine.isPlaying,
+                ) { _, _ -> },
+            ) { _, _, _ -> }
                 .debounce(8000)
                 .collect {
                     if (AuthRepository.session.value != null && NetworkMonitor.isOnline.value) {
