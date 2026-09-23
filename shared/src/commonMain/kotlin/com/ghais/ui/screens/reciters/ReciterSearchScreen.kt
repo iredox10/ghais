@@ -75,10 +75,11 @@ import kotlinx.coroutines.delay
  * shows live results with the same matching as RecitersScreen
  * (nameEn / nameAr / country contains, ignoreCase, ~300ms debounce).
  *
- * Row tap records the slug in [ReciterSearchHistoryStore], builds the
- * full-surah queue for that reciter, starts [AudioEngine.playQueue] and pushes
- * [NowPlayingScreen] — the same play wiring as RecitersScreen's
- * onPlayReciter block. History is recorded on play only, never on profile open.
+ * Row tap records the slug in [ReciterSearchHistoryStore] and pushes
+ * [ReciterProfileScreen]. The trailing play disc keeps the direct-play path:
+ * builds the full-surah queue for that reciter, starts [AudioEngine.playQueue]
+ * and pushes [NowPlayingScreen] — the same play wiring as RecitersScreen's
+ * onPlayReciter block. History is recorded on both profile-open and play.
  *
  * Owner binding: [com.ghais.data.sync.SyncTriggers] owns store rebinding —
  * this screen never calls setOwner (follow-up).
@@ -114,6 +115,11 @@ class ReciterSearchScreen : Screen {
         // Shared queue builder — mirrors RecitersScreen onPlayReciter.
         // getSurahsForReciter is already availability-filtered; the explicit
         // isSurahAvailable guard keeps us safe if that ever changes.
+        fun openProfile(reciter: Reciter) {
+            ReciterSearchHistoryStore.record(reciter.slug)
+            rootNavigator.push(ReciterProfileScreen(reciter.slug))
+        }
+
         fun playReciter(reciter: Reciter) {
             ReciterSearchHistoryStore.record(reciter.slug)
             val surahs = QuranDataRepository.getSurahsForReciter(reciter)
@@ -217,7 +223,8 @@ class ReciterSearchScreen : Screen {
                             items(recentReciters, key = { "recent-${it.slug}" }) { reciter ->
                                 RecentReciterRow(
                                     reciter = reciter,
-                                    onOpen = { playReciter(reciter) },
+                                    onOpen = { openProfile(reciter) },
+                                    onPlay = { playReciter(reciter) },
                                     onRemove = { ReciterSearchHistoryStore.remove(reciter.slug) }
                                 )
                             }
@@ -267,6 +274,7 @@ class ReciterSearchScreen : Screen {
                         items(results, key = { "result-${it.slug}" }) { reciter ->
                             ResultReciterRow(
                                 reciter = reciter,
+                                onOpen = { openProfile(reciter) },
                                 onPlay = { playReciter(reciter) }
                             )
                         }
@@ -359,12 +367,14 @@ private fun ReciterSearchField(
 
 /**
  * Recent-search row in the NoirListRow language: grayscale avatar well,
- * dual text, per-item remove (X well). Row tap plays.
+ * dual text, trailing play disc for direct play, per-item remove (X well).
+ * Row tap opens the reciter profile.
  */
 @Composable
 private fun RecentReciterRow(
     reciter: Reciter,
     onOpen: () -> Unit,
+    onPlay: () -> Unit,
     onRemove: () -> Unit
 ) {
     Row(
@@ -410,6 +420,22 @@ private fun RecentReciterRow(
         }
         Box(
             modifier = Modifier
+                .size(32.dp)
+                .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                .background(GhaisNoir.Fill2, CircleShape)
+                .noirClickable(onPlay),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = "Play reciter ${reciter.nameEn}",
+                tint = GhaisNoir.TextPrimary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Box(
+            modifier = Modifier
                 .size(28.dp)
                 .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
                 .background(GhaisNoir.Fill2, CircleShape)
@@ -428,11 +454,12 @@ private fun RecentReciterRow(
 
 /**
  * Live-result row in the NoirListRow language: grayscale avatar well,
- * dual text, ghost circular play affordance. Row tap plays.
+ * dual text, ghost circular play affordance. Row tap opens the reciter profile.
  */
 @Composable
 private fun ResultReciterRow(
     reciter: Reciter,
+    onOpen: () -> Unit,
     onPlay: () -> Unit
 ) {
     Row(
@@ -442,7 +469,7 @@ private fun ResultReciterRow(
             .background(GhaisNoir.cardFillSoft(), GhaisShapes.row)
             .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.row)
             .topSpecular(inset = 22.dp)
-            .noirClickable(onPlay)
+            .noirClickable(onOpen)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
