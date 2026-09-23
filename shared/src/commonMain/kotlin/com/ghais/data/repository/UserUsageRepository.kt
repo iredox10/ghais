@@ -492,7 +492,8 @@ object UserUsageRepository {
 
     /**
      * Restores listening history from decoded cloud entries (most-recent-first
-     * `TrackItem` + `played_at_ms` pairs, as supplied by the sync pull).
+     * `TrackItem` + `played_at_ms` + `position_ms` triples, as supplied by the
+     * sync pull).
      *
      * Day/order-aware: entries are sorted by `playedAtMs` desc so the most
      * recent play heads the list, and each entry keeps its cloud timestamp as
@@ -500,25 +501,32 @@ object UserUsageRepository {
      * [toPersistedHistoryItem]) instead of being re-stamped with "now".
      * Capped at 15 like [recordProgress], and merges without duplicating
      * identical entries (same `surahId` + `reciterSlug` keeps the most recent
-     * occurrence). Persists via [saveHistoryToDisk]. Cloud tracks carry no
-     * saved position, so restored entries resume from the start
-     * (`positionMs = 0`, "Not started" subtitle) with the known duration.
+     * occurrence). Persists via [saveHistoryToDisk]. The cloud `position_ms`
+     * is adopted (capped strictly below `durationMs` so resume never starts
+     * at/past the end); entries without one resume from the start
+     * (`positionMs = 0`, "Not started" subtitle).
      */
-    fun restoreHistory(items: List<Pair<TrackItem, Long>>) {
+    fun restoreHistory(items: List<Triple<TrackItem, Long, Long>>) {
         if (items.isEmpty()) return
         val seen = mutableSetOf<Pair<Int, String>>()
-        val restored = items.sortedByDescending { it.second }.mapNotNull { (track, playedAt) ->
+        val restored = items.sortedByDescending { it.second }.mapNotNull { (track, playedAt, positionMs) ->
             if (track.surahId <= 0 || playedAt <= 0L) return@mapNotNull null
             if (!seen.add(track.surahId to track.reciterSlug)) return@mapNotNull null
             val duration = track.durationMs.coerceAtLeast(0L)
+            val safePos = if (duration > 0L) {
+                positionMs.coerceIn(0L, (duration - 1L).coerceAtLeast(0L))
+            } else {
+                positionMs.coerceAtLeast(0L)
+            }
+            val progress = if (duration > 0L) (safePos.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
             JumpBackInItem(
                 title = track.surahNameEn.ifEmpty { "Surah ${track.surahId}" },
-                subtitle = "${track.reciterName.ifEmpty { "Mishary" }} • ${formatRemainingTime(0L, duration)}",
-                progress = 0f,
+                subtitle = "${track.reciterName.ifEmpty { "Mishary" }} • ${formatRemainingTime(safePos, duration)}",
+                progress = progress,
                 coverUrl = getCoverForSurah(track.surahId),
                 surahId = track.surahId,
                 reciterSlug = track.reciterSlug,
-                positionMs = 0L,
+                positionMs = safePos,
                 durationMs = duration,
                 lastPlayedTimestampMs = playedAt
             )

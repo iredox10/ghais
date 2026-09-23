@@ -198,10 +198,13 @@ private fun resumeHistoryEntry(entry: JumpBackInItem, openPlayer: () -> Unit) {
         else -> {
             // A redirected start belongs to a different surah, so its saved
             // position does not apply — start from the beginning instead.
+            // Otherwise cap strictly below duration (never start at/past the
+            // end) and restart entries already within 5s of finishing.
             val resumeAt = if (redirected) {
                 0L
-            } else if (entry.durationMs > 0L && entry.positionMs >= entry.durationMs - 5_000L) {
-                0L
+            } else if (entry.durationMs > 0L) {
+                val capped = entry.positionMs.coerceIn(0L, (entry.durationMs - 1L).coerceAtLeast(0L))
+                if (capped >= entry.durationMs - 5_000L) 0L else capped
             } else {
                 entry.positionMs.coerceAtLeast(0L)
             }

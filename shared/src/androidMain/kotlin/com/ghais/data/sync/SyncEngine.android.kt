@@ -8,11 +8,13 @@ import com.ghais.data.repository.CustomRoutine
 import com.ghais.data.repository.CustomRoutinesStore
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
+import com.ghais.data.repository.KhatmaStore
 import com.ghais.data.repository.OnboardingStore
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.SchedulesStore
 import com.ghais.domain.model.Reciter
 import com.ghais.data.repository.UserUsageRepository
+import com.ghais.domain.model.KhatmaPlan
 import com.ghais.data.repository.StatsSnapshot
 import com.ghais.ui.screens.reciters.remotePhotoFetcher
 import com.ghais.data.seed.JumpBackInItem
@@ -173,6 +175,10 @@ actual object SyncEngine {
                 pushHistory(db, userId, cloudHasData)
             }
             runCollection(SCHEDULES) { pushSchedules(db, userId) }
+            runCollection(KHATMA) {
+                val cloudHasData = pullKhatmaIfEmpty(db, userId)
+                pushKhatma(db, userId, cloudHasData)
+            }
             runCollection(PLAYLISTS) { pushRoutines(db, userId) }
             runCollection(ROUTINE_BACKUPS) {
                 val cloudHasData = pullRoutineBackupsIfEmpty(db, userId)
@@ -745,9 +751,10 @@ actual object SyncEngine {
     // cloud has data, so a fresh login never clobbers its restore source with
     // an empty state — no-data-loss guard, same as playback/stats).
     //
-    // Cloud shape: `history{user_id,track_json,played_at_ms}` (index on
+    // Cloud shape: `history{user_id,track_json,played_at_ms,position_ms}` (index on
     // `user_id,played_at_ms`). `track_json = Json.encodeToString(TrackItem)`
-    // ([TrackItem] is `@Serializable`; rebuilt from the local
+    // ([TrackItem] is `@Serializable` and carries no position, so the live
+    // `positionMs` travels as top-level `position_ms`; rebuilt from the local
     // [JumpBackInItem] via reciter/surah lookups so the JSON carries real
     // display names + audio URL). Doc ids are stable per entry:
     // `"h-<sanitizedSlug>-<surahId>-<playedAtMs>"` (max 36 chars). Push sends
@@ -779,12 +786,13 @@ actual object SyncEngine {
             if (trackJson.isEmpty()) return@mapNotNull null
             val playedAt = asLong(doc.data["played_at_ms"]) ?: return@mapNotNull null
             if (playedAt <= 0L) return@mapNotNull null
+            val positionMs = asLong(doc.data["position_ms"])?.coerceAtLeast(0L) ?: 0L
             val track = try {
                 json.decodeFromString<TrackItem>(trackJson)
             } catch (_: Exception) {
                 return@mapNotNull null
             }
-            track to playedAt
+            Triple(track, playedAt, positionMs)
         }
         if (items.isEmpty()) return false // cloud snapshot itself is empty; let push converge
         val ordered = items.sortedByDescending { it.second }
@@ -831,6 +839,7 @@ actual object SyncEngine {
                 "user_id" to userId,
                 "track_json" to json.encodeToString(track),
                 "played_at_ms" to playedAt,
+                "position_ms" to item.positionMs.coerceAtLeast(0L),
             )
             upsert(db, HISTORY, docId, data)
         }
@@ -929,6 +938,99 @@ actual object SyncEngine {
                 "enabled" to schedule.enabled,
             )
             upsert(db, SCHEDULES, scheduleDocId(userId, schedule.id), data)
+        }
+    }
+
+    // --------------------------------------------------------------- khatma plans
+    //
+    // Pull-if-empty + push (push skips when local is still empty but cloud
+    // holds data, so a fresh login never clobbers its restore source with an
+    // empty state — no-data-loss guard, same as playback/stats/history).
+    //
+    // Cloud shape: `khatma_plans{user_id,title,total_days,current_surah,
+    // current_ayah,percent}` (index on `user_id`). The collection carries no
+    // plan id / streak / date attributes, so doc ids are stable per plan:
+    // `"khatma-<sanitizedPlanId>"` (max 36 chars) and the pull derives the
+    // plan id back from the doc id. Streak/dates don't round-trip: restored
+    // plans start at streak 0 with `startDateMs = lastProgressMs = now`, and
+    // `totalAyahsRead` is derived from `percent` (`percent * 6236`).
+
+    /**
+     * Pulls the cloud `khatma_plans` docs when local plans are still empty,
+     * and applies them via [KhatmaStore.restoreAll] so a fresh login adopts
+     * the cloud copy instead of starting from zero.
+     *
+     * Returns true when the cloud holds at least one usable plan (caller must
+     * then skip pushing an empty state, otherwise the still-empty local state
+     * would overwrite it). Returns false when local plans are non-empty
+     * (never overwritten — no-clobber guard) or the cloud has nothing usable,
+     * so push proceeds.
+     */
+    private suspend fun pullKhatmaIfEmpty(db: Databases, userId: String): Boolean {
+        if (KhatmaStore.plans.value.isNotEmpty()) return false
+        val docs = listForUser(db, KHATMA, userId) ?: return false
+        if (docs.isEmpty()) return false
+        val now = System.currentTimeMillis()
+        val restored = docs.mapNotNull { doc ->
+            val data = doc.data
+            val planId = doc.id.removePrefix("khatma-").takeIf { it.isNotBlank() }
+                ?: return@mapNotNull null
+            val title = (data["title"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+                ?: return@mapNotNull null
+            val targetDays = asInt(data["total_days"])?.coerceAtLeast(1) ?: 30
+            val surah = asInt(data["current_surah"])?.coerceIn(1, 114) ?: 1
+            val ayah = asInt(data["current_ayah"])?.coerceAtLeast(1) ?: 1
+            val percent = asDouble(data["percent"])?.toFloat()?.coerceIn(0f, 1f) ?: 0f
+            KhatmaPlan(
+                id = planId,
+                title = title,
+                targetDays = targetDays,
+                currentSurahId = surah,
+                currentAyahNo = ayah,
+                streak = 0,
+                startDateMs = now,
+                lastProgressMs = now,
+                totalAyahsRead = (percent * 6236f).toInt().coerceIn(0, 6236),
+            )
+        }
+        if (restored.isEmpty()) return false // cloud snapshot itself is empty; let push converge
+        KhatmaStore.restoreAll(restored)
+        Log.i(TAG, "khatma pull: restored ${restored.size} plan(s).")
+        return true
+    }
+
+    private suspend fun pushKhatma(db: Databases, userId: String, cloudHasData: Boolean) {
+        val local = KhatmaStore.plans.value
+        if (local.isEmpty()) {
+            if (cloudHasData) {
+                // Fresh login whose cloud snapshot couldn't be applied locally
+                // yet: don't overwrite it with an empty state.
+                Log.i(TAG, "pushKhatma skipped (local empty, cloud has data).")
+            }
+            return
+        }
+        val existing = listForUser(db, KHATMA, userId) ?: return
+        val localIds = local.map { it.id }.toSet()
+        for (doc in existing) {
+            val planId = doc.id.removePrefix("khatma-")
+            if (planId !in localIds) {
+                try {
+                    db.deleteDocument(DB_ID, KHATMA, doc.id)
+                } catch (e: Exception) {
+                    Log.e(TAG, "delete stale khatma plan ${doc.id} failed", e)
+                }
+            }
+        }
+        for (plan in local) {
+            val data: Map<String, Any?> = mapOf(
+                "user_id" to userId,
+                "title" to plan.title,
+                "total_days" to plan.targetDays,
+                "current_surah" to plan.currentSurahId,
+                "current_ayah" to plan.currentAyahNo,
+                "percent" to plan.progressPercentage.toDouble(),
+            )
+            upsert(db, KHATMA, khatmaDocId(plan.id), data)
         }
     }
 
@@ -1202,6 +1304,13 @@ actual object SyncEngine {
         else -> null
     }
 
+    /** Lenient double coercion (Appwrite decodes `percent` float as [Number]). */
+    private fun asDouble(v: Any?): Double? = when (v) {
+        is Number -> v.toDouble()
+        is String -> v.trim().toDoubleOrNull()
+        else -> null
+    }
+
     /** Same epoch-day check (`millis/86400000`, mirroring UserUsageRepository's day math). */
     private fun sameEpochDay(aMs: Long, bMs: Long): Boolean {
         if (aMs <= 0L || bMs <= 0L) return false
@@ -1254,6 +1363,9 @@ actual object SyncEngine {
 
     private fun scheduleDocId(userId: String, scheduleId: String): String =
         scheduleId.take(36)
+
+    private fun khatmaDocId(planId: String): String =
+        "khatma-${sanitizeId(planId)}".take(36)
 
     private fun jsonString(s: String): String = buildString {
         append('"')
