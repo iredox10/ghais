@@ -377,10 +377,11 @@ fun NowPlayingLyricsCard(
                         .fillMaxWidth()
                         .padding(start = 12.dp)
                 ) {
-                    // Arabic verse — KFGQPC Hafs Uthmani text (100% white, RTL)
+                    // Arabic verse — QCF Hafs Uthmani text (100% white, RTL)
+                    // with the end-of-ayah sign.
                     if (activeArabic.isNotBlank()) {
                         Text(
-                            text = activeArabic,
+                            text = "$activeArabic ۝",
                             fontFamily = GhaisTypography.quranFont,
                             fontSize = 25.sp,
                             fontWeight = FontWeight.Bold,
@@ -478,7 +479,8 @@ fun NowPlayingLyricsCard(
                         if (upcomingAyahVerse.textUthmani.isNotBlank()) {
                             Spacer(modifier = Modifier.height(3.dp))
                             Text(
-                                text = upcomingAyahVerse.textUthmani,
+                                text = "${upcomingAyahVerse.textUthmani} ۝",
+                                fontFamily = GhaisTypography.quranFont,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Normal,
                                 color = GhaisNoir.TextSecondary,

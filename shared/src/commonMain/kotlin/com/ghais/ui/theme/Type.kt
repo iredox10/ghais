@@ -8,7 +8,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import ghais.shared.generated.resources.Res
-import ghais.shared.generated.resources.KFGQPC_Hafs
+import ghais.shared.generated.resources.QCF_Hafs
 import org.jetbrains.compose.resources.Font
 
 /**
@@ -186,13 +186,14 @@ object GhaisTypography {
 
     // -------------------------------------------------------------------------
     // Arabic Scripture typography (1.8x line-height ratio for tashkeel diacritics)
-    // KFGQPC Uthmanic Script HAFS — bundled under composeResources/font.
-    // Resource fonts load in composition, so the family is a composable
-    // getter; pass it as Text's fontFamily alongside the arabic* styles.
+    // QCF Hafs (KFGQPC HAFS Uthmanic Script v22, official bundle) — see
+    // composeResources/font. Resource fonts load in composition, so the
+    // family is a composable getter; pass it as Text's fontFamily alongside
+    // the arabic* styles.
     // -------------------------------------------------------------------------
     val quranFont: FontFamily
         @Composable
-        get() = FontFamily(Font(Res.font.KFGQPC_Hafs))
+        get() = FontFamily(Font(Res.font.QCF_Hafs))
 
     val arabicTitle = TextStyle(
         fontWeight = FontWeight.Normal,
