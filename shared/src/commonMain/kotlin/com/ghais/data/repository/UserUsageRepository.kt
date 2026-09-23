@@ -41,6 +41,23 @@ data class UserListeningStats(
 )
 
 /**
+ * Cloud snapshot for [UserUsageRepository.restoreStats].
+ *
+ * Mirrors [UserListeningStats] plus the cloud `updated_at` millis used for
+ * the `minutes_today` day-boundary check (adopted only when it falls on the
+ * current epoch day, else restored as 0 — never resurrect yesterday's
+ * minutes).
+ */
+data class StatsSnapshot(
+    val daysStreak: Int,
+    val minutesToday: Int,
+    val uniqueRecitersCount: Int,
+    val uniqueSurahsCount: Int,
+    val totalSecondsListened: Long = 0L,
+    val updatedAtMs: Long? = null
+)
+
+/**
  * UserUsageRepository:
  *
  * Provides live, real-time, persisted tracking of user listening history
@@ -207,7 +224,9 @@ object UserUsageRepository {
             try {
                 val parsed = json.decodeFromString<List<PersistedHistoryItem>>(rawJson)
                 if (parsed.isNotEmpty()) {
+                    // Latest-first invariant at read: newest timestamp first (stable for ties).
                     _history.value = parsed.map { it.toJumpBackInItem() }
+                        .sortedByDescending { it.lastPlayedTimestampMs }
                     return
                 }
             } catch (_: Exception) {
@@ -246,6 +265,69 @@ object UserUsageRepository {
         )
     }
 
+    /**
+     * Adopts a cloud stats snapshot (fresh-login restore).
+     *
+     * - Adopts cloud totals/streak/uniques as-is.
+     * - `minutes_today` is adopted ONLY when [StatsSnapshot.updatedAtMs]
+     *   falls on the current epoch day (`ms/86400000`, same math as the
+     *   day-rollover logic); otherwise it restores as 0. `KEY_LAST_DAY` is
+     *   stamped to today so the rollover logic can't resurrect yesterday's
+     *   minutes on the next load.
+     * - Unique counts come from the cloud as counts only (no identity), so
+     *   the local id sets are padded with `restored-*` placeholders up to the
+     *   cloud size — never shrunk, so real local uniques are never lost.
+     * - Persists everything to disk and refreshes [_stats]. Never throws.
+     */
+    fun restoreStats(snapshot: StatsSnapshot) {
+        try {
+            val today = currentEpochDay()
+            val isToday = snapshot.updatedAtMs != null &&
+                snapshot.updatedAtMs > 0L &&
+                snapshot.updatedAtMs / 86_400_000L == today
+            val total = snapshot.totalSecondsListened.coerceAtLeast(0L)
+            val streak = snapshot.daysStreak.coerceAtLeast(1)
+            var secondsToday =
+                if (isToday) snapshot.minutesToday.coerceAtLeast(0) * 60L else 0L
+            if (secondsToday > total) secondsToday = total
+
+            settings.putLong(k(KEY_LAST_DAY), today)
+            settings.putInt(k(KEY_STREAK), streak)
+            settings.putLong(k(KEY_SECONDS_TODAY), secondsToday)
+            settings.putLong(k(KEY_TOTAL_SECONDS), total)
+
+            val reciters = getStoredSet(KEY_UNIQUE_RECITERS).toMutableSet()
+            if (snapshot.uniqueRecitersCount > reciters.size) {
+                var i = 1
+                while (reciters.size < snapshot.uniqueRecitersCount) {
+                    reciters.add("restored-reciter-$i")
+                    i++
+                }
+                saveStoredSet(KEY_UNIQUE_RECITERS, reciters)
+            }
+            val surahs = getStoredSet(KEY_UNIQUE_SURAHS).toMutableSet()
+            if (snapshot.uniqueSurahsCount > surahs.size) {
+                var i = 1
+                while (surahs.size < snapshot.uniqueSurahsCount) {
+                    surahs.add("restored-surah-$i")
+                    i++
+                }
+                saveStoredSet(KEY_UNIQUE_SURAHS, surahs)
+            }
+
+            _stats.value = UserListeningStats(
+                daysStreak = streak,
+                minutesToday = (secondsToday / 60L).toInt(),
+                uniqueRecitersCount = reciters.ifEmpty { setOf("mishary") }.size
+                    .coerceAtLeast(if (snapshot.uniqueRecitersCount > 0) snapshot.uniqueRecitersCount else 1),
+                uniqueSurahsCount = surahs.ifEmpty { setOf("18") }.size
+                    .coerceAtLeast(if (snapshot.uniqueSurahsCount > 0) snapshot.uniqueSurahsCount else 1),
+                totalSecondsListened = total
+            )
+        } catch (_: Exception) {
+        }
+    }
+
     private fun observeAudioEngine() {
         scope.launch {
             AudioEngine.isPlaying.collect { isPlaying ->
@@ -280,6 +362,7 @@ object UserUsageRepository {
     }
 
     private fun recordProgress(track: TrackItem, positionMs: Long, durationMs: Long) {
+        val now = currentTimeMs()
         val progress = if (durationMs > 0L) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
         val formattedRemaining = formatRemainingTime(positionMs, durationMs)
         val cover = getCoverForSurah(track.surahId)
@@ -292,19 +375,21 @@ object UserUsageRepository {
             surahId = track.surahId,
             reciterSlug = track.reciterSlug,
             positionMs = positionMs,
-            durationMs = durationMs
+            durationMs = durationMs,
+            lastPlayedTimestampMs = now
         )
 
         _history.update { currentList ->
             val filtered = currentList.filterNot { it.surahId == track.surahId && it.reciterSlug == track.reciterSlug }
+            // Most-recent-first: newest at index 0.
             (listOf(updatedItem) + filtered).take(15)
         }
 
         recordUniqueItem(track.reciterSlug, track.surahId)
 
-        val now = currentTimeMs()
-        if (now - lastSavedTimestampMs > 5000L) {
-            lastSavedTimestampMs = now
+        val saveNow = currentTimeMs()
+        if (saveNow - lastSavedTimestampMs > 5000L) {
+            lastSavedTimestampMs = saveNow
             saveHistoryToDisk()
             saveStatsToDisk()
         }
@@ -405,6 +490,48 @@ object UserUsageRepository {
         }
     }
 
+    /**
+     * Restores listening history from decoded cloud entries (most-recent-first
+     * `TrackItem` + `played_at_ms` pairs, as supplied by the sync pull).
+     *
+     * Day/order-aware: entries are sorted by `playedAtMs` desc so the most
+     * recent play heads the list, and each entry keeps its cloud timestamp as
+     * [JumpBackInItem.lastPlayedTimestampMs] (persisted as-is; see
+     * [toPersistedHistoryItem]) instead of being re-stamped with "now".
+     * Capped at 15 like [recordProgress], and merges without duplicating
+     * identical entries (same `surahId` + `reciterSlug` keeps the most recent
+     * occurrence). Persists via [saveHistoryToDisk]. Cloud tracks carry no
+     * saved position, so restored entries resume from the start
+     * (`positionMs = 0`, "Not started" subtitle) with the known duration.
+     */
+    fun restoreHistory(items: List<Pair<TrackItem, Long>>) {
+        if (items.isEmpty()) return
+        val seen = mutableSetOf<Pair<Int, String>>()
+        val restored = items.sortedByDescending { it.second }.mapNotNull { (track, playedAt) ->
+            if (track.surahId <= 0 || playedAt <= 0L) return@mapNotNull null
+            if (!seen.add(track.surahId to track.reciterSlug)) return@mapNotNull null
+            val duration = track.durationMs.coerceAtLeast(0L)
+            JumpBackInItem(
+                title = track.surahNameEn.ifEmpty { "Surah ${track.surahId}" },
+                subtitle = "${track.reciterName.ifEmpty { "Mishary" }} • ${formatRemainingTime(0L, duration)}",
+                progress = 0f,
+                coverUrl = getCoverForSurah(track.surahId),
+                surahId = track.surahId,
+                reciterSlug = track.reciterSlug,
+                positionMs = 0L,
+                durationMs = duration,
+                lastPlayedTimestampMs = playedAt
+            )
+        }.take(15)
+        if (restored.isEmpty()) return
+        _history.update { current ->
+            val keys = current.map { it.surahId to it.reciterSlug }.toMutableSet()
+            val fresh = restored.filter { keys.add(it.surahId to it.reciterSlug) }
+            (current + fresh).take(15)
+        }
+        saveHistoryToDisk()
+    }
+
     private fun getCoverForSurah(surahId: Int): String {
         return when (surahId) {
             1 -> GhaisAssets.LibraryMorningCover
@@ -466,7 +593,9 @@ object UserUsageRepository {
             reciterSlug = reciterSlug,
             positionMs = positionMs,
             durationMs = durationMs,
-            lastPlayedTimestampMs = currentTimeMs()
+            // Preserve real play timestamps (e.g. cloud-restored entries);
+            // only stamp "now" for in-session items that don't have one yet.
+            lastPlayedTimestampMs = lastPlayedTimestampMs.takeIf { it > 0L } ?: currentTimeMs()
         )
     }
 }

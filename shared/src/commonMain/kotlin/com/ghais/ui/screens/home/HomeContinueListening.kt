@@ -57,7 +57,9 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
     val currentTrack by AudioEngine.currentTrack.collectAsState()
     val isEnginePlaying by AudioEngine.isPlaying.collectAsState()
 
-    val recent = remember(history) { history.take(7) }
+    // Latest-first at read: hero = single newest, rail follows newest-first.
+    // sortedByDescending is stable, so timestamp ties keep store (MRU-first) order.
+    val recent = remember(history) { history.sortedByDescending { it.lastPlayedTimestampMs }.take(7) }
 
     if (recent.isEmpty()) {
         NoirCard(modifier = Modifier.fillMaxWidth()) {

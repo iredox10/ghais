@@ -13,6 +13,7 @@ import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.SchedulesStore
 import com.ghais.domain.model.Reciter
 import com.ghais.data.repository.UserUsageRepository
+import com.ghais.data.repository.StatsSnapshot
 import com.ghais.ui.screens.reciters.remotePhotoFetcher
 import com.ghais.data.seed.JumpBackInItem
 import com.ghais.domain.model.TrackItem
@@ -512,7 +513,10 @@ actual object SyncEngine {
 
     /**
      * Pulls the cloud `playback_state` doc (docId = [userId]) when the local
-     * player is empty, and rebuilds the [TrackItem] for a paused restore.
+     * player is empty, and silently preloads it PAUSED via
+     * [AudioEngine.prepareTrack] (load + seek, NO autoplay — the user presses
+     * play to start, and [AudioEngine.resume] continues from the preloaded
+     * position instead of restarting from 0).
      *
      * Returns true when the cloud holds a usable snapshot (caller must then
      * skip pushing, otherwise the still-empty local state would overwrite
@@ -525,13 +529,6 @@ actual object SyncEngine {
      * it also carries `ayah_no`. Names/duration resolve via
      * [QuranDataRepository.getSurahById] + [Reciter.getAyahAudioUrl] /
      * [Reciter.getFullSurahUrl] (duration stays unknown/0 until streaming).
-     *
-     * Restore is METADATA-ONLY (parse + validate + log): [AudioEngine] has no
-     * paused-load path — only [AudioEngine.playTrack]/[AudioEngine.playQueue]
-     * (both autoplay via `PlayerBridge.play`) plus `pause`/`seekTo` — so there
-     * is nothing that loads a track + seeks while staying paused. Follow-up:
-     * add `AudioEngine.prepareTrack(track, positionMs)` (load + seek, paused)
-     * and call it here instead of just logging.
      */
     private suspend fun pullPlaybackIfEmpty(db: Databases, userId: String): Boolean {
         if (AudioEngine.currentTrack.value != null) return false
@@ -568,13 +565,23 @@ actual object SyncEngine {
             }.getOrNull().orEmpty()
         }
         if (audioUrl.isBlank()) return true
-        // Metadata-only: validated rebuild (no autoplay path to load it paused).
+        val track = TrackItem(
+            reciterSlug = reciter.slug,
+            reciterName = reciter.nameEn,
+            surahId = surah.id,
+            surahNameEn = surah.nameEn,
+            surahNameAr = surah.nameAr,
+            ayahNo = ayahNo,
+            audioUrl = audioUrl,
+        )
+        // Silent preload: load + seek, stays paused, NO autoplay.
         Log.i(
             TAG,
-            "playback pull: cloud '${reciter.slug}/$surahId' ayah=$ayahNo pos=${positionMs}ms" +
+            "playback pull: restoring '${reciter.slug}/$surahId' ayah=$ayahNo pos=${positionMs}ms" +
                 (if (updatedAt != null) " updatedAt=$updatedAt" else "") +
-                " — metadata validated only; AudioEngine has no paused-load API yet."
+                " — preloading paused (no autoplay)."
         )
+        AudioEngine.prepareTrack(track, positionMs)
         return true
     }
 
@@ -645,27 +652,21 @@ actual object SyncEngine {
 
     /**
      * Pulls the cloud `listening_stats` doc (docId = [userId]) when local stats
-     * are still at fresh-install defaults, so a fresh login can adopt the
-     * cloud snapshot instead of starting from zero.
+     * are still at fresh-install defaults, and applies it via
+     * [UserUsageRepository.restoreStats] so a fresh login adopts the cloud
+     * snapshot instead of starting from zero.
      *
      * Returns true when the cloud holds a usable snapshot (caller must then
-     * skip pushing, otherwise local zeros would overwrite it). Returns false
-     * when local stats are already non-zero (never overwrite those) or the
-     * cloud has nothing, so push proceeds.
+     * skip pushing when local is still empty, otherwise local zeros would
+     * overwrite it). Returns false when local stats are already non-zero
+     * (never overwrite those) or the cloud has nothing, so push proceeds.
      *
      * `minutes_today` date semantics: [UserUsageRepository] derives it from
      * seconds-listened-today for the CURRENT epoch day (`now/86400000`) and
-     * resets on day rollover, so a cloud `minutes_today` is only valid when
-     * cloud `updated_at` falls on today's epoch day — otherwise it restores
-     * as 0. `days_streak`/`total_seconds`/uniques carry over as-is.
-     *
-     * Adopt is currently GUARDED, not applied: [UserUsageRepository] exposes
-     * no restore/import API (private `_stats`/keys; `setOwner` only reloads
-     * from disk), and this file may not grow new deps or touch other files.
-     * So the snapshot is validated + logged and the zero-push is skipped to
-     * protect the cloud copy. Follow-up: add
-     * `UserUsageRepository.restoreStats(...)` (day-rollover aware) and call it
-     * here.
+     * resets on day rollover, so [UserUsageRepository.restoreStats] adopts
+     * cloud `minutes_today` only when cloud `updated_at` falls on today's
+     * epoch day — otherwise it restores as 0. `days_streak`/`total_seconds`/
+     * uniques carry over as-is.
      */
     private suspend fun pullStatsIfEmpty(db: Databases, userId: String): Boolean {
         if (!isLocalStatsEmpty()) return false
@@ -683,12 +684,21 @@ actual object SyncEngine {
         if (total <= 0L && streak <= 1 && minutes <= 0 && uniquesReciters <= 0 && uniquesSurahs <= 0) {
             return false // cloud snapshot itself is empty; let push converge
         }
+        UserUsageRepository.restoreStats(
+            StatsSnapshot(
+                daysStreak = streak,
+                minutesToday = minutes,
+                uniqueRecitersCount = uniquesReciters,
+                uniqueSurahsCount = uniquesSurahs,
+                totalSecondsListened = total,
+                updatedAtMs = updatedAt,
+            )
+        )
         Log.i(
             TAG,
-            "stats pull: cloud total=${total}s streak=$streak minutesToday=$minutes " +
+            "stats pull: adopted cloud total=${total}s streak=$streak minutesToday=$minutes " +
                 "reciters=$uniquesReciters surahs=$uniquesSurahs" +
-                (if (updatedAt != null) " updatedAt=$updatedAt" else "") +
-                " — no UserUsageRepository restore API yet; keeping local zeros, push skipped."
+                (if (updatedAt != null) " updatedAt=$updatedAt" else "") + "."
         )
         return true
     }
@@ -746,44 +756,43 @@ actual object SyncEngine {
 
     /**
      * Pulls the cloud `history` docs (ordered by `played_at_ms` desc) when
-     * local history is still empty, so a fresh login can adopt the cloud
+     * local history is still empty, and applies them via
+     * [UserUsageRepository.restoreHistory] so a fresh login adopts the cloud
      * copy instead of starting from zero.
      *
      * Returns true when the cloud holds at least one usable snapshot (caller
-     * must then skip pushing, otherwise the still-empty local state would
-     * overwrite it). Returns false when local history is non-empty or the
-     * cloud has nothing usable, so push proceeds.
+     * must then skip pushing an empty state, otherwise the still-empty local
+     * state would overwrite it). Returns false when local history is non-empty
+     * (never overwritten — no-clobber guard) or the cloud has nothing usable,
+     * so push proceeds.
      *
-     * Adopt is currently GUARDED, not applied: [UserUsageRepository] exposes
-     * no history restore/import API (private `_history`; `recordProgress` is
-     * private and driven only by [AudioEngine] polls), and this file may not
-     * grow new deps or touch other files. So the snapshot is validated +
-     * logged and the empty-push is skipped to protect the cloud copy.
-     * Follow-up: add `UserUsageRepository.restoreHistory(items)` (taking
-     * decoded `TrackItem` + `playedAtMs` pairs, most-recent-first, capped)
-     * and call it here.
+     * After a successful restore the local history is non-empty, so the
+     * paired [pushHistory] converges normally (re-uploads the restored
+     * entries). [TrackItem] is `@Serializable`, decoded with the shared [Json].
      */
     private suspend fun pullHistoryIfEmpty(db: Databases, userId: String): Boolean {
         if (UserUsageRepository.history.value.isNotEmpty()) return false
         val docs = listHistoryForUser(db, userId) ?: return false
         if (docs.isEmpty()) return false
-        var valid = 0
-        for (doc in docs) {
+        val items = docs.mapNotNull { doc ->
             val trackJson = (doc.data["track_json"] as? String)?.trim().orEmpty()
-            if (trackJson.isEmpty()) continue
-            val playedAt = asLong(doc.data["played_at_ms"]) ?: continue
-            try {
+            if (trackJson.isEmpty()) return@mapNotNull null
+            val playedAt = asLong(doc.data["played_at_ms"]) ?: return@mapNotNull null
+            if (playedAt <= 0L) return@mapNotNull null
+            val track = try {
                 json.decodeFromString<TrackItem>(trackJson)
-                if (playedAt > 0L) valid++
             } catch (_: Exception) {
+                return@mapNotNull null
             }
+            track to playedAt
         }
-        if (valid <= 0) return false // cloud snapshot itself is empty; let push converge
+        if (items.isEmpty()) return false // cloud snapshot itself is empty; let push converge
+        val ordered = items.sortedByDescending { it.second }
+        UserUsageRepository.restoreHistory(ordered)
         Log.i(
             TAG,
-            "history pull: cloud has $valid entries (most recent playedAt=" +
-                "${asLong(docs.firstOrNull()?.data?.get("played_at_ms"))})" +
-                " — no UserUsageRepository restore API yet; keeping local empty, push skipped."
+            "history pull: restored ${UserUsageRepository.history.value.size} entries " +
+                "(cloud had ${ordered.size}, most recent playedAt=${ordered.firstOrNull()?.second})."
         )
         return true
     }
