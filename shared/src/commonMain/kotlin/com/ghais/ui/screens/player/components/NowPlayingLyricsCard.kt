@@ -2,11 +2,6 @@ package com.ghais.ui.screens.player.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -18,7 +13,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -27,13 +21,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.RepeatOne
@@ -41,12 +32,9 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -57,7 +45,6 @@ import androidx.compose.runtime.setValue
 import com.ghais.data.repository.HifzMasteryStore
 import com.ghais.data.repository.MasteryStatus
 import com.ghais.player.AudioEngine
-import com.ghais.player.VoiceRecorderBridge
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,15 +60,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.AyahVerse
-import com.ghais.data.repository.QuranDataRepository
 import com.ghais.domain.model.TrackItem
 import com.ghais.ui.components.noir.noirClickable
-import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisTypography
-import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.util.AyahEndMark
-import com.ghais.ui.util.toArabicDigits
 
 /**
  * Synchronized Ayah Lyrics Card — MINIMAL (monochrome, zero hue).
@@ -95,8 +78,7 @@ import com.ghais.ui.util.toArabicDigits
  * - Active ayah: prominent Arabic Uthmani in quranFont (25.sp, RTL,
  *   2.0x line height) + enclosed rosette, transliteration tertiary italic,
  *   translation secondary (14.5.sp).
- * - NEXT preview: single quiet line (number + translation), clickable via [onNextAyah].
- * - Record & Compare: one ghost row expanding the existing recorder flow.
+ * - NEXT preview removed; Record & Compare removed (params kept for compatibility).
  * - All callbacks/logic/signatures preserved; scrubber + controls bar untouched.
  */
 @Composable
@@ -402,77 +384,9 @@ fun NowPlayingLyricsCard(
                     }
             }
 
-            // NEXT preview — single quiet line, no card. Preserves onNextAyah + surah resolve.
-            if (upcomingAyahVerse != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(GhaisNoir.BorderGhost)
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (onNextAyah != null) Modifier.noirClickable { onNextAyah() }
-                            else Modifier
-                        ),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val isNextSurah = currentTrack != null && upcomingAyahVerse.surahId != currentTrack.surahId
-                    val nextLabel = if (isNextSurah) {
-                        val surah = QuranDataRepository.getSurahById(upcomingAyahVerse.surahId)
-                        "NEXT — ${surah?.nameEn ?: "Surah ${upcomingAyahVerse.surahId}"} • ${upcomingAyahVerse.ayahNo}"
-                    } else {
-                        "NEXT — AYAH ${upcomingAyahVerse.ayahNo}"
-                    }
-                    Column(modifier = Modifier.weight(1f, fill = false)) {
-                        Text(
-                            text = nextLabel,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 1.1.sp,
-                            color = GhaisNoir.TextTertiary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (upcomingAyahVerse.translation.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = upcomingAyahVerse.translation,
-                                fontSize = 12.sp,
-                                color = GhaisNoir.TextTertiary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Next Ayah",
-                        tint = GhaisNoir.TextTertiary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(GhaisNoir.BorderGhost)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            MinimalRecordCompareRow(
-                surahId = surahId,
-                ayahNo = displayAyahNo
-            )
+            // NEXT preview removed — [upcomingAyahVerse]/[onNextAyah] kept in signature
+            // for caller compatibility (NowPlayingScreen) but intentionally not rendered.
+            // Record & Compare removed — intentionally not rendered.
     }
 }
 
@@ -590,245 +504,6 @@ private fun MinimalMasteryWell(
             tint = tint,
             modifier = Modifier.size(15.dp)
         )
-    }
-}
-
-/**
- * Record & Compare — single ghost row. Tap expands the existing
- * [VoiceRecorderBridge] + [AudioEngine] compare flow. Noir only, zero hue,
- * no card fills. Logic mirrors VoiceCompareSection states.
- */
-@Composable
-private fun MinimalRecordCompareRow(
-    surahId: Int,
-    ayahNo: Int
-) {
-    var isExpanded by remember { mutableStateOf(false) }
-
-    val isRecording by VoiceRecorderBridge.isRecording.collectAsState()
-    val recordingDurationMs by VoiceRecorderBridge.recordingDurationMs.collectAsState()
-    val isPlayingRecording by VoiceRecorderBridge.isPlayingRecording.collectAsState()
-    val isAudioEnginePlaying by AudioEngine.isPlaying.collectAsState()
-
-    val recordingPath = remember(surahId, ayahNo, isRecording) {
-        VoiceRecorderBridge.getRecordingPath(surahId, ayahNo)
-    }
-    val hasRecording = recordingPath != null
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .noirClickable { isExpanded = !isExpanded }
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.weight(1f, fill = false)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(GhaisNoir.wellFill())
-                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Mic,
-                        contentDescription = "Record and Compare",
-                        tint = if (isRecording) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-                Column(modifier = Modifier.weight(1f, fill = false)) {
-                    Text(
-                        text = "Record & Compare",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = GhaisNoir.TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = if (hasRecording) "Recitation recorded • Tap to compare"
-                        else "Record your voice to test recitation",
-                        fontSize = 11.sp,
-                        color = GhaisNoir.TextTertiary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = if (isExpanded) "Collapse" else "Expand",
-                tint = GhaisNoir.TextTertiary,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-
-        AnimatedVisibility(
-            visible = isExpanded,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 4.dp)
-            ) {
-                if (isRecording) {
-                    val seconds = (recordingDurationMs / 1000).toInt()
-                    val timeStr = "${(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}"
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(7.dp)
-                                    .clip(CircleShape)
-                                    .background(GhaisNoir.TextPrimary)
-                            )
-                            Text(
-                                text = "Recording ($timeStr)...",
-                                color = GhaisNoir.TextPrimary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        Text(
-                            text = "Done",
-                            color = GhaisNoir.TextSecondary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.noirClickable { VoiceRecorderBridge.stopRecording() }
-                        )
-                    }
-                } else if (!hasRecording) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .noirClickable {
-                                if (isAudioEnginePlaying) AudioEngine.pause()
-                                VoiceRecorderBridge.startRecording(surahId, ayahNo)
-                            }
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Mic,
-                            contentDescription = "Record",
-                            tint = GhaisNoir.TextSecondary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Record My Recitation",
-                            color = GhaisNoir.TextSecondary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val sheikhActive = isAudioEnginePlaying && !isPlayingRecording
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.noirClickable {
-                                if (isPlayingRecording) VoiceRecorderBridge.stopPlayback()
-                                if (sheikhActive) AudioEngine.pause() else AudioEngine.resume()
-                            }
-                        ) {
-                            Icon(
-                                imageVector = if (sheikhActive) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = "Sheikh recitation",
-                                tint = if (sheikhActive) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = "Sheikh",
-                                color = if (sheikhActive) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        val userActive = isPlayingRecording
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.noirClickable {
-                                if (isAudioEnginePlaying) AudioEngine.pause()
-                                if (userActive) VoiceRecorderBridge.stopPlayback()
-                                else recordingPath?.let { VoiceRecorderBridge.playRecording(it) }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = if (userActive) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = "My recitation",
-                                tint = if (userActive) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = "My Voice",
-                                color = if (userActive) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        Spacer(modifier = Modifier.weight(1f))
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Re-record",
-                            tint = GhaisNoir.TextTertiary,
-                            modifier = Modifier
-                                .size(14.dp)
-                                .noirClickable {
-                                    VoiceRecorderBridge.stopPlayback()
-                                    VoiceRecorderBridge.deleteRecording(surahId, ayahNo)
-                                    if (isAudioEnginePlaying) AudioEngine.pause()
-                                    VoiceRecorderBridge.startRecording(surahId, ayahNo)
-                                }
-                        )
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 2.dp, bottom = 2.dp),
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Stop,
-                            contentDescription = null,
-                            tint = GhaisNoir.TextTertiary,
-                            modifier = Modifier.size(11.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (isPlayingRecording) "Stop playback" else "Sheikh pauses while your voice plays",
-                            fontSize = 10.5.sp,
-                            color = GhaisNoir.TextTertiary
-                        )
-                    }
-                }
-            }
-        }
     }
 }
 

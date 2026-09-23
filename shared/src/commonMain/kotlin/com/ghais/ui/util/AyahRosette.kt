@@ -1,7 +1,8 @@
 package com.ghais.ui.util
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
@@ -10,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
@@ -21,7 +23,6 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.ui.theme.GhaisNoir
-import com.ghais.ui.theme.GhaisTypography
 
 /**
  * Enclosed ayah rosette: digits drawn INSIDE the ۝ ornament.
@@ -101,9 +102,9 @@ fun ayahRosetteContent(
 /**
  * Standalone end-of-ayah mark for Row/FlowRow placement after a verse Text.
  *
- * Fixed-size [Box] ([ornamentSize] square) stacking the ۝ ornament from the
- * Quran font with the Arabic-Indic digits centered inside (slight upward
- * nudge so the digits sit optically centered in the ring).
+ * Fixed-size [Box] ([ornamentSize] square) drawing the ring with Canvas
+ * [drawCircle] (stroke 1.5.dp, [tint]) with the Arabic-Indic digits centered
+ * inside via [Alignment.Center].
  */
 @Composable
 fun AyahEndMark(
@@ -134,29 +135,28 @@ private fun RosetteBox(
     digitSize: TextUnit,
     tint: Color,
 ) {
-    val quranFont = GhaisTypography.quranFont
     val boxSize = with(LocalDensity.current) { ornamentSize.toDp() }
+    val strokeWidth = 1.5.dp
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier.size(boxSize),
     ) {
-        Text(
-            text = "۝",
-            fontFamily = quranFont,
-            fontSize = ornamentSize,
-            color = tint,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-        )
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokePx = strokeWidth.toPx()
+            drawCircle(
+                color = tint,
+                radius = (size.minDimension - strokePx) / 2f,
+                style = Stroke(width = strokePx),
+            )
+        }
         if (digits.isNotEmpty()) {
             Text(
                 text = digits,
                 fontSize = digitSize,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Normal,
                 color = tint,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
-                modifier = Modifier.offset(y = (-1).dp),
             )
         }
     }

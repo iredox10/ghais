@@ -188,7 +188,7 @@ class NowPlayingScreen : Screen {
         var isScrubbing by remember { mutableStateOf(false) }
         var scrubFraction by remember { mutableStateOf(0f) }
         val poke: () -> Unit = { idleTick++; controlsVisible = true }
-        val uiBusy = showSleepTimer || showQueue || showAmbient || showVolume || isScrubbing || isAyahMode
+        val uiBusy = showSleepTimer || showQueue || showAmbient || showVolume || showTafseer || isScrubbing || isAyahMode
         androidx.compose.runtime.LaunchedEffect(controlsVisible, idleTick, uiBusy) {
             if (controlsVisible && !uiBusy) {
                 kotlinx.coroutines.delay(10_000L)
@@ -228,8 +228,11 @@ class NowPlayingScreen : Screen {
         NoirScreenRoot(
             modifier = Modifier
                 .offset { IntOffset(0, dragOffsetY.roundToInt()) }
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = { poke() })
+                .pointerInput(controlsVisible, uiBusy) {
+                    detectTapGestures(
+                        onTap = { poke() },
+                        onDoubleTap = { if (controlsVisible && !uiBusy) controlsVisible = false }
+                    )
                 }
                 .pointerInput(Unit) {
                     detectVerticalDragGestures(
