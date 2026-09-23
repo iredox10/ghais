@@ -33,9 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -96,16 +94,9 @@ class RecitersScreen : Tab {
         val rootNavigator = LocalRootNavigator.current
             ?: LocalNavigator.current?.parent
             ?: LocalNavigator.current
-        var searchQuery by remember { mutableStateOf("") }
 
-        val groups = remember(searchQuery) {
+        val groups = remember {
             QuranData.RECITERS
-                .filter {
-                    searchQuery.isBlank() ||
-                        it.nameEn.contains(searchQuery, ignoreCase = true) ||
-                        it.nameAr.contains(searchQuery, ignoreCase = true) ||
-                        it.country.contains(searchQuery, ignoreCase = true)
-                }
                 .groupBy { it.country.ifBlank { "Other" } }
                 .entries
                 .sortedByDescending { (_, reciters) -> reciters.size }
@@ -126,15 +117,14 @@ class RecitersScreen : Tab {
                     )
                     Spacer(Modifier.height(16.dp))
                     NoirRecitersSearch(
-                        searchQuery = searchQuery,
-                        onSearchChange = { searchQuery = it }
+                        onClick = { rootNavigator?.push(ReciterSearchScreen()) }
                     )
                     Spacer(Modifier.height(20.dp))
                 }
 
                 if (groups.isEmpty()) {
                     item {
-                        NoirRecitersEmpty(query = searchQuery)
+                        NoirRecitersEmpty()
                     }
                 } else {
                     groups.forEachIndexed { index, (nation, reciters) ->
@@ -246,12 +236,13 @@ private fun NoirRecitersChip(text: String) {
 
 /**
  * Engraved search field — carved-in recessed surface (dark inset fill +
- * ~5% rim), search glyph at 38%, typed text at 100%, hint at 24%.
+ * ~5% rim), search glyph at 38%, hint at 24%. Read-only affordance:
+ * tapping pushes the dedicated [ReciterSearchScreen] instead of filtering
+ * inline.
  */
 @Composable
 private fun NoirRecitersSearch(
-    searchQuery: String,
-    onSearchChange: (String) -> Unit
+    onClick: () -> Unit
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -260,6 +251,7 @@ private fun NoirRecitersSearch(
             .clip(GhaisShapes.row)
             .background(GhaisNoir.insetFill())
             .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.row)
+            .noirClickable(onClick)
             .padding(horizontal = 16.dp, vertical = 13.dp)
     ) {
         Icon(
@@ -270,22 +262,21 @@ private fun NoirRecitersSearch(
         )
         Spacer(modifier = Modifier.width(10.dp))
         BasicTextField(
-            value = searchQuery,
-            onValueChange = onSearchChange,
+            value = "",
+            onValueChange = {},
             singleLine = true,
+            enabled = false,
+            readOnly = true,
             textStyle = TextStyle(
                 color = GhaisNoir.TextPrimary,
                 fontSize = 15.sp
             ),
-            decorationBox = { inner ->
-                if (searchQuery.isEmpty()) {
-                    Text(
-                        text = "Search reciters…",
-                        color = GhaisNoir.TextDisabled,
-                        fontSize = 15.sp
-                    )
-                }
-                inner()
+            decorationBox = {
+                Text(
+                    text = "Search reciters…",
+                    color = GhaisNoir.TextDisabled,
+                    fontSize = 15.sp
+                )
             },
             modifier = Modifier.fillMaxWidth()
         )
@@ -535,7 +526,7 @@ private fun NoirReciterCard(
 
 /** Ghost empty state — muted mosque well + tertiary copy, no hue. */
 @Composable
-private fun NoirRecitersEmpty(query: String) {
+private fun NoirRecitersEmpty() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -570,7 +561,7 @@ private fun NoirRecitersEmpty(query: String) {
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            text = if (query.isBlank()) "Try a different nation" else "Nothing matches “$query”",
+            text = "Try a different nation",
             color = GhaisNoir.TextTertiary,
             fontSize = 13.sp,
             textAlign = TextAlign.Center
