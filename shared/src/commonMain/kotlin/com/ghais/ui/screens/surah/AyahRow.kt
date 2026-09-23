@@ -35,6 +35,7 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.theme.GhaisTypography
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -98,13 +99,14 @@ fun AyahRow(
                 horizontalAlignment = Alignment.End
             ) {
                 Text(
-                    text = ayah.textUthmani,
+                    text = "${ayah.textUthmani} ۝",
                     modifier = Modifier.fillMaxWidth(),
                     color = GhaisNoir.TextPrimary,
                     fontSize = 22.sp,
                     lineHeight = 40.sp,
                     textAlign = TextAlign.Right,
-                    fontWeight = FontWeight.Normal
+                    fontWeight = FontWeight.Normal,
+                    fontFamily = GhaisTypography.quranFont
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
