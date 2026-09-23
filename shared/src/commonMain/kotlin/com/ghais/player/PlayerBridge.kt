@@ -28,6 +28,14 @@ expect object PlayerBridge {
      * (applied at prepare time so early seeks can't be dropped while buffering).
      */
     fun play(url: String, startPositionMs: Long = 0L)
+    /**
+     * Loads [url] + prepares + seeks to [startPositionMs] WITHOUT starting
+     * playback (stays paused). Silent preload for continue-listening restore:
+     * must NOT request audio focus side effects that start playback — the
+     * Android actual must NOT invoke `onPlayRequested` (no FGS boot) and must
+     * leave playWhenReady=false even on a reused player instance.
+     */
+    fun prepare(url: String, startPositionMs: Long = 0L)
     /** Hint for lockscreen/notification title; consumed atomically by the next play() (no race). */
     fun setPlaybackMetadata(title: String?, artist: String?)
     /**

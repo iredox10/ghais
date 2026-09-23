@@ -278,6 +278,78 @@ object AudioEngine {
         }
     }
 
+    /**
+     * Silent preload for continue-listening restore: loads [track] + seeks to
+     * [positionMs] and stays PAUSED — never autoplays, never boots the
+     * foreground service ([PlayerBridge.prepare] skips `onPlayRequested`; the
+     * FGS starts later via [resume] when the user actually presses play and
+     * the service reuses this preloaded player instance, keeping the seeked
+     * position).
+     *
+     * Mirrors [playTrack]'s setup (ayah-mode flag, surah-row queue, offline-
+     * first URI, atomic resume offset) minus `play()`:
+     * - engine state ([currentTrack], position, progress, [playbackState]) is
+     *   updated so the UI shows the resume point immediately;
+     * - no-op when a track is already loaded (never clobbers live playback);
+     * - pressing play must NOT restart from 0: [resume] routes PAUSED (not
+     *   IDLE/ERROR) straight to `PlayerBridge.resume()` — i.e. `play()` on the
+     *   already-seeked item — while [startPlayback]'s position reset only runs
+     *   on fresh [playTrack]/[playQueue]/IDLE-resume. The [pendingSeekMs] retry
+     *   net is also armed so a buffering-dropped seek still lands.
+     */
+    fun prepareTrack(track: TrackItem, positionMs: Long = 0L) {
+        if (_currentTrack.value != null) return
+        val isAyah = track.ayahNo > 0 && !track.isFullSurah
+        _isAyahMode.value = isAyah
+        val surahTrack = track.toSurahTrack()
+        queueManager.clear()
+        queueManager.addToQueue(surahTrack)
+        _queue.value = queueManager.queue
+        _currentIndex.value = queueManager.currentIndex
+        // The queue holds the surah row (like playTrack); the loaded item is
+        // the track as given so per-ayah restores keep their ayah URL.
+        val loadTrack = if (isAyah) track else surahTrack
+        val resumeAt = positionMs.coerceAtLeast(0L)
+        pendingSeekMs = resumeAt
+        pendingSeekTries = if (resumeAt > 0L) 40 else 0
+        progressJob?.cancel()
+        _currentTrack.value = loadTrack
+        _isPlaying.value = false
+        _currentPositionMs.value = resumeAt
+        val initialDuration = loadTrack.resolvedDurationMs()
+        _durationMs.value = initialDuration
+        _progress.value = if (initialDuration > 0L) {
+            (resumeAt.toFloat() / initialDuration.toFloat()).coerceIn(0f, 1f)
+        } else 0f
+        _playbackState.update { state ->
+            state.copy(
+                status = PlaybackStatus.PAUSED,
+                currentTrackInfo = CurrentTrackInfo(
+                    track = loadTrack,
+                    progressMs = resumeAt,
+                    durationMs = initialDuration,
+                    isPlaying = false,
+                    queueIndex = queueManager.currentIndex
+                ),
+                settings = state.settings.copy(
+                    repeatMode = queueManager.repeatMode,
+                    shuffle = queueManager.isShuffle
+                )
+            )
+        }
+        PlayerBridge.setSpeed(_playbackSpeed.value)
+        PlayerBridge.setVolume(_volume.value)
+        PlayerBridge.setPlaybackMetadata(trackDisplayTitle(loadTrack), loadTrack.reciterName)
+        // Same offline-first resolution as startPlayback: a download completing
+        // mid-preload does not swap the stream — offline applies next load.
+        val playbackUri = if (loadTrack.isFullSurah || loadTrack.ayahNo <= 0) {
+            QuranDownloads.localUri(loadTrack.reciterSlug, loadTrack.surahId) ?: loadTrack.audioUrl
+        } else {
+            loadTrack.audioUrl
+        }
+        PlayerBridge.prepare(playbackUri, resumeAt)
+    }
+
     fun setAyahMode(enabled: Boolean) {
         if (enabled == _isAyahMode.value) return
         if (enabled) {

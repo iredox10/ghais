@@ -268,6 +268,10 @@ actual object PlayerBridge {
         playWithMetadata(url, pendingTitle, pendingArtist, startPositionMs)
     }
 
+    actual fun prepare(url: String, startPositionMs: Long) {
+        prepareWithMetadata(url, pendingTitle, pendingArtist, startPositionMs)
+    }
+
     actual fun setPlaybackMetadata(title: String?, artist: String?) {
         if (!title.isNullOrBlank()) pendingTitle = title
         if (!artist.isNullOrBlank()) pendingArtist = artist
@@ -314,6 +318,57 @@ actual object PlayerBridge {
         } catch (e: Exception) {
             _isBuffering.value = false
             _errorMessage.value = e.message ?: "Unable to start playback"
+        }
+    }
+
+    /**
+     * Android-only: load + prepare + seek WITHOUT starting playback (stays
+     * paused). Silent preload for continue-listening restore.
+     *
+     * Deliberately mirrors [playWithMetadata] MINUS `p.play()` and MINUS
+     * `onPlayRequested`: no foreground-service boot while idle — ExoPlayer can
+     * prepare/buffer in the app process with no audio output, and the FGS
+     * starts later via [resume] when the user actually presses play (the
+     * service then reuses this preloaded instance via `attachPlayer`, keeping
+     * the seeked position). The explicit `p.pause()` pins playWhenReady=false
+     * so a reused player (left with playWhenReady=true by a prior session)
+     * can never autoplay on READY — the no-autoplay guarantee.
+     */
+    fun prepareWithMetadata(url: String, title: String?, artist: String?, startPositionMs: Long = 0L) {
+        if (!title.isNullOrBlank()) pendingTitle = title
+        if (!artist.isNullOrBlank()) pendingArtist = artist
+        val p = exoPlayer ?: appContext?.let { player(it) } ?: run {
+            _errorMessage.value = "Player not initialised — call PlayerBridge.init(context) from MainActivity"
+            return
+        }
+        try {
+            _errorMessage.value = null
+            _isBuffering.value = true
+            _positionMs.value = startPositionMs.coerceAtLeast(0L)
+            _durationMs.value = 0L
+            val metadata = androidx.media3.common.MediaMetadata.Builder()
+                .apply {
+                    val t = pendingTitle ?: title
+                    val a = pendingArtist ?: artist
+                    if (!t.isNullOrBlank()) setTitle(t) else setTitle("Ghais")
+                    if (!a.isNullOrBlank()) setArtist(a)
+                    val artwork = pendingArtworkUri
+                    if (!artwork.isNullOrBlank()) {
+                        try { setArtworkUri(android.net.Uri.parse(artwork)) } catch (_: Exception) { }
+                    }
+                }
+                .build()
+            val item = androidx.media3.common.MediaItem.Builder()
+                .setUri(android.net.Uri.parse(url))
+                .setMediaId(url)
+                .setMediaMetadata(metadata)
+                .build()
+            p.setMediaItem(item, startPositionMs.coerceAtLeast(0L))
+            p.prepare()
+            p.pause()
+        } catch (e: Exception) {
+            _isBuffering.value = false
+            _errorMessage.value = e.message ?: "Unable to load playback"
         }
     }
 

@@ -162,6 +162,34 @@ actual object PlayerBridge {
         }
     }
 
+    actual fun prepare(url: String, startPositionMs: Long) {
+        try {
+            _errorMessage.value = null
+            _isBuffering.value = true
+            _positionMs.value = startPositionMs.coerceAtLeast(0L)
+            _durationMs.value = 0L
+            val nsUrl = NSURL.URLWithString(url)
+            if (nsUrl == null) {
+                _isBuffering.value = false
+                _errorMessage.value = "Invalid audio URL"
+                return
+            }
+            configureAudioSession()
+            val p = ensurePlayer()
+            val item = AVPlayerItem.playerItemWithURL(nsUrl)
+            observeTrackEnd(item)
+            p.replaceCurrentItemWithPlayerItem(item)
+            p.volume = currentVolume
+            if (startPositionMs > 0L) {
+                p.seekToTime(CMTimeMakeWithSeconds(startPositionMs / 1000.0, 600))
+            }
+            // NOTE: no p.play() — stays paused (silent preload, no autoplay).
+        } catch (e: Exception) {
+            _isBuffering.value = false
+            _errorMessage.value = e.message ?: "Unable to load playback"
+        }
+    }
+
     actual fun pause() {
         try {
             player?.pause()
