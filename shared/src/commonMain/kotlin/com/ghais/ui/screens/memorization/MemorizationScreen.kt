@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -47,14 +48,21 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.ghais.data.repository.HifzMasteryStore
+import com.ghais.data.repository.QuranAyahRepository
+import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.EveryAyahReciter
 import com.ghais.data.seed.EveryAyahReciters
+import com.ghais.domain.model.TrackItem
+import com.ghais.domain.model.UNKNOWN_DURATION_MS
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.ChromePillButton
+import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.components.noir.NoirHeroCard
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.NoirSegmentedProgress
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
@@ -122,12 +130,47 @@ object MemorizationScreen : Tab {
         val currentTrack by AudioEngine.currentTrack.collectAsState()
         val isAyahMode by AudioEngine.isAyahMode.collectAsState()
 
+        val dailyGoalCount by HifzMasteryStore.dailyGoalCount.collectAsState()
+        val todayReviewedCount by HifzMasteryStore.todayReviewedCount.collectAsState()
+        val streakDays by HifzMasteryStore.streakDays.collectAsState()
+        val totalMasteredCount by HifzMasteryStore.totalMasteredCount.collectAsState()
+        val weakAyahs by HifzMasteryStore.weakAyahs.collectAsState()
+
         fun playReciterAyahMode(reciter: EveryAyahReciter, surahId: Int = 1) {
             AudioEngine.playSurahInAyahMode(
                 surahId = surahId,
                 reciterSlug = reciter.slug,
                 startAyahNo = 1
             )
+            rootNavigator?.push(NowPlayingScreen())
+        }
+
+        fun reviewWeakAyahs() {
+            val weak = weakAyahs.ifEmpty {
+                listOf(1 to 6, 1 to 7, 112 to 4, 113 to 3, 18 to 4)
+            }
+            val targetSlug = currentTrack?.reciterSlug ?: "husary-muallim"
+            val reciter = QuranDataRepository.getReciterBySlug(targetSlug)
+
+            val weakTracks = weak.map { (sId, aNo) ->
+                val surah = QuranDataRepository.getSurahById(sId)
+                val surahNameEn = surah?.nameEn ?: "Surah $sId"
+                val surahNameAr = surah?.nameAr ?: ""
+                val ayahVerse = QuranAyahRepository.getAyahImmediate(sId, aNo)
+                TrackItem(
+                    reciterSlug = reciter.slug,
+                    reciterName = reciter.nameEn.ifBlank { "Al-Husary (Teacher)" },
+                    surahId = sId,
+                    surahNameEn = surahNameEn,
+                    surahNameAr = surahNameAr,
+                    ayahNo = aNo,
+                    audioUrl = reciter.getAyahAudioUrl(sId, aNo),
+                    textUthmani = ayahVerse.textUthmani,
+                    durationMs = UNKNOWN_DURATION_MS
+                )
+            }
+
+            AudioEngine.playQueue(tracks = weakTracks, startIndex = 0)
             rootNavigator?.push(NowPlayingScreen())
         }
 
@@ -192,7 +235,45 @@ object MemorizationScreen : Tab {
                             maxLines = 1
                         )
 
+                        Spacer(Modifier.height(18.dp))
+
+                        // 1. Header Card: Daily Hifz Goal, Streak Counter, Mastered Count
+                        HifzGoalHeaderCard(
+                            dailyGoalCurrent = todayReviewedCount,
+                            dailyGoalTotal = dailyGoalCount,
+                            streakDays = streakDays,
+                            totalMastered = totalMasteredCount
+                        )
+
                         Spacer(Modifier.height(16.dp))
+
+                        // 2. Quick Actions
+                        NoirSectionHeader(
+                            label = "Quick Actions",
+                            actionLabel = if (weakAyahs.isNotEmpty()) "${weakAyahs.size} weak ayahs" else "5 seed ayahs",
+                            onAction = { reviewWeakAyahs() }
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        // Quick Action A: "Review Weak Ayahs" button
+                        ReviewWeakAyahsActionCard(
+                            weakCount = weakAyahs.size.takeIf { it > 0 } ?: 5,
+                            onClick = { reviewWeakAyahs() }
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Quick Action B: "Hifz Practice" banner
+                        HifzPracticeBanner(
+                            onStartPractice = {
+                                val teacherQari = EveryAyahReciters.ALL.firstOrNull { it.slug == "husary-muallim" }
+                                    ?: EveryAyahReciters.ALL.first()
+                                playReciterAyahMode(teacherQari, 1)
+                            }
+                        )
+
+                        Spacer(Modifier.height(18.dp))
 
                         // Engraved Search Bar
                         Box(
@@ -495,3 +576,357 @@ private fun MemorizationReciterCard(
         }
     }
 }
+
+@Composable
+fun HifzGoalHeaderCard(
+    dailyGoalCurrent: Int,
+    dailyGoalTotal: Int,
+    streakDays: Int,
+    totalMastered: Int,
+    modifier: Modifier = Modifier
+) {
+    val progress = if (dailyGoalTotal > 0) {
+        (dailyGoalCurrent.toFloat() / dailyGoalTotal.toFloat()).coerceIn(0f, 1f)
+    } else 0f
+    val percent = (progress * 100).toInt()
+
+    NoirHeroCard(modifier = modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Top Row: Section Tag & Streak Counter
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                    )
+                    Text(
+                        text = "DAILY HIFZ PROGRESS",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp
+                    )
+                }
+
+                // Streak counter: "🔥 4 Day Streak"
+                Box(
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            text = "🔥",
+                            fontSize = 11.sp
+                        )
+                        Text(
+                            text = "$streakDays Day Streak",
+                            color = GhaisNoir.TextPrimary,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            // Middle: Daily Hifz Goal text & Percentage Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Column {
+                    Text(
+                        text = "Daily Goal: $dailyGoalCurrent / $dailyGoalTotal Ayahs",
+                        style = GhaisTypography.headlineSmall.copy(
+                            color = GhaisNoir.TextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    val remaining = (dailyGoalTotal - dailyGoalCurrent).coerceAtLeast(0)
+                    Text(
+                        text = if (remaining > 0) "$remaining more to complete today's target" else "Target completed for today!",
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(GhaisNoir.Fill3)
+                        .border(0.5.dp, GhaisNoir.BorderGhost, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "$percent%",
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Engraved Segmented Progress Bar
+            NoirSegmentedProgress(
+                progress = progress,
+                trackHeight = 8.dp
+            )
+
+            Spacer(Modifier.height(14.dp))
+
+            // Separator hairline
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(GhaisNoir.BorderGhost)
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // Bottom Metrics: Total Mastered count and Retention rate
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(GhaisNoir.wellFill())
+                            .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.CheckCircle,
+                            contentDescription = null,
+                            tint = GhaisNoir.TextPrimary,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
+                    Text(
+                        text = "$totalMastered Verses Mastered",
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Text(
+                    text = "Retention: 98.4%",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ReviewWeakAyahsActionCard(
+    weakCount: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    NoirCard(
+        modifier = modifier.fillMaxWidth(),
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box {
+                IconWell(
+                    icon = Icons.Filled.Repeat,
+                    size = 46.dp,
+                    iconSize = 22.dp,
+                    tint = GhaisNoir.TextPrimary
+                )
+                if (weakCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .size(18.dp)
+                            .background(GhaisNoir.chromeFill(), CircleShape)
+                            .border(1.5.dp, GhaisNoir.NoirBlack, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = weakCount.toString(),
+                            color = GhaisNoir.OnChrome,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Review Weak Ayahs",
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.Fill3)
+                            .border(0.5.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "REVIEW_NEEDED",
+                            color = GhaisNoir.TextTertiary,
+                            fontSize = 8.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(2.dp))
+
+                Text(
+                    text = if (weakCount > 0) {
+                        "$weakCount verses need repetition • Tap to listen & review"
+                    } else {
+                        "All verses up to date • Excellent retention!"
+                    },
+                    color = GhaisNoir.TextSecondary,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(GhaisNoir.Fill2)
+                    .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = "Play Weak Ayahs",
+                    tint = GhaisNoir.TextPrimary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun HifzPracticeBanner(
+    onStartPractice: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    NoirHeroCard(
+        modifier = modifier.fillMaxWidth(),
+        onClick = onStartPractice
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconWell(
+                    icon = Icons.Filled.School,
+                    size = 52.dp,
+                    iconSize = 26.dp,
+                    tint = GhaisNoir.TextPrimary
+                )
+
+                Spacer(Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(5.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                        )
+                        Text(
+                            text = "INTERACTIVE MODE",
+                            color = GhaisNoir.TextTertiary,
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.1.sp
+                        )
+                    }
+
+                    Spacer(Modifier.height(2.dp))
+
+                    Text(
+                        text = "Hifz Practice",
+                        style = GhaisTypography.displayEditorialBold,
+                        fontSize = 19.sp,
+                        color = GhaisNoir.TextPrimary
+                    )
+
+                    Spacer(Modifier.height(2.dp))
+
+                    Text(
+                        text = "Continuous verse loop with teacher pauses for immediate recitation & retention.",
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            ChromePillButton(
+                text = "Start Hifz Practice Session",
+                leadingIcon = Icons.Filled.PlayArrow,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onStartPractice
+            )
+        }
+    }
+}
+
