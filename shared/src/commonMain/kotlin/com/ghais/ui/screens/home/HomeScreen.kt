@@ -153,7 +153,10 @@ object HomeScreen : Tab {
  */
 private fun resumeHistoryEntry(entry: JumpBackInItem, openPlayer: () -> Unit) {
     val reciter = QuranDataRepository.getReciterBySlug(entry.reciterSlug)
-    val surahs = QuranDataRepository.getSurahs()
+    // Never queue a surah this reciter never recorded (known-404 URL):
+    // restrict the queue to available surahs only.
+    val surahs = QuranDataRepository.getSurahs().filter { reciter.isSurahAvailable(it.id) }
+    if (surahs.isEmpty()) return // "not recorded by this reciter" — do nothing.
     val allTracks = surahs.map { s ->
         TrackItem(
             reciterSlug = reciter.slug,
@@ -166,7 +169,21 @@ private fun resumeHistoryEntry(entry: JumpBackInItem, openPlayer: () -> Unit) {
             durationMs = s.ayahsCount * 15_000L
         )
     }
-    val startIndex = allTracks.indexOfFirst { it.surahId == entry.surahId }.coerceAtLeast(0)
+    val exactIndex = allTracks.indexOfFirst { it.surahId == entry.surahId }
+    val startIndex = if (exactIndex >= 0) {
+        exactIndex
+    } else {
+        // Resumed surah unavailable — start from the nearest available one
+        // (absolute id distance, tie-break forward so listening keeps moving ahead).
+        surahs.indices.minWithOrNull(
+            compareBy(
+                { kotlin.math.abs(surahs[it].id - entry.surahId) },
+                { if (surahs[it].id >= entry.surahId) 0 else 1 },
+                { surahs[it].id }
+            )
+        ) ?: 0
+    }
+    val redirected = exactIndex < 0
     val currentTrack = AudioEngine.currentTrack.value
     val isCurrent = currentTrack != null &&
         currentTrack.surahId == entry.surahId &&
@@ -179,7 +196,11 @@ private fun resumeHistoryEntry(entry: JumpBackInItem, openPlayer: () -> Unit) {
             openPlayer()
         }
         else -> {
-            val resumeAt = if (entry.durationMs > 0L && entry.positionMs >= entry.durationMs - 5_000L) {
+            // A redirected start belongs to a different surah, so its saved
+            // position does not apply — start from the beginning instead.
+            val resumeAt = if (redirected) {
+                0L
+            } else if (entry.durationMs > 0L && entry.positionMs >= entry.durationMs - 5_000L) {
                 0L
             } else {
                 entry.positionMs.coerceAtLeast(0L)

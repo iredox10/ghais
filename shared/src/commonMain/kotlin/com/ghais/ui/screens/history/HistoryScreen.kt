@@ -105,7 +105,10 @@ object HistoryScreen : Screen {
 
         fun replaySurah(group: HistorySurahGroup) {
             val reciter = QuranDataRepository.getReciterBySlug(group.reciterSlug)
-            val surahs = QuranDataRepository.getSurahs()
+            // Never queue a surah this reciter never recorded (known-404 URL):
+            // restrict the queue to available surahs only.
+            val surahs = QuranDataRepository.getSurahs().filter { reciter.isSurahAvailable(it.id) }
+            if (surahs.isEmpty()) return // "not recorded by this reciter" — do nothing.
             val allTracks = surahs.map { s ->
                 TrackItem(
                     reciterSlug = reciter.slug,
@@ -118,7 +121,21 @@ object HistoryScreen : Screen {
                     durationMs = s.ayahsCount * 15_000L
                 )
             }
-            val startIndex = allTracks.indexOfFirst { it.surahId == group.surahId }.coerceAtLeast(0)
+            val exactIndex = allTracks.indexOfFirst { it.surahId == group.surahId }
+            // Replayed surah unavailable — start from the nearest available one
+            // (absolute id distance, tie-break forward so listening keeps moving ahead).
+            val startIndex = if (exactIndex >= 0) {
+                exactIndex
+            } else {
+                surahs.indices.minWithOrNull(
+                    compareBy(
+                        { kotlin.math.abs(surahs[it].id - group.surahId) },
+                        { if (surahs[it].id >= group.surahId) 0 else 1 },
+                        { surahs[it].id }
+                    )
+                ) ?: 0
+            }
+            val redirected = exactIndex < 0
             val currentTrack = AudioEngine.currentTrack.value
             val isCurrent = currentTrack != null &&
                 currentTrack.surahId == group.surahId &&
@@ -129,7 +146,11 @@ object HistoryScreen : Screen {
                 AudioEngine.resume()
                 navigator.push(NowPlayingScreen())
             } else {
-                val resumeAt = if (group.durationMs > 0L && group.positionMs >= group.durationMs - 5_000L) {
+                // A redirected start belongs to a different surah, so its saved
+                // position does not apply — start from the beginning instead.
+                val resumeAt = if (redirected) {
+                    0L
+                } else if (group.durationMs > 0L && group.positionMs >= group.durationMs - 5_000L) {
                     0L
                 } else {
                     group.positionMs.coerceAtLeast(0L)
