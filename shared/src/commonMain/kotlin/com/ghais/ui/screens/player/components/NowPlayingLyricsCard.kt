@@ -64,6 +64,7 @@ import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisTypography
 import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.util.AyahEndMark
 import com.ghais.ui.util.toArabicDigits
 
 /**
@@ -380,18 +381,31 @@ fun NowPlayingLyricsCard(
                         .padding(start = 12.dp)
                 ) {
                     // Arabic verse — QCF Hafs Uthmani text (100% white, RTL)
-                    // with the end-of-ayah sign.
+                    // with the enclosed end-of-ayah rosette. Normal weight:
+                    // synthetic bold perturbs mark shaping on dense stacks.
                     if (activeArabic.isNotBlank()) {
-                        Text(
-                            text = "$activeArabic ۝${toArabicDigits(displayAyahNo)}",
-                            fontFamily = GhaisTypography.quranFont,
-                            fontSize = 25.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = GhaisNoir.TextPrimary,
-                            textAlign = TextAlign.End,
-                            lineHeight = 44.sp,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            AyahEndMark(
+                                number = displayAyahNo,
+                                ornamentSize = 26.sp,
+                                digitSize = 11.sp,
+                                tint = GhaisNoir.TextPrimary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = activeArabic,
+                                fontFamily = GhaisTypography.quranFont,
+                                fontSize = 25.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = GhaisNoir.TextPrimary,
+                                textAlign = TextAlign.End,
+                                lineHeight = 50.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
 
                     // Phonetic transliteration — tertiary italic
@@ -480,18 +494,30 @@ fun NowPlayingLyricsCard(
 
                         if (upcomingAyahVerse.textUthmani.isNotBlank()) {
                             Spacer(modifier = Modifier.height(3.dp))
-                            Text(
-                                text = "${upcomingAyahVerse.textUthmani} ۝${toArabicDigits(upcomingAyahVerse.ayahNo)}",
-                                fontFamily = GhaisTypography.quranFont,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = GhaisNoir.TextSecondary,
-                                textAlign = TextAlign.End,
-                                lineHeight = 28.sp,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                AyahEndMark(
+                                    number = upcomingAyahVerse.ayahNo,
+                                    ornamentSize = 20.sp,
+                                    digitSize = 9.sp,
+                                    tint = GhaisNoir.TextSecondary
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = upcomingAyahVerse.textUthmani,
+                                    fontFamily = GhaisTypography.quranFont,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = GhaisNoir.TextSecondary,
+                                    textAlign = TextAlign.End,
+                                    lineHeight = 36.sp,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
 
                         if (upcomingAyahVerse.translation.isNotBlank()) {

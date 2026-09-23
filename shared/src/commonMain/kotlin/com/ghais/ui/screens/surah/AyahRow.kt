@@ -36,7 +36,7 @@ import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
-import com.ghais.ui.util.toArabicDigits
+import com.ghais.ui.util.AyahEndMark
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -99,16 +99,28 @@ fun AyahRow(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.End
             ) {
-                Text(
-                    text = "${ayah.textUthmani} ۝${toArabicDigits(ayah.ayahNo)}",
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    color = GhaisNoir.TextPrimary,
-                    fontSize = 22.sp,
-                    lineHeight = 40.sp,
-                    textAlign = TextAlign.Right,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = GhaisTypography.quranFont
-                )
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    AyahEndMark(
+                        number = ayah.ayahNo,
+                        ornamentSize = 22.sp,
+                        digitSize = 10.sp,
+                        tint = GhaisNoir.TextPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = ayah.textUthmani,
+                        modifier = Modifier.weight(1f),
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 22.sp,
+                        lineHeight = 44.sp,
+                        textAlign = TextAlign.Right,
+                        fontWeight = FontWeight.Normal,
+                        fontFamily = GhaisTypography.quranFont
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
