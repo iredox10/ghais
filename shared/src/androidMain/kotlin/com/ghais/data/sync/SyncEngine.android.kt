@@ -189,6 +189,13 @@ actual object SyncEngine {
                 pullUserPrefsIfEmpty(db, userId)
                 pushUserPrefs(db, userId)
             }
+            // Reciter catalog (Appwrite source of truth): refresh the
+            // in-memory cloud overlay; bundled seeds stay the fallback.
+            try {
+                refreshReciterCatalog(db)
+            } catch (e: Exception) {
+                Log.w(TAG, "reciter catalog refresh failed", e)
+            }
         }
         if (firstError == null) {
             _lastError.value = null
@@ -458,6 +465,76 @@ actual object SyncEngine {
                 null
             }
         }
+
+    // ------------------------------------------------------- reciter catalog
+    //
+    // Appwrite `reciters` is the source of truth (keyed by
+    // `catalog_key = "<catalog>:<slug>"` so MP3Quran and EveryAyah variants
+    // never collide; `image_url` editable per reciter from admin panel).
+    // Bulk refresh populates [ReciterCloudCache]; bundled seeds stay the
+    // offline fallback. Never throws.
+
+    /**
+     * Pulls all `reciters` docs (paginated) into [ReciterCloudCache].
+     * Skips disabled docs and malformed rows. Never throws.
+     */
+    suspend fun refreshReciterCatalog(db: Databases) {
+        try {
+            val out = ArrayList<Reciter>(300)
+            var offset = 0
+            while (true) {
+                val page = try {
+                    db.listDocuments(
+                        DB_ID,
+                        RECITERS,
+                        listOf(Query.limit(100), Query.offset(offset)),
+                    ).documents
+                } catch (e: Exception) {
+                    if (!isNotFound(e)) Log.w(TAG, "reciters list failed", e)
+                    break
+                }
+                if (page.isEmpty()) break
+                for (doc in page) {
+                    parseReciterDoc(doc.data)?.let { out.add(it) }
+                }
+                if (page.size < 100) break
+                offset += page.size
+            }
+            if (out.isNotEmpty()) {
+                com.ghais.data.repository.ReciterCloudCache.setCloudReciters(out)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "reciter catalog refresh failed", e)
+        }
+    }
+
+    private fun parseReciterDoc(data: Map<String, Any?>): Reciter? {
+        return try {
+            val slug = (data["slug"] as? String)?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+            val enabled = data["enabled"] as? Boolean ?: true
+            if (!enabled) return null
+            Reciter(
+                slug = slug,
+                nameEn = (data["name_en"] as? String)?.takeIf { it.isNotBlank() } ?: slug,
+                nameAr = (data["name_ar"] as? String) ?: "",
+                riwayah = (data["riwayah"] as? String)?.takeIf { it.isNotBlank() } ?: "Hafs",
+                style = (data["style"] as? String)?.takeIf { it.isNotBlank() } ?: "murattal",
+                tempo = (data["tempo"] as? String)?.takeIf { it.isNotBlank() } ?: "medium",
+                imageUrl = (data["image_url"] as? String)?.takeIf { it.isNotBlank() },
+                audioFolder = (data["audio_folder"] as? String) ?: "",
+                country = (data["country"] as? String) ?: "",
+                serverUrl = (data["server_url"] as? String) ?: "",
+                availableSurahList = (data["available_surahs"] as? String) ?: "",
+                catalog = com.ghais.data.repository.ReciterCloudCache.catalogOf(data["catalog"]),
+                description = (data["description"] as? String) ?: "",
+                isTeacher = (data["is_teacher"] as? Boolean) ?: false,
+                imageFileId = (data["image_file_id"] as? String)?.takeIf { it.isNotBlank() },
+                enabled = true,
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     // ------------------------------------------------------- reciter photos
     //

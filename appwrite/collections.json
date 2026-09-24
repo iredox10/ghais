@@ -15,34 +15,47 @@
         {
           "key": "slug",
           "type": "string",
-          "size": 64,
-          "required": true
+          "size": 255,
+          "required": true,
+          "note": "NOT globally unique: shared across catalogs (e.g. mp3quran + everyayah variants). Use catalog_key as the unique identity."
+        },
+        {
+          "key": "catalog",
+          "type": "string",
+          "size": 16,
+          "required": true,
+          "note": "Reciter source catalog: 'mp3quran' | 'everyayah'. Required with NO server default (Appwrite forbids defaults on required columns); writers must always set it. Source of truth: ReciterCatalog.wire in Models.kt."
+        },
+        {
+          "key": "catalog_key",
+          "type": "string",
+          "size": 128,
+          "required": true,
+          "note": "Stable cross-catalog identity '<catalog>:<slug>' (see Reciter.catalogKey()). Backed by the catalog_key_unique index. Row IDs are legacy bare slugs for mp3quran and 'everyayah-<slug>' for new everyayah variants (':' is illegal in row IDs)."
         },
         {
           "key": "name_en",
           "type": "string",
-          "size": 128,
+          "size": 255,
           "required": true
         },
         {
           "key": "name_ar",
           "type": "string",
-          "size": 128,
+          "size": 255,
           "required": true
         },
         {
           "key": "riwayah",
           "type": "string",
-          "size": 64,
-          "required": false,
-          "default": "Hafs"
+          "size": 255,
+          "required": false
         },
         {
           "key": "style",
           "type": "string",
-          "size": 32,
-          "required": false,
-          "default": "murattal"
+          "size": 255,
+          "required": false
         },
         {
           "key": "tempo",
@@ -54,14 +67,60 @@
         {
           "key": "audio_folder",
           "type": "string",
-          "size": 128,
-          "required": true
+          "size": 255,
+          "required": false,
+          "note": "EveryAyah per-ayah folder (https://everyayah.com/data/<folder>/SSSA AA.mp3). Empty for mp3quran rows, which stream via server_url."
+        },
+        {
+          "key": "country",
+          "type": "string",
+          "size": 255,
+          "required": false
+        },
+        {
+          "key": "server_url",
+          "type": "string",
+          "size": 512,
+          "required": false
+        },
+        {
+          "key": "available_surahs",
+          "type": "string",
+          "size": 2048,
+          "required": false,
+          "note": "Comma-separated surah IDs for mp3quran rows. Empty = all 114 (everyayah rows)."
+        },
+        {
+          "key": "description",
+          "type": "string",
+          "size": 1024,
+          "required": false
+        },
+        {
+          "key": "is_teacher",
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "note": "True for Mu'allim/Tajweed-master editions used by memorization flows."
         },
         {
           "key": "image_url",
           "type": "string",
           "size": 512,
           "required": false
+        },
+        {
+          "key": "image_file_id",
+          "type": "string",
+          "size": 128,
+          "required": false,
+          "note": "File ID in the 'covers' bucket (preferred over hotlinked image_url)."
+        },
+        {
+          "key": "enabled",
+          "type": "boolean",
+          "required": false,
+          "default": true
         },
         {
           "key": "verified",
@@ -72,25 +131,12 @@
       ],
       "indexes": [
         {
-          "key": "slug_unique",
+          "key": "catalog_key_unique",
           "type": "unique",
           "attributes": [
-            "slug"
-          ]
-        },
-        {
-          "key": "style_idx",
-          "type": "key",
-          "attributes": [
-            "style"
-          ]
-        },
-        {
-          "key": "tempo_idx",
-          "type": "key",
-          "attributes": [
-            "tempo"
-          ]
+            "catalog_key"
+          ],
+          "note": "Replaces slug_unique (deleted 2026-09-24): slug alone cannot be unique once mp3quran + everyayah variants coexist."
         }
       ]
     },

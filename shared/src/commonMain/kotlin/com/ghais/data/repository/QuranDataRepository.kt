@@ -58,9 +58,12 @@ object QuranDataRepository {
         com.ghais.data.seed.EveryAyahReciters.ALL.map { it.toReciter() }
 
     /**
-     * Returns all reciters.
+     * Returns all reciters: bundled seeds with Appwrite cloud fields
+     * overlaid (images, descriptions, flags) once [ReciterCloudCache] has
+     * synced. Offline behavior is unchanged (bundled only).
      */
-    fun getReciters(): List<Reciter> = QuranData.RECITERS
+    fun getReciters(): List<Reciter> =
+        ReciterCloudCache.mergedWith(QuranData.RECITERS)
 
     /**
      * Returns all surahs.

@@ -19,6 +19,8 @@ import com.ghais.data.seed.GhaisAssets
 import com.ghais.ui.screens.home.NoirArtworkWell
 
 fun photoForSlug(slug: String): String? {
+    // Cloud first (admin-uploaded via Appwrite `reciters.image_url`), then local.
+    com.ghais.data.repository.ReciterCloudCache.cloudImageForSlug(slug)?.let { return it }
     val clean = slug.lowercase().replace('_', '-')
     val verified = ALL_VERIFIED_RECITERS.find {
         val vSlug = it.slug.lowercase().replace('_', '-')

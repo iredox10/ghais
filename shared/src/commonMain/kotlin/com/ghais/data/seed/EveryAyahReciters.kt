@@ -1,13 +1,28 @@
 package com.ghais.data.seed
 
 import com.ghais.domain.model.Reciter
+import com.ghais.domain.model.ReciterCatalog
 
 /**
  * Verified EveryAyah Reciters Catalog.
- * 
+ *
  * Every reciter in this catalog has authentic, verified Ayah-by-Ayah audio recordings
  * hosted on https://everyayah.com/data/<audioFolder>/<surahId><ayahNo>.mp3.
  * These reciters are specially suited for Hifz (memorization) and Tajweed study.
+ *
+ * Catalog identity: [EveryAyahReciter.toReciter] stamps [ReciterCatalog.EVERYAYAH],
+ * while the MP3Quran seed list ([ALL_MP3QURAN_RECITERS]) relies on the [Reciter]
+ * default ([ReciterCatalog.MP3QURAN]). The two catalogs are therefore distinct even
+ * when slugs overlap — compare via [Reciter.catalogKey], never bare [Reciter.slug].
+ *
+ * Slug-collision policy (11 slugs exist verbatim in both catalogs: salah-al-budair,
+ * ali-jaber, abu-bakr-al-shatri, fares-abbad, muhammad-ayyub, muhammad-jibreel,
+ * ibrahim-al-akhdar, abdullah-basfar, mahmoud-ali-al-banna, mustafa-ismail,
+ * khalifa-al-tunaiji): callers that know the catalog must use the catalog-aware
+ * [findBySlug] overload / [resolveReciter] for an exact-catalog match; callers that
+ * don't know it resolve MP3QURAN first. NOTE: [com.ghais.data.repository.QuranDataRepository.getReciterBySlug]
+ * still resolves EveryAyah-first (legacy order) — see [resolveReciter] and the
+ * follow-up to align it.
  */
 data class EveryAyahReciter(
     val slug: String,
@@ -32,7 +47,10 @@ data class EveryAyahReciter(
         imageUrl = null,
         audioFolder = audioFolder,
         country = country,
-        serverUrl = serverUrl
+        serverUrl = serverUrl,
+        catalog = ReciterCatalog.EVERYAYAH,
+        description = description,
+        isTeacher = isTeacher
     )
 }
 
@@ -71,7 +89,10 @@ object EveryAyahReciters {
             style = "Tajweed Master",
             tempo = "Precise & Slow",
             audioFolder = "Ayman_Sowaid_64kbps",
-            serverUrl = "https://server10.mp3quran.net/ajm/",
+            // No MP3Quran stream exists for this reciter: leave blank so full-surah
+            // falls back to the legacy default instead of cross-wiring another
+            // reciter's voice (previously pointed at Ajamy's ajm/ stream).
+            serverUrl = "",
             country = "Syria",
             description = "World renowned scholar and supreme authority in the science of Tajweed and Makharij al-Huruf.",
             isTeacher = true
@@ -232,7 +253,7 @@ object EveryAyahReciters {
             style = "Madinah Murattal",
             tempo = "Medium",
             audioFolder = "Salah_Al_Budair_128kbps",
-            serverUrl = "https://server6.mp3quran.net/bdr/",
+            serverUrl = "https://server6.mp3quran.net/s_bud/",
             country = "Saudi Arabia",
             description = "Imam and Khatib of the Prophet's Mosque in Madinah."
         ),
@@ -300,7 +321,7 @@ object EveryAyahReciters {
             style = "Tadabbur",
             tempo = "Slow & Tearful",
             audioFolder = "Hani_Rifai_192kbps",
-            serverUrl = "https://server8.mp3quran.net/rifai/",
+            serverUrl = "https://server8.mp3quran.net/hani/",
             country = "Saudi Arabia",
             description = "Deeply poignant recitation conveying humility, repentance, and awe."
         ),
@@ -344,7 +365,7 @@ object EveryAyahReciters {
             style = "Egyptian Classic",
             tempo = "Rich & Vocal",
             audioFolder = "Mohammad_al_Tablaway_128kbps",
-            serverUrl = "https://server12.mp3quran.net/tblwi/",
+            serverUrl = "https://server12.mp3quran.net/tblawi/",
             country = "Egypt",
             description = "Former Sheikh of Egyptian Reciters, recognized for unique vocal timbre and breath."
         ),
@@ -377,7 +398,7 @@ object EveryAyahReciters {
             style = "Murattal",
             tempo = "Medium",
             audioFolder = "Yaser_Salamah_128kbps",
-            serverUrl = "https://server11.mp3quran.net/salamah/",
+            serverUrl = "https://server12.mp3quran.net/salamah/Rewayat-Hafs-A-n-Assem/",
             country = "Egypt",
             description = "Gentle, soothing recitation with pristine phonetic transitions."
         ),
@@ -436,5 +457,34 @@ object EveryAyahReciters {
             (clean == "basit" && rSlug == "abdul-basit") ||
             reciter.nameEn.lowercase().contains(clean)
         }
+    }
+
+    /**
+     * Catalog-scoped lookup within the EveryAyah catalog only.
+     * Returns null unless [catalog] is EVERYAYAH (or null, meaning "no
+     * preference at this layer") — MP3QURAN callers must consult
+     * [ALL_MP3QURAN_RECITERS] / [QuranData.RECITERS] instead, so a shared slug
+     * can never clobber across catalogs at this layer.
+     */
+    fun findBySlug(slug: String, catalog: ReciterCatalog?): EveryAyahReciter? {
+        if (catalog == ReciterCatalog.MP3QURAN) return null
+        return findBySlug(slug)
+    }
+
+    /**
+     * Cross-catalog resolution honoring the slug-collision policy: exact-catalog
+     * match wins when [preferredCatalog] is known, otherwise MP3QURAN first
+     * (EveryAyah only as fallback), finally Mishary as the global fallback.
+     * Fuzzy alias matching stays in `QuranDataRepository.getReciterBySlug`;
+     * this helper matches exact normalized slugs only.
+     */
+    fun resolveReciter(slug: String, preferredCatalog: ReciterCatalog? = null): Reciter {
+        if (preferredCatalog == ReciterCatalog.EVERYAYAH) {
+            findBySlug(slug)?.let { return it.toReciter() }
+        }
+        val clean = slug.trim().lowercase()
+        ALL_MP3QURAN_RECITERS.find { it.slug.lowercase() == clean }?.let { return it }
+        findBySlug(slug)?.let { return it.toReciter() }
+        return findBySlug("mishary")!!.toReciter()
     }
 }

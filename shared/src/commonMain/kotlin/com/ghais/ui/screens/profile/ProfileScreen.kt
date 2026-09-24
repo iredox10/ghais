@@ -8,15 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DownloadDone
-import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,8 +25,6 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.data.auth.AuthRepository
-import com.ghais.data.repository.FavoritesStore
-import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.NoirGrainOverlay
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirAmbientGlow
@@ -43,7 +37,6 @@ import com.ghais.ui.screens.profile.glass.ProtonSwitchRow
 import com.ghais.ui.screens.profile.glass.SchedulesProtonSection
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.screens.settings.AppSettingsScreen
-import com.ghais.ui.screens.stats.StatsScreen
 import com.russhwolf.settings.Settings
 import kotlinx.coroutines.launch
 
@@ -135,10 +128,6 @@ object ProfileScreen : Tab {
             ?: LocalNavigator.current?.parent
             ?: LocalNavigator.current
 
-        // Live favourites count
-        val favoriteTracks by FavoritesStore.favoriteTracks.collectAsState()
-        val favoriteCount = favoriteTracks.size
-
         // Auth session (null = guest)
         val session by AuthRepository.session.collectAsState()
 
@@ -155,14 +144,6 @@ object ProfileScreen : Tab {
         var dailyDhikrReminder by remember {
             mutableStateOf(settings.migratedProfileBoolean(PREF_DHIKR_ALERT, true))
         }
-
-        // Live offline-download storage state
-        val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
-        var storageSizeBytes by remember { mutableStateOf(0L) }
-        LaunchedEffect(downloadedKeys) {
-            storageSizeBytes = QuranDownloads.storageBytes()
-        }
-        val cachedSurahCount = downloadedKeys.size
 
         Box(
             modifier = Modifier
@@ -199,32 +180,7 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 2. Library (badge rows)
-                // -----------------------------------------------------------------
-                item {
-                    NoirSectionHeader(label = "Collections")
-                    GlassCardContainer {
-                        com.ghais.ui.screens.profile.NoirLibraryRow(
-                            icon = Icons.Filled.MusicNote,
-                            title = "Favorite Verses & Surahs",
-                            subtitle = "Bookmarked ayahs and cherished recitations",
-                            countBadge = favoriteCount
-                        )
-
-                        NoirRowDivider()
-
-                        com.ghais.ui.screens.profile.NoirLibraryRow(
-                            icon = Icons.Filled.DownloadDone,
-                            title = "Offline downloads",
-                            subtitle = "$cachedSurahCount surahs cached • " + formatStorageBytes(storageSizeBytes),
-                            countBadge = cachedSurahCount
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(18.dp))
-                }
-
-                // -----------------------------------------------------------------
-                // 3. Recitation schedules
+                // 2. Recitation schedules
                 // -----------------------------------------------------------------
                 item {
                     NoirSectionHeader(label = "Schedules")
@@ -233,7 +189,7 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 4. Preferences (Sentinel-style)
+                // 3. Preferences (Sentinel-style)
                 // -----------------------------------------------------------------
                 item {
                     NoirSectionHeader(label = "Preferences")
@@ -262,23 +218,7 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 5. Journey (Sentinel-style rows)
-                // -----------------------------------------------------------------
-                item {
-                    NoirSectionHeader(label = "Journey")
-                    GlassCardContainer {
-                        com.ghais.ui.screens.profile.NoirSettingsRow(
-                            icon = Icons.Filled.Insights,
-                            title = "Your stats",
-                            subtitle = "Streaks, listening time & Khatmah journey",
-                            onClick = { rootNavigator?.push(StatsScreen) }
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(18.dp))
-                }
-
-                // -----------------------------------------------------------------
-                // 6. About (ghost value chips)
+                // 4. About (ghost value chips)
                 // -----------------------------------------------------------------
                 item {
                     NoirSectionHeader(label = "About")
@@ -303,7 +243,7 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 7. Log out (ghost danger row — muted, no red)
+                // 5. Log out (ghost danger row — muted, no red)
                 // -----------------------------------------------------------------
                 item {
                     GlassCardContainer {
@@ -340,18 +280,4 @@ object ProfileScreen : Tab {
             )
         }
     }
-}
-
-// Storage size formatting: B / KB / MB with one decimal
-private fun formatStorageBytes(bytes: Long): String {
-    if (bytes < 1024) return "$bytes B"
-    val kb = bytes / 1024.0
-    if (kb < 1024) return "${oneDecimal(kb)} KB"
-    val mb = kb / 1024.0
-    return "${oneDecimal(mb)} MB"
-}
-
-private fun oneDecimal(value: Double): String {
-    val tenths = kotlin.math.round(value * 10).toLong()
-    return "${tenths / 10}.${kotlin.math.abs(tenths % 10)}"
 }

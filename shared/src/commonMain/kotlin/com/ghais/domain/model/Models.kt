@@ -23,6 +23,12 @@ data class Ayah(
 )
 
 @Serializable
+enum class ReciterCatalog(val wire: String) {
+    MP3QURAN("mp3quran"),
+    EVERYAYAH("everyayah")
+}
+
+@Serializable
 data class Reciter(
     val slug: String,
     val nameEn: String,
@@ -34,12 +40,30 @@ data class Reciter(
     val audioFolder: String = "",
     val country: String = "",
     val serverUrl: String = "",
-    val availableSurahList: String = ""
+    val availableSurahList: String = "",
+    val catalog: ReciterCatalog = ReciterCatalog.MP3QURAN,
+    val description: String = "",
+    val isTeacher: Boolean = false,
+    val imageFileId: String? = null,
+    val enabled: Boolean = true
 ) {
+    /** Stable catalog-scoped identity: "<catalog.wire>:<slug>". */
+    fun catalogKey(): String = "${catalog.wire}:$slug"
+
+    /**
+     * Per-ayah audio resolution for the EVERYAYAH catalog
+     * (https://everyayah.com/data/<folder>/<SSSA AA>.mp3).
+     * Branches on [catalog] explicitly, but the URL shape is identical for
+     * both catalogs: per-ayah clips are only served via EveryAyah, so
+     * MP3QURAN reciters reuse the same EveryAyah folder resolution.
+     */
     fun getAyahAudioUrl(surahId: Int, ayahNo: Int): String {
         val s = surahId.toString().padStart(3, '0')
         val a = ayahNo.toString().padStart(3, '0')
-        val folder = audioFolder.ifEmpty { resolveEveryAyahFolder(slug) }
+        val folder = when (catalog) {
+            ReciterCatalog.EVERYAYAH,
+            ReciterCatalog.MP3QURAN -> audioFolder.ifEmpty { resolveEveryAyahFolder(slug) }
+        }
         return "https://everyayah.com/data/$folder/$s$a.mp3"
     }
 
@@ -55,11 +79,24 @@ data class Reciter(
         return if (ids.isEmpty()) (1..114).toList() else ids
     }
 
+    /**
+     * Full-surah audio resolution for the MP3QURAN catalog.
+     * Branches on [catalog] explicitly, but the URL is identical for both
+     * catalogs: [serverUrl] wins when set, otherwise the legacy per-slug
+     * mp3quran mapping applies (EveryAyah has no full-surah endpoint, so
+     * EVERYAYAH reciters reuse the same MP3QURAN full-surah URLs).
+     */
     fun getFullSurahUrl(surahId: Int): String {
         val pad = surahId.toString().padStart(3, '0')
         if (serverUrl.isNotBlank()) {
             val base = if (serverUrl.endsWith("/")) serverUrl else "$serverUrl/"
             return "$base$pad.mp3"
+        }
+        // Catalog-aware branch kept behavior-identical: both catalogs share
+        // the MP3QURAN full-surah mapping below.
+        when (catalog) {
+            ReciterCatalog.MP3QURAN,
+            ReciterCatalog.EVERYAYAH -> Unit
         }
         return when (slug.lowercase()) {
             "mishary", "alafasy" -> "https://server8.mp3quran.net/afs/$pad.mp3"
