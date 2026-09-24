@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -37,6 +38,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,7 +50,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -57,6 +63,12 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import coil3.compose.AsyncImage
+import com.ghais.data.repository.EditorialPlaylist
+import com.ghais.data.repository.EditorialRepository
+import com.ghais.data.repository.toTrackItems
+import com.ghais.data.sync.SyncEngine
+import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
@@ -67,6 +79,7 @@ import com.ghais.ui.screens.playlists.MoodPlaylist
 import com.ghais.ui.screens.playlists.MoodPlaylists
 import com.ghais.ui.screens.playlists.PlaylistArt
 import com.ghais.ui.screens.playlists.PlaylistDetailsScreen
+import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.routines.MyRoutinesScreen
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
@@ -103,6 +116,20 @@ object LibraryScreen : Tab {
         val rootNavigator = LocalRootNavigator.current ?: LocalNavigator.current?.parent ?: LocalNavigator.current
         var query by remember { mutableStateOf("") }
         var selectedFilter by remember { mutableStateOf("All") }
+
+        // Live editorial shelf (read-only public catalog; empty until the
+        // first successful pull — the section hides itself when empty).
+        val editorial by EditorialRepository.playlists.collectAsState()
+        LaunchedEffect(Unit) {
+            SyncEngine.refreshEditorial()
+        }
+        fun playEditorial(playlist: EditorialPlaylist) {
+            val tracks = playlist.toTrackItems()
+            if (tracks.isNotEmpty()) {
+                AudioEngine.playQueue(tracks, startIndex = 0)
+                rootNavigator?.push(NowPlayingScreen())
+            }
+        }
 
         val filteredPlaylists = remember(query, selectedFilter) {
             MoodPlaylists.filter { playlist ->
@@ -142,6 +169,22 @@ object LibraryScreen : Tab {
                             filters = Filters,
                             selected = selectedFilter,
                             onSelect = { selectedFilter = it }
+                        )
+                    }
+                }
+
+                // Live editorial shelf: sits above the local collections,
+                // outside search/filter (server-ordered, tap-to-play). Shown
+                // even when the local filter is empty; hidden only when the
+                // pull has never succeeded.
+                if (editorial.isNotEmpty()) {
+                    item(span = { GridItemSpan(2) }) {
+                        NoirSectionHeader(label = "Editorial • ${editorial.size}")
+                    }
+                    items(editorial, key = { "ed_${it.id}" }) { playlist ->
+                        NoirEditorialTile(
+                            playlist = playlist,
+                            onPlay = { playEditorial(playlist) }
                         )
                     }
                 }
@@ -689,6 +732,147 @@ private fun NoirLibraryEmpty() {
             color = GhaisNoir.TextTertiary,
             textAlign = TextAlign.Center
         )
+    }
+}
+
+/** True-grayscale filter — cover art stays recognisable, strictly monochrome. */
+private val NoirEditorialGrayscale: ColorFilter by lazy {
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+}
+
+/**
+ * Editorial shelf tile: same Noir bento shell as [NoirLibraryTile] (soft
+ * glass fill + 1px card border + top-only specular, sheen + bottom scrim),
+ * but bound to a live [EditorialPlaylist]. Cover art renders grayscale from
+ * `cover_url` (recessed plate + darkening scrim, mirroring the curated hero);
+ * blank URLs fall back to a clay icon-well. Whole tile + chrome play disc
+ * both tap-to-play via the existing `AudioEngine.playQueue` path.
+ */
+@Composable
+private fun NoirEditorialTile(
+    playlist: EditorialPlaylist,
+    onPlay: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(NoirLibraryTileShape)
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, NoirLibraryTileShape)
+            .topSpecular()
+            .noirClickable(onPlay)
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(GhaisNoir.sheen())
+        )
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.28f)
+                        )
+                    )
+                )
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                NoirLibraryBadge("Editorial")
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(GhaisNoir.chromeFill(), CircleShape)
+                        .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
+                        .noirClickable(onPlay),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "Play",
+                        tint = GhaisNoir.OnChrome,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(76.dp)
+                        .clip(NoirLibraryArtShape)
+                        .background(GhaisNoir.wellFill())
+                        .border(1.dp, GhaisNoir.BorderCard, NoirLibraryArtShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (playlist.coverUrl.isNullOrBlank()) {
+                        Icon(
+                            imageVector = Icons.Filled.QueueMusic,
+                            contentDescription = null,
+                            tint = GhaisNoir.TextTertiary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    } else {
+                        AsyncImage(
+                            model = playlist.coverUrl,
+                            contentDescription = playlist.title,
+                            contentScale = ContentScale.Crop,
+                            colorFilter = NoirEditorialGrayscale,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = 0.35f))
+                    )
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            Text(
+                text = playlist.title,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.2).sp,
+                color = GhaisNoir.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = playlist.description.ifBlank { "A curated editorial collection" },
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Normal,
+                lineHeight = 16.5.sp,
+                color = GhaisNoir.TextSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "${playlist.items.size} tracks • Editorial",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
+                color = GhaisNoir.TextTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 

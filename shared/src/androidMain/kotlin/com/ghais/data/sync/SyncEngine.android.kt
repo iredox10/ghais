@@ -4,8 +4,12 @@ import android.util.Log
 import com.ghais.data.auth.AppwriteConfig
 import com.ghais.data.auth.AuthRepository
 import com.ghais.data.auth.PersistentCookieJar
-import com.ghais.data.repository.CustomRoutine
+import com.ghais.data.repository.Broadcast
+import com.ghais.data.repository.BroadcastRepository
 import com.ghais.data.repository.CustomRoutinesStore
+import com.ghais.data.repository.EditorialPlaylist
+import com.ghais.data.repository.EditorialPlaylistItem
+import com.ghais.data.repository.EditorialRepository
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.KhatmaStore
@@ -17,6 +21,7 @@ import com.ghais.data.repository.UserUsageRepository
 import com.ghais.domain.model.KhatmaPlan
 import com.ghais.data.repository.StatsSnapshot
 import com.ghais.ui.screens.reciters.remotePhotoFetcher
+import com.russhwolf.settings.Settings
 import com.ghais.data.seed.JumpBackInItem
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
@@ -66,6 +71,10 @@ actual object SyncEngine {
     private const val PLAYLISTS = "playlists"
     private const val PLAYLIST_ITEMS = "playlist_items"
     private const val RECITERS = "reciters"
+    private const val TELEMETRY = "telemetry"
+    /** Throttle window for the device-telemetry upload (at most once per 24h per device). */
+    private const val TELEMETRY_THROTTLE_MS = 24L * 60 * 60 * 1000L
+    private const val TELEMETRY_PREF_PREFIX = "ghais_telemetry_last_upload_"
     private const val ROUTINE_DOC_PREFIX = "rtn-"
     private const val HISTORY_CAP = 100
 
@@ -87,6 +96,11 @@ actual object SyncEngine {
     @Volatile
     private var appContext: android.content.Context? = null
 
+    // Owner-independent throttle store (multiplatform-settings, same prefs
+    // mechanism UserUsageRepository uses; raw keys, no owner prefix — this is
+    // device state, not user state).
+    private val telemetryPrefs: Settings by lazy { Settings() }
+
     /**
      * Extra (non-expect) member: caches the app context for the cookie jar.
      * Actual objects may declare members beyond the expect contract.
@@ -104,6 +118,11 @@ actual object SyncEngine {
         // can upgrade to cloud portraits (null = local-only fallback).
         if (remotePhotoFetcher == null) {
             remotePhotoFetcher = { slug -> reciterImage(slug) }
+        }
+        // Wire the public broadcasts pull into BroadcastRepository so the
+        // inbox refreshes without a login (PUBLIC_READ collection).
+        if (BroadcastRepository.cloudFetcher == null) {
+            BroadcastRepository.cloudFetcher = { fetchBroadcasts() }
         }
     }
 
@@ -180,7 +199,10 @@ actual object SyncEngine {
                 val cloudHasData = pullKhatmaIfEmpty(db, userId)
                 pushKhatma(db, userId, cloudHasData)
             }
-            runCollection(PLAYLISTS) { pushRoutines(db, userId) }
+            runCollection(PLAYLISTS) {
+                refreshEditorial()
+                pushRoutines(db, userId)
+            }
             runCollection(ROUTINE_BACKUPS) {
                 val cloudHasData = pullRoutineBackupsIfEmpty(db, userId)
                 pushRoutineBackups(db, userId, cloudHasData)
@@ -195,6 +217,21 @@ actual object SyncEngine {
                 refreshReciterCatalog(db)
             } catch (e: Exception) {
                 Log.w(TAG, "reciter catalog refresh failed", e)
+            }
+            // Public broadcasts inbox: newest-first pull into the in-memory
+            // BroadcastRepository cache (PUBLIC_READ, so this also succeeds
+            // for the fetcher path outside syncNow).
+            try {
+                BroadcastRepository.refresh()
+            } catch (e: Exception) {
+                Log.w(TAG, "broadcasts refresh failed", e)
+            }
+            // Device telemetry: only after a fully successful pass, throttled,
+            // and ALWAYS silent (never touches firstError — must not break sync).
+            try {
+                if (firstError == null) pushTelemetryIfDue(db, userId, ctx)
+            } catch (e: Exception) {
+                Log.w(TAG, "telemetry upload skipped", e)
             }
         }
         if (firstError == null) {
@@ -603,6 +640,59 @@ actual object SyncEngine {
                 null
             }
         }
+
+    // --------------------------------------------------------------- broadcasts
+    //
+    // Public announcements (`broadcasts{title,body,audience,urgency}`,
+    // PUBLIC_READ in DB `ghais`). Single newest-first pull (order
+    // `$createdAt` desc, limit 50) into BroadcastRepository; the client never
+    // writes. Needs no session — only AppwriteConfig + init context — so the
+    // inbox pull also works for signed-out users. Never throws.
+
+    /**
+     * Pulls all `broadcasts` docs newest-first (cap 50) as [Broadcast] rows.
+     * Skips docs with blank title/body. Returns empty on ANY failure.
+     */
+    suspend fun fetchBroadcasts(): List<Broadcast> = withContext(Dispatchers.IO) {
+        try {
+            val ctx = appContext ?: return@withContext emptyList()
+            if (!AppwriteConfig.isConfigured()) return@withContext emptyList()
+            val db = databases(ctx)
+            val docs = try {
+                db.listDocuments(
+                    DB_ID,
+                    BROADCASTS,
+                    listOf(Query.orderDesc("\$createdAt"), Query.limit(50)),
+                ).documents
+            } catch (e: Exception) {
+                if (!isNotFound(e)) Log.w(TAG, "broadcasts list failed", e)
+                return@withContext emptyList()
+            }
+            docs.mapNotNull { doc ->
+                try {
+                    val data = doc.data
+                    val title = (data["title"] as? String)?.trim()
+                        ?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+                    val body = (data["body"] as? String)?.trim()
+                        ?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+                    Broadcast(
+                        id = doc.id,
+                        title = title,
+                        body = body,
+                        audience = (data["audience"] as? String)?.trim()
+                            ?.takeIf { it.isNotEmpty() } ?: "all",
+                        urgency = (data["urgency"] as? String)?.trim()
+                            ?.takeIf { it.isNotEmpty() } ?: "Normal",
+                        createdAt = doc.createdAt,
+                    )
+                } catch (_: Exception) {
+                    null
+                }
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
 
     // --------------------------------------------------------------- playback
     //
@@ -1455,6 +1545,96 @@ actual object SyncEngine {
         }
     }
 
+    // ------------------------------------------------- editorial catalog
+    //
+    // Read-only pull of the public catalog (`playlists` with
+    // `is_public = true`, limit 20 + `playlist_items` per playlist, limit 50
+    // ordered by `position`) into [EditorialRepository]. Mirrors the public
+    // `reciters`/`reciter_stats` read pattern (no user filter, no login
+    // requirement on the client — the server still requires an authenticated
+    // user per the collection permissions, so signed-out calls fail into the
+    // best-effort null below). Never throws: on ANY failure the last-good
+    // cache is kept so offline keeps showing the previous shelf.
+
+    /**
+     * Pulls public playlists + their items (see section header). Updates
+     * [EditorialRepository] only when at least one usable playlist parses —
+     * an empty/error result keeps the previous shelf. Never throws.
+     */
+    actual suspend fun refreshEditorial() {
+        val ctx = appContext ?: return
+        if (!AppwriteConfig.isConfigured()) return
+        EditorialRepository.setRefreshing(true)
+        try {
+            withContext(Dispatchers.IO) {
+                val db = databases(ctx)
+                val docs = try {
+                    db.listDocuments(
+                        DB_ID,
+                        PLAYLISTS,
+                        listOf(Query.equal("is_public", true), Query.limit(20)),
+                    ).documents
+                } catch (e: Exception) {
+                    if (!isNotFound(e)) Log.w(TAG, "editorial playlists list failed", e)
+                    return@withContext
+                }
+                val out = docs.mapNotNull { doc ->
+                    parseEditorialPlaylist(db, doc.id, doc.data)
+                }
+                if (out.isNotEmpty()) {
+                    EditorialRepository.setPlaylists(out)
+                    Log.i(TAG, "editorial pull: adopted ${out.size} public playlist(s).")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "editorial refresh failed", e)
+        } finally {
+            EditorialRepository.setRefreshing(false)
+        }
+    }
+
+    private suspend fun parseEditorialPlaylist(
+        db: Databases,
+        docId: String,
+        data: Map<String, Any?>,
+    ): EditorialPlaylist? {
+        val title = (data["title"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+            ?: return null
+        val items = try {
+            db.listDocuments(
+                DB_ID,
+                PLAYLIST_ITEMS,
+                listOf(
+                    Query.equal("playlist_id", docId),
+                    Query.orderAsc("position"),
+                    Query.limit(50),
+                ),
+            ).documents
+        } catch (e: Exception) {
+            if (!isNotFound(e)) Log.w(TAG, "editorial items list failed for '$docId'", e)
+            emptyList()
+        }.mapNotNull { item ->
+            val slug = (item.data["reciter_slug"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+                ?: return@mapNotNull null
+            val surahId = asInt(item.data["surah_id"])?.takeIf { it in 1..114 }
+                ?: return@mapNotNull null
+            EditorialPlaylistItem(
+                reciterSlug = slug,
+                surahId = surahId,
+                ayahFrom = asInt(item.data["ayah_from"])?.coerceAtLeast(0) ?: 0,
+                ayahTo = asInt(item.data["ayah_to"])?.coerceAtLeast(0) ?: 0,
+                position = asInt(item.data["position"])?.coerceAtLeast(0) ?: 0,
+            )
+        }.sortedBy { it.position }
+        return EditorialPlaylist(
+            id = docId,
+            title = title,
+            description = (data["description"] as? String)?.trim().orEmpty(),
+            coverUrl = (data["cover_url"] as? String)?.trim()?.takeIf { it.isNotEmpty() },
+            items = items,
+        )
+    }
+
     // --------------------------------------------------------------- routines
     //
     // v1: push-only. Each PUBLIC routine is published to `playlists` /
@@ -1575,37 +1755,35 @@ actual object SyncEngine {
     // `playlists`/`playlist_items` publish flow above, which stays unchanged:
     // private routines must never leak into the public catalog.
     //
-    // Pull-if-empty is GUARDED, not applied: [CustomRoutinesStore] exposes no
-    // bulk restore/import API (`create()` regenerates ids/timestamps;
-    // `update()`/`delete()` need existing entries), so the snapshot is
-    // validated + logged and the empty-push is skipped to protect the cloud
-    // copy. Follow-up: add `CustomRoutinesStore.restoreAll(...)` and call it
-    // here (same pattern as the [STATS] follow-up above).
+    // Pull-if-empty restores via [CustomRoutinesStore.restoreAllJson], which
+    // only replaces an empty local store (never clobbers) and skips malformed
+    // entries per-item. The boolean still protects the cloud copy by skipping
+    // the empty-push whenever the cloud holds backups.
 
     /**
-     * Validates the cloud `routine_backups` snapshot when local routines are
-     * still empty. Returns true when the cloud holds at least one parseable
-     * backup (caller must then skip pushing, otherwise the still-empty local
-     * state would overwrite it). Returns false when local routines exist or
-     * the cloud has nothing, so push proceeds.
+     * Restores the cloud `routine_backups` snapshot into an empty local
+     * [CustomRoutinesStore]. Returns true when the cloud holds at least one
+     * backup (restored or not — caller must then skip pushing, otherwise the
+     * still-empty local state would overwrite it). Returns false when local
+     * routines exist or the cloud has nothing, so push proceeds.
      */
     private suspend fun pullRoutineBackupsIfEmpty(db: Databases, userId: String): Boolean {
         if (CustomRoutinesStore.routines.value.isNotEmpty()) return false
         val docs = listForUser(db, ROUTINE_BACKUPS, userId) ?: return false
-        var usable = 0
-        for (doc in docs) {
-            val raw = doc.data["routine_json"] as? String ?: continue
-            if (raw.isBlank()) continue
-            if (runCatching { json.decodeFromString<CustomRoutine>(raw) }.getOrNull() != null) {
-                usable++
-            }
+        val rawJsons = docs.mapNotNull { doc ->
+            (doc.data["routine_json"] as? String)?.takeIf { it.isNotBlank() }
         }
-        if (usable <= 0) return false
-        Log.i(
-            TAG,
-            "routine_backups pull: $usable usable backup(s) in cloud" +
-                " — no CustomRoutinesStore restore API yet; keeping local empty, push skipped."
-        )
+        if (rawJsons.isEmpty()) return false
+        val restored = CustomRoutinesStore.restoreAllJson(rawJsons)
+        if (restored > 0) {
+            Log.i(TAG, "routine_backups pull: restored $restored routine(s) from cloud.")
+        } else {
+            Log.i(
+                TAG,
+                "routine_backups pull: cloud holds ${rawJsons.size} backup(s) but none parseable" +
+                    " — keeping local empty, push skipped."
+            )
+        }
         return true
     }
 
@@ -1686,6 +1864,85 @@ actual object SyncEngine {
             "daily_minutes" to OnboardingStore.dailyGoalMinutes.value,
         )
         upsert(db, USER_PREFS, userId, data)
+    }
+
+    // ------------------------------------------------------- device telemetry
+    //
+    // Minimal per-device usage snapshot for the admin dashboard:
+    // `telemetry{user_id,device_id,platform,app_version,total_seconds,
+    // updated_at}` (USER_RW, DB `ghais`, see appwrite/collections.json). One
+    // doc per user+device, id `t-<userId>-<deviceId>` (truncated to 36 chars
+    // like every other doc-id scheme here). Throttled to at most one upload
+    // per 24h per device; runs only after a fully successful syncNow pass.
+    // Create = the shared [upsert] (create, then update on 409). ANY failure
+    // is swallowed (Log.w) so telemetry never breaks sync — this covers the
+    // unprovisioned-collection/404 case the same way runCollection skips.
+
+    /**
+     * Upserts the telemetry doc when the 24h per-device throttle has expired.
+     * The last-upload epoch is keyed per telemetry doc id (user+device), so
+     * an account switch still uploads for the new account. The throttle is
+     * stamped only on success, so a failed attempt retries on the next sync.
+     * Never throws.
+     */
+    private suspend fun pushTelemetryIfDue(
+        db: Databases,
+        userId: String,
+        ctx: android.content.Context,
+    ) {
+        try {
+            // Device identity: the canonical persisted UUID from
+            // UserUsageRepository.deviceId() (owner-independent
+            // `ghais_device_id` key + in-memory cache). Deliberately NOT
+            // Settings.Secure.ANDROID_ID (an older draft used it; the stats
+            // v2 sync standardised on this UUID).
+            val devId = UserUsageRepository.deviceId().trim()
+            if (userId.isBlank() || devId.isEmpty()) return
+            val docId = "t-${sanitizeId(userId)}-${sanitizeId(devId)}".take(36)
+            val prefKey = TELEMETRY_PREF_PREFIX + docId
+            val now = System.currentTimeMillis()
+            val last = try {
+                telemetryPrefs.getLong(prefKey, 0L)
+            } catch (_: Exception) {
+                0L
+            }
+            if (last > 0L && now - last < TELEMETRY_THROTTLE_MS) return
+            // Payload total: the live aggregate from UserUsageRepository.stats
+            // (KEY_TOTAL_SECONDS-backed `totalSecondsListened`, accumulated in
+            // recordListeningTime — same value pushStats uploads).
+            val data: Map<String, Any?> = mapOf(
+                "user_id" to userId,
+                "device_id" to devId,
+                "platform" to "android",
+                "app_version" to appVersion(ctx),
+                "total_seconds" to UserUsageRepository.stats.value.totalSecondsListened,
+                "updated_at" to now,
+            )
+            upsert(db, TELEMETRY, docId, data)
+            try {
+                telemetryPrefs.putLong(prefKey, now)
+            } catch (_: Exception) {
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "telemetry upload skipped", e)
+        }
+    }
+
+    /**
+     * App version for the telemetry payload. No version accessor existed in
+     * shared code (androidApp `versionName = "1.0"` lives in the app-module
+     * gradle config, unreachable from `:shared`), so it is read via
+     * PackageManager from the same [appContext] pattern the cookie jar
+     * already uses. Returns "unknown" when unreadable. Never throws.
+     */
+    private fun appVersion(ctx: android.content.Context): String {
+        return try {
+            @Suppress("DEPRECATION")
+            ctx.packageManager.getPackageInfo(ctx.packageName, 0)?.versionName
+                ?.trim()?.takeIf { it.isNotEmpty() } ?: "unknown"
+        } catch (_: Exception) {
+            "unknown"
+        }
     }
 
     // ---------------------------------------------------------------- helpers

@@ -115,6 +115,37 @@ object CustomRoutinesStore {
         save()
     }
 
+    /**
+     * Bulk-restores routines from cloud backup JSONs (sync pull-restore path).
+     *
+     * Replaces local state ONLY when the store is currently empty (fresh
+     * device) — existing local routines are never clobbered. Malformed or
+     * blank entries are skipped per-item; duplicate ids collapse to the first
+     * occurrence. Returns the number of routines adopted.
+     */
+    fun restoreAllJson(rawJsons: List<String>): Int {
+        if (_routines.value.isNotEmpty()) return 0
+        val seenIds = LinkedHashSet<String>()
+        val restored = mutableListOf<CustomRoutine>()
+        for (raw in rawJsons) {
+            if (raw.isBlank()) continue
+            val routine = try {
+                json.decodeFromString<CustomRoutine>(raw)
+            } catch (_: Exception) {
+                continue
+            }
+            if (routine.id.isBlank() || !seenIds.add(routine.id)) continue
+            restored.add(routine)
+        }
+        if (restored.isEmpty()) return 0
+        // Newest-first, matching the store's exposed ordering.
+        _routines.value = restored.sortedWith(
+            compareByDescending<CustomRoutine> { it.updatedAtMs }.thenBy { it.id }
+        )
+        save()
+        return restored.size
+    }
+
     private fun load() {
         try {
             var raw = settings.getString(key(KEY_ROUTINES), "")

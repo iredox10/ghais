@@ -22,4 +22,8 @@ actual object SyncEngine {
     actual suspend fun syncNow() {
         // No-op until a Native HTTP sync path lands.
     }
+
+    actual suspend fun refreshEditorial() {
+        // No-op until a Native HTTP sync path lands (shelf stays empty on iOS).
+    }
 }
