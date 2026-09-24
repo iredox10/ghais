@@ -99,13 +99,20 @@ class ReciterSearchScreen : Screen {
 
         val recentSlugs by ReciterSearchHistoryStore.recentSlugs.collectAsState()
         val recentReciters = remember(recentSlugs) {
-            recentSlugs.mapNotNull { slug -> resolveKnownReciter(slug) }
+            // Collapse aliases to the browse winner so one human is one row
+            // (and so catalogKey keys below stay unique).
+            recentSlugs
+                .mapNotNull { QuranDataRepository.getBrowseReciterBySlug(it) }
+                .distinctBy { it.catalogKey() }
         }
 
         val results = remember(debouncedQuery) {
             val q = debouncedQuery.trim()
             if (q.isBlank()) emptyList()
-            else QuranDataRepository.getReciters().filter {
+            // getBrowseReciters: one row per human (the raw catalog holds an
+            // MP3Quran + an EveryAyah row for the same reciter, which used to
+            // render twice and crash the list on duplicate keys).
+            else QuranDataRepository.getBrowseReciters().filter {
                 it.nameEn.contains(q, ignoreCase = true) ||
                     it.nameAr.contains(q, ignoreCase = true) ||
                     it.country.contains(q, ignoreCase = true)
@@ -220,7 +227,7 @@ class ReciterSearchScreen : Screen {
                             contentPadding = PaddingValues(top = 2.dp, bottom = 120.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            items(recentReciters, key = { "recent-${it.slug}" }) { reciter ->
+                            items(recentReciters, key = { "recent-${it.catalogKey()}" }) { reciter ->
                                 RecentReciterRow(
                                     reciter = reciter,
                                     onOpen = { openProfile(reciter) },
@@ -271,7 +278,9 @@ class ReciterSearchScreen : Screen {
                         contentPadding = PaddingValues(top = 2.dp, bottom = 120.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(results, key = { "result-${it.slug}" }) { reciter ->
+                        // catalogKey (not bare slug) so two catalog variants can
+                        // never collide — a duplicate key is a fatal Compose crash.
+                        items(results, key = { "result-${it.catalogKey()}" }) { reciter ->
                             ResultReciterRow(
                                 reciter = reciter,
                                 onOpen = { openProfile(reciter) },

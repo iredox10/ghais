@@ -105,7 +105,7 @@ object OnboardingScreen : Screen {
         var reminderOn by remember { mutableStateOf(false) }
         var hour by remember { mutableStateOf(7) }
         var minute by remember { mutableStateOf(0) }
-        val reciters = remember { QuranDataRepository.getReciters().take(8) }
+        val reciters = remember { QuranDataRepository.getBrowseReciters().take(8) }
 
         fun goTo(page: Int) {
             scope.launch { pagerState.animateScrollToPage(page.coerceIn(0, LastPage)) }
@@ -426,7 +426,7 @@ private fun ReciterStep(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            items(reciters, key = { it.slug }) { reciter ->
+            items(reciters, key = { it.catalogKey() }) { reciter ->
                 val photo = remember(reciter.slug) {
                     resolveFollowedQari(reciter.slug)?.photoUrl
                 }

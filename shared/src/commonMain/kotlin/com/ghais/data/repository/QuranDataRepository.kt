@@ -103,9 +103,70 @@ object QuranDataRepository {
      * Returns all reciters: bundled seeds with Appwrite cloud fields
      * overlaid (images, descriptions, flags) once [ReciterCloudCache] has
      * synced. Offline behavior is unchanged (bundled only).
+     *
+     * This is the CATALOG-COMPLETE list: it intentionally keeps both audio
+     * variants (MP3Quran + EveryAyah) for the same human, keyed apart by
+     * [Reciter.catalogKey]. Use [getBrowseReciters] for anything that lists
+     * or searches reciters for a human.
      */
     fun getReciters(): List<Reciter> =
         ReciterCloudCache.mergedWith(QuranData.RECITERS)
+
+    /**
+     * Human-facing reciter list: ONE row per person, for browse/search and
+     * reciter pickers.
+     *
+     * The catalog legitimately stores two rows for one reciter (MP3Quran
+     * full-surah + EveryAyah per-ayah, see [Reciter.catalogKey]) and the two
+     * catalogs also use different slugs for the same human (`mishary` vs
+     * `alafasy`, `al-muiqly` vs `muaiqly`, ...). Listing the raw catalog
+     * therefore produced duplicate people — sometimes with different photos —
+     * and duplicate Compose LazyColumn keys, which is a hard crash.
+     *
+     * Rows are grouped by [personKeyFor] and the survivor is chosen by
+     * [browseWinner]: the variant carrying an admin-uploaded photo wins, then
+     * MP3Quran (canonical full-surah identity, matching [getReciterBySlug]),
+     * then whatever came first. Nothing is deleted — [getReciters] and
+     * [getReciterByCatalogKey] still resolve every audio variant, and Hifz
+     * keeps its own EveryAyah list via [getEveryAyahReciters].
+     */
+    fun getBrowseReciters(): List<Reciter> =
+        getReciters()
+            .groupBy { personKeyFor(it) }
+            .values
+            .mapNotNull { variants -> variants.takeIf { it.isNotEmpty() }?.let(::browseWinner) }
+
+    /**
+     * Identity of the human behind a reciter row. Same-slug cross-catalog
+     * rows collapse for free; the alias table folds the cross-catalog naming
+     * differences into one group.
+     *
+     * Deliberately excludes recording *editions* (teacher / mujawwad /
+     * haramain slugs): those are distinct audio folders and stay separate
+     * rows so their playback is never merged away.
+     */
+    private fun personKeyFor(reciter: Reciter): String {
+        val slug = reciter.slug.trim().lowercase()
+        return RECITER_PERSON_ALIASES[slug] ?: slug
+    }
+
+    /**
+     * The single [getBrowseReciters] row for the human behind [slug],
+     * whichever catalog spelling was stored. Returns null when the slug is
+     * unknown. Used by search history so `mishary` and `alafasy` collapse to
+     * one reciter row instead of two profiles for the same person.
+     */
+    fun getBrowseReciterBySlug(slug: String?): Reciter? {
+        val clean = slug?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: return null
+        val personKey = RECITER_PERSON_ALIASES[clean] ?: clean
+        return getBrowseReciters().firstOrNull { personKeyFor(it) == personKey }
+    }
+
+    /** Survivor rule for one human's variants — see [getBrowseReciters]. */
+    private fun browseWinner(variants: List<Reciter>): Reciter =
+        variants.firstOrNull { !it.imageUrl.isNullOrBlank() }
+            ?: variants.firstOrNull { it.catalog == ReciterCatalog.MP3QURAN }
+            ?: variants.first()
 
     /**
      * Returns all surahs.
@@ -124,4 +185,36 @@ object QuranDataRepository {
         val availableIds = reciter.getAvailableSurahIds()
         return QuranData.SURAHS.filter { availableIds.contains(it.id) }
     }
+
+    /**
+     * Cross-catalog slug aliases for the SAME human, keyed by the alias slug
+     * and valued with a stable group id (the EveryAyah spelling).
+     *
+     * Both catalogs index several reciters under different slugs
+     * (`mishary` vs `alafasy`, `al-sudais` vs `abdulrahman-al-sudais`, ...),
+     * which surfaced as two "different" profiles with two different photos in
+     * browse/search. Audio identity stays per-slug — this table is display
+     * grouping only (see [getBrowseReciters]).
+     *
+     * Edition slugs (teacher / mujawwad / haramain) are intentionally absent:
+     * they are separate recordings with separate audio folders.
+     */
+    private val RECITER_PERSON_ALIASES: Map<String, String> = mapOf(
+        "alafasy" to "mishary",
+        "mahmoud-khalil-al-hussary" to "al-husary",
+        "shuraym" to "saud-shuraim",
+        "abdulbasit-abdulsamad" to "abdul-basit",
+        "muaiqly" to "al-muaiqly",
+        "dossari" to "al-dossari",
+        "abdulrahman-al-sudais" to "al-sudais",
+        "mohamed-siddiq-el-minshawi" to "al-minshawi",
+        "ghamdi" to "saad-alghamdi",
+        "ali-bin-abdulrahman-al-huthaify" to "hudhaify",
+        "abdullah-awad-al-juhany" to "abdullah-al-juhany",
+        "ahmad-bin-ali-al-ajmi" to "ahmed-alajamy",
+        "hani-al-rifai" to "hani-ar-rifai",
+        "nasser-al-qatami" to "nasser-alqatami",
+        "mohammad-mahmoud-al-tablawi" to "mohammad-al-tablawi",
+        "yasser-salamah" to "yasser-salama",
+    )
 }

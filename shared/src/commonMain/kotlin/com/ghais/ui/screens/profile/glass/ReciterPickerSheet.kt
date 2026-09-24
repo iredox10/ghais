@@ -73,7 +73,7 @@ fun ReciterPickerSheet(
     if (!visible) return
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val reciters = remember { QuranDataRepository.getReciters() }
+    val reciters = remember { QuranDataRepository.getBrowseReciters() }
     var query by remember { mutableStateOf("") }
 
     val filtered = remember(query, reciters) {
@@ -240,7 +240,7 @@ fun ReciterPickerSheet(
                 ) {
                     items(
                         items = filtered,
-                        key = { it.slug }
+                        key = { it.catalogKey() }
                     ) { reciter ->
                         val isSelected = reciter.slug.equals(selectedSlug, ignoreCase = true)
                         Row(
