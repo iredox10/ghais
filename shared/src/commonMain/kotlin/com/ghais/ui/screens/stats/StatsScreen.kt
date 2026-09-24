@@ -133,21 +133,37 @@ object StatsScreen : Screen {
         val goalMin by com.ghais.data.repository.OnboardingStore.dailyGoalMinutes.collectAsState()
         val ringProgress = (stats.minutesToday / goalMin.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
 
-        // Time-range selection. Contract (sibling-owned, lands in parallel):
-        // UserUsageRepository.dailySeconds: StateFlow<Map<epochDay, seconds>>.
-        // Empty map = contract not yet populated -> fall back to history-derived
+        // Time-range selection. Contracts (sibling-owned):
+        // UserUsageRepository.dailySeconds: StateFlow<Map<epochDay, seconds>> (this device).
+        // UserUsageRepository.remoteDailySeconds: StateFlow<Map<epochDay, seconds>>
+        //   (other devices only, own device excluded -> plain per-day sum, no double count).
+        // Empty maps = contracts not yet populated -> fall back to history-derived
         // per-day minutes (same math as weekMinutes below).
         val dailyMap by UserUsageRepository.dailySeconds.collectAsState()
+        val remoteDailyMap by UserUsageRepository.remoteDailySeconds.collectAsState()
         var range by remember { mutableStateOf(StatsRange.Week) }
         val todayEpochDay = remember { Clock.System.now().toEpochMilliseconds() / DAY_MS }
 
-        val rangeMinutes: List<Float> = remember(range, dailyMap, history, weekMinutes) {
-            if (range == StatsRange.Week && dailyMap.isEmpty()) {
+        // Combined per-day seconds: this device + other devices. Plain sum is
+        // correct because the remote map excludes this device.
+        val combinedDailySeconds: Map<Long, Long> = remember(dailyMap, remoteDailyMap) {
+            if (remoteDailyMap.isEmpty()) dailyMap
+            else {
+                val merged = dailyMap.toMutableMap()
+                for ((day, secs) in remoteDailyMap) {
+                    if (secs > 0L) merged[day] = (merged[day] ?: 0L) + secs
+                }
+                merged
+            }
+        }
+
+        val rangeMinutes: List<Float> = remember(range, combinedDailySeconds, history, weekMinutes) {
+            if (range == StatsRange.Week && combinedDailySeconds.isEmpty()) {
                 weekMinutes
             } else {
                 List(range.days) { i ->
                     val epochDay = todayEpochDay - (range.days - 1 - i)
-                    val mapped = dailyMap[epochDay]
+                    val mapped = combinedDailySeconds[epochDay]
                     if (mapped != null) mapped / 60f
                     else historyMinutesForEpochDay(history, epochDay)
                 }
@@ -164,7 +180,18 @@ object StatsScreen : Screen {
         } ?: "—"
         val shownBars = remember(rangeMinutes) { rangeMinutes.takeLast(30) }
         val barsTruncated = rangeMinutes.size > shownBars.size
-        val usingHistoryFallback = dailyMap.isEmpty()
+        val usingHistoryFallback = combinedDailySeconds.isEmpty()
+        // Quiet multi-device note: remote minutes inside the current window.
+        val remoteMinutesInRange = remember(range, remoteDailyMap, todayEpochDay) {
+            var sum = 0L
+            var day = todayEpochDay - (range.days - 1)
+            while (day <= todayEpochDay) {
+                sum += remoteDailyMap[day] ?: 0L
+                day++
+            }
+            sum / 60f
+        }
+        val showRemoteCaption = remoteMinutesInRange >= 1f
 
         val rangeProgress = remember(range, rangeTotalMin, rangeActiveDays, goalMin) {
             when (range) {
@@ -437,6 +464,14 @@ object StatsScreen : Screen {
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "Daily breakdown pending — estimated from history",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                            if (showRemoteCaption) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "+${remoteMinutesInRange.toInt()}m from other devices",
                                     color = GhaisNoir.TextTertiary,
                                     fontSize = 11.sp
                                 )

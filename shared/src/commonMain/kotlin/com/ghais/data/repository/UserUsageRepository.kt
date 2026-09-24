@@ -18,6 +18,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
+import kotlin.uuid.Uuid
 
 @Serializable
 data class PersistedHistoryItem(
@@ -76,6 +77,7 @@ object UserUsageRepository {
     private const val KEY_UNIQUE_RECITERS = "ghais_stats_unique_reciters"
     private const val KEY_UNIQUE_SURAHS = "ghais_stats_unique_surahs"
     private const val KEY_DAILY_SECONDS = "ghais_stats_daily_seconds"
+    private const val KEY_DEVICE_ID = "ghais_device_id"
     private const val MAX_DAILY_BUCKETS = 400
 
     // Derives the pre-rebrand base key ("quran…" + "ify_…" form) without
@@ -179,6 +181,48 @@ object UserUsageRepository {
     private fun k(key: String): String =
         if (ownerPrefix.isEmpty()) key else ownerPrefix + key
 
+    private var cachedDeviceId: String? = null
+
+    /**
+     * Stable per-install device identity for per-device daily sync (v2).
+     *
+     * Owner-INDEPENDENT by design: stored under the raw [KEY_DEVICE_ID]
+     * Settings key (no [k] owner prefix), so the id survives account
+     * switches — the same device keeps one id across accounts because this
+     * is device identity, not user identity. Generated once via UUID on
+     * first run, cached in memory, never reset by [setOwner]. Never throws
+     * (falls back to a `dev-<nowMs>-<rand>` id when UUID/Settings fail).
+     */
+    fun deviceId(): String {
+        cachedDeviceId?.takeIf { it.isNotBlank() }?.let { return it }
+        try {
+            val stored = try {
+                settings.getString(KEY_DEVICE_ID, "")
+            } catch (_: Exception) {
+                ""
+            }
+            if (stored.isNotBlank()) {
+                cachedDeviceId = stored
+                return stored
+            }
+            val fresh = try {
+                Uuid.random().toString()
+            } catch (_: Exception) {
+                "dev-${currentTimeMs()}-${(0..999_999).random()}"
+            }.takeIf { it.isNotBlank() } ?: "dev-${currentTimeMs()}"
+            try {
+                settings.putString(KEY_DEVICE_ID, fresh)
+            } catch (_: Exception) {
+            }
+            cachedDeviceId = fresh
+            return fresh
+        } catch (_: Exception) {
+            val fallback = "dev-${currentTimeMs()}"
+            cachedDeviceId = fallback
+            return fallback
+        }
+    }
+
     fun setOwner(ownerId: String) {
         val normalized = ownerId.ifBlank { "local" }
         if (normalized == currentOwnerId) return
@@ -189,6 +233,7 @@ object UserUsageRepository {
         lastSavedTimestampMs = currentTimeMs()
         _history.value = emptyList()
         _dailySeconds.value = emptyMap()
+        _remoteDailySeconds.value = emptyMap()
         loadHistory()
         loadStats()
     }
@@ -198,7 +243,7 @@ object UserUsageRepository {
 
     private val _stats = MutableStateFlow(
         UserListeningStats(
-            daysStreak = 1,
+            daysStreak = 0,
             minutesToday = 0,
             uniqueRecitersCount = 1,
             uniqueSurahsCount = 1
@@ -213,6 +258,32 @@ object UserUsageRepository {
      * [MAX_DAILY_BUCKETS] newest days, older entries pruned on write.
      */
     val dailySeconds: StateFlow<Map<Long, Long>> = _dailySeconds.asStateFlow()
+
+    private val _remoteDailySeconds = MutableStateFlow<Map<Long, Long>>(emptyMap())
+    /**
+     * Per-day seconds from OTHER devices (memory-only, derived per sync pull;
+     * never persisted). Keyed by epochDay like [dailySeconds]. Recomputed on
+     * every stats pull; empty until the first pull with cloud daily data.
+     * Local [dailySeconds] buckets stay this-device-only and never include
+     * these values — UI layers sum both sides for display.
+     */
+    val remoteDailySeconds: StateFlow<Map<Long, Long>> = _remoteDailySeconds.asStateFlow()
+
+    /**
+     * Replaces the in-memory [remoteDailySeconds] map (sync pull path only).
+     * Sanitizes (drops negative days / non-positive seconds), never persists,
+     * never touches [dailySeconds]. Empty input clears the map. Never throws.
+     */
+    fun setRemoteDailySeconds(daily: Map<Long, Long>) {
+        try {
+            if (daily.isEmpty()) {
+                _remoteDailySeconds.value = emptyMap()
+                return
+            }
+            _remoteDailySeconds.value = daily.filter { it.key >= 0L && it.value > 0L }
+        } catch (_: Exception) {
+        }
+    }
 
     private var lastRecordedTimeMs: Long = 0L
     /** Sub-second leftover: position polls arrive ~4x/sec, so plain ms/1000 truncation would drop everything. */
@@ -249,7 +320,7 @@ object UserUsageRepository {
     private fun loadStats() {
         val today = currentEpochDay()
         val savedDay = migratedLong(KEY_LAST_DAY, 0L)
-        var streak = migratedInt(KEY_STREAK, 1).coerceAtLeast(1)
+        var streak = migratedInt(KEY_STREAK, 0).coerceAtLeast(0)
         var secondsToday = migratedLong(KEY_SECONDS_TODAY, 0L)
         val totalSeconds = migratedLong(KEY_TOTAL_SECONDS, 0L)
 
@@ -258,8 +329,8 @@ object UserUsageRepository {
                 // Consecutive day
                 secondsToday = 0L
             } else if (today > savedDay + 1L) {
-                // Streak broken
-                streak = 1
+                // Streak broken (no listen yet today — first listen bumps 0 → 1)
+                streak = 0
                 secondsToday = 0L
             }
         }
@@ -462,6 +533,9 @@ object UserUsageRepository {
                 streak += 1
             } else if (savedDay != 0L && today > savedDay + 1L) {
                 streak = 1
+            } else if (savedDay == 0L) {
+                // Fresh install, first listen ever: 0 → 1.
+                streak = streak.coerceAtLeast(1)
             }
             secondsToday = deltaSeconds
             settings.putLong(k(KEY_LAST_DAY), today)
@@ -497,13 +571,16 @@ object UserUsageRepository {
     private fun ensureStreakUpdatedForToday() {
         val today = currentEpochDay()
         val savedDay = migratedLong(KEY_LAST_DAY, 0L)
-        var streak = migratedInt(KEY_STREAK, 1).coerceAtLeast(1)
+        var streak = migratedInt(KEY_STREAK, 0).coerceAtLeast(0)
 
         if (savedDay != today) {
             if (savedDay != 0L && today == savedDay + 1L) {
                 streak += 1
             } else if (savedDay != 0L && today > savedDay + 1L) {
                 streak = 1
+            } else if (savedDay == 0L) {
+                // Fresh install, first listen ever: 0 → 1.
+                streak = streak.coerceAtLeast(1)
             }
             settings.putLong(k(KEY_LAST_DAY), today)
             settings.putInt(k(KEY_STREAK), streak)

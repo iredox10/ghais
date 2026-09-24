@@ -665,9 +665,21 @@ actual object SyncEngine {
     // usually counts the SAME listening on each side — summing would
     // double-count multi-device same-day listening, while max adopts the fuller
     // side without ever shrinking local buckets.
+    //
+    // v2 push: `daily_json` is written per-device as
+    // `{"<epochDay>":{"<devId>":seconds,...}}` ([UserUsageRepository.deviceId]),
+    // merged-then-written (cloud doc is read first; every device entry is kept
+    // and only this device's own entry is overwritten) so concurrent devices
+    // stop clobbering each other.
 
-    /** Newest days carried in `daily_json` (~15 chars/entry fits 370 in 8192). */
-    private const val DAILY_JSON_CAP = 370
+    /** Newest days carried in `daily_json` (count ceiling; the 8192-char cap binds first in v2). */
+    private const val DAILY_JSON_CAP = 150
+
+    /**
+     * Hard ceiling for the `daily_json` string attribute. The v2 encoder drops
+     * oldest days first until the payload measures under this.
+     */
+    private const val DAILY_JSON_MAX_CHARS = 8192
 
     /**
      * Pulls the cloud `listening_stats` doc (docId = [userId]) when local stats
@@ -685,10 +697,15 @@ actual object SyncEngine {
      * resets on day rollover, so [UserUsageRepository.restoreStats] adopts
      * cloud `minutes_today` only when cloud `updated_at` falls on today's
      * epoch day — otherwise it restores as 0. `days_streak`/`total_seconds`/
-     * uniques carry over as-is. `daily_json` (when present) is parsed and
-     * merged per-day with max() against local daily buckets, then applied via
-     * [UserUsageRepository.restoreDaily] — so offline listening accumulated on
-     * another device restores here and converges on the next push.
+     * uniques carry over as-is. `daily_json` (when present) is parsed in BOTH
+     * shapes — v2 per-device `{"day":{"dev":secs}}` and legacy flat
+     * `{"day":secs}` (legacy counts as other-device `"legacy"` seconds).
+     * The own-device slice merges per-day with max() against local daily
+     * buckets via [UserUsageRepository.restoreDaily] (local buckets stay
+     * this-device-only); all other devices' seconds are summed per day
+     * (excluding this device's id) into the memory-only
+     * [UserUsageRepository.remoteDailySeconds] — so offline listening
+     * accumulated on another device restores here and converges on next push.
      */
     private suspend fun pullStatsIfEmpty(db: Databases, userId: String): Boolean {
         if (!isLocalStatsEmpty()) return false
@@ -703,14 +720,23 @@ actual object SyncEngine {
         if (updatedAt == null || !sameEpochDay(updatedAt, System.currentTimeMillis())) {
             minutes = 0
         }
-        val cloudDaily = parseDailyJson((data["daily_json"] as? String).orEmpty())
-        if (total <= 0L && streak <= 1 && minutes <= 0 && uniquesReciters <= 0 && uniquesSurahs <= 0 && cloudDaily.isEmpty()) {
+        val cloudDailyPerDevice =
+            parseDailyJsonPerDevice((data["daily_json"] as? String).orEmpty())
+        val ownId = UserUsageRepository.deviceId()
+        val (ownDaily, remoteOthers) = splitOwnAndRemote(cloudDailyPerDevice, ownId)
+        // Memory-only others-side total, recomputed every pull (never persisted,
+        // never merged into local buckets). Always set — even empty — so a
+        // pull with no cloud daily data clears a stale map.
+        UserUsageRepository.setRemoteDailySeconds(remoteOthers)
+        if (total <= 0L && streak <= 1 && minutes <= 0 && uniquesReciters <= 0 && uniquesSurahs <= 0 && ownDaily.isEmpty() && remoteOthers.isEmpty()) {
             return false // cloud snapshot itself is empty; let push converge
         }
-        // Daily buckets merge (per-day max — see section header) before the
-        // aggregate restore, so a fresh login adopts the cloud series; a later
-        // push then re-uploads the merged map and the series converges.
-        val mergedDaily = mergeDailyMax(UserUsageRepository.dailySeconds.value, cloudDaily)
+        // Daily buckets merge (per-day max of the OWN device slice only — see
+        // section header) before the aggregate restore, so a fresh login adopts
+        // its own cloud series; other devices' seconds stay in
+        // remoteDailySeconds only and never enter local buckets. A later push
+        // then re-uploads the merged map and the series converges.
+        val mergedDaily = mergeDailyMax(UserUsageRepository.dailySeconds.value, ownDaily)
         if (mergedDaily.isNotEmpty()) {
             UserUsageRepository.restoreDaily(mergedDaily)
         }
@@ -733,6 +759,24 @@ actual object SyncEngine {
         return true
     }
 
+    /**
+     * Pushes stats with a per-device v2 `daily_json`
+     * (`{"<epochDay>":{"<devId>":secs}}`, newest [DAILY_JSON_CAP] days, kept
+     * under [DAILY_JSON_MAX_CHARS] chars by dropping oldest days first).
+     *
+     * Merge-then-write: the current cloud doc is read first and its device
+     * maps are unioned (every device entry kept, only this device's own entry
+     * overwritten with the local buckets) before upsert, which narrows the
+     * multi-writer clobber window vs a blind overwrite.
+     *
+     * Residual race (documented, accepted): read-modify-write is not atomic —
+     * two devices pushing concurrently can interleave (both read, then last
+     * writer wins), losing one push worth of the loser's own-device seconds.
+     * Bounded damage: each writer only mutates its own devId key, so only the
+     * concurrent update is lost (never another device's history), and the next
+     * push re-uploads the full local buckets, self-healing on the following
+     * sync.
+     */
     private suspend fun pushStats(db: Databases, userId: String, cloudHasData: Boolean) {
         if (cloudHasData && isLocalStatsEmpty()) {
             // Fresh login whose cloud snapshot couldn't be applied locally yet:
@@ -741,6 +785,12 @@ actual object SyncEngine {
             return
         }
         val s = UserUsageRepository.stats.value
+        val devId = UserUsageRepository.deviceId()
+        val dailyJson = encodeDailyJsonV2(
+            cloud = readCloudDailyPerDevice(db, userId),
+            devId = devId,
+            local = UserUsageRepository.dailySeconds.value,
+        )
         val full: Map<String, Any?> = mapOf(
             "user_id" to userId,
             "days_streak" to s.daysStreak,
@@ -749,7 +799,7 @@ actual object SyncEngine {
             "unique_surahs" to s.uniqueSurahsCount,
             "total_seconds" to s.totalSecondsListened,
             "updated_at" to System.currentTimeMillis(),
-            "daily_json" to encodeDailyJson(UserUsageRepository.dailySeconds.value),
+            "daily_json" to dailyJson,
         )
         // `daily_json` (string 8192, optional) is sent when the cloud
         // collection has it; when the attribute isn't provisioned yet the
@@ -765,34 +815,205 @@ actual object SyncEngine {
     }
 
     /**
-     * Compact daily-series JSON: `{"<epochDay>":seconds,...}`, oldest first,
-     * capped at [DAILY_JSON_CAP] newest days. Zero/negative values dropped.
-     * Never throws (falls back to `"{}"`).
+     * Best-effort read of the cloud `daily_json` for merge-then-write
+     * ([pushStats]): parses BOTH the v2 per-device shape and the legacy flat
+     * shape via [parseDailyJsonPerDevice] (legacy days survive under the
+     * `"legacy"` device key). Returns empty on missing doc/collection or ANY
+     * read failure so a failed read degrades to a local-only write instead of
+     * blocking the push. Never throws.
      */
-    private fun encodeDailyJson(daily: Map<Long, Long>): String {
+    private suspend fun readCloudDailyPerDevice(
+        db: Databases,
+        userId: String,
+    ): Map<Long, Map<String, Long>> {
+        return try {
+            val raw = getDocument(db, STATS, userId)?.data?.get("daily_json") as? String
+            parseDailyJsonPerDevice(raw.orEmpty())
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    /**
+     * Per-device daily-series JSON: `{"<epochDay>":{"<devId>":seconds,...}}`,
+     * oldest day first on the wire, capped at [DAILY_JSON_CAP] newest days.
+     *
+     * Union semantics: every cloud device entry is kept; only [devId]'s own
+     * entry per day is overwritten with the local buckets (days absent locally
+     * keep the cloud's own-device entry untouched). Sanitizes both sides
+     * (drops negative days / non-positive seconds / blank device ids).
+     *
+     * Size guard: v2 entries run ~50+ chars/day/device, so the
+     * [DAILY_JSON_MAX_CHARS] attribute limit binds long before the day-count
+     * cap (~130 single-device days fit) — oldest days are dropped first until
+     * the measured payload is under the limit. Never throws (falls back to
+     * `"{}"`).
+     */
+    private fun encodeDailyJsonV2(
+        cloud: Map<Long, Map<String, Long>>,
+        devId: String,
+        local: Map<Long, Long>,
+    ): String {
         try {
-            val entries = daily.entries
-                .filter { it.key >= 0L && it.value > 0L }
-                .sortedBy { it.key }
-                .takeLast(DAILY_JSON_CAP)
-            if (entries.isEmpty()) return "{}"
-            return buildString(entries.size * 16 + 2) {
-                append('{')
-                entries.forEachIndexed { index, (day, secs) ->
-                    if (index > 0) append(',')
-                    append('"').append(day).append('"').append(':').append(secs)
-                }
-                append('}')
+            val cleanDev = devId.trim().takeIf { it.isNotEmpty() } ?: return "{}"
+            val merged = LinkedHashMap<Long, MutableMap<String, Long>>(
+                cloud.size + local.size
+            )
+            for ((day, devs) in cloud) {
+                if (day < 0L) continue
+                val clean = devs.filter { it.key.isNotBlank() && it.value > 0L }
+                if (clean.isNotEmpty()) merged[day] = clean.toMutableMap()
             }
+            for ((day, secs) in local) {
+                if (day < 0L || secs <= 0L) continue
+                merged.getOrPut(day) { LinkedHashMap() }[cleanDev] = secs
+            }
+            if (merged.isEmpty()) return "{}"
+            var days = merged.keys.sortedDescending().take(DAILY_JSON_CAP)
+            var out = buildDailyJsonV2(merged, days)
+            while (out.length >= DAILY_JSON_MAX_CHARS && days.size > 1) {
+                days = days.dropLast(1)
+                out = buildDailyJsonV2(merged, days)
+            }
+            return out
         } catch (_: Exception) {
             return "{}"
         }
     }
 
+    /** Renders the v2 daily map for [daysDesc] (newest first), oldest day first on the wire. */
+    private fun buildDailyJsonV2(
+        merged: Map<Long, Map<String, Long>>,
+        daysDesc: List<Long>,
+    ): String {
+        val days = daysDesc.sorted()
+        return buildString(days.size * 64 + 2) {
+            append('{')
+            var firstDay = true
+            for (day in days) {
+                val devs = merged[day] ?: continue
+                if (devs.isEmpty()) continue
+                if (!firstDay) append(',')
+                firstDay = false
+                append('"').append(day).append('"').append(':').append('{')
+                devs.entries.forEachIndexed { index, (dev, secs) ->
+                    if (index > 0) append(',')
+                    append(jsonString(dev)).append(':').append(secs)
+                }
+                append('}')
+            }
+            append('}')
+        }
+    }
+
     /**
-     * Lenient parse of [encodeDailyJson] output: non-numeric keys/values and
+     * Lenient per-device parse of `daily_json`: accepts BOTH shapes —
+     * - v2 per-device: `{"<epochDay>":{"<devId>":seconds,...}}`
+     * - legacy flat: `{"<epochDay>":seconds}` (treated as `{"legacy":seconds}`)
+     * Non-numeric day keys, negative days, blank device ids, non-numeric or
+     * non-positive seconds, and malformed entries are skipped. Missing/blank /
+     * malformed top-level input yields an empty map. Never throws.
+     */
+    private fun parseDailyJsonPerDevice(raw: String): Map<Long, Map<String, Long>> {
+        if (raw.isBlank()) return emptyMap()
+        return try {
+            val obj = json.parseToJsonElement(raw).jsonObject
+            val out = LinkedHashMap<Long, Map<String, Long>>(obj.size)
+            for ((key, value) in obj) {
+                val day = key.toLongOrNull() ?: continue
+                if (day < 0L) continue
+                try {
+                    val el = value
+                    val prim = try {
+                        el.jsonPrimitive
+                    } catch (_: Exception) {
+                        null
+                    }
+                    if (prim != null) {
+                        // Flat value (numeric or quoted-numeric) → legacy.
+                        val secs = prim.longOrNull
+                            ?: prim.content.toDoubleOrNull()?.toLong()
+                            ?: continue
+                        if (secs <= 0L) continue
+                        out[day] = mapOf("legacy" to secs)
+                    } else {
+                        // Object value → v2 per-device map.
+                        val devObj = try {
+                            el.jsonObject
+                        } catch (_: Exception) {
+                            continue
+                        }
+                        val devMap = LinkedHashMap<String, Long>(devObj.size)
+                        for ((devId, devVal) in devObj) {
+                            val cleanId = devId.trim()
+                            if (cleanId.isEmpty()) continue
+                            val secs = try {
+                                val p = devVal.jsonPrimitive
+                                p.longOrNull
+                                    ?: p.content.toDoubleOrNull()?.toLong()
+                            } catch (_: Exception) {
+                                null
+                            } ?: continue
+                            if (secs <= 0L) continue
+                            devMap[cleanId] = secs
+                        }
+                        if (devMap.isEmpty()) continue
+                        out[day] = devMap
+                    }
+                } catch (_: Exception) {
+                    continue
+                }
+            }
+            out
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    /**
+     * Splits a per-device daily map into `(ownDaily, remoteOthers)`:
+     * - `ownDaily[day]` = this device's entry only (absent when this device
+     *   has no entry that day) — the ONLY slice ever merged into local buckets.
+     * - `remoteOthers[day]` = per-day sum of ALL device entries EXCEPT the own
+     *   device id (legacy `"legacy"` entries count as others). Never throws.
+     */
+    private fun splitOwnAndRemote(
+        perDevice: Map<Long, Map<String, Long>>,
+        ownDevId: String,
+    ): Pair<Map<Long, Long>, Map<Long, Long>> {
+        try {
+            if (perDevice.isEmpty()) return emptyMap<Long, Long>() to emptyMap<Long, Long>()
+            val own = LinkedHashMap<Long, Long>()
+            val remote = LinkedHashMap<Long, Long>()
+            for ((day, devMap) in perDevice) {
+                if (day < 0L) continue
+                var othersSum = 0L
+                for ((devId, secs) in devMap) {
+                    if (secs <= 0L) continue
+                    if (ownDevId.isNotEmpty() && devId == ownDevId) {
+                        own[day] = secs
+                    } else {
+                        othersSum += secs
+                    }
+                }
+                if (othersSum > 0L) remote[day] = othersSum
+            }
+            return own to remote
+        } catch (_: Exception) {
+            return emptyMap<Long, Long>() to emptyMap<Long, Long>()
+        }
+    }
+
+    /**
+     * Lenient parse of the legacy flat daily-series shape
+     * (`{"<epochDay>":seconds,...}`): non-numeric keys/values and
      * non-positive entries are skipped. Missing/blank/malformed input yields
      * an empty map. Never throws.
+     *
+     * NOTE: currently unreferenced — the pull path parses both shapes via
+     * [parseDailyJsonPerDevice] (legacy days land under `"legacy"`) and the
+     * push path encodes v2 via [encodeDailyJsonV2]. Kept as the documented
+     * legacy-shape reader.
      */
     private fun parseDailyJson(raw: String): Map<Long, Long> {
         if (raw.isBlank()) return emptyMap()
