@@ -18,9 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
@@ -46,6 +48,12 @@ import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
+
+/**
+ * Basmalah header text + rule live in QuranAyahRepository (single source of
+ * truth, Quran-wide: every surah except 1 — where verse 1 IS the Basmalah —
+ * and 9, which has none).
+ */
 
 /**
  * Strict Noir Glass Surah detail — true-black canvas (glow zone -> #050506 +
@@ -284,24 +292,20 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                         }
                     }
 
-                    // Bismillah plate — uthmani at 100% white on an engraved well.
-                    if (surahId != 9) {
+                    // Quran-wide Basmalah header — ONE centered line above verse 1.
+                    // AyahRow renders no per-row Basmalah (verified), so no dedup
+                    // conflict: the header lives only here.
+                    if (QuranAyahRepository.hasBasmalahHeader(surah.id)) {
                         item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 6.dp)
-                                    .clip(GhaisShapes.row)
-                                    .background(GhaisNoir.insetFill())
-                                    .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.row)
-                                    .padding(horizontal = 20.dp, vertical = 20.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                                 Text(
-                                    text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+                                    text = QuranAyahRepository.BASMALAH,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
                                     color = GhaisNoir.TextPrimary,
-                                    fontSize = 26.sp,
-                                    lineHeight = 52.sp,
+                                    fontSize = 22.sp,
+                                    lineHeight = 44.sp,
                                     textAlign = TextAlign.Center,
                                     fontFamily = GhaisTypography.quranFont
                                 )
@@ -313,24 +317,29 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                         val mastery = remember(masteryVersion, ayah.ayahNo) {
                             HifzMasteryStore.getStatus(surah.id, ayah.ayahNo)
                         }
-                        AyahRow(
-                            ayah = ayah,
-                            // Highlight syncs via currentTrack.surahId/ayahNo/reciterSlug;
-                            // icon reflects live play state.
-                            isActive = isAyahActive(ayah.ayahNo),
-                            isPlaying = isAyahPlaying(ayah.ayahNo),
-                            isFavorite = favorites.any { it.audioUrl == selectedReciter.getAyahAudioUrl(surah.id, ayah.ayahNo) },
-                            masteryStatus = mastery,
-                            onMasteryClick = {
-                                HifzMasteryStore.cycleStatus(surah.id, ayah.ayahNo)
-                                masteryVersion++
-                            },
-                            onPlayClick = { onAyahToggle(ayah, index) },
-                            onFavoriteClick = {
-                                FavoritesStore.toggle(buildAyahTrack(ayah))
-                            },
-                            onShareClick = { /* Share */ }
-                        )
+                        // AyahRow does no RTL CompositionLocalProvider itself
+                        // (verified) — direction is provided per-row here so the
+                        // English header/hero above stay LTR.
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                            AyahRow(
+                                ayah = ayah,
+                                // Highlight syncs via currentTrack.surahId/ayahNo/reciterSlug;
+                                // icon reflects live play state.
+                                isActive = isAyahActive(ayah.ayahNo),
+                                isPlaying = isAyahPlaying(ayah.ayahNo),
+                                isFavorite = favorites.any { it.audioUrl == selectedReciter.getAyahAudioUrl(surah.id, ayah.ayahNo) },
+                                masteryStatus = mastery,
+                                onMasteryClick = {
+                                    HifzMasteryStore.cycleStatus(surah.id, ayah.ayahNo)
+                                    masteryVersion++
+                                },
+                                onPlayClick = { onAyahToggle(ayah, index) },
+                                onFavoriteClick = {
+                                    FavoritesStore.toggle(buildAyahTrack(ayah))
+                                },
+                                onShareClick = { /* Share */ }
+                            )
+                        }
                     }
                 }
             }
