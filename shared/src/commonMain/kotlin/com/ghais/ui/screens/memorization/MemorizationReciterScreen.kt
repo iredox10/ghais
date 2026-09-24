@@ -43,11 +43,13 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.EveryAyahReciters
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.Surah
 import com.ghais.player.AudioEngine
+import com.ghais.player.DownloadKeys
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.NoirListRow
@@ -84,14 +86,22 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
         val dlProgress by QuranDownloads.progress.collectAsState()
         val failedKeys by QuranDownloads.failedKeys.collectAsState()
 
+        // Download-all bookkeeping over full bundles (surah + every ayah).
+        // A surah counts as done only when its whole bundle is on disk.
         val allKeys = remember(reciter.slug, allSurahs) {
-            allSurahs.map { "${reciter.slug}/${it.id}" }
+            allSurahs.flatMap { DownloadKeys.bundleKeys(reciter.slug, it.id, it.ayahsCount) }
         }
         val downloadedCount = remember(reciter.slug, allSurahs, downloaded) {
-            allSurahs.count { "${reciter.slug}/${it.id}" in downloaded }
+            allSurahs.count { surah ->
+                DownloadKeys.bundleKeys(reciter.slug, surah.id, surah.ayahsCount)
+                    .all { it in downloaded }
+            }
         }
         val allDone = allKeys.isNotEmpty() && allKeys.all { it in downloaded }
-        val downloadingCount = allKeys.count { it in dlProgress && it !in downloaded }
+        val downloadingCount = allSurahs.count { surah ->
+            val keys = DownloadKeys.bundleKeys(reciter.slug, surah.id, surah.ayahsCount)
+            !keys.all { it in downloaded } && keys.any { it in downloaded || it in dlProgress }
+        }
 
         fun playSurahInAyahMode(surahId: Int) {
             AudioEngine.playSurahInAyahMode(
@@ -180,14 +190,20 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                                     },
                                     onClick = {
                                         allSurahs.forEach { surah ->
-                                            val key = "${reciter.slug}/${surah.id}"
-                                            if (key !in downloaded && !dlProgress.containsKey(key) && key !in failedKeys) {
-                                                QuranDownloads.download(
-                                                    reciter.slug,
-                                                    surah.id,
-                                                    reciter.getFullSurahUrl(surah.id)
-                                                )
+                                            val keys = DownloadKeys.bundleKeys(
+                                                reciter.slug, surah.id, surah.ayahsCount
+                                            )
+                                            if (keys.all { it in downloaded }) return@forEach
+                                            val ayahUrls = (1..surah.ayahsCount).associateWith { ayahNo ->
+                                                reciter.getAyahAudioUrl(surah.id, ayahNo)
                                             }
+                                            QuranDownloads.downloadSurahBundle(
+                                                reciter.slug,
+                                                surah.id,
+                                                reciter.getFullSurahUrl(surah.id),
+                                                ayahUrls
+                                            )
+                                            QuranAyahRepository.prefetchSurah(surah.id)
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth()
@@ -206,13 +222,20 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                             currentTrack?.reciterSlug == reciter.slug &&
                             isAyahMode
 
-                        // Precedence: downloaded > downloading > failed > idle.
-                        val downloadKey = "${reciter.slug}/${surah.id}"
-                        val isDownloaded = downloadKey in downloaded
-                        val rawProgress: Float? = dlProgress[downloadKey]
-                        val surahProgress: Float? = if (isDownloaded) null else rawProgress
-                        val isDownloading = surahProgress != null
-                        val isFailed = !isDownloaded && !isDownloading && downloadKey in failedKeys
+                        // Bundle precedence: downloaded (surah + every ayah) >
+                        // downloading (any bundle key in flight or partial) >
+                        // failed > idle. Partial bundles resume on tap — the
+                        // engine skips keys already done or in flight.
+                        val bundleKeys = remember(reciter.slug, surah.id, surah.ayahsCount) {
+                            DownloadKeys.bundleKeys(reciter.slug, surah.id, surah.ayahsCount)
+                        }
+                        val isDownloaded = bundleKeys.all { it in downloaded }
+                        val isDownloading = !isDownloaded &&
+                            bundleKeys.any { it in downloaded || it in dlProgress }
+                        val isFailed = !isDownloaded && !isDownloading &&
+                            bundleKeys.any { it in failedKeys }
+                        val bundleProgress: Float? = if (!isDownloading) null else
+                            bundleKeys.count { it in downloaded }.toFloat() / bundleKeys.size.toFloat()
                         val audioUrl = reciter.getFullSurahUrl(surah.id)
 
                         Column(modifier = Modifier.fillMaxWidth()) {
@@ -230,17 +253,25 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                                         isDownloading = isDownloading,
                                         isDownloadFailed = isFailed,
                                         onDownloadClick = {
+                                            // Guard: finished bundles stay finished.
+                                            // Partial/failed bundles resume — the engine
+                                            // skips keys already done or in flight.
                                             if (isDownloaded) return@HifzSurahTrailing
-                                            if (dlProgress.containsKey(downloadKey)) return@HifzSurahTrailing
-                                            QuranDownloads.download(reciter.slug, surah.id, audioUrl)
+                                            val ayahUrls = (1..surah.ayahsCount).associateWith { ayahNo ->
+                                                reciter.getAyahAudioUrl(surah.id, ayahNo)
+                                            }
+                                            QuranDownloads.downloadSurahBundle(
+                                                reciter.slug, surah.id, audioUrl, ayahUrls
+                                            )
+                                            QuranAyahRepository.prefetchSurah(surah.id)
                                         },
                                         onPlayClick = { playSurahInAyahMode(surah.id) }
                                     )
                                 }
                             )
 
-                            val p = surahProgress
-                            if (!isDownloaded && p != null && p in 0f..1f) {
+                            val p = bundleProgress
+                            if (isDownloading && p != null && p in 0f..1f) {
                                 Spacer(modifier = Modifier.height(6.dp))
                                 NoirSegmentedProgress(
                                     progress = p,

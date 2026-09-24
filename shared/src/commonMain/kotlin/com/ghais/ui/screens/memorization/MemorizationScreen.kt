@@ -45,9 +45,12 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.ghais.data.repository.QuranAyahRepository
+import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.EveryAyahReciter
 import com.ghais.data.seed.EveryAyahReciters
 import com.ghais.player.AudioEngine
+import com.ghais.player.DownloadKeys
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.components.noir.NoirScreenRoot
@@ -209,12 +212,21 @@ object MemorizationScreen : Tab {
                     ) { reciter ->
                         val isPlayingThisReciter = currentTrack?.reciterSlug == reciter.slug && isAyahMode
 
-                        val downloadKey = "${reciter.slug}/1"
-                        val isDownloaded = downloadKey in downloaded
-                        val rawProgress: Float? = dlProgress[downloadKey]
-                        val reciterProgress: Float? = if (isDownloaded) null else rawProgress
-                        val isDownloading = reciterProgress != null
-                        val isFailed = !isDownloaded && !isDownloading && downloadKey in failedKeys
+                        // Starter-pack bundle: Al-Fatihah surah file + every ayah
+                        // clip + verse text, so the bundle plays and reads fully
+                        // offline in the player.
+                        val bundleKeys = remember(reciter.slug) {
+                            val count = QuranDataRepository.getSurahById(1)?.ayahsCount ?: 7
+                            DownloadKeys.bundleKeys(reciter.slug, 1, count)
+                        }
+                        val isDownloaded = bundleKeys.all { it in downloaded }
+                        val isDownloading = !isDownloaded &&
+                            bundleKeys.any { it in downloaded || it in dlProgress }
+                        val isFailed = !isDownloaded && !isDownloading &&
+                            bundleKeys.any { it in failedKeys }
+                        val doneCount = bundleKeys.count { it in downloaded }
+                        val reciterProgress: Float? = if (!isDownloading) null else
+                            doneCount.toFloat() / bundleKeys.size.toFloat()
                         val starterAudioUrl = reciter.toReciter().getFullSurahUrl(1)
 
                         MemorizationReciterCard(
@@ -224,9 +236,18 @@ object MemorizationScreen : Tab {
                             downloadProgress = reciterProgress,
                             isDownloadFailed = isFailed,
                             onDownloadClick = {
+                                // Finished bundles stay finished; partial/failed
+                                // bundles resume (engine skips done/in-flight keys).
                                 if (isDownloaded) return@MemorizationReciterCard
-                                if (dlProgress.containsKey(downloadKey)) return@MemorizationReciterCard
-                                QuranDownloads.download(reciter.slug, 1, starterAudioUrl)
+                                val full = reciter.toReciter()
+                                val count = QuranDataRepository.getSurahById(1)?.ayahsCount ?: 7
+                                val ayahUrls = (1..count).associateWith { ayahNo ->
+                                    full.getAyahAudioUrl(1, ayahNo)
+                                }
+                                QuranDownloads.downloadSurahBundle(
+                                    reciter.slug, 1, starterAudioUrl, ayahUrls
+                                )
+                                QuranAyahRepository.prefetchSurah(1)
                             },
                             onPlayClick = { playReciterAyahMode(reciter, 1) },
                             onCardClick = { rootNavigator?.push(MemorizationReciterScreen(reciter.slug)) }
