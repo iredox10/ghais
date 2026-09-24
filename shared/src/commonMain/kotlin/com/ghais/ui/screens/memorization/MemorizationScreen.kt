@@ -287,7 +287,8 @@ private fun MemorizationReciterCard(
                     nameEn = reciter.nameEn,
                     size = 48.dp,
                     shape = RoundedCornerShape(14.dp),
-                    ring = isPlaying
+                    ring = isPlaying,
+                    slug = reciter.slug
                 )
 
                 Spacer(Modifier.width(12.dp))

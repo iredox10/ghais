@@ -269,7 +269,8 @@ fun ReciterPickerSheet(
                                 nameEn = reciter.nameEn,
                                 size = 48.dp,
                                 shape = RoundedCornerShape(14.dp),
-                                monogramSize = 18.sp
+                                monogramSize = 18.sp,
+                                slug = reciter.slug
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(
