@@ -21,8 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
@@ -36,6 +34,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.SearchHistoryStore
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.data.seed.QuranData
 import com.ghais.domain.model.Reciter
@@ -56,11 +55,7 @@ import com.ghais.ui.screens.reciters.ReciterProfileScreen
 import com.ghais.ui.screens.surah.SurahDetailScreen
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
-
-/** True-grayscale filter — thumbs stay recognisable while strictly monochrome. */
-private val NoirGrayscale: ColorFilter by lazy {
-    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-}
+import kotlinx.coroutines.delay
 
 /**
  * Noir Glass — strict monochrome redesign.
@@ -68,7 +63,7 @@ private val NoirGrayscale: ColorFilter by lazy {
  * Canvas #050506 via [NoirScreenRoot] (glow zone -> absolute black + grain).
  * Engraved [NoirInsetField] search (white cursor, 24% hint, ghost clear),
  * chrome/ghost filter pills, [NoirCard] ayah plate with chrome play,
- * result rows in the NoirListRow language with grayscale thumbs, ghost-well
+ * result rows in the NoirListRow language with reciter photos in color, ghost-well
  * empty states. Zero hue — state reads through fill, weight and opacity.
  *
  * Signatures, search/filter/play logic and navigation preserved.
@@ -81,6 +76,15 @@ class SearchScreen : Screen {
         var query by remember { mutableStateOf("") }
         var selectedFilter by remember { mutableStateOf("All") }
         val filters = listOf("All", "Surahs", "Reciters", "Ayahs")
+        val recentQueries by SearchHistoryStore.recentQueries.collectAsState()
+
+        LaunchedEffect(query) {
+            delay(600)
+            val meaningfulQuery = query.trim()
+            if (meaningfulQuery.length >= 2) {
+                SearchHistoryStore.record(meaningfulQuery)
+            }
+        }
 
         val searchResults = remember(query) { SearchEngine.search(query) }
 
@@ -163,16 +167,35 @@ class SearchScreen : Screen {
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                if (query.isEmpty()) {
+                if (query.isBlank()) {
                     NoirSectionHeader(
                         label = "Recent searches",
-                        onAction = {}
+                        actionLabel = "Clear all".takeIf { recentQueries.isNotEmpty() },
+                        onAction = { SearchHistoryStore.clear() }
+                            .takeIf { recentQueries.isNotEmpty() }
                     )
-                    SearchEmptyWell(
-                        headline = "Search anything",
-                        hint = "Surahs, reciters, or ayah refs like 2:255"
-                    )
+                    if (recentQueries.isEmpty()) {
+                        SearchEmptyWell(
+                            headline = "Search anything",
+                            hint = "Surahs, reciters, or ayah refs like 2:255"
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 2.dp, bottom = 120.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(recentQueries, key = { "recent-$it" }) { recentQuery ->
+                                RecentSearchRow(
+                                    query = recentQuery,
+                                    onClick = { query = recentQuery },
+                                    onRemove = { SearchHistoryStore.remove(recentQuery) }
+                                )
+                            }
+                        }
+                    }
                 } else {
+
                     val ayahRef = searchResults.ayahReference
                     val showAyah = ayahRef != null && (selectedFilter == "All" || selectedFilter == "Ayahs")
                     val showSurahs = searchResults.surahs.isNotEmpty() &&
@@ -453,8 +476,8 @@ private fun SurahNoirRow(
 }
 
 /**
- * Reciter result row in the NoirListRow language: grayscale photo well
- * (desaturated + 35% scrim, monogram fallback), dual text, ghost style chip,
+ * Reciter result row in the NoirListRow language: color photo well
+ * (monogram fallback), dual text, ghost style chip,
  * circular chevron to the profile. Trailing play keeps the queue-start logic.
  */
 @Composable
@@ -492,13 +515,12 @@ private fun ReciterNoirRow(
                     model = photoUrl,
                     contentDescription = reciter.nameEn,
                     contentScale = ContentScale.Crop,
-                    colorFilter = NoirGrayscale,
                     modifier = Modifier.fillMaxSize()
                 )
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .background(Color.Black.copy(alpha = 0.35f))
+                        .background(Color.Black.copy(alpha = 0f))
                 )
             } else {
                 Text(
@@ -577,6 +599,59 @@ private fun ReciterNoirRow(
                 contentDescription = null,
                 tint = GhaisNoir.TextTertiary,
                 modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun RecentSearchRow(
+    query: String,
+    onClick: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(GhaisShapes.row)
+            .background(GhaisNoir.cardFillSoft(), GhaisShapes.row)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.row)
+            .topSpecular(inset = 22.dp)
+            .noirClickable(onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconWell(
+            icon = Icons.Default.Search,
+            size = 40.dp,
+            iconSize = 18.dp,
+            contentDescription = null,
+            tint = GhaisNoir.TextSecondary
+        )
+        Text(
+            text = query,
+            color = GhaisNoir.TextPrimary,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp, end = 8.dp)
+        )
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                .background(GhaisNoir.Fill2, CircleShape)
+                .noirClickable(onRemove),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Remove $query",
+                tint = GhaisNoir.TextSecondary,
+                modifier = Modifier.size(14.dp)
             )
         }
     }
