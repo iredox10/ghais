@@ -77,6 +77,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.core.screen.ScreenKey
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ghais.ui.navigation.LocalRootNavigator
 import kotlinx.coroutines.Job
@@ -114,6 +115,20 @@ import com.ghais.ui.theme.GhaisShapes
  * text ladder 100 / 62 / 38 / 24%.
  */
 class NowPlayingScreen : Screen {
+    // Unique key per pushed instance: Voyager's default Screen.key is the
+    // class name, so two stacked players alias one SaveableState slot and the
+    // revealed duplicate renders blank. A stacked push is still possible via
+    // rapid taps, but each instance now owns isolated state.
+    private val instanceTag = nextInstanceTag()
+
+    override val key: ScreenKey
+        get() = "NowPlayingScreen#$instanceTag"
+
+    companion object {
+        private var instanceCounter = 0L
+        private fun nextInstanceTag(): Long = instanceCounter++
+    }
+
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.current
@@ -280,14 +295,19 @@ class NowPlayingScreen : Screen {
                             change.consume()
                         }
                         if (slopChange == null) return@awaitEachGesture
-                        // Vertical drag won — claim it.
+                        // Vertical drag won — claim it. Re-arm the release
+                        // decision: a cancelled dismiss tween must never leave
+                        // isDismissing latched with a stranded offset.
                         settleJob?.cancel()
+                        isDismissing = false
                         isDragging = true
                         poke()
                         var pointerId = slopChange.id
                         var lastY = slopChange.position.y
+                        val maxOffsetY =
+                            if (screenHeightPx > 0f) screenHeightPx else Float.MAX_VALUE
                         dragOffsetY = (dragOffsetY + (slopChange.position.y - down.position.y))
-                            .coerceAtLeast(0f)
+                            .coerceIn(0f, maxOffsetY)
                         lastDragTime = slopChange.uptimeMillis
                         while (true) {
                             val event = awaitPointerEvent()
@@ -308,8 +328,10 @@ class NowPlayingScreen : Screen {
                             }
                             lastDragTime = now
                             // Downward only — upward rubber-bands back to 0.
+                            // Upper-clamped so a long pull can never park the
+                            // content fully off-screen past the dismiss target.
                             if (dy != 0f) {
-                                dragOffsetY = (dragOffsetY + dy).coerceAtLeast(0f)
+                                dragOffsetY = (dragOffsetY + dy).coerceIn(0f, maxOffsetY)
                                 change.consume()
                             }
                         }
@@ -328,6 +350,10 @@ class NowPlayingScreen : Screen {
                                 ) { value, _ ->
                                     dragOffsetY = value
                                 }
+                                // Snap back to fully visible before popping so
+                                // Voyager's exit transition starts from a clean
+                                // state — never a pre-faded double-fade frame.
+                                dragOffsetY = 0f
                                 dismissPlayer()
                             }
                         } else if (!isDismissing) {
@@ -412,7 +438,7 @@ class NowPlayingScreen : Screen {
                             modifier = Modifier
                                 .size(width = 64.dp, height = 36.dp)
                                 .clip(RoundedCornerShape(18.dp))
-                                .clickable { (rootNavigator ?: navigator)?.pop() },
+                                .clickable { dismissPlayer() },
                             contentAlignment = Alignment.Center
                         ) {
                             Box(
