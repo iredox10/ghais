@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -73,7 +74,8 @@ import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
-import com.ghais.ui.util.AyahEndMark
+import com.ghais.ui.util.appendGluedRosette
+import com.ghais.ui.util.ayahRosetteContent
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -426,28 +428,20 @@ fun TafseerSheet(
                                         .padding(bottom = 8.dp)
                                 )
                             }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.Bottom
-                            ) {
-                                Text(
-                                    text = entry.arabicText,
-                                    fontFamily = GhaisTypography.quranFont,
-                                    color = GhaisNoir.TextPrimary,
-                                    fontSize = 24.sp,
-                                    lineHeight = 48.sp,
-                                    textAlign = TextAlign.Right,
-                                    fontWeight = FontWeight.Normal,
-                                    modifier = Modifier.weight(1f).padding(vertical = 2.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                AyahEndMark(
-                                    number = entry.ayahNo,
-                                    ornamentSize = 24.sp,
-                                    digitSize = 11.sp,
-                                    tint = GhaisNoir.TextPrimary
-                                )
-                            }
+                            Text(
+                                text = buildAnnotatedString {
+                                    append(entry.arabicText)
+                                    appendGluedRosette(entry.ayahNo)
+                                },
+                                inlineContent = ayahRosetteContent(24.sp, 11.sp),
+                                fontFamily = GhaisTypography.quranFont,
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 24.sp,
+                                lineHeight = 48.sp,
+                                textAlign = TextAlign.Right,
+                                fontWeight = FontWeight.Normal,
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                            )
                         }
                     }
                 }
