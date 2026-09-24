@@ -3,6 +3,9 @@ package com.ghais.ui.screens.stats
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +29,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,6 +51,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.UserUsageRepository
+import com.ghais.data.seed.JumpBackInItem
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.NoirCard
@@ -126,6 +132,56 @@ object StatsScreen : Screen {
 
         val goalMin by com.ghais.data.repository.OnboardingStore.dailyGoalMinutes.collectAsState()
         val ringProgress = (stats.minutesToday / goalMin.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
+
+        // Time-range selection. Contract (sibling-owned, lands in parallel):
+        // UserUsageRepository.dailySeconds: StateFlow<Map<epochDay, seconds>>.
+        // Empty map = contract not yet populated -> fall back to history-derived
+        // per-day minutes (same math as weekMinutes below).
+        val dailyMap by UserUsageRepository.dailySeconds.collectAsState()
+        var range by remember { mutableStateOf(StatsRange.Week) }
+        val todayEpochDay = remember { Clock.System.now().toEpochMilliseconds() / DAY_MS }
+
+        val rangeMinutes: List<Float> = remember(range, dailyMap, history, weekMinutes) {
+            if (range == StatsRange.Week && dailyMap.isEmpty()) {
+                weekMinutes
+            } else {
+                List(range.days) { i ->
+                    val epochDay = todayEpochDay - (range.days - 1 - i)
+                    val mapped = dailyMap[epochDay]
+                    if (mapped != null) mapped / 60f
+                    else historyMinutesForEpochDay(history, epochDay)
+                }
+            }
+        }
+
+        val rangeTotalMin = rangeMinutes.sum()
+        val rangeAvgMin = if (range.days > 0) rangeTotalMin / range.days else 0f
+        val rangeActiveDays = rangeMinutes.count { it > 0f }
+        val bestIndex = rangeMinutes.indices.maxByOrNull { rangeMinutes[it] }
+        val bestMin = bestIndex?.let { rangeMinutes[it] } ?: 0f
+        val bestDayLabel = bestIndex?.let {
+            weekdayShort(todayEpochDay - (range.days - 1 - it))
+        } ?: "—"
+        val shownBars = remember(rangeMinutes) { rangeMinutes.takeLast(30) }
+        val barsTruncated = rangeMinutes.size > shownBars.size
+        val usingHistoryFallback = dailyMap.isEmpty()
+
+        val rangeProgress = remember(range, rangeTotalMin, rangeActiveDays, goalMin) {
+            when (range) {
+                StatsRange.Today -> (rangeTotalMin / goalMin.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
+                StatsRange.Week -> (rangeTotalMin / (goalMin * 7f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                else -> if (range.days > 0) (rangeActiveDays / range.days.toFloat()).coerceIn(0f, 1f) else 0f
+            }
+        }
+        val rangeCaption = when (range) {
+            StatsRange.Today -> "${rangeTotalMin.toInt()} min of $goalMin min goal"
+            StatsRange.Week -> if (rangeTotalMin > 0f) {
+                "${rangeTotalMin.toInt()} min this week"
+            } else {
+                "No activity yet this week"
+            }
+            else -> "Active $rangeActiveDays of ${range.days} days"
+        }
 
         NoirScreenRoot {
             LazyColumn(
@@ -272,38 +328,85 @@ object StatsScreen : Screen {
                 }
 
                 item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        StatsRange.values().forEach { r ->
+                            StatsRangePill(
+                                label = r.label,
+                                selected = r == range,
+                                onClick = { range = r }
+                            )
+                        }
+                    }
+                }
+
+                item {
                     NoirCard(modifier = Modifier.fillMaxWidth()) {
                         Column {
                             Text(
-                                text = "This week",
+                                text = range.header,
                                 color = GhaisNoir.TextPrimary,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "minutes per day",
+                                text = range.window,
                                 color = GhaisNoir.TextTertiary,
                                 fontSize = 12.sp
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            val maxVal = (weekMinutes.maxOrNull() ?: 0f).coerceAtLeast(1f)
+                            Text(
+                                text = formatCompactMinutes(rangeTotalMin),
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Text(
+                                text = if (rangeTotalMin > 0f) "listened" else "listened • start listening",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 12.sp
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                NoirStatChip(text = "${rangeAvgMin.toInt()}m / day")
+                                NoirStatChip(
+                                    text = if (bestMin > 0f) {
+                                        "Best $bestDayLabel • ${bestMin.toInt()}m"
+                                    } else {
+                                        "Best —"
+                                    }
+                                )
+                                // Streak is only meaningful for short windows.
+                                if (range == StatsRange.Today || range == StatsRange.Week) {
+                                    NoirStatChip(text = "${stats.daysStreak}-day streak")
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            val maxVal = (shownBars.maxOrNull() ?: 0f).coerceAtLeast(1f)
                             Canvas(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(120.dp)
                             ) {
-                                val barCount = 7
-                                val gap = 8.dp.toPx()
+                                val barCount = shownBars.size.coerceAtLeast(1)
+                                val gap = (if (barCount > 12) 3.dp else 8.dp).toPx()
                                 val barWidth = (size.width - gap * (barCount - 1)) / barCount
                                 val corner = 6.dp.toPx()
-                                weekMinutes.forEachIndexed { index, value ->
+                                shownBars.forEachIndexed { index, value ->
                                     val fraction = (value / maxVal).coerceIn(0f, 1f)
                                     val barHeight = (size.height * fraction)
                                         .coerceAtLeast(if (value > 0f) 8.dp.toPx() else 4.dp.toPx())
                                     val left = index * (barWidth + gap)
                                     val top = size.height - barHeight
                                     drawRoundRect(
-                                        color = if (index == 6) {
+                                        color = if (index == shownBars.lastIndex) {
                                             Color.White
                                         } else {
                                             Color.White.copy(alpha = 0.28f)
@@ -315,21 +418,29 @@ object StatsScreen : Screen {
                                 }
                             }
                             Spacer(modifier = Modifier.height(12.dp))
-                            val weekTotal = weekMinutes.sum()
-                            val weekGoal = (goalMin * 7f).coerceAtLeast(1f)
-                            NoirSegmentedProgress(
-                                progress = (weekTotal / weekGoal).coerceIn(0f, 1f)
-                            )
+                            NoirSegmentedProgress(progress = rangeProgress)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = if (weekTotal > 0f) {
-                                    "${weekTotal.toInt()} min this week"
-                                } else {
-                                    "No activity yet this week"
-                                },
+                                text = rangeCaption,
                                 color = GhaisNoir.TextTertiary,
                                 fontSize = 12.sp
                             )
+                            if (barsTruncated) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Showing last 30 of ${range.days} days",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                            if (usingHistoryFallback) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Daily breakdown pending — estimated from history",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 11.sp
+                                )
+                            }
                         }
                     }
                 }
@@ -435,5 +546,88 @@ object StatsScreen : Screen {
                 }
             }
         }
+    }
+}
+
+private enum class StatsRange(
+    val label: String,
+    val days: Int,
+    val header: String,
+    val window: String
+) {
+    Today("Today", 1, "Your day in Quran", "today so far"),
+    Week("Week", 7, "Your week in Quran", "last 7 days"),
+    Month("30 days", 30, "Your month in Quran", "last 30 days"),
+    Quarter("3 months", 90, "Your season in Quran", "last 90 days"),
+    Year("Year", 365, "Your year in Quran", "last 365 days")
+}
+
+/** History-derived per-day minutes (fallback while `dailySeconds` is unpopulated). */
+private fun historyMinutesForEpochDay(history: List<JumpBackInItem>, epochDay: Long): Float {
+    val dayStart = epochDay * DAY_MS
+    val dayEnd = dayStart + DAY_MS
+    return history.filter { it.lastPlayedTimestampMs in dayStart until dayEnd }
+        .sumOf { item ->
+            val listenedMs = if (item.positionMs > 0L) {
+                item.positionMs
+            } else if (item.durationMs > 0L) {
+                (item.durationMs * item.progress).toLong()
+            } else {
+                0L
+            }
+            listenedMs / 60_000L
+        }.toFloat()
+}
+
+private fun formatCompactMinutes(minutes: Float): String {
+    val totalMin = minutes.toLong()
+    if (totalMin <= 0L) return "0m"
+    if (totalMin < 60L) return "${totalMin}m"
+    val hours = totalMin / 60L
+    val rem = totalMin % 60L
+    return if (rem == 0L) "${hours}h" else "${hours}h ${rem}m"
+}
+
+private val WEEKDAY_SHORT = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+/** Epoch day 0 (1970-01-01) was a Thursday. */
+private fun weekdayShort(epochDay: Long): String {
+    val idx = ((epochDay + 3) % 7 + 7) % 7
+    return WEEKDAY_SHORT[idx.toInt()]
+}
+
+/** Range pill: chrome fill when selected, ghost wash otherwise. Zero hue. */
+@Composable
+private fun StatsRangePill(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(20.dp)
+    Box(
+        modifier = Modifier
+            .clip(shape)
+            .then(
+                if (selected) {
+                    Modifier.background(GhaisNoir.chromeFill())
+                } else {
+                    Modifier.background(GhaisNoir.Fill2)
+                }
+            )
+            .border(
+                1.dp,
+                if (selected) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                shape
+            )
+            .noirClickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = if (selected) GhaisNoir.OnChrome else GhaisNoir.TextSecondary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
