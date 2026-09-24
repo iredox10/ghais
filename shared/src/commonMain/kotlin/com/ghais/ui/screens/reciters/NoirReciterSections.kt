@@ -49,6 +49,8 @@ fun NoirReciterSectionHeader(
  * reciter rows/cards.
  *
  * @param slug reciter slug for the async cloud-photo lookup; null keeps the local [photoUrl] only.
+ * @param grayscale whether to render the reciter photo in grayscale.
+ * @param scrimAlpha opacity of the fallback scrim over the artwork.
  */
 @Composable
 fun NoirReciterArtwork(
@@ -60,6 +62,8 @@ fun NoirReciterArtwork(
     monogramSize: TextUnit = 28.sp,
     ring: Boolean = false,
     slug: String? = null,
+    grayscale: Boolean = true,
+    scrimAlpha: Float = 0.35f,
 ) {
     NoirReciterAvatar(
         photoUrl = photoUrl,
@@ -70,5 +74,7 @@ fun NoirReciterArtwork(
         monogramSize = monogramSize,
         ring = ring,
         slug = slug,
+        grayscale = grayscale,
+        scrimAlpha = scrimAlpha,
     )
 }

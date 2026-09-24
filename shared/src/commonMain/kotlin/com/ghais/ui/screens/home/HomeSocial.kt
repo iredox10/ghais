@@ -93,7 +93,9 @@ fun HomeFollowedRow(onReciter: (String) -> Unit) {
                     shape = CircleShape,
                     size = 84.dp,
                     monogramSize = 28.sp,
-                    ring = true
+                    ring = true,
+                    grayscale = false,
+                    scrimAlpha = 0f
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(

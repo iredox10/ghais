@@ -115,12 +115,15 @@ fun monogramForReciter(nameEn: String): String =
  * Cloud upgrade: when [slug] is provided and [remotePhotoFetcher] is wired,
  * the local [photoUrl]/monogram renders instantly and the cloud portrait
  * swaps in only on null→url (never blank, never flashes, never blocks the
- * UI). [slug] defaults to null so existing callers are unaffected.
+ * UI). [slug] defaults to null so existing callers are unaffected. Color is
+ * opt-in per call site by setting [grayscale] to false.
  *
  * @param photoUrl nullable local portrait URL; blank/null renders the monogram well.
  * @param nameEn English name used for the monogram + content description.
  * @param ring when true uses the bright chromium top-specular border, else the ghost card border.
  * @param slug reciter slug used for the async cloud-photo lookup; null disables it.
+ * @param grayscale when true applies the shared grayscale artwork treatment.
+ * @param scrimAlpha opacity of the artwork scrim.
  */
 @Composable
 fun NoirReciterAvatar(
@@ -132,6 +135,8 @@ fun NoirReciterAvatar(
     monogramSize: TextUnit = 28.sp,
     ring: Boolean = false,
     slug: String? = null,
+    grayscale: Boolean = true,
+    scrimAlpha: Float = 0.35f,
 ) {
     val remoteUrl = rememberCloudPhoto(slug)
     NoirArtworkWell(
@@ -142,6 +147,8 @@ fun NoirReciterAvatar(
         size = size,
         monogramSize = monogramSize,
         ring = ring,
+        grayscale = grayscale,
+        scrimAlpha = scrimAlpha,
     )
 }
 

@@ -47,9 +47,12 @@ private val NoirGrayscale: ColorFilter by lazy {
 }
 
 /**
- * Recessed artwork plate. Grayscale image inside a clay well, dimmed so it
- * reads as an engraved tile rather than a bright sticker. Falls back to a
- * monogram when there is no artwork, mirroring the Profile identity pill.
+ * Recessed artwork plate. Falls back to a monogram when there is no artwork,
+ * mirroring the Profile identity pill.
+ *
+ * [grayscale] keeps the Noir monochrome look by default. Call sites that need
+ * real color can opt out by passing false. [scrimAlpha] controls the dark
+ * overlay applied only when artwork is present.
  */
 @Composable
 fun NoirArtworkWell(
@@ -59,7 +62,9 @@ fun NoirArtworkWell(
     modifier: Modifier = Modifier,
     size: Dp = 64.dp,
     monogramSize: TextUnit = 22.sp,
-    ring: Boolean = false
+    ring: Boolean = false,
+    grayscale: Boolean = true,
+    scrimAlpha: Float = 0.35f
 ) {
     Box(
         modifier = modifier
@@ -74,14 +79,14 @@ fun NoirArtworkWell(
                 model = coverUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                colorFilter = NoirGrayscale,
+                colorFilter = if (grayscale) NoirGrayscale else null,
                 modifier = Modifier.fillMaxSize()
             )
             // Darkening scrim: keeps the plate recessed instead of glowing.
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .background(Color.Black.copy(alpha = 0.35f))
+                    .background(Color.Black.copy(alpha = scrimAlpha))
             )
         } else {
             Text(
