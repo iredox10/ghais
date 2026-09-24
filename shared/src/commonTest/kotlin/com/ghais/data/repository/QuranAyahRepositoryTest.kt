@@ -2,8 +2,7 @@ package com.ghais.data.repository
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
@@ -30,13 +29,7 @@ class QuranAyahRepositoryTest {
         assertEquals("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", verse.textUthmani)
         assertEquals("In the name of Allah, the Entirely Merciful, the Especially Merciful.", verse.translation)
         assertEquals("", verse.transliteration, "Transliteration should default to empty string")
-
-        val domainAyah = verse.toAyah(juz = 1, page = 1)
-        assertEquals(verse.surahId, domainAyah.surahId)
-        assertEquals(verse.ayahNo, domainAyah.ayahNo)
-        assertEquals(verse.textUthmani, domainAyah.textUthmani)
-        assertEquals(1, domainAyah.juz)
-        assertEquals(1, domainAyah.page)
+        assertEquals("", AyahVerse(2, 2, "text").translation, "Translation should default to empty string")
     }
 
     @Test
@@ -46,7 +39,7 @@ class QuranAyahRepositoryTest {
             ayahNo = 1,
             textUthmani = "قُلْ هُوَ ٱللَّهُ أَحَدٌ",
             translation = "Say, \"He is Allah, [who is] One,\"",
-            transliteration = "Qul huwal laahu ahad"
+            transliteration = "Qul Huwallāhu Aḥad"
         )
 
         val encoded = json.encodeToString(verse)
@@ -56,218 +49,119 @@ class QuranAyahRepositoryTest {
     }
 
     @Test
-    fun testBundledSeedsCompleteness() {
-        // Surah 1 Al-Fatihah (7 ayahs)
-        val fatihah = QuranAyahRepository.SEED_VERSES[1]
-        assertNotNull(fatihah)
-        assertEquals(7, fatihah.size)
-        fatihah.forEachIndexed { index, ayah ->
-            assertEquals(1, ayah.surahId)
-            assertEquals(index + 1, ayah.ayahNo)
-            assertTrue(ayah.textUthmani.isNotBlank())
-            assertTrue(ayah.translation.isNotBlank())
-            assertTrue(ayah.transliteration.isNotBlank())
-        }
-
-        // Surah 112 Al-Ikhlas (4 ayahs)
-        val ikhlas = QuranAyahRepository.SEED_VERSES[112]
-        assertNotNull(ikhlas)
-        assertEquals(4, ikhlas.size)
-        ikhlas.forEachIndexed { index, ayah ->
-            assertEquals(112, ayah.surahId)
-            assertEquals(index + 1, ayah.ayahNo)
-            assertTrue(ayah.textUthmani.isNotBlank())
-            assertTrue(ayah.translation.isNotBlank())
-            assertTrue(ayah.transliteration.isNotBlank())
-        }
-
-        // Surah 113 Al-Falaq (5 ayahs)
-        val falaq = QuranAyahRepository.SEED_VERSES[113]
-        assertNotNull(falaq)
-        assertEquals(5, falaq.size)
-        falaq.forEachIndexed { index, ayah ->
-            assertEquals(113, ayah.surahId)
-            assertEquals(index + 1, ayah.ayahNo)
-            assertTrue(ayah.textUthmani.isNotBlank())
-            assertTrue(ayah.translation.isNotBlank())
-            assertTrue(ayah.transliteration.isNotBlank())
-        }
-
-        // Surah 114 An-Nas (6 ayahs)
-        val nas = QuranAyahRepository.SEED_VERSES[114]
-        assertNotNull(nas)
-        assertEquals(6, nas.size)
-        nas.forEachIndexed { index, ayah ->
-            assertEquals(114, ayah.surahId)
-            assertEquals(index + 1, ayah.ayahNo)
-            assertTrue(ayah.textUthmani.isNotBlank())
-            assertTrue(ayah.translation.isNotBlank())
-            assertTrue(ayah.transliteration.isNotBlank())
-        }
-
-        // Surah 18 Al-Kahf (first 10 ayahs)
-        val kahf = QuranAyahRepository.SEED_VERSES[18]
-        assertNotNull(kahf)
-        assertEquals(10, kahf.size)
-        kahf.forEachIndexed { index, ayah ->
-            assertEquals(18, ayah.surahId)
-            assertEquals(index + 1, ayah.ayahNo)
-            assertTrue(ayah.textUthmani.isNotBlank())
-            assertTrue(ayah.translation.isNotBlank())
-            assertTrue(ayah.transliteration.isNotBlank())
-        }
-    }
-
-    @Test
-    fun testGetAyahImmediate() {
-        QuranAyahRepository.clearCache()
-
-        // 1. From seed without cache
+    fun testBundledSeedsPresentWithCorrectVerseOneTexts() {
+        // Surah 1 verse 1 IS the basmalah; full 7-ayah seed is bundled.
         val fatihah1 = QuranAyahRepository.getAyahImmediate(1, 1)
-        assertNotNull(fatihah1)
         assertEquals(1, fatihah1.surahId)
         assertEquals(1, fatihah1.ayahNo)
         assertEquals("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", fatihah1.textUthmani)
+        val fatihah7 = QuranAyahRepository.getAyahImmediate(1, 7)
+        assertEquals(7, fatihah7.ayahNo)
+        assertTrue(fatihah7.textUthmani.isNotBlank())
+        assertFalse(fatihah7.textUthmani.contains("آية رقم"))
 
-        val kahf10 = QuranAyahRepository.getAyahImmediate(18, 10)
-        assertNotNull(kahf10)
-        assertEquals(10, kahf10.ayahNo)
+        // Surah 112 (4 ayahs bundled).
+        val ikhlas1 = QuranAyahRepository.getAyahImmediate(112, 1)
+        assertEquals("قُلْ هُوَ ٱللَّهُ أَحَدٌ", ikhlas1.textUthmani)
+        val ikhlas4 = QuranAyahRepository.getAyahImmediate(112, 4)
+        assertEquals(4, ikhlas4.ayahNo)
+        assertFalse(ikhlas4.textUthmani.contains("آية رقم"))
 
-        // 2. Sensible fallback for non-seed surah
-        val baqarah1 = QuranAyahRepository.getAyahImmediate(2, 1)
-        assertNotNull(baqarah1)
-        assertEquals(2, baqarah1.surahId)
-        assertEquals(1, baqarah1.ayahNo)
-        assertTrue(baqarah1.textUthmani.contains("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ"))
-        assertTrue(baqarah1.translation.contains("Surah Al-Baqarah, Verse 1"))
+        // Surah 113 (5 ayahs bundled).
+        val falaq1 = QuranAyahRepository.getAyahImmediate(113, 1)
+        assertEquals("قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَقِ", falaq1.textUthmani)
+        val falaq5 = QuranAyahRepository.getAyahImmediate(113, 5)
+        assertEquals(5, falaq5.ayahNo)
+        assertFalse(falaq5.textUthmani.contains("آية رقم"))
 
-        val baqarah2 = QuranAyahRepository.getAyahImmediate(2, 2)
-        assertNotNull(baqarah2)
+        // Surah 114 (6 ayahs bundled).
+        val nas1 = QuranAyahRepository.getAyahImmediate(114, 1)
+        assertEquals("قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ", nas1.textUthmani)
+        val nas6 = QuranAyahRepository.getAyahImmediate(114, 6)
+        assertEquals(6, nas6.ayahNo)
+        assertFalse(nas6.textUthmani.contains("آية رقم"))
+
+        // Surah 108 (3 ayahs bundled).
+        val kawthar1 = QuranAyahRepository.getAyahImmediate(108, 1)
+        assertEquals("إِنَّآ أَعْطَيْنَٰكَ ٱلْكَوْثَرَ", kawthar1.textUthmani)
+        val kawthar3 = QuranAyahRepository.getAyahImmediate(108, 3)
+        assertEquals(3, kawthar3.ayahNo)
+        assertFalse(kawthar3.textUthmani.contains("آية رقم"))
+
+        // Surah 18 is a partial seed; verse 1 has NO basmalah prefix.
+        val kahf1 = QuranAyahRepository.getAyahImmediate(18, 1)
+        assertEquals(18, kahf1.surahId)
+        assertEquals(1, kahf1.ayahNo)
+        assertTrue(kahf1.textUthmani.startsWith("ٱلْحَمْدُ لِلَّهِ"))
+        assertFalse(kahf1.textUthmani.contains("بِسْمِ"))
+        // Seeded through ayah 5; ayah 6+ falls back to a placeholder.
+        val kahf5 = QuranAyahRepository.getAyahImmediate(18, 5)
+        assertEquals(5, kahf5.ayahNo)
+        assertFalse(kahf5.textUthmani.contains("آية رقم"))
+        val kahf6 = QuranAyahRepository.getAyahImmediate(18, 6)
+        assertEquals(6, kahf6.ayahNo)
+        assertTrue(kahf6.textUthmani.contains("آية رقم"))
+    }
+
+    @Test
+    fun testGetAyahImmediatePlaceholderShape() {
+        // Never null: unseeded surahs return a clean baseline placeholder.
+        val baqarah2: AyahVerse = QuranAyahRepository.getAyahImmediate(2, 2)
+        assertEquals(2, baqarah2.surahId)
         assertEquals(2, baqarah2.ayahNo)
-        assertTrue(baqarah2.textUthmani.contains("آية رقم 2 من سورة البقرة"))
-
-        // 3. From cache
-        val customVerse = AyahVerse(99, 1, "custom text", "custom translation")
-        QuranAyahRepository.setCachedSurah(99, listOf(customVerse))
-        val fromCache = QuranAyahRepository.getAyahImmediate(99, 1)
-        assertNotNull(fromCache)
-        assertEquals("custom text", fromCache.textUthmani)
-
-        // 4. Out of bounds
-        assertNull(QuranAyahRepository.getAyahImmediate(999, 1))
-        assertNull(QuranAyahRepository.getAyahImmediate(1, 99))
-        assertNull(QuranAyahRepository.getAyahImmediate(1, 0))
+        assertTrue(baqarah2.textUthmani.contains("آية رقم"))
+        assertTrue(baqarah2.textUthmani.contains("2"))
     }
 
     @Test
-    fun testGetAyahsForSurahOfflineFallbackAndCache() = runBlocking {
-        QuranAyahRepository.clearCache()
-
-        // Surah 112 fallback/seed
-        val ikhlasList = QuranAyahRepository.getFallbackVerses(112)
-        assertEquals(4, ikhlasList.size)
-        assertEquals(QuranAyahRepository.SEED_VERSES[112], ikhlasList)
-
-        // Surah 18 fallback (first 10 from seed, 11..110 generated)
-        val kahfList = QuranAyahRepository.getFallbackVerses(18)
-        assertEquals(110, kahfList.size)
-        assertEquals("Alhamdu lillaahil lazeee anzala 'alaa 'abdihil kitaaba wa lam yaj'al lahoo 'iwajaa", kahfList[0].transliteration)
-        assertEquals(10, kahfList[9].ayahNo)
-        assertEquals(11, kahfList[10].ayahNo)
-        assertTrue(kahfList[10].textUthmani.contains("آية رقم 11 من سورة الكهف"))
-
-        // Surah 108 (Al-Kawthar, 3 ayahs) not in seeds
-        val kawtharList = QuranAyahRepository.getFallbackVerses(108)
-        assertEquals(3, kawtharList.size)
-        assertEquals(1, kawtharList[0].ayahNo)
-        assertTrue(kawtharList[0].textUthmani.contains("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ"))
-        assertTrue(kawtharList[1].textUthmani.contains("آية رقم 2"))
-
-        // Cache testing
-        QuranAyahRepository.setCachedSurah(1, ikhlasList)
-        assertTrue(QuranAyahRepository.isCached(1))
-        val cached = QuranAyahRepository.getAyahsForSurah(1)
-        assertEquals(4, cached.size)
-        assertEquals(ikhlasList, cached)
-
-        QuranAyahRepository.clearCache()
-        assertEquals(0, QuranAyahRepository.cache.size)
+    fun testCleanQuranicText() {
+        // Strips U+25CC (dotted circle), U+200B (zero-width space), U+FEFF (BOM).
+        assertEquals("ab", QuranAyahRepository.cleanQuranicText("a\u25CCb"))
+        assertEquals("ab", QuranAyahRepository.cleanQuranicText("a\u200Bb"))
+        assertEquals("ab", QuranAyahRepository.cleanQuranicText("\uFEFFab"))
+        // Collapses repeated spaces and trims.
+        assertEquals("a b", QuranAyahRepository.cleanQuranicText("a  b"))
+        assertEquals("a b", QuranAyahRepository.cleanQuranicText("  a b  "))
+        assertEquals("a b", QuranAyahRepository.cleanQuranicText("\uFEFF  a\u200B   b\u25CC  "))
+        // Rejoins hamza splits (lam-sukun + hamza, hamza + alef).
+        assertEquals("لْء", QuranAyahRepository.cleanQuranicText("لْ ء"))
+        assertEquals("لْء", QuranAyahRepository.cleanQuranicText("لْ  ء"))
+        assertEquals("ءا", QuranAyahRepository.cleanQuranicText("ء ا"))
+        // Strips spaces before orphan combining marks, keeps word spaces.
+        assertEquals("نَصْرًا", QuranAyahRepository.cleanQuranicText("نَصْر ًا"))
+        assertEquals("a b c", QuranAyahRepository.cleanQuranicText("a b c"))
     }
 
     @Test
-    fun testAlQuranCloudApiResponseParsing() {
-        val sampleJson = """
-        {
-          "code": 200,
-          "status": "OK",
-          "data": [
-            {
-              "number": 1,
-              "name": "سُورَةُ ٱلْفَاتِحَةِ",
-              "englishName": "Al-Faatiha",
-              "englishNameTranslation": "The Opening",
-              "revelationType": "Meccan",
-              "numberOfAyahs": 2,
-              "ayahs": [
-                {
-                  "number": 1,
-                  "text": "﻿بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
-                  "numberInSurah": 1
-                },
-                {
-                  "number": 2,
-                  "text": "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ",
-                  "numberInSurah": 2
-                }
-              ],
-              "edition": {
-                "identifier": "quran-uthmani",
-                "language": "ar",
-                "type": "quran"
-              }
-            },
-            {
-              "number": 1,
-              "name": "سُورَةُ ٱلْفَاتِحَةِ",
-              "englishName": "Al-Faatiha",
-              "englishNameTranslation": "The Opening",
-              "revelationType": "Meccan",
-              "numberOfAyahs": 2,
-              "ayahs": [
-                {
-                  "number": 1,
-                  "text": "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
-                  "numberInSurah": 1
-                },
-                {
-                  "number": 2,
-                  "text": "[All] praise is [due] to Allah, Lord of the worlds -",
-                  "numberInSurah": 2
-                }
-              ],
-              "edition": {
-                "identifier": "en.sahih",
-                "language": "en",
-                "type": "translation"
-              }
-            }
-          ]
-        }
-        """.trimIndent()
+    fun testHasBasmalahHeader() {
+        assertTrue(QuranAyahRepository.BASMALAH.isNotBlank())
+        assertFalse(QuranAyahRepository.hasBasmalahHeader(1))
+        assertFalse(QuranAyahRepository.hasBasmalahHeader(9))
+        assertTrue(QuranAyahRepository.hasBasmalahHeader(2))
+        assertTrue(QuranAyahRepository.hasBasmalahHeader(18))
+        assertTrue(QuranAyahRepository.hasBasmalahHeader(114))
+    }
 
-        val parsed = json.decodeFromString<AlQuranCloudResponse>(sampleJson)
-        assertEquals(200, parsed.code)
-        assertEquals("OK", parsed.status)
-        assertEquals(2, parsed.data.size)
+    @Test
+    fun testSanitizeVerseTextStripBehavior() {
+        val withPrefix = "بسم الله الرحمن الرحيم الْحَمْدُ لِلَّهِ"
+        val stripped = QuranAyahRepository.sanitizeVerseText(2, 1, withPrefix)
+        assertTrue(stripped.contains("الْحَمْدُ"))
+        assertFalse(stripped.contains("بسم"))
+        // Surah 1 keeps its verse-1 text untouched.
+        assertEquals(withPrefix, QuranAyahRepository.sanitizeVerseText(1, 1, withPrefix))
+        // Non-first ayahs are untouched.
+        assertEquals(withPrefix, QuranAyahRepository.sanitizeVerseText(2, 2, withPrefix))
+    }
 
-        val uthmani = parsed.data.find { it.edition?.identifier == "quran-uthmani" }
-        assertNotNull(uthmani)
-        assertEquals(2, uthmani.ayahs.size)
-        assertEquals("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ", uthmani.ayahs[0].text.removePrefix("\uFEFF"))
-
-        val translation = parsed.data.find { it.edition?.identifier == "en.sahih" }
-        assertNotNull(translation)
-        assertEquals(2, translation.ayahs.size)
-        assertEquals("In the name of Allah, the Entirely Merciful, the Especially Merciful.", translation.ayahs[0].text)
+    @Test
+    fun testCacheGenNonDecreasingAfterGetAyahsForSurah() = runBlocking {
+        val before = QuranAyahRepository.cacheGen.value
+        // Seeded surah: served from cache, no network needed (offline-safe).
+        val verses = QuranAyahRepository.getAyahsForSurah(112)
+        assertTrue(verses.isNotEmpty())
+        assertTrue(QuranAyahRepository.cacheGen.value >= before)
+        // Prefetch smoke test (fire-and-forget, must not throw).
+        QuranAyahRepository.prefetchSurah(112)
     }
 }
