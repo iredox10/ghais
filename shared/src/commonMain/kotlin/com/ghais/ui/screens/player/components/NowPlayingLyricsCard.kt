@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,8 +57,9 @@ import com.ghais.data.repository.AyahVerse
 import com.ghais.domain.model.TrackItem
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.util.appendGluedRosette
+import com.ghais.ui.util.ayahRosetteContent
 import com.ghais.ui.theme.GhaisTypography
-import com.ghais.ui.util.AyahEndMark
 
 /**
  * Synchronized Ayah Lyrics Card — MINIMAL (monochrome, zero hue).
@@ -270,31 +271,27 @@ fun NowPlayingLyricsCard(
                                     )
                                 }
                                 // Arabic verse — QCF Hafs Uthmani text (100% white, RTL)
-                                // with the enclosed end-of-ayah rosette. Normal weight:
+                                // with the enclosed end-of-ayah rosette glued to the
+                                // last word (inline content). Normal weight:
                                 // synthetic bold perturbs mark shaping on dense stacks.
                                 if (activeArabic.isNotBlank()) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.Bottom
-                                    ) {
-                                        AyahEndMark(
-                                            number = displayAyahNo,
+                                    Text(
+                                        text = buildAnnotatedString {
+                                            append(activeArabic)
+                                            appendGluedRosette(displayAyahNo)
+                                        },
+                                        inlineContent = ayahRosetteContent(
                                             ornamentSize = 26.sp,
-                                            digitSize = 11.sp,
-                                            tint = GhaisNoir.TextPrimary
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = activeArabic,
-                                            fontFamily = GhaisTypography.quranFont,
-                                            fontSize = 25.sp,
-                                            fontWeight = FontWeight.Normal,
-                                            color = GhaisNoir.TextPrimary,
-                                            textAlign = TextAlign.End,
-                                            lineHeight = 50.sp,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    }
+                                            digitSize = 11.sp
+                                        ),
+                                        fontFamily = GhaisTypography.quranFont,
+                                        fontSize = 25.sp,
+                                        fontWeight = FontWeight.Normal,
+                                        color = GhaisNoir.TextPrimary,
+                                        textAlign = TextAlign.End,
+                                        lineHeight = 50.sp,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
                                 }
                             }
                         }
