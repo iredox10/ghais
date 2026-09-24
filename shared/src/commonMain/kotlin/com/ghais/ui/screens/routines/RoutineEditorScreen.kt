@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -300,7 +301,7 @@ class RoutineEditorScreen(val routineId: String? = null) : Screen {
                         }
                     }
 
-                    items(items, key = { "${it.reciterSlug}:${it.surahId}" }) { item ->
+                    itemsIndexed(items, key = { index, item -> "${item.reciterSlug}:${item.surahId}#$index" }) { _, item ->
                         val surah = surahs.find { it.id == item.surahId }
                         val reciterName = reciters.find { it.slug == item.reciterSlug }?.nameEn
                             ?: QuranDataRepository.getReciterBySlug(item.reciterSlug).nameEn

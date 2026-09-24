@@ -238,7 +238,7 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                         }
                         items(
                             items = filtered,
-                            key = { it.slug }
+                            key = { it.catalogKey() }
                         ) { reciter ->
                             val isCurrentReciter = currentTrack?.reciterSlug == reciter.slug
                             val activelyPlaying = isCurrentReciter && isPlaying

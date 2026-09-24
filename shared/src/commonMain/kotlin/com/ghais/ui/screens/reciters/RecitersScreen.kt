@@ -306,7 +306,7 @@ private fun NoirNationReel(
         ) {
             items(
                 items = reciters,
-                key = { it.slug }
+                key = { it.catalogKey() }
             ) { reciter ->
                 NoirReciterCard(
                     reciter = reciter,

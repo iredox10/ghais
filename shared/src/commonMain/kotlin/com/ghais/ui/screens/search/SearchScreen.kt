@@ -225,7 +225,7 @@ class SearchScreen : Screen {
                                         onAction = {}
                                     )
                                 }
-                                items(searchResults.reciters, key = { "reciter-${it.slug}" }) { reciter ->
+                                items(searchResults.reciters, key = { "reciter-${it.catalogKey()}" }) { reciter ->
                                     ReciterNoirRow(
                                         reciter = reciter,
                                         onOpen = { navigator.push(ReciterProfileScreen(reciter.slug)) },

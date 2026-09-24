@@ -51,7 +51,10 @@ fun HomeFollowedRow(onReciter: (String) -> Unit) {
             resolveFollowedQari(slug)?.let { qari ->
                 Triple(qari.reciter.slug, qari.reciter.nameEn, qari.photoUrl.orEmpty())
             }
-        }
+        // Two followed slugs can resolve to the SAME reciter (mishary +
+        // alafasy are the same person), which would both duplicate the row
+        // and collide on the LazyRow key below.
+        }.distinctBy { it.first }
     }
 
     if (resolved.isEmpty()) {
@@ -75,6 +78,8 @@ fun HomeFollowedRow(onReciter: (String) -> Unit) {
     }
 
     LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        // Followed slugs can alias to the same human (mishary/alafasy);
+        // `resolved` is already distinct by slug, so this key is unique.
         items(resolved, key = { it.first }) { (slug, name, photoUrl) ->
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,

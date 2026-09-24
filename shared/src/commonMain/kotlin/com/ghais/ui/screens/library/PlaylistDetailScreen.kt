@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -242,7 +243,7 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
                         }
                     }
 
-                    items(items = tracks, key = { it.surahId to it.reciterSlug }) { track ->
+                    itemsIndexed(items = tracks, key = { index, track -> "${track.surahId}-${track.reciterSlug}#$index" }) { _, track ->
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()

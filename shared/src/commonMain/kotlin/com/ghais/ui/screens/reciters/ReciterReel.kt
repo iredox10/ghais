@@ -120,7 +120,7 @@ fun NationReelBlock(
         ) {
             items(
                 items = reciters,
-                key = { it.slug }
+                key = { it.catalogKey() }
             ) { reciter ->
                 ReciterReelCard(
                     reciter = reciter,

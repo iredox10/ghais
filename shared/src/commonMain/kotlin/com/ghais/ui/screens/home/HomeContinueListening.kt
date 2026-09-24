@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
@@ -164,10 +164,10 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
     if (rail.isNotEmpty()) {
         Spacer(Modifier.height(12.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(
+            itemsIndexed(
                 items = rail,
-                key = { "${it.reciterSlug}-${it.surahId}" }
-            ) { item ->
+                key = { index, item -> "${item.reciterSlug}-${item.surahId}#$index" }
+            ) { _, item ->
                 val active = isLive(item, currentTrack?.surahId, currentTrack?.reciterSlug)
                 NoirRecentPlate(
                     item = item,
