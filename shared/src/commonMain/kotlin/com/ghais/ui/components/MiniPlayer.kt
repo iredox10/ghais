@@ -83,6 +83,18 @@ fun MiniPlayer(
     val rootNav = com.ghais.ui.navigation.LocalRootNavigator.current
     val navigator = rootNav ?: LocalNavigator.current?.parent ?: LocalNavigator.current
 
+    // Single-flight open: tap + swipe-up race each other (clickable vs drag
+    // threshold), and a stacked duplicate shares Voyager's class-name key and
+    // renders blank when revealed. Never stack two players.
+    fun openPlayerOnce() {
+        if (navigator?.lastItem is NowPlayingScreen) return
+        if (onOpenNowPlaying != null) {
+            onOpenNowPlaying()
+        } else {
+            navigator?.push(NowPlayingScreen())
+        }
+    }
+
     val canSkipNext = remember(queue, currentIndex, playbackState.settings.repeatMode, track) {
         if (queue.isEmpty()) false
         else if (playbackState.settings.repeatMode != com.ghais.domain.model.RepeatMode.OFF) true
@@ -135,13 +147,7 @@ fun MiniPlayer(
                     .fillMaxWidth()
                     .background(glassGradient)
                     .clip(GhaisShapes.playerBar)
-                    .clickable {
-                        if (onOpenNowPlaying != null) {
-                            onOpenNowPlaying()
-                        } else {
-                            navigator?.push(NowPlayingScreen())
-                        }
-                    }
+                    .clickable { openPlayerOnce() }
                     .pointerInput(Unit) {
                         var cumulativeDragY = 0f
                         detectVerticalDragGestures(
@@ -149,11 +155,7 @@ fun MiniPlayer(
                                 if (cumulativeDragY > 100f) {
                                     AudioEngine.clear()
                                 } else if (cumulativeDragY < -50f) {
-                                    if (onOpenNowPlaying != null) {
-                                        onOpenNowPlaying()
-                                    } else {
-                                        navigator?.push(NowPlayingScreen())
-                                    }
+                                    openPlayerOnce()
                                 }
                                 cumulativeDragY = 0f
                             },
@@ -166,11 +168,7 @@ fun MiniPlayer(
                                     AudioEngine.clear()
                                     cumulativeDragY = 0f
                                 } else if (cumulativeDragY < -70f) {
-                                    if (onOpenNowPlaying != null) {
-                                        onOpenNowPlaying()
-                                    } else {
-                                        navigator?.push(NowPlayingScreen())
-                                    }
+                                    openPlayerOnce()
                                     cumulativeDragY = 0f
                                 }
                             }
