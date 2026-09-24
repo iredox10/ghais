@@ -1,6 +1,5 @@
 package com.ghais.ui.screens.home
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -23,7 +22,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,14 +31,11 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
-import ghais.shared.generated.resources.Res
-import ghais.shared.generated.resources.ghais_mark
-import org.jetbrains.compose.resources.painterResource
 
 /**
  * Phase 4 — Noir Home header.
  *
- * Logo left; search + analytics wells and the user avatar right (avatar opens
+ * Home title left; search + analytics wells and the user avatar right (avatar opens
  * the profile tab). Editorial headline below stays untouched.
  */
 @Composable
@@ -61,21 +56,14 @@ fun HomeTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Logo mark in a clay well.
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .background(GhaisNoir.wellFill(), GhaisShapes.well)
-                .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.well),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(Res.drawable.ghais_mark),
-                contentDescription = "Ghais",
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(30.dp)
-            )
-        }
+        // Home title.
+        Text(
+            text = "Home",
+            color = GhaisNoir.TextPrimary,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
