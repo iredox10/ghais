@@ -75,6 +75,8 @@ object UserUsageRepository {
     private const val KEY_TOTAL_SECONDS = "ghais_stats_total_seconds"
     private const val KEY_UNIQUE_RECITERS = "ghais_stats_unique_reciters"
     private const val KEY_UNIQUE_SURAHS = "ghais_stats_unique_surahs"
+    private const val KEY_DAILY_SECONDS = "ghais_stats_daily_seconds"
+    private const val MAX_DAILY_BUCKETS = 400
 
     // Derives the pre-rebrand base key ("quran…" + "ify_…" form) without
     // hardcoding the legacy literal, so the rename stays grep-clean.
@@ -186,6 +188,7 @@ object UserUsageRepository {
         unaccountedMs = 0L
         lastSavedTimestampMs = currentTimeMs()
         _history.value = emptyList()
+        _dailySeconds.value = emptyMap()
         loadHistory()
         loadStats()
     }
@@ -202,6 +205,14 @@ object UserUsageRepository {
         )
     )
     val stats: StateFlow<UserListeningStats> = _stats.asStateFlow()
+
+    private val _dailySeconds = MutableStateFlow<Map<Long, Long>>(emptyMap())
+    /**
+     * Per-day listening buckets: epochDay (ms/86400000) -> seconds listened.
+     * Local-only accumulation for Today/Week/30d/3mo/Year ranges; capped at
+     * [MAX_DAILY_BUCKETS] newest days, older entries pruned on write.
+     */
+    val dailySeconds: StateFlow<Map<Long, Long>> = _dailySeconds.asStateFlow()
 
     private var lastRecordedTimeMs: Long = 0L
     /** Sub-second leftover: position polls arrive ~4x/sec, so plain ms/1000 truncation would drop everything. */
@@ -256,6 +267,10 @@ object UserUsageRepository {
         val uniqueReciters = getStoredSet(KEY_UNIQUE_RECITERS).ifEmpty { setOf("mishary") }
         val uniqueSurahs = getStoredSet(KEY_UNIQUE_SURAHS).ifEmpty { setOf("18") }
 
+        // Day rollover keeps buckets: only secondsToday/minutesToday resets above.
+        // Buckets accumulate indefinitely (capped) so range queries stay intact.
+        _dailySeconds.value = loadDailySeconds()
+
         _stats.value = UserListeningStats(
             daysStreak = streak,
             minutesToday = (secondsToday / 60L).toInt(),
@@ -278,6 +293,8 @@ object UserUsageRepository {
      *   the local id sets are padded with `restored-*` placeholders up to the
      *   cloud size — never shrunk, so real local uniques are never lost.
      * - Persists everything to disk and refreshes [_stats]. Never throws.
+     * - Per-day buckets ([dailySeconds]) are adopted separately, not here:
+     *   the sync agent merges the cloud `daily_json` series via [restoreDaily].
      */
     fun restoreStats(snapshot: StatsSnapshot) {
         try {
@@ -324,6 +341,38 @@ object UserUsageRepository {
                     .coerceAtLeast(if (snapshot.uniqueSurahsCount > 0) snapshot.uniqueSurahsCount else 1),
                 totalSecondsListened = total
             )
+        } catch (_: Exception) {
+        }
+    }
+
+    /**
+     * Merges a cloud daily-seconds series into the local per-day buckets
+     * (sync restore path for the `listening_stats.daily_json` attribute).
+     *
+     * Per-day `max()`, never sum: there is no per-device tracking, so a day
+     * present on both sides usually counts the SAME listening on each side —
+     * summing would double-count multi-device same-day listening, while `max`
+     * adopts the fuller side. Never shrinks local buckets, prunes to
+     * [MAX_DAILY_BUCKETS] newest days, persists via [saveDailySeconds], and
+     * refreshes [dailySeconds]. Empty input is a no-op. Never throws.
+     */
+    fun restoreDaily(daily: Map<Long, Long>) {
+        if (daily.isEmpty()) return
+        try {
+            val cleaned = daily.filter { it.key >= 0L && it.value > 0L }
+            if (cleaned.isEmpty()) return
+            val merged = _dailySeconds.value.toMutableMap()
+            for ((day, secs) in cleaned) {
+                merged[day] = maxOf(merged[day] ?: 0L, secs)
+            }
+            val pruned = if (merged.size > MAX_DAILY_BUCKETS) {
+                merged.entries.sortedByDescending { it.key }.take(MAX_DAILY_BUCKETS)
+                    .associate { it.key to it.value }
+            } else {
+                merged
+            }
+            _dailySeconds.value = pruned
+            saveDailySeconds(pruned)
         } catch (_: Exception) {
         }
     }
@@ -422,6 +471,20 @@ object UserUsageRepository {
         settings.putLong(k(KEY_SECONDS_TODAY), secondsToday)
         settings.putLong(k(KEY_TOTAL_SECONDS), totalSeconds)
 
+        // Accumulate into today's per-day bucket (local-only; never reset on rollover).
+        val prunedBuckets = _dailySeconds.value.let { current ->
+            current + (today to ((current[today] ?: 0L) + deltaSeconds))
+        }.let { updated ->
+            if (updated.size > MAX_DAILY_BUCKETS) {
+                updated.entries.sortedByDescending { it.key }.take(MAX_DAILY_BUCKETS)
+                    .associate { it.key to it.value }
+            } else {
+                updated
+            }
+        }
+        _dailySeconds.value = prunedBuckets
+        saveDailySeconds(prunedBuckets)
+
         _stats.update { current ->
             current.copy(
                 daysStreak = streak,
@@ -445,6 +508,7 @@ object UserUsageRepository {
             settings.putLong(k(KEY_LAST_DAY), today)
             settings.putInt(k(KEY_STREAK), streak)
             settings.putLong(k(KEY_SECONDS_TODAY), 0L)
+            // Buckets intentionally kept: only minutes_today resets on rollover.
 
             _stats.update { it.copy(daysStreak = streak, minutesToday = 0) }
         }
@@ -575,6 +639,53 @@ object UserUsageRepository {
 
     private fun saveStoredSet(key: String, set: Set<String>) {
         settings.putString(k(key), set.joinToString(","))
+    }
+
+    private fun loadDailySeconds(): Map<Long, Long> {
+        val raw = migratedString(KEY_DAILY_SECONDS, "")
+        if (raw.isBlank()) return emptyMap()
+        try {
+            val parsed = json.decodeFromString<Map<Long, Long>>(raw)
+            if (parsed.isEmpty()) return emptyMap()
+            val cleaned = parsed.filter { it.key >= 0L && it.value > 0L }
+            if (cleaned.isEmpty()) return emptyMap()
+            return if (cleaned.size > MAX_DAILY_BUCKETS) {
+                cleaned.entries.sortedByDescending { it.key }.take(MAX_DAILY_BUCKETS)
+                    .associate { it.key to it.value }
+            } else {
+                cleaned
+            }
+        } catch (_: Exception) {
+            // Tolerate Long-keys-encoded-as-strings variance across JSON impls.
+            try {
+                val fallback = json.decodeFromString<Map<String, Long>>(raw)
+                val cleaned = fallback.mapNotNull { (day, secs) ->
+                    val epochDay = day.toLongOrNull() ?: return@mapNotNull null
+                    if (epochDay < 0L || secs <= 0L) null else epochDay to secs
+                }.toMap()
+                if (cleaned.isEmpty()) return emptyMap()
+                return if (cleaned.size > MAX_DAILY_BUCKETS) {
+                    cleaned.entries.sortedByDescending { it.key }.take(MAX_DAILY_BUCKETS)
+                        .associate { it.key to it.value }
+                } else {
+                    cleaned
+                }
+            } catch (_: Exception) {
+                return emptyMap()
+            }
+        }
+    }
+
+    private fun saveDailySeconds(buckets: Map<Long, Long>) {
+        try {
+            val pruned = if (buckets.size > MAX_DAILY_BUCKETS) {
+                buckets.entries.sortedByDescending { it.key }.take(MAX_DAILY_BUCKETS)
+                    .associate { it.key to it.value }
+            } else {
+                buckets
+            }
+            settings.putString(k(KEY_DAILY_SECONDS), json.encodeToString(pruned))
+        } catch (_: Exception) {}
     }
 
     private fun PersistedHistoryItem.toJumpBackInItem(): JumpBackInItem {
