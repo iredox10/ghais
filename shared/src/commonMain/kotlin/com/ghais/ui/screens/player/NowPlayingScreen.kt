@@ -90,6 +90,7 @@ import com.ghais.data.seed.GhaisAssets
 import com.ghais.domain.model.RepeatMode
 import com.ghais.player.AmbientMixer
 import com.ghais.player.AudioEngine
+import com.ghais.player.PlayerBackHandler
 import com.ghais.player.displayName
 import com.ghais.player.videoKeys
 import com.ghais.ui.components.noir.ChromeFab
@@ -203,6 +204,22 @@ class NowPlayingScreen : Screen {
         var showAmbient by remember { mutableStateOf(false) }
         var showVolume by remember { mutableStateOf(false) }
         var showTafseer by remember { mutableStateOf(false) }
+
+        // System-back routes through the guarded dismissPlayer() (idempotent
+        // via isDismissed) instead of Voyager's raw pop — prevents a
+        // double-pop when the settle tween and a back-press race. Open sheets
+        // consume the press first.
+        PlayerBackHandler(enabled = true) {
+            if (showSleepTimer || showQueue || showAmbient || showVolume || showTafseer) {
+                showSleepTimer = false
+                showQueue = false
+                showAmbient = false
+                showVolume = false
+                showTafseer = false
+            } else {
+                dismissPlayer()
+            }
+        }
 
         // Cinematic idle fade — mirrors Media3's controllerShowTimeoutMs:
         // 10s without interaction melts all chrome except video + transport.
