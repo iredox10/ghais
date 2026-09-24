@@ -854,6 +854,105 @@
           ]
         }
       ]
+    },
+    {
+      "$id": "broadcasts",
+      "name": "Broadcasts & Announcements",
+      "permissions": [
+        "read(\"any\")"
+      ],
+      "attributes": [
+        {
+          "key": "title",
+          "type": "string",
+          "size": 128,
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "body",
+          "type": "string",
+          "size": 2048,
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "audience",
+          "type": "string",
+          "size": 32,
+          "required": false,
+          "default": "all"
+        },
+        {
+          "key": "urgency",
+          "type": "string",
+          "size": 16,
+          "required": false,
+          "default": "Normal"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "$id": "telemetry",
+      "name": "Device Telemetry",
+      "permissions": [
+        "read(\"users\")",
+        "create(\"users\")",
+        "update(\"users\")",
+        "delete(\"users\")"
+      ],
+      "attributes": [
+        {
+          "key": "user_id",
+          "type": "string",
+          "size": 36,
+          "required": false,
+          "default": null
+        },
+        {
+          "key": "device_id",
+          "type": "string",
+          "size": 64,
+          "required": false,
+          "default": null
+        },
+        {
+          "key": "platform",
+          "type": "string",
+          "size": 16,
+          "required": false,
+          "default": null
+        },
+        {
+          "key": "app_version",
+          "type": "string",
+          "size": 32,
+          "required": false,
+          "default": null
+        },
+        {
+          "key": "total_seconds",
+          "type": "integer",
+          "required": false,
+          "default": null
+        },
+        {
+          "key": "updated_at",
+          "type": "integer",
+          "required": false,
+          "default": null
+        }
+      ],
+      "indexes": [
+        {
+          "key": "user_idx",
+          "type": "key",
+          "attributes": [
+            "user_id"
+          ]
+        }
+      ]
     }
   ],
   "buckets": [
