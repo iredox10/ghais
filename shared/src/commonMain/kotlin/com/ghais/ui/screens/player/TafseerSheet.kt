@@ -34,6 +34,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -50,14 +51,17 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.repository.QuranTafseerRepository
 import com.ghais.data.seed.QuranData
 import com.ghais.data.share.ShareSheet
@@ -402,27 +406,49 @@ fun TafseerSheet(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        Text(
-                            text = entry.arabicText,
-                            fontFamily = GhaisTypography.quranFont,
-                            color = GhaisNoir.TextPrimary,
-                            fontSize = 24.sp,
-                            lineHeight = 48.sp,
-                            textAlign = TextAlign.Right,
-                            fontWeight = FontWeight.Normal,
-                            modifier = Modifier.weight(1f).padding(vertical = 2.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        AyahEndMark(
-                            number = entry.ayahNo,
-                            ornamentSize = 24.sp,
-                            digitSize = 11.sp,
-                            tint = GhaisNoir.TextPrimary
-                        )
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            // Centered Basmalah above verse-1 quotes (every surah
+                            // except 1 — where verse 1 IS the Basmalah — and 9).
+                            if (entry.ayahNo == 1 &&
+                                QuranAyahRepository.hasBasmalahHeader(entry.surahId)
+                            ) {
+                                Text(
+                                    text = QuranAyahRepository.BASMALAH,
+                                    fontFamily = GhaisTypography.quranFont,
+                                    color = GhaisNoir.TextSecondary,
+                                    fontSize = 20.sp,
+                                    lineHeight = 40.sp,
+                                    textAlign = TextAlign.Center,
+                                    fontWeight = FontWeight.Normal,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 8.dp)
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                Text(
+                                    text = entry.arabicText,
+                                    fontFamily = GhaisTypography.quranFont,
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 24.sp,
+                                    lineHeight = 48.sp,
+                                    textAlign = TextAlign.Right,
+                                    fontWeight = FontWeight.Normal,
+                                    modifier = Modifier.weight(1f).padding(vertical = 2.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                AyahEndMark(
+                                    number = entry.ayahNo,
+                                    ornamentSize = 24.sp,
+                                    digitSize = 11.sp,
+                                    tint = GhaisNoir.TextPrimary
+                                )
+                            }
+                        }
                     }
                 }
             }
