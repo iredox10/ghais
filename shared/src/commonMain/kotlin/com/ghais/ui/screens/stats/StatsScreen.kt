@@ -50,6 +50,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
+import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.seed.JumpBackInItem
 import com.ghais.data.repository.resolveFollowedQari
@@ -100,13 +101,22 @@ object StatsScreen : Screen {
             else resolveFollowedQari(topQari.key)?.reciter?.nameEn ?: topQari.key
         }
 
-        val topSurahs = remember(history) {
-            history.filter { it.title.isNotBlank() }
-                .groupingBy { it.title }
-                .eachCount()
-                .entries
+        val surahPlays by UserUsageRepository.surahPlays.collectAsState()
+        // All-time per-surah play counts (see UserUsageRepository.surahPlays
+        // completion-or-30s rule). NOT range-filtered — the label below says
+        // "Most played • all time" honestly instead of pretending per-range.
+        val topSurahs = remember(surahPlays) {
+            surahPlays.entries
                 .sortedByDescending { it.value }
-                .take(3)
+                .take(5)
+                .mapNotNull { (surahId, plays) ->
+                    val surah = QuranDataRepository.getSurahById(surahId)
+                        ?: return@mapNotNull null
+                    val name = surah.nameEn.ifBlank {
+                        surah.transliteration.ifBlank { "Surah $surahId" }
+                    }
+                    Triple(surahId, name, plays)
+                }
         }
 
         val weekMinutes = remember(history) {
@@ -529,6 +539,11 @@ object StatsScreen : Screen {
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
+                            Text(
+                                text = "Most played • all time",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 12.sp
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
                             if (topSurahs.isEmpty()) {
                                 Text(
@@ -552,7 +567,7 @@ object StatsScreen : Screen {
                                             modifier = Modifier.width(20.dp)
                                         )
                                         Text(
-                                            text = entry.key,
+                                            text = entry.second,
                                             color = GhaisNoir.TextPrimary,
                                             fontSize = 15.sp,
                                             fontWeight = FontWeight.SemiBold,
@@ -561,7 +576,7 @@ object StatsScreen : Screen {
                                             overflow = TextOverflow.Ellipsis
                                         )
                                         Text(
-                                            text = "${entry.value} plays",
+                                            text = "${entry.third} plays",
                                             color = GhaisNoir.TextTertiary,
                                             fontSize = 12.sp
                                         )

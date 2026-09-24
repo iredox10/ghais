@@ -77,6 +77,7 @@ object UserUsageRepository {
     private const val KEY_UNIQUE_RECITERS = "ghais_stats_unique_reciters"
     private const val KEY_UNIQUE_SURAHS = "ghais_stats_unique_surahs"
     private const val KEY_DAILY_SECONDS = "ghais_stats_daily_seconds"
+    private const val KEY_SURAH_PLAYS = "ghais_stats_surah_plays"
     private const val KEY_DEVICE_ID = "ghais_device_id"
     private const val MAX_DAILY_BUCKETS = 400
 
@@ -231,9 +232,13 @@ object UserUsageRepository {
         lastRecordedTimeMs = 0L
         unaccountedMs = 0L
         lastSavedTimestampMs = currentTimeMs()
+        playCountTrackKey = null
+        playCountCounted = false
+        playCountLastPosMs = 0L
         _history.value = emptyList()
         _dailySeconds.value = emptyMap()
         _remoteDailySeconds.value = emptyMap()
+        _surahPlays.value = emptyMap()
         loadHistory()
         loadStats()
     }
@@ -269,6 +274,29 @@ object UserUsageRepository {
      */
     val remoteDailySeconds: StateFlow<Map<Long, Long>> = _remoteDailySeconds.asStateFlow()
 
+    private val _surahPlays = MutableStateFlow<Map<Int, Long>>(emptyMap())
+    /**
+     * Per-surah play counts: surahId (1..114) -> qualifying plays, all-time.
+     *
+     * Counting rule ("completion-or-30s"): a surah earns ONE play the first
+     * time in a listen session where, while [AudioEngine.isPlaying] is true,
+     * either (a) observed position >= 30_000ms, or (b) progress >= 0.95
+     * (covers short surahs under 30s). NOT counted on track start alone, so
+     * skips under 30s don't inflate the chart.
+     *
+     * Ayah-mode tracks (per-ayah EveryAyah audio) count only when the FINAL
+     * ayah of the surah qualifies — otherwise each ayah completion would
+     * inflate the surah count by ~ayahsCount. Partial-surah listens in
+     * ayah mode (never reaching the last ayah) don't count yet.
+     *
+     * Session tracking: keyed by `surahId::reciterSlug`; a position rewind
+     * >10s resets the counted flag so genuine replays/loops count again,
+     * while small seeks don't double-count. Seeks straight to the end DO
+     * count (known limitation — no seek signal is exposed). Owner-namespaced
+     * + persisted; intentionally all-time (no per-range filtering).
+     */
+    val surahPlays: StateFlow<Map<Int, Long>> = _surahPlays.asStateFlow()
+
     /**
      * Replaces the in-memory [remoteDailySeconds] map (sync pull path only).
      * Sanitizes (drops negative days / non-positive seconds), never persists,
@@ -289,6 +317,10 @@ object UserUsageRepository {
     /** Sub-second leftover: position polls arrive ~4x/sec, so plain ms/1000 truncation would drop everything. */
     private var unaccountedMs: Long = 0L
     private var lastSavedTimestampMs: Long = 0L
+    // Play-count session tracking (see [surahPlays] for the rule).
+    private var playCountTrackKey: String? = null
+    private var playCountCounted: Boolean = false
+    private var playCountLastPosMs: Long = 0L
 
     init {
         loadHistory()
@@ -341,6 +373,7 @@ object UserUsageRepository {
         // Day rollover keeps buckets: only secondsToday/minutesToday resets above.
         // Buckets accumulate indefinitely (capped) so range queries stay intact.
         _dailySeconds.value = loadDailySeconds()
+        _surahPlays.value = loadSurahPlays()
 
         _stats.value = UserListeningStats(
             daysStreak = streak,
@@ -470,6 +503,7 @@ object UserUsageRepository {
                 recordProgress(track, pos, duration)
 
                 if (AudioEngine.isPlaying.value) {
+                    maybeCountSurahPlay(track, pos, duration)
                     val now = currentTimeMs()
                     val deltaMs = if (lastRecordedTimeMs > 0L) (now - lastRecordedTimeMs).coerceIn(0L, 5000L) else 0L
                     lastRecordedTimeMs = now
@@ -613,6 +647,86 @@ object UserUsageRepository {
                 )
             }
         }
+    }
+
+    /**
+     * Completion-or-30s gate for [surahPlays] (call only while isPlaying).
+     *
+     * Session handling: `surahId::reciterSlug` key change starts a new
+     * session (counted=false); a rewind >10s also resets, so genuine
+     * replays/queue loops can count again while small seeks can't
+     * double-count. Ayah-mode tracks are eligible only on the surah's final
+     * ayah (else each ayah would inflate the surah count). Never throws.
+     */
+    private fun maybeCountSurahPlay(track: TrackItem, positionMs: Long, durationMs: Long) {
+        try {
+            val surahId = track.surahId
+            if (surahId <= 0 || positionMs < 0L) return
+            val key = "${surahId}::${track.reciterSlug}"
+            if (key != playCountTrackKey) {
+                playCountTrackKey = key
+                playCountCounted = false
+                playCountLastPosMs = positionMs
+            } else if (positionMs < playCountLastPosMs - 10_000L) {
+                // Rewind/restart/replay (incl. SURAH-repeat loops): new session.
+                playCountCounted = false
+            }
+            playCountLastPosMs = positionMs
+            if (playCountCounted) return
+
+            // Ayah-mode guard: only the final ayah can close out a surah play.
+            if (track.ayahNo > 0) {
+                val totalAyahs = QuranDataRepository.getSurahById(surahId)?.ayahsCount
+                    ?: return
+                if (track.ayahNo < totalAyahs) return
+            }
+
+            val progress = if (durationMs > 0L) {
+                (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+            if (positionMs >= 30_000L || progress >= 0.95f) {
+                playCountCounted = true
+                recordSurahPlay(surahId)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun recordSurahPlay(surahId: Int) {
+        try {
+            val updated = _surahPlays.value.toMutableMap()
+            updated[surahId] = (updated[surahId] ?: 0L) + 1L
+            _surahPlays.value = updated
+            saveSurahPlays(updated)
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun loadSurahPlays(): Map<Int, Long> {
+        val raw = migratedString(KEY_SURAH_PLAYS, "")
+        if (raw.isBlank()) return emptyMap()
+        try {
+            val parsed = json.decodeFromString<Map<Int, Long>>(raw)
+            return parsed.filter { it.key in 1..114 && it.value > 0L }
+        } catch (_: Exception) {
+            try {
+                val fallback = json.decodeFromString<Map<String, Long>>(raw)
+                return fallback.mapNotNull { (id, plays) ->
+                    val surahId = id.toIntOrNull() ?: return@mapNotNull null
+                    if (surahId !in 1..114 || plays <= 0L) null else surahId to plays
+                }.toMap()
+            } catch (_: Exception) {
+                return emptyMap()
+            }
+        }
+    }
+
+    private fun saveSurahPlays(plays: Map<Int, Long>) {
+        try {
+            settings.putString(k(KEY_SURAH_PLAYS), json.encodeToString(plays))
+        } catch (_: Exception) {}
     }
 
     private fun formatRemainingTime(positionMs: Long, durationMs: Long): String {
