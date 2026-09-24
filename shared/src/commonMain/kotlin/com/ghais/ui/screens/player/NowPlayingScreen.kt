@@ -14,10 +14,11 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitVerticalTouchSlopOrCancellation
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -28,7 +29,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -64,15 +64,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
@@ -80,7 +81,6 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ghais.ui.navigation.LocalRootNavigator
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.QuranAyahRepository
@@ -120,10 +120,17 @@ class NowPlayingScreen : Screen {
         val rootNavigator = LocalRootNavigator.current ?: LocalNavigator.current
         val coroutineScope = rememberCoroutineScope()
         val density = LocalDensity.current
-        val dismissThresholdPx = with(density) { 120.dp.toPx() }
+        // Responsive dismiss: ~100dp travel, or a >500px/s downward fling
+        // (with a small 24dp min-travel guard against tap jitter).
+        val dismissThresholdPx = with(density) { 100.dp.toPx() }
+        val flingVelocityThresholdPxPerSec = 500f
+        val minTravelForFlingPx = with(density) { 24.dp.toPx() }
 
         var dragOffsetY by remember { mutableStateOf(0f) }
         var isDismissed by remember { mutableStateOf(false) }
+        var isDismissing by remember { mutableStateOf(false) }
+        var isDragging by remember { mutableStateOf(false) }
+        var screenHeightPx by remember { mutableStateOf(0f) }
         var settleJob by remember { mutableStateOf<Job?>(null) }
         var lastDragTime by remember { mutableStateOf(0L) }
         var dragVelocityY by remember { mutableStateOf(0f) }
@@ -227,7 +234,16 @@ class NowPlayingScreen : Screen {
 
         NoirScreenRoot(
             modifier = Modifier
-                .offset { IntOffset(0, dragOffsetY.roundToInt()) }
+                .onSizeChanged { screenHeightPx = it.height.toFloat() }
+                .graphicsLayer {
+                    translationY = dragOffsetY
+                    // Fade content as it slides away — delightful exit cue.
+                    alpha = if (screenHeightPx > 0f) {
+                        (1f - (dragOffsetY / screenHeightPx).coerceIn(0f, 1f) * 0.9f).coerceIn(0.1f, 1f)
+                    } else {
+                        1f
+                    }
+                }
                 .pointerInput(controlsVisible, uiBusy) {
                     detectTapGestures(
                         onTap = { poke() },
@@ -235,36 +251,72 @@ class NowPlayingScreen : Screen {
                     )
                 }
                 .pointerInput(Unit) {
-                    detectVerticalDragGestures(
-                        onDragStart = {
-                            settleJob?.cancel()
-                            dragVelocityY = 0f
-                            lastDragTime = 0L
-                            poke()
-                        },
-                        onDragEnd = {
-                            val shouldDismiss = dragOffsetY >= dismissThresholdPx ||
-                                (dragVelocityY > 700f && dragOffsetY > with(density) { 20.dp.toPx() })
-                            if (shouldDismiss) {
-                                dismissPlayer()
-                            } else {
-                                settleJob = coroutineScope.launch {
-                                    animate(
-                                        initialValue = dragOffsetY,
-                                        targetValue = 0f,
-                                        animationSpec = spring(
-                                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                                            stiffness = Spring.StiffnessLow
-                                        )
-                                    ) { value, _ ->
-                                        dragOffsetY = value
-                                    }
-                                }
+                    awaitEachGesture {
+                        // requireUnconsumed=false so the drag can start anywhere —
+                        // over video, cards, buttons — before children consume.
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        lastDragTime = 0L
+                        dragVelocityY = 0f
+                        // Wait for vertical touch-slop only: horizontal scrubs
+                        // (progress bar) stay unconsumed so the child keeps them,
+                        // vertical swipes are claimed here first.
+                        val slopChange = awaitVerticalTouchSlopOrCancellation(
+                            pointerId = down.id
+                        ) { change, _ ->
+                            change.consume()
+                        }
+                        if (slopChange == null) return@awaitEachGesture
+                        // Vertical drag won — claim it.
+                        settleJob?.cancel()
+                        isDragging = true
+                        poke()
+                        var pointerId = slopChange.id
+                        var lastY = slopChange.position.y
+                        dragOffsetY = (dragOffsetY + (slopChange.position.y - down.position.y))
+                            .coerceAtLeast(0f)
+                        lastDragTime = slopChange.uptimeMillis
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == pointerId } ?: break
+                            if (change.changedToUp()) {
+                                change.consume()
+                                break
                             }
-                            dragVelocityY = 0f
-                            lastDragTime = 0L
-                        },
-                        onDragCancel = {
+                            // If a child consumed (e.g. nested scroll), yield.
+                            if (change.isConsumed) break
+                            val dy = change.position.y - lastY
+                            lastY = change.position.y
+                            val now = change.uptimeMillis
+                            if (lastDragTime > 0L && dy != 0f) {
+                                val dt = (now - lastDragTime).coerceAtLeast(1L)
+                                val instantVelocity = (dy / dt.toFloat()) * 1000f
+                                dragVelocityY = 0.7f * dragVelocityY + 0.3f * instantVelocity
+                            }
+                            lastDragTime = now
+                            // Downward only — upward rubber-bands back to 0.
+                            if (dy != 0f) {
+                                dragOffsetY = (dragOffsetY + dy).coerceAtLeast(0f)
+                                change.consume()
+                            }
+                        }
+                        isDragging = false
+                        val shouldDismiss = dragOffsetY >= dismissThresholdPx ||
+                            (dragVelocityY > flingVelocityThresholdPxPerSec &&
+                                dragOffsetY > minTravelForFlingPx)
+                        if (shouldDismiss && !isDismissing) {
+                            isDismissing = true
+                            settleJob = coroutineScope.launch {
+                                val target = if (screenHeightPx > 0f) screenHeightPx else dragOffsetY + 1200f
+                                animate(
+                                    initialValue = dragOffsetY,
+                                    targetValue = target,
+                                    animationSpec = tween(durationMillis = 280)
+                                ) { value, _ ->
+                                    dragOffsetY = value
+                                }
+                                dismissPlayer()
+                            }
+                        } else if (!isDismissing) {
                             settleJob = coroutineScope.launch {
                                 animate(
                                     initialValue = dragOffsetY,
@@ -277,24 +329,10 @@ class NowPlayingScreen : Screen {
                                     dragOffsetY = value
                                 }
                             }
-                            dragVelocityY = 0f
-                            lastDragTime = 0L
-                        },
-                        onVerticalDrag = { change, dragAmount ->
-                            val now = change.uptimeMillis
-                            if (lastDragTime > 0L) {
-                                val dt = (now - lastDragTime).coerceAtLeast(1L)
-                                val instantVelocity = (dragAmount / dt.toFloat()) * 1000f
-                                dragVelocityY = 0.7f * dragVelocityY + 0.3f * instantVelocity
-                            }
-                            lastDragTime = now
-
-                            dragOffsetY = (dragOffsetY + dragAmount).coerceAtLeast(0f)
-                            if (dragOffsetY > dismissThresholdPx) {
-                                dismissPlayer()
-                            }
                         }
-                    )
+                        dragVelocityY = 0f
+                        lastDragTime = 0L
+                    }
                 }
         ) {
             // Ambient video is the hero — only a light veil + bottom grade
@@ -332,11 +370,24 @@ class NowPlayingScreen : Screen {
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Top pill bar handle — melts away with the idle fade.
+                // Grows + highlights while dragging for tactile feedback.
                 AnimatedVisibility(
                     visible = controlsVisible,
                     enter = fadeIn(tween(350)) + slideInVertically(tween(350)) { -it },
                     exit = fadeOut(tween(350)) + slideOutVertically(tween(350)) { -it }
                 ) {
+                    val handleWidth by animateDpAsState(
+                        targetValue = if (isDragging) 72.dp else 48.dp,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        ),
+                        label = "handleWidth"
+                    )
+                    val handleHeight by animateDpAsState(
+                        targetValue = if (isDragging) 6.dp else 5.dp,
+                        label = "handleHeight"
+                    )
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -352,10 +403,13 @@ class NowPlayingScreen : Screen {
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .width(48.dp)
-                                    .height(5.dp)
+                                    .width(handleWidth)
+                                    .height(handleHeight)
                                     .clip(RoundedCornerShape(50))
-                                    .background(GhaisNoir.TextDisabled)
+                                    .background(
+                                        if (isDragging) GhaisNoir.TextPrimary
+                                        else GhaisNoir.TextDisabled
+                                    )
                             )
                         }
                     }
