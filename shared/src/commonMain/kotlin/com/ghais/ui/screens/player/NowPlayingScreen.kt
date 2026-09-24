@@ -515,9 +515,11 @@ class NowPlayingScreen : Screen {
                         nameEn = reciterName,
                         size = 46.dp,
                         shape = CircleShape,
-                        monogramSize = 20.sp,
-                        ring = isPlaying,
-                        slug = track?.reciterSlug
+                         monogramSize = 20.sp,
+                         ring = isPlaying,
+                         slug = track?.reciterSlug,
+                         grayscale = false,
+                         scrimAlpha = 0f
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {

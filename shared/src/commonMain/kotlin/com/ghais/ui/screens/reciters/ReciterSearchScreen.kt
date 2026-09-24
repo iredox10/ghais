@@ -403,7 +403,9 @@ private fun RecentReciterRow(
             size = 48.dp,
             shape = CircleShape,
             monogramSize = 18.sp,
-            slug = reciter.slug
+            slug = reciter.slug,
+            grayscale = false,
+            scrimAlpha = 0f
         )
         Column(
             modifier = Modifier
@@ -488,7 +490,9 @@ private fun ResultReciterRow(
             size = 48.dp,
             shape = CircleShape,
             monogramSize = 18.sp,
-            slug = reciter.slug
+            slug = reciter.slug,
+            grayscale = false,
+            scrimAlpha = 0f
         )
         Column(
             modifier = Modifier
