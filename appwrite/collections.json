@@ -356,13 +356,13 @@
           "key": "ayah_from",
           "type": "integer",
           "required": false,
-          "default": 1
+          "default": 0
         },
         {
           "key": "ayah_to",
           "type": "integer",
           "required": false,
-          "default": 1
+          "default": 0
         }
       ],
       "indexes": [
@@ -624,6 +624,13 @@
           "key": "updated_at",
           "type": "integer",
           "required": false
+        },
+        {
+          "key": "daily_json",
+          "type": "string",
+          "size": 4096,
+          "required": false,
+          "default": null
         }
       ],
       "indexes": [
@@ -702,6 +709,16 @@
           "key": "track_json",
           "type": "string",
           "size": 16384,
+          "required": false
+        },
+        {
+          "key": "played_at_ms",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "key": "position_ms",
+          "type": "integer",
           "required": false
         },
         {
