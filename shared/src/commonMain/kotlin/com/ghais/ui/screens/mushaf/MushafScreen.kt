@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
@@ -42,7 +43,9 @@ import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
+import com.ghais.ui.util.AYAH_ROSETTE_ID
 import com.ghais.ui.util.AyahEndMark
+import com.ghais.ui.util.ayahRosetteContent
 import com.ghais.ui.util.toArabicDigits
 import kotlin.math.PI
 import kotlin.math.cos
@@ -903,9 +906,11 @@ private fun AyahBlock(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Uthmani text — 100% white, all Normal (single Regular file).
+            // Rosette is inline content (Canvas ring + centered digits), never
+            // a " ۝" string: the quran font renders the bare ornament detached
+            // from its digits.
             val arabicAnnotated = buildAnnotatedString {
                 val base = GhaisNoir.TextPrimary
-                val ayahRosette = " ۝${toArabicDigits(ayah.ayahNumber)} "
 
                 if (isTajweed && ayah.tajweedPart != null) {
                     if (ayah.tajweedPrefix) {
@@ -932,19 +937,17 @@ private fun AyahBlock(
                     }
                 }
 
-                withStyle(
-                    SpanStyle(
-                        color = GhaisNoir.TextPrimary,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = (arabicFontSize * 0.75f).sp
-                    )
-                ) {
-                    append(ayahRosette)
-                }
+                append(" ")
+                appendInlineContent(AYAH_ROSETTE_ID, toArabicDigits(ayah.ayahNumber))
+                append(" ")
             }
 
             Text(
                 text = arabicAnnotated,
+                inlineContent = ayahRosetteContent(
+                    ornamentSize = (arabicFontSize * 0.75f).sp,
+                    digitSize = (arabicFontSize * 0.38f).sp
+                ),
                 fontSize = arabicFontSize.sp,
                 fontWeight = FontWeight.Normal,
                 fontFamily = GhaisTypography.quranFont,
@@ -1173,6 +1176,9 @@ private fun MushafPageViewCard(
             Spacer(modifier = Modifier.height(14.dp))
 
             // Continuous uthmani — all Normal (single Regular file; no synthetic bold).
+            // Rosette is inline content (Canvas ring + centered digits), never
+            // a " ۝" string: the quran font renders the bare ornament detached
+            // from its digits.
             val pageText = buildAnnotatedString {
                 ayahs.forEach { ayah ->
                     val isSelected = ayah.ayahNumber == activeAyah
@@ -1203,19 +1209,18 @@ private fun MushafPageViewCard(
                         }
                     }
 
-                    withStyle(
-                        SpanStyle(
-                            color = GhaisNoir.TextPrimary,
-                            fontWeight = FontWeight.Normal
-                        )
-                    ) {
-                        append(" ۝${toArabicDigits(ayah.ayahNumber)} ")
-                    }
+                    append(" ")
+                    appendInlineContent(AYAH_ROSETTE_ID, toArabicDigits(ayah.ayahNumber))
+                    append(" ")
                 }
             }
 
             Text(
                 text = pageText,
+                inlineContent = ayahRosetteContent(
+                    ornamentSize = ((arabicFontSize - 2) * 0.75f).sp,
+                    digitSize = ((arabicFontSize - 2) * 0.38f).sp
+                ),
                 fontSize = (arabicFontSize - 2).sp,
                 fontFamily = GhaisTypography.quranFont,
                 lineHeight = ((arabicFontSize - 2) * 2.1f).sp,

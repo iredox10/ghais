@@ -148,8 +148,11 @@ class NowPlayingScreen : Screen {
         val isAyahMode by AudioEngine.isAyahMode.collectAsState()
         val queue by AudioEngine.queue.collectAsState()
         val currentIndex by AudioEngine.currentIndex.collectAsState()
-        val currentVerse = remember(currentTrack) { currentTrack?.let { QuranAyahRepository.getAyahImmediate(it.surahId, it.ayahNo.coerceAtLeast(1)) } }
-        val upcomingVerse = remember(currentTrack, queue, currentIndex) {
+        // Verse text resolves through the repository cache: placeholders swap
+        // to real text when the fetch lands (cacheGen), not on track change.
+        val cacheGen by QuranAyahRepository.cacheGen.collectAsState()
+        val currentVerse = remember(currentTrack, cacheGen) { currentTrack?.let { QuranAyahRepository.getAyahImmediate(it.surahId, it.ayahNo.coerceAtLeast(1)) } }
+        val upcomingVerse = remember(currentTrack, queue, currentIndex, cacheGen) {
             val track = currentTrack ?: return@remember null
             val totalAyahs = QuranDataRepository.getSurahById(track.surahId)?.ayahsCount ?: 7
             val currentAyah = track.ayahNo.coerceAtLeast(1)
@@ -214,14 +217,25 @@ class NowPlayingScreen : Screen {
         val reciterName = track?.reciterName ?: "Mishary Rashid Alafasy"
         val isFav = track?.let { t -> favorites.any { it.audioUrl == t.audioUrl } } == true
 
-        val canSkipNext = remember(queue, currentIndex, repeatMode, track) {
+        val canSkipNext = remember(queue, currentIndex, repeatMode, track, isAyahMode) {
             if (track == null || queue.isEmpty()) false
+            // Ayah mode steps verse-by-verse: enabled while a next ayah (or a
+            // next surah to cross into) exists — the surah queue alone can't tell.
+            else if (isAyahMode) {
+                val totalAyahs = QuranDataRepository.getSurahById(track.surahId)?.ayahsCount ?: 0
+                val ayahNo = track.ayahNo.coerceAtLeast(1)
+                repeatMode != com.ghais.domain.model.RepeatMode.OFF ||
+                    ayahNo < totalAyahs || currentIndex < queue.size - 1
+            }
             else if (repeatMode != com.ghais.domain.model.RepeatMode.OFF) true
             else currentIndex < queue.size - 1
         }
 
-        val canSkipPrevious = remember(queue, currentIndex, repeatMode, track, currentPositionMs) {
+        val canSkipPrevious = remember(queue, currentIndex, repeatMode, track, currentPositionMs, isAyahMode) {
             if (track == null) false
+            // Ayah mode: prev restarts the verse (or steps back), so it is
+            // always meaningful while a track is loaded.
+            else if (isAyahMode) true
             else if (currentPositionMs > 3_000L) true
             else if (queue.isEmpty()) false
             else if (repeatMode != com.ghais.domain.model.RepeatMode.OFF) true
@@ -566,9 +580,9 @@ class NowPlayingScreen : Screen {
                 ) {
                     NoirTransportWell(
                         icon = Icons.Filled.FastRewind,
-                        contentDescription = "Previous",
+                        contentDescription = if (isAyahMode) "Previous Ayah" else "Previous",
                         enabled = canSkipPrevious,
-                        onClick = { poke(); AudioEngine.skipPrevious() },
+                        onClick = { poke(); AudioEngine.previous() },
                         iconSize = 26.dp
                     )
                     Spacer(modifier = Modifier.width(20.dp))
@@ -581,9 +595,9 @@ class NowPlayingScreen : Screen {
                     Spacer(modifier = Modifier.width(20.dp))
                     NoirTransportWell(
                         icon = Icons.Filled.FastForward,
-                        contentDescription = "Next",
+                        contentDescription = if (isAyahMode) "Next Ayah" else "Next",
                         enabled = canSkipNext,
-                        onClick = { poke(); AudioEngine.skipNext() },
+                        onClick = { poke(); AudioEngine.next() },
                         iconSize = 26.dp
                     )
                 }

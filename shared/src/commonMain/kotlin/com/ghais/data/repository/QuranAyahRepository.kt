@@ -115,6 +115,19 @@ object QuranAyahRepository {
     private val _loadingSurahs = MutableStateFlow<Set<Int>>(emptySet())
     val loadingSurahs: StateFlow<Set<Int>> = _loadingSurahs.asStateFlow()
 
+    /**
+     * Bumped on every cache write (network fetch, bundled seed adoption,
+     * generated fallback, disk restore). UI collects this and re-reads
+     * [getAyahImmediate] so a placeholder swaps to real text the moment the
+     * fetch lands instead of sticking until the track changes.
+     */
+    private val _cacheGen = MutableStateFlow(0)
+    val cacheGen: StateFlow<Int> = _cacheGen.asStateFlow()
+
+    private fun bumpCacheGen() {
+        _cacheGen.value = _cacheGen.value + 1
+    }
+
     // Disk-backed text cache so a surah downloaded for hifz stays readable
     // offline across restarts. multiplatform-settings holds one JSON blob per
     // surah plus an index of which surahs were persisted; the in-memory cache
@@ -141,16 +154,21 @@ object QuranAyahRepository {
         try {
             val rawIndex = settings.getStringOrNull(textIndexKey()) ?: return
             val ids = rawIndex.split(",").mapNotNull { it.trim().toIntOrNull() }
+            var restored = false
             for (surahId in ids) {
                 try {
                     val raw = settings.getStringOrNull(textKey(surahId)) ?: continue
                     val verses = json.decodeFromString<List<AyahVerse>>(raw)
-                    if (verses.isNotEmpty()) cache[surahId] = verses
+                    if (verses.isNotEmpty()) {
+                        cache[surahId] = verses
+                        restored = true
+                    }
                 } catch (_: Exception) {
                     // Corrupt entry: drop it from the index, keep going.
                     persistTextIndex(ids - surahId)
                 }
             }
+            if (restored) bumpCacheGen()
         } catch (_: Exception) {
             // Text cache is best-effort; network fetch remains the fallback.
         }
@@ -235,6 +253,7 @@ object QuranAyahRepository {
                 mutex.withLock {
                     cache[surahId] = fetched
                 }
+                bumpCacheGen()
                 return fetched
             }
         } catch (_: Exception) {
@@ -246,6 +265,7 @@ object QuranAyahRepository {
         // Check bundled seed
         BUNDLED_SEEDS[surahId]?.let {
             mutex.withLock { cache[surahId] = it }
+            bumpCacheGen()
             return it
         }
 
@@ -267,6 +287,7 @@ object QuranAyahRepository {
         mutex.withLock {
             cache[surahId] = generated
         }
+        bumpCacheGen()
         return generated
     }
 
