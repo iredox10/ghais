@@ -284,6 +284,22 @@ actual object QuranDownloads {
         enqueueDownload(ctx, canonicalAyahKey(slug, surahId, ayahNo), url, fileFor(ctx, slug, surahId, ayahNo))
     }
 
+    actual fun downloadSurahBundle(slug: String, surahId: Int, surahUrl: String, ayahUrls: Map<Int, String>) {
+        val ctx = contextOrNull() ?: return
+        enqueueDownload(ctx, canonicalKey(slug, surahId), surahUrl, fileFor(ctx, slug, surahId))
+        ayahUrls.toSortedMap().forEach { (ayahNo, url) ->
+            enqueueDownload(ctx, canonicalAyahKey(slug, surahId, ayahNo), url, fileFor(ctx, slug, surahId, ayahNo))
+        }
+    }
+
+    actual fun deleteSurahBundle(slug: String, surahId: Int, ayahCount: Int) {
+        val ctx = contextOrNull()
+        deleteKey(canonicalKey(slug, surahId), ctx?.let { fileFor(it, slug, surahId) })
+        for (ayahNo in 1..ayahCount) {
+            deleteKey(canonicalAyahKey(slug, surahId, ayahNo), ctx?.let { fileFor(it, slug, surahId, ayahNo) })
+        }
+    }
+
     // Shared download machinery for surah + ayah keys: engine-level
     // idempotency (already-downloaded / in-flight no-ops), progress/failed
     // flow updates, .part temp file + atomic rename, persisted index update.

@@ -24,6 +24,18 @@ import kotlinx.coroutines.flow.StateFlow
 object DownloadKeys {
     fun key(slug: String, surahId: Int): String = "$slug/$surahId"
     fun ayahKey(slug: String, surahId: Int, ayahNo: Int): String = "$slug/$surahId/$ayahNo"
+
+    /**
+     * Every key in a full offline bundle: the surah file plus one per ayah.
+     * Hifz rows treat the bundle (not the lone surah key) as the unit of
+     * "downloaded" so offline ayah-mode has both audio and (via the
+     * prefetched text cache) readable verses.
+     */
+    fun bundleKeys(slug: String, surahId: Int, ayahCount: Int): List<String> =
+        buildList {
+            add(key(slug, surahId))
+            for (ayahNo in 1..ayahCount) add(ayahKey(slug, surahId, ayahNo))
+        }
 }
 
 expect object QuranDownloads {
@@ -53,6 +65,16 @@ expect object QuranDownloads {
     fun deleteAyah(slug: String, surahId: Int, ayahNo: Int)
     /** Local playback URI (file://...) for a single ayah, or null when not downloaded. */
     fun localAyahUri(slug: String, surahId: Int, ayahNo: Int): String?
+    /**
+     * Full offline bundle for hifz: the surah file plus every per-ayah clip.
+     * Each key stays independently idempotent (already-downloaded / in-flight
+     * keys are skipped), so re-tapping a partial bundle only fetches what's
+     * missing. Pair with `QuranAyahRepository.prefetchSurah` so verse text is
+     * readable offline too.
+     */
+    fun downloadSurahBundle(slug: String, surahId: Int, surahUrl: String, ayahUrls: Map<Int, String>)
+    /** Removes the surah file plus all per-ayah clips for `1..ayahCount`. */
+    fun deleteSurahBundle(slug: String, surahId: Int, ayahCount: Int)
     suspend fun storageBytes(): Long
     suspend fun clearAll()
 }

@@ -139,6 +139,20 @@ actual object QuranDownloads {
         startDownload(DownloadKeys.ayahKey(slug, surahId, ayahNo), url, fileFor(slug, surahId, ayahNo))
     }
 
+    actual fun downloadSurahBundle(slug: String, surahId: Int, surahUrl: String, ayahUrls: Map<Int, String>) {
+        startDownload(DownloadKeys.key(slug, surahId), surahUrl, fileFor(slug, surahId))
+        ayahUrls.toSortedMap().forEach { (ayahNo, url) ->
+            startDownload(DownloadKeys.ayahKey(slug, surahId, ayahNo), url, fileFor(slug, surahId, ayahNo))
+        }
+    }
+
+    actual fun deleteSurahBundle(slug: String, surahId: Int, ayahCount: Int) {
+        deleteKey(DownloadKeys.key(slug, surahId), fileFor(slug, surahId))
+        for (ayahNo in 1..ayahCount) {
+            deleteKey(DownloadKeys.ayahKey(slug, surahId, ayahNo), fileFor(slug, surahId, ayahNo))
+        }
+    }
+
     // Shared NSURLSession machinery for surah + ayah keys (indeterminate -1f
     // progress, persisted index update on success).
     private fun startDownload(key: String, url: String, path: String) {

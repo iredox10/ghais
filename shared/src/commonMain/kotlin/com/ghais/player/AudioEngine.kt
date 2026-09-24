@@ -342,10 +342,16 @@ object AudioEngine {
         PlayerBridge.setPlaybackMetadata(trackDisplayTitle(loadTrack), loadTrack.reciterName)
         // Same offline-first resolution as startPlayback: a download completing
         // mid-preload does not swap the stream — offline applies next load.
-        // Ayah tracks resolve the same way so hifz playback works offline when
-        // the surah file is downloaded.
-        val playbackUri =
+        // Ayah tracks prefer their own clip so hifz repetition plays the verse,
+        // not the whole surah; the surah file stays the fallback.
+        val isAyahTrack = loadTrack.ayahNo > 0 && !loadTrack.isFullSurah
+        val playbackUri = if (isAyahTrack) {
+            QuranDownloads.localAyahUri(loadTrack.reciterSlug, loadTrack.surahId, loadTrack.ayahNo)
+                ?: QuranDownloads.localUri(loadTrack.reciterSlug, loadTrack.surahId)
+                ?: loadTrack.audioUrl
+        } else {
             QuranDownloads.localUri(loadTrack.reciterSlug, loadTrack.surahId) ?: loadTrack.audioUrl
+        }
         PlayerBridge.prepare(playbackUri, resumeAt)
     }
 
@@ -991,11 +997,19 @@ object AudioEngine {
         PlayerBridge.setSpeed(_playbackSpeed.value)
         PlayerBridge.setVolume(_volume.value)
         PlayerBridge.setPlaybackMetadata(trackDisplayTitle(track), track.reciterName)
-        // Prefer offline file when downloaded (full surahs and ayah-mode alike);
-        // a download completing mid-play does not interrupt the current stream —
-        // offline applies from next startPlayback.
-        val playbackUri =
+        // Prefer offline file when downloaded. Ayah tracks prefer their own
+        // downloaded clip (hifz repetition needs the verse, not the full
+        // surah); the surah file stays the fallback before streaming.
+        // A download completing mid-play does not interrupt the current
+        // stream — offline applies from next startPlayback.
+        val isAyahTrack = track.ayahNo > 0 && !track.isFullSurah
+        val playbackUri = if (isAyahTrack) {
+            QuranDownloads.localAyahUri(track.reciterSlug, track.surahId, track.ayahNo)
+                ?: QuranDownloads.localUri(track.reciterSlug, track.surahId)
+                ?: track.audioUrl
+        } else {
             QuranDownloads.localUri(track.reciterSlug, track.surahId) ?: track.audioUrl
+        }
         // Atomic resume: start position rides along with prepare, so early
         // seeks can't be dropped while buffering. The retry net below stays
         // as a backstop for mid-play item replacements.

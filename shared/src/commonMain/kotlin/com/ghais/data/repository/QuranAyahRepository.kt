@@ -1,6 +1,7 @@
 package com.ghais.data.repository
 
 import com.ghais.data.seed.QuranData
+import com.russhwolf.settings.Settings
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
@@ -14,6 +15,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -112,9 +115,78 @@ object QuranAyahRepository {
     private val _loadingSurahs = MutableStateFlow<Set<Int>>(emptySet())
     val loadingSurahs: StateFlow<Set<Int>> = _loadingSurahs.asStateFlow()
 
+    // Disk-backed text cache so a surah downloaded for hifz stays readable
+    // offline across restarts. multiplatform-settings holds one JSON blob per
+    // surah plus an index of which surahs were persisted; the in-memory cache
+    // above stays the hot path. Generated placeholders are never persisted.
+    private val textSettings: Settings? by lazy {
+        try {
+            Settings()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun textKey(surahId: Int): String = "ayah_text_v1_$surahId"
+    private fun textIndexKey(): String = "ayah_text_v1_index"
+
     init {
         // Pre-populate cache with bundled seeds
         cache.putAll(BUNDLED_SEEDS)
+        loadPersistedText()
+    }
+
+    private fun loadPersistedText() {
+        val settings = textSettings ?: return
+        try {
+            val rawIndex = settings.getStringOrNull(textIndexKey()) ?: return
+            val ids = rawIndex.split(",").mapNotNull { it.trim().toIntOrNull() }
+            for (surahId in ids) {
+                try {
+                    val raw = settings.getStringOrNull(textKey(surahId)) ?: continue
+                    val verses = json.decodeFromString<List<AyahVerse>>(raw)
+                    if (verses.isNotEmpty()) cache[surahId] = verses
+                } catch (_: Exception) {
+                    // Corrupt entry: drop it from the index, keep going.
+                    persistTextIndex(ids - surahId)
+                }
+            }
+        } catch (_: Exception) {
+            // Text cache is best-effort; network fetch remains the fallback.
+        }
+    }
+
+    private fun persistTextIndex(ids: List<Int>) {
+        try {
+            textSettings?.putString(textIndexKey(), ids.joinToString(","))
+        } catch (_: Exception) {
+        }
+    }
+
+    /**
+     * Warms the verse-text cache for offline reading and persists it to disk.
+     * Fire-and-forget from download actions: fetches from network when needed
+     * (bundled seeds persist immediately), skips generated placeholders.
+     */
+    fun prefetchSurah(surahId: Int) {
+        scope.launch {
+            try {
+                val verses = getAyahsForSurah(surahId)
+                if (verses.isEmpty()) return@launch
+                if (verses.first().textUthmani.startsWith("آية رقم")) return@launch
+                mutex.withLock {
+                    try {
+                        textSettings?.putString(textKey(surahId), json.encodeToString(verses))
+                        val ids = (textSettings?.getStringOrNull(textIndexKey())
+                            ?.split(",")?.mapNotNull { it.trim().toIntOrNull() }
+                            .orEmpty() + surahId).distinct()
+                        persistTextIndex(ids)
+                    } catch (_: Exception) {
+                    }
+                }
+            } catch (_: Exception) {
+            }
+        }
     }
 
     /**
