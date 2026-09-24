@@ -31,10 +31,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.NoirScreenRoot
@@ -45,6 +48,7 @@ import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
 import com.ghais.ui.util.AYAH_ROSETTE_ID
 import com.ghais.ui.util.AyahEndMark
+import com.ghais.ui.util.appendGluedRosette
 import com.ghais.ui.util.ayahRosetteContent
 import com.ghais.ui.util.toArabicDigits
 import kotlin.math.PI
@@ -768,6 +772,7 @@ private fun AyahBlock(
     isTajweed: Boolean,
     showTranslation: Boolean,
     arabicFontSize: Int,
+    surahId: Int = 18,
     onCardClick: () -> Unit,
     onPlayClick: () -> Unit,
     onBookmarkClick: () -> Unit,
@@ -937,24 +942,40 @@ private fun AyahBlock(
                     }
                 }
 
-                append(" ")
-                appendInlineContent(AYAH_ROSETTE_ID, toArabicDigits(ayah.ayahNumber))
-                append(" ")
+                appendGluedRosette(ayah.ayahNumber)
             }
 
-            Text(
-                text = arabicAnnotated,
-                inlineContent = ayahRosetteContent(
-                    ornamentSize = (arabicFontSize * 0.75f).sp,
-                    digitSize = (arabicFontSize * 0.38f).sp
-                ),
-                fontSize = arabicFontSize.sp,
-                fontWeight = FontWeight.Normal,
-                fontFamily = GhaisTypography.quranFont,
-                textAlign = TextAlign.End,
-                lineHeight = (arabicFontSize * 2.1f).sp,
-                modifier = Modifier.fillMaxWidth()
-            )
+            val showBasmalah = ayah.ayahNumber == 1 && QuranAyahRepository.hasBasmalahHeader(surahId)
+
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                if (showBasmalah) {
+                    Text(
+                        text = QuranAyahRepository.BASMALAH,
+                        fontSize = (arabicFontSize * 0.85f).sp,
+                        fontWeight = FontWeight.Normal,
+                        fontFamily = GhaisTypography.quranFont,
+                        color = GhaisNoir.TextPrimary,
+                        textAlign = TextAlign.Center,
+                        lineHeight = (arabicFontSize * 0.85f * 2.1f).sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 14.dp)
+                    )
+                }
+                Text(
+                    text = arabicAnnotated,
+                    inlineContent = ayahRosetteContent(
+                        ornamentSize = (arabicFontSize * 0.75f).sp,
+                        digitSize = (arabicFontSize * 0.38f).sp
+                    ),
+                    fontSize = arabicFontSize.sp,
+                    fontWeight = FontWeight.Normal,
+                    fontFamily = GhaisTypography.quranFont,
+                    textAlign = TextAlign.End,
+                    lineHeight = (arabicFontSize * 2.1f).sp,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             if (showTranslation) {
                 Spacer(modifier = Modifier.height(10.dp))
@@ -1115,6 +1136,9 @@ private fun MushafBottomToolsCapsule(
 /** Near-black dark paper for the Mushaf page — eye comfort, no pure white. */
 private val NoirDarkPaper = Color(0xFF0E0E10)
 
+// Basmalah text + rule live in QuranAyahRepository (single source of truth).
+// Surah 1 IS the Basmalah (verse 1) and Surah 9 has no header; all others do.
+
 /**
  * Traditional Mushaf page view on dark paper (near-black, not pure white):
  * engraved header, continuous uthmani at 100% white, hairline rules.
@@ -1126,6 +1150,7 @@ private fun MushafPageViewCard(
     activeAyah: Int,
     arabicFontSize: Int,
     isTajweed: Boolean,
+    surahId: Int = 18,
     onSelectAyah: (MushafAyahData) -> Unit
 ) {
     Box(
@@ -1209,28 +1234,44 @@ private fun MushafPageViewCard(
                         }
                     }
 
-                    append(" ")
-                    appendInlineContent(AYAH_ROSETTE_ID, toArabicDigits(ayah.ayahNumber))
-                    append(" ")
+                    appendGluedRosette(ayah.ayahNumber)
                 }
             }
 
-            Text(
-                text = pageText,
-                inlineContent = ayahRosetteContent(
-                    ornamentSize = ((arabicFontSize - 2) * 0.75f).sp,
-                    digitSize = ((arabicFontSize - 2) * 0.38f).sp
-                ),
-                fontSize = (arabicFontSize - 2).sp,
-                fontFamily = GhaisTypography.quranFont,
-                lineHeight = ((arabicFontSize - 2) * 2.1f).sp,
-                textAlign = TextAlign.End,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .noirClickable(onClick = {
-                        ayahs.find { it.ayahNumber == activeAyah }?.let(onSelectAyah)
-                    })
-            )
+            val showBasmalah = ayahs.firstOrNull()?.ayahNumber == 1 && QuranAyahRepository.hasBasmalahHeader(surahId)
+
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                if (showBasmalah) {
+                    Text(
+                        text = QuranAyahRepository.BASMALAH,
+                        fontSize = ((arabicFontSize - 2) * 0.85f).sp,
+                        fontWeight = FontWeight.Normal,
+                        fontFamily = GhaisTypography.quranFont,
+                        color = GhaisNoir.TextPrimary,
+                        textAlign = TextAlign.Center,
+                        lineHeight = ((arabicFontSize - 2) * 0.85f * 2.1f).sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 14.dp)
+                    )
+                }
+                Text(
+                    text = pageText,
+                    inlineContent = ayahRosetteContent(
+                        ornamentSize = ((arabicFontSize - 2) * 0.75f).sp,
+                        digitSize = ((arabicFontSize - 2) * 0.38f).sp
+                    ),
+                    fontSize = (arabicFontSize - 2).sp,
+                    fontFamily = GhaisTypography.quranFont,
+                    lineHeight = ((arabicFontSize - 2) * 2.1f).sp,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .noirClickable(onClick = {
+                            ayahs.find { it.ayahNumber == activeAyah }?.let(onSelectAyah)
+                        })
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
