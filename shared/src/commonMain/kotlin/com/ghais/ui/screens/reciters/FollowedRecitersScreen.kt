@@ -200,7 +200,9 @@ object FollowedRecitersScreen : Screen {
                                     .noirClickable { navigator.push(ReciterProfileScreen(reciter.slug)) }
                                     .padding(12.dp)
                             ) {
-                                val photo = qari.photoUrl ?: photoForSlug(reciter.slug)
+                                val photo = rememberCloudPhoto(reciter.slug)
+                                    ?: qari.photoUrl
+                                    ?: photoForSlug(reciter.slug)
                                 if (photo != null) {
                                     Box(
                                         modifier = Modifier

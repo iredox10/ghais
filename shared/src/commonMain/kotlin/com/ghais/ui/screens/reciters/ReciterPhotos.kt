@@ -62,6 +62,33 @@ fun photoForSlug(slug: String): String? {
 var remotePhotoFetcher: (suspend (String) -> String?)? = null
 
 /**
+ * Lazily resolve a reciter's cloud portrait ([remotePhotoFetcher]) for
+ * [slug], remembering the result per slug.
+ *
+ * The catalog pull ([ReciterCloudCache]) only refreshes on sync, so a photo
+ * uploaded in the admin after the last sync would otherwise stay invisible
+ * until the next one. Every reciter row that renders a photo should prefer
+ * this over a bare [photoForSlug] call, so admin edits appear on next open.
+ * Returns null while loading / on any failure, letting callers fall back to
+ * their local photo.
+ */
+@Composable
+fun rememberCloudPhoto(slug: String?): String? {
+    var remoteUrl by remember(slug) { mutableStateOf<String?>(null) }
+    if (!slug.isNullOrBlank() && remoteUrl == null) {
+        LaunchedEffect(slug) {
+            val fetched = try {
+                remotePhotoFetcher?.invoke(slug)
+            } catch (_: Exception) {
+                null
+            }
+            if (!fetched.isNullOrBlank()) remoteUrl = fetched
+        }
+    }
+    return remoteUrl
+}
+
+/**
  * Noir reciter artwork helpers — reference [com.ghais.ui.theme.GhaisNoir].
  *
  * All reciter photo/avatar rendering must go through [NoirReciterAvatar] (or
@@ -106,17 +133,7 @@ fun NoirReciterAvatar(
     ring: Boolean = false,
     slug: String? = null,
 ) {
-    var remoteUrl by remember(slug) { mutableStateOf<String?>(null) }
-    if (slug != null && remoteUrl == null) {
-        LaunchedEffect(slug) {
-            val fetched = try {
-                remotePhotoFetcher?.invoke(slug)
-            } catch (_: Exception) {
-                null
-            }
-            if (!fetched.isNullOrBlank()) remoteUrl = fetched
-        }
-    }
+    val remoteUrl = rememberCloudPhoto(slug)
     NoirArtworkWell(
         coverUrl = remoteUrl ?: photoUrl.orEmpty(),
         monogram = monogramForReciter(nameEn),

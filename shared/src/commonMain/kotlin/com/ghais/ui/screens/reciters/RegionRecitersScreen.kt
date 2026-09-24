@@ -266,7 +266,7 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                                 modifier = rowModifier.padding(12.dp)
                             ) {
                                 // Grayscale artwork well — engraved tile, dimmed scrim
-                                val photo = photoForSlug(reciter.slug)
+                                val photo = rememberCloudPhoto(reciter.slug) ?: photoForSlug(reciter.slug)
                                 if (photo != null) {
                                     Box(
                                         modifier = Modifier

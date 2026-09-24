@@ -400,7 +400,7 @@ private fun ReciterNoirHeroPlate(
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ReciterNoirAvatar(
-                    photoUrl = meta.photoUrl,
+                    photoUrl = rememberCloudPhoto(reciter.slug) ?: meta.photoUrl,
                     nameEn = reciter.nameEn,
                     size = 84.dp
                 )

@@ -383,7 +383,8 @@ private fun NoirReciterCard(
                 modifier = Modifier.size(128.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (photoUrl != null) {
+                val cloudPhoto = rememberCloudPhoto(reciter.slug)
+                if (photoUrl != null || cloudPhoto != null) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -393,7 +394,7 @@ private fun NoirReciterCard(
                         contentAlignment = Alignment.Center
                     ) {
                         AsyncImage(
-                            model = photoUrl,
+                            model = cloudPhoto ?: photoUrl,
                             contentDescription = reciter.nameEn,
                             contentScale = ContentScale.Crop,
                             colorFilter = NoirReciterGrayscale,
