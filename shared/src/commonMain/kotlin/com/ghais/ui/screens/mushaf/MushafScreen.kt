@@ -47,7 +47,6 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
 import com.ghais.ui.util.AYAH_ROSETTE_ID
-import com.ghais.ui.util.AyahEndMark
 import com.ghais.ui.util.appendGluedRosette
 import com.ghais.ui.util.ayahRosetteContent
 import com.ghais.ui.util.toArabicDigits
@@ -1321,28 +1320,26 @@ private fun TafsirDialog(
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    Text(
-                        text = ayah.textUthmani + (ayah.tajweedPart ?: ""),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Normal,
-                        fontFamily = GhaisTypography.quranFont,
-                        color = GhaisNoir.TextPrimary,
-                        textAlign = TextAlign.End,
-                        lineHeight = 36.sp,
-                        modifier = Modifier.weight(1f).padding(vertical = 2.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    AyahEndMark(
-                        number = ayah.ayahNumber,
+                Text(
+                    text = buildAnnotatedString {
+                        append(ayah.textUthmani)
+                        if (ayah.tajweedPart != null) {
+                            append(ayah.tajweedPart)
+                        }
+                        appendGluedRosette(ayah.ayahNumber)
+                    },
+                    inlineContent = ayahRosetteContent(
                         ornamentSize = 20.sp,
-                        digitSize = 10.sp,
-                        tint = GhaisNoir.TextPrimary
-                    )
-                }
+                        digitSize = 10.sp
+                    ),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Normal,
+                    fontFamily = GhaisTypography.quranFont,
+                    color = GhaisNoir.TextPrimary,
+                    textAlign = TextAlign.End,
+                    lineHeight = 36.sp,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                )
                 Spacer(modifier = Modifier.height(10.dp))
                 HorizontalDivider(color = GhaisNoir.BorderGhost)
                 Spacer(modifier = Modifier.height(10.dp))
