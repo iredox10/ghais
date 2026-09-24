@@ -102,6 +102,7 @@ object HistoryScreen : Screen {
         val navigator = LocalNavigator.currentOrThrow
         var searchQuery by remember { mutableStateOf("") }
         val history by UserUsageRepository.history.collectAsState()
+        val surahPlays by UserUsageRepository.surahPlays.collectAsState()
 
         fun replaySurah(group: HistorySurahGroup) {
             val reciter = QuranDataRepository.getReciterBySlug(group.reciterSlug)
@@ -160,7 +161,7 @@ object HistoryScreen : Screen {
             }
         }
 
-        val groups = remember(history) {
+        val groups = remember(history, surahPlays) {
             val cutoff = Clock.System.now().toEpochMilliseconds() - HISTORY_WINDOW_MS
             history.filter { it.lastPlayedTimestampMs == 0L || it.lastPlayedTimestampMs >= cutoff }
                 .groupBy {
@@ -183,7 +184,13 @@ object HistoryScreen : Screen {
                             ?: latest.subtitle.substringBefore("•").trim().ifEmpty { latest.reciterSlug },
                         coverUrl = latest.coverUrl,
                         lastPlayedMs = perSurah.maxOf { it.lastPlayedTimestampMs },
-                        playsCount = perSurah.size,
+                        // All-time qualified plays (sibling-owned surahPlays) win;
+                        // fall back to in-window entry count so a visible-but-
+                        // unqualified row (e.g. <30s skim) still reads "1 play".
+                        playsCount = maxOf(
+                            surahPlays[latest.surahId]?.toInt() ?: 0,
+                            perSurah.size
+                        ),
                         positionMs = latest.positionMs,
                         durationMs = latest.durationMs,
                     )
@@ -443,7 +450,8 @@ private fun HistoryNoirRow(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "${group.reciterName} • ${group.playsCount} plays",
+                text = if (group.playsCount == 1) "${group.reciterName} • 1 play"
+                else "${group.reciterName} • ${group.playsCount} plays",
                 color = GhaisNoir.TextSecondary,
                 fontSize = 12.sp,
                 maxLines = 1,
