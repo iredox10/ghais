@@ -69,6 +69,18 @@ fun ayahWithRosette(text: String, number: Int): AnnotatedString =
     }
 
 /**
+ * Strand-proof inline marker for mushaf continuous text.
+ *
+ * NBSP glues the Canvas-ring marker to the preceding word so it can never
+ * strand alone on the next line.
+ */
+fun AnnotatedString.Builder.appendGluedRosette(number: Int) {
+    append("\u00A0")
+    appendInlineContent(AYAH_ROSETTE_ID, toArabicDigits(number))
+    append(" ")
+}
+
+/**
  * Shared inline-content map for [ayahWithRosette] output.
  *
  * The per-instance number arrives via the placeholder's alternate text
