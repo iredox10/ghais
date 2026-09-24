@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,6 +25,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -49,7 +52,11 @@ import kotlin.math.sin
  *
  * Arabic stays at 100% white in all states — never dimmed.
  * Signature + playback/favorite/share callbacks are unchanged.
+ *
+ * No per-row Basmalah here: the single header lives in SurahDetailScreen
+ * (this row's only caller), so verse 1 never double-renders it.
  */
+
 @Composable
 fun AyahRow(
     ayah: Ayah,
@@ -99,27 +106,35 @@ fun AyahRow(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.End
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    AyahEndMark(
-                        number = ayah.ayahNo,
-                        ornamentSize = 22.sp,
-                        digitSize = 10.sp,
-                        tint = GhaisNoir.TextPrimary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = ayah.textUthmani,
-                        modifier = Modifier.weight(1f),
-                        color = GhaisNoir.TextPrimary,
-                        fontSize = 22.sp,
-                        lineHeight = 44.sp,
-                        textAlign = TextAlign.Right,
-                        fontWeight = FontWeight.Normal,
-                        fontFamily = GhaisTypography.quranFont
-                    )
+                // Explicit RTL paragraph direction for Quranic verse flow.
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Text(
+                                text = ayah.textUthmani,
+                                modifier = Modifier.weight(1f),
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 22.sp,
+                                lineHeight = 44.sp,
+                                textAlign = TextAlign.Right,
+                                fontWeight = FontWeight.Normal,
+                                fontFamily = GhaisTypography.quranFont
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            AyahEndMark(
+                                number = ayah.ayahNo,
+                                ornamentSize = 22.sp,
+                                digitSize = 10.sp,
+                                tint = GhaisNoir.TextPrimary
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
