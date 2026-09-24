@@ -19,47 +19,31 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.RepeatOne
-import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import com.ghais.data.repository.HifzMasteryStore
-import com.ghais.data.repository.MasteryStatus
 import com.ghais.player.AudioEngine
-import com.ghais.player.DownloadKeys
-import com.ghais.player.QuranDownloads
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -78,13 +62,12 @@ import com.ghais.ui.util.AyahEndMark
  * - Transparent surface: no card fills, borders, sheens, or engraved insets.
  *   Hairline dividers + spacing only.
  * - Header: single slim row — X ghost well + "AYAH {ayahNo}" text +
- *   sync dot + Surah name. No pills.
- * - Tools: tiny ghost icon wells in one row (Loop / Tafseer / Learning),
- *   active states via fill + specular only.
- * - Active ayah: prominent Arabic Uthmani in quranFont (25.sp, RTL,
- *   2.0x line height) + enclosed rosette, transliteration tertiary italic,
- *   translation secondary (14.5.sp).
- * - NEXT preview removed; Record & Compare removed (params kept for compatibility).
+ *   sync dot + Surah name. No pills, no chevrons (transport covers prev/next).
+ * - Verse: prominent Arabic Uthmani in quranFont (25.sp, RTL,
+ *   2.0x line height) + enclosed rosette, translation secondary (14.5.sp).
+ *   No transliteration, no tools row (loop/tafseer/learning/download live in
+ *   their own screens), no NEXT preview, no Record & Compare.
+ * - Range-loop and recitation-gap banners render only while active.
  * - All callbacks/logic/signatures preserved; scrubber + controls bar untouched.
  */
 @Composable
@@ -99,8 +82,6 @@ fun NowPlayingLyricsCard(
     onOpenTafseer: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val repTarget by AudioEngine.ayahRepetitionTarget.collectAsState()
-    val currentRep by AudioEngine.currentAyahRepetition.collectAsState()
     val isGapActive by AudioEngine.isRecitationGapActive.collectAsState()
     val gapCountdown by AudioEngine.recitationGapCountdown.collectAsState()
     val hifzRange by AudioEngine.hifzRange.collectAsState()
@@ -110,8 +91,6 @@ fun NowPlayingLyricsCard(
         ?: 1
 
     val surahId = currentTrack?.surahId ?: currentAyahVerse?.surahId ?: 1
-    val masteryMap by HifzMasteryStore.masteryMap.collectAsState()
-    val currentStatus = masteryMap[surahId to displayAyahNo] ?: HifzMasteryStore.getStatus(surahId, displayAyahNo)
 
     val surahName = currentTrack?.surahNameEn?.takeIf { it.isNotBlank() }
         ?: currentAyahVerse?.surahId?.let { "Surah $it" }
@@ -121,7 +100,6 @@ fun NowPlayingLyricsCard(
         ?: currentTrack?.textUthmani?.takeIf { it.isNotBlank() }
         ?: ""
 
-    val transliterationText = currentAyahVerse?.transliteration?.takeIf { it.isNotBlank() }
     val translationText = currentAyahVerse?.translation?.takeIf { it.isNotBlank() }
 
     // MINIMAL Ayah mode: transparent surface, no card fills/borders/sheens.
@@ -226,90 +204,6 @@ fun NowPlayingLyricsCard(
                         )
                     }
                 }
-
-                if (onPreviousAyah != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(26.dp)
-                            .clip(CircleShape)
-                            .noirClickable { onPreviousAyah() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SkipPrevious,
-                            contentDescription = "Previous Ayah",
-                            tint = GhaisNoir.TextTertiary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
-            }
-
-            // Tools: tiny ghost icon wells in one row — Loop / Tafseer / Learning.
-            // Active states via fill + specular only. Zero hue.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                MinimalLoopWell(
-                    repetitionTarget = repTarget,
-                    currentRepetition = currentRep,
-                    onTargetSelected = { AudioEngine.setAyahRepetitionTarget(it) }
-                )
-
-                if (onOpenTafseer != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(GhaisNoir.wellFill())
-                            .border(1.dp, GhaisNoir.BorderCard, CircleShape)
-                            .noirClickable { onOpenTafseer() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                            contentDescription = "Tafseer",
-                            tint = GhaisNoir.TextSecondary,
-                            modifier = Modifier.size(15.dp)
-                        )
-                    }
-                }
-
-                MinimalMasteryWell(
-                    status = currentStatus,
-                    onCycle = {
-                        HifzMasteryStore.cycleStatus(surahId, displayAyahNo)
-                        HifzMasteryStore.recordAyahReviewed(surahId, displayAyahNo)
-                    }
-                )
-
-                // Per-ayah offline toggle — hidden when the card has no
-                // reciter slug / stream URL to download from.
-                val ayahSlug = currentTrack?.reciterSlug?.takeIf { it.isNotBlank() }
-                val ayahAudioUrl = currentTrack?.audioUrl?.takeIf { it.isNotBlank() }
-                if (ayahSlug != null && ayahAudioUrl != null) {
-                    MinimalAyahDownloadWell(
-                        slug = ayahSlug,
-                        surahId = surahId,
-                        ayahNo = displayAyahNo,
-                        url = ayahAudioUrl
-                    )
-                }
-
-                if (repTarget != 1) {
-                    val loopLabel = if (repTarget == -1) "∞ ($currentRep)"
-                    else "${repTarget}x ($currentRep/$repTarget)"
-                    Text(
-                        text = loopLabel,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = GhaisNoir.TextTertiary
-                    )
-                }
             }
 
             if (isGapActive) {
@@ -378,18 +272,6 @@ fun NowPlayingLyricsCard(
                         }
                     }
 
-                    // Phonetic transliteration — tertiary italic
-                    if (!transliterationText.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = transliterationText,
-                            fontSize = 13.sp,
-                            fontStyle = FontStyle.Italic,
-                            color = GhaisNoir.TextTertiary,
-                            lineHeight = 18.sp
-                        )
-                    }
-
                     // English translation — secondary
                     if (!translationText.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(6.dp))
@@ -406,216 +288,12 @@ fun NowPlayingLyricsCard(
             // NEXT preview removed — [upcomingAyahVerse]/[onNextAyah] kept in signature
             // for caller compatibility (NowPlayingScreen) but intentionally not rendered.
             // Record & Compare removed — intentionally not rendered.
+            // Tools row (loop/tafseer/learning/download) removed for minimal —
+            // [onNextAyah]/[onPreviousAyah]/[onToggleAyahMode]/[onOpenTafseer]
+            // kept in signature but intentionally not rendered here.
     }
 }
 
-/**
- * Loop ghost well — preserves [AudioEngine] repetition target flow.
- * Active via stronger fill + specular border. Dropdown unchanged.
- */
-@Composable
-private fun MinimalLoopWell(
-    repetitionTarget: Int,
-    currentRepetition: Int,
-    onTargetSelected: (Int) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val isActive = repetitionTarget != 1
-    Box {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(
-                    if (isActive) Brush.verticalGradient(
-                        listOf(GhaisNoir.Fill4, GhaisNoir.FillDeep)
-                    ) else GhaisNoir.wellFill()
-                )
-                .border(
-                    1.dp,
-                    if (isActive) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
-                    CircleShape
-                )
-                .noirClickable { expanded = true },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = if (repetitionTarget == 1) Icons.Default.Repeat else Icons.Default.RepeatOne,
-                contentDescription = "Ayah Repetition: $repetitionTarget",
-                tint = if (isActive) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                modifier = Modifier.size(15.dp)
-            )
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier
-                .background(GhaisNoir.CanvasTop)
-                .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(12.dp))
-        ) {
-            listOf(1, 3, 5, 7, 10, -1).forEach { target ->
-                val label = if (target == -1) "Continuous (∞)" else "$target times (${target}x)"
-                val selected = repetitionTarget == target
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = label,
-                                color = if (selected) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 13.sp
-                            )
-                        }
-                    },
-                    onClick = {
-                        onTargetSelected(target)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-/**
- * Learning ghost well — preserves [HifzMasteryStore] cycle flow.
- * NEW dim → REVIEW specular → MASTERED bright. Zero hue, no emoji.
- */
-@Composable
-private fun MinimalMasteryWell(
-    status: MasteryStatus,
-    onCycle: () -> Unit
-) {
-    val (fill, border, tint) = when (status) {
-        MasteryStatus.NEW -> Triple(GhaisNoir.wellFill(), GhaisNoir.BorderCard, GhaisNoir.TextTertiary)
-        MasteryStatus.REVIEW_NEEDED -> Triple(
-            GhaisNoir.wellFill(),
-            GhaisNoir.SpecularTop.copy(alpha = 0.5f),
-            GhaisNoir.TextSecondary
-        )
-        MasteryStatus.MASTERED -> Triple(
-            Brush.verticalGradient(listOf(GhaisNoir.Fill4, GhaisNoir.FillDeep)),
-            GhaisNoir.TextPrimary.copy(alpha = 0.7f),
-            GhaisNoir.TextPrimary
-        )
-    }
-    val description = when (status) {
-        MasteryStatus.NEW -> "Learning"
-        MasteryStatus.REVIEW_NEEDED -> "Needs review"
-        MasteryStatus.MASTERED -> "Mastered"
-    }
-    Box(
-        modifier = Modifier
-            .size(32.dp)
-            .clip(CircleShape)
-            .background(fill)
-            .border(1.dp, border, CircleShape)
-            .noirClickable { onCycle() },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.School,
-            contentDescription = "Mastery: $description",
-            tint = tint,
-            modifier = Modifier.size(15.dp)
-        )
-    }
-}
-
-/**
- * Per-ayah download ghost well — offline toggle for the CURRENT ayah.
- *
- * States: idle (Download) → downloading (progress ring, taps ignored) →
- * downloaded (Done, tap removes) / failed (Retry, tap retries).
- * Wired to [QuranDownloads.downloadAyah]/[isAyahDownloaded]/[deleteAyah];
- * in-flight/failed membership is read from the shared [QuranDownloads]
- * flows using the per-ayah [DownloadKeys.ayahKey].
- */
-@Composable
-private fun MinimalAyahDownloadWell(
-    slug: String,
-    surahId: Int,
-    ayahNo: Int,
-    url: String
-) {
-    val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
-    val dlProgress by QuranDownloads.progress.collectAsState()
-    val failedKeys by QuranDownloads.failedKeys.collectAsState()
-    val ayahKey = DownloadKeys.ayahKey(slug, surahId, ayahNo)
-    // Strict precedence: downloaded > downloading > failed > idle —
-    // a completed key never renders a stale progress/failed affordance.
-    val isDownloaded = ayahKey in downloadedKeys ||
-        QuranDownloads.isAyahDownloaded(slug, surahId, ayahNo)
-    val pending: Float? = if (isDownloaded) null else dlProgress[ayahKey]
-    val isDownloading = pending != null
-    val isFailed = !isDownloaded && !isDownloading && ayahKey in failedKeys
-
-    val border = when {
-        isDownloaded -> GhaisNoir.TextPrimary.copy(alpha = 0.7f)
-        else -> GhaisNoir.BorderCard
-    }
-    val tint = when {
-        isDownloaded -> GhaisNoir.TextPrimary
-        isFailed -> GhaisNoir.TextSecondary
-        else -> GhaisNoir.TextTertiary
-    }
-    val description = when {
-        isDownloaded -> "Ayah downloaded — tap to remove"
-        isDownloading -> "Downloading ayah"
-        isFailed -> "Ayah download failed — tap to retry"
-        else -> "Download ayah"
-    }
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(
-                if (isDownloaded) Brush.verticalGradient(
-                    listOf(GhaisNoir.Fill4, GhaisNoir.FillDeep)
-                ) else GhaisNoir.wellFill()
-            )
-            .border(1.dp, border, CircleShape)
-            .noirClickable {
-                when {
-                    isDownloaded -> QuranDownloads.deleteAyah(slug, surahId, ayahNo)
-                    isDownloading -> Unit // in-flight: ignore double-taps
-                    else -> QuranDownloads.downloadAyah(slug, surahId, ayahNo, url)
-                }
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        when {
-            isDownloading -> CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                color = GhaisNoir.TextPrimary,
-                strokeWidth = 2.dp,
-                trackColor = GhaisNoir.Fill2
-            )
-            isDownloaded -> Icon(
-                imageVector = Icons.Default.Done,
-                contentDescription = description,
-                tint = tint,
-                modifier = Modifier.size(16.dp)
-            )
-            isFailed -> Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = description,
-                tint = tint,
-                modifier = Modifier.size(16.dp)
-            )
-            else -> Icon(
-                imageVector = Icons.Default.Download,
-                contentDescription = description,
-                tint = tint,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-    }
-}
 
 /**
  * Backward-compatible overload for [NowPlayingLyricsCard].
