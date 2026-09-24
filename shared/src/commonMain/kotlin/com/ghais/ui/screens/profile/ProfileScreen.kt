@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VerifiedUser
@@ -25,6 +26,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.data.auth.AuthRepository
+import com.ghais.data.repository.BroadcastRepository
 import com.ghais.ui.components.noir.NoirGrainOverlay
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirAmbientGlow
@@ -35,6 +37,7 @@ import com.ghais.ui.screens.profile.glass.GlassCardContainer
 import com.ghais.ui.screens.profile.glass.ProfileIdentityPill
 import com.ghais.ui.screens.profile.glass.ProtonSwitchRow
 import com.ghais.ui.screens.profile.glass.SchedulesProtonSection
+import com.ghais.ui.screens.broadcasts.BroadcastsScreen
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.screens.settings.AppSettingsScreen
 import com.russhwolf.settings.Settings
@@ -131,6 +134,11 @@ object ProfileScreen : Tab {
         // Auth session (null = guest)
         val session by AuthRepository.session.collectAsState()
 
+        // Broadcasts inbox unread badge (public cache; refresh happens on inbox open).
+        val broadcasts by BroadcastRepository.broadcasts.collectAsState()
+        val seenIds by BroadcastRepository.seenIds.collectAsState()
+        val unreadBroadcasts = broadcasts.count { it.id !in seenIds }
+
         // User profile editable state
         var userName by remember {
             mutableStateOf(settings.migratedProfileString(PREF_USER_NAME, "Abdullah • Believer"))
@@ -212,6 +220,15 @@ object ProfileScreen : Tab {
                             title = "Settings",
                             subtitle = "Audio, reciter, appearance & downloads",
                             onClick = { rootNavigator?.push(AppSettingsScreen) }
+                        )
+
+                        NoirRowDivider()
+
+                        com.ghais.ui.screens.profile.NoirSettingsRow(
+                            icon = Icons.Filled.Notifications,
+                            title = "Broadcasts",
+                            subtitle = if (unreadBroadcasts > 0) "$unreadBroadcasts unread announcement(s)" else "Announcements from Ghais",
+                            onClick = { rootNavigator?.push(BroadcastsScreen) }
                         )
                     }
                     Spacer(modifier = Modifier.height(18.dp))

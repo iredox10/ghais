@@ -59,3 +59,12 @@ const val USER_PREFS = "user_prefs"
  * NOT synced yet: no readable local store exists (see SyncEngine KDoc).
  */
 const val KHATMA = "khatma_plans"
+
+/**
+ * Cloud collection holding public announcements
+ * (`broadcasts{title,body,audience,urgency}`). Public read-only; the client
+ * never writes. Pulled newest-first (`$createdAt` desc, limit 50) on every
+ * sync pass and on inbox open into
+ * `BroadcastRepository` (see `com.ghais.data.repository`).
+ */
+const val BROADCASTS = "broadcasts"
