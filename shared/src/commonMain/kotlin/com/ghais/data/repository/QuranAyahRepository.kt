@@ -47,6 +47,9 @@ object QuranAyahRepository {
 
     fun cleanQuranicText(raw: String): String {
         var s = raw.replace("\u25CC", "").replace("\u200B", "").replace("\uFEFF", "")
+        s = s.replace("لْ  ء", "لْء").replace("لْ ء", "لْء")
+        s = s.replace("ء  ا", "ءا").replace("ء ا", "ءا")
+        s = s.replace(Regex(" +(?=[\u064B-\u065F\u0670\u06D6-\u06ED])"), "")
         s = s.replace(Regex(" {2,}"), " ")
         return s.trim()
     }
