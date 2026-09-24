@@ -39,7 +39,9 @@ import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
-import com.ghais.ui.util.AyahEndMark
+import androidx.compose.ui.text.buildAnnotatedString
+import com.ghais.ui.util.appendGluedRosette
+import com.ghais.ui.util.ayahRosetteContent
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -112,28 +114,22 @@ fun AyahRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.End
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.Bottom
-                        ) {
-                            Text(
-                                text = ayah.textUthmani,
-                                modifier = Modifier.weight(1f),
-                                color = GhaisNoir.TextPrimary,
-                                fontSize = 22.sp,
-                                lineHeight = 44.sp,
-                                textAlign = TextAlign.Right,
-                                fontWeight = FontWeight.Normal,
-                                fontFamily = GhaisTypography.quranFont
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            AyahEndMark(
-                                number = ayah.ayahNo,
+                        Text(
+                            text = buildAnnotatedString {
+                                append(ayah.textUthmani)
+                                appendGluedRosette(ayah.ayahNo)
+                            },
+                            inlineContent = ayahRosetteContent(
                                 ornamentSize = 22.sp,
-                                digitSize = 10.sp,
-                                tint = GhaisNoir.TextPrimary
-                            )
-                        }
+                                digitSize = 10.sp
+                            ),
+                            color = GhaisNoir.TextPrimary,
+                            fontSize = 22.sp,
+                            lineHeight = 44.sp,
+                            textAlign = TextAlign.Right,
+                            fontWeight = FontWeight.Normal,
+                            fontFamily = GhaisTypography.quranFont
+                        )
                     }
                 }
 
