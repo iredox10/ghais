@@ -659,8 +659,14 @@
           "required": false
         },
         {
-          "key": "played_at_ms",
+          "key": "updated_at",
           "type": "integer",
+          "required": false
+        },
+        {
+          "key": "daily_json",
+          "type": "string",
+          "size": 8192,
           "required": false
         }
       ],

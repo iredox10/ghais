@@ -36,6 +36,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 
 /**
  * Android live implementation of the `SyncEngine` expect object declared in
@@ -655,6 +656,18 @@ actual object SyncEngine {
     }
 
     // ------------------------------------------------------------------ stats
+    //
+    // Daily series: `listening_stats.daily_json` (string 8192, optional) carries
+    // the per-day buckets as compact JSON `{"<epochDay>":seconds,...}`, capped
+    // at [DAILY_JSON_CAP] newest days so offline listening uploads on reconnect
+    // and range charts restore on a fresh device. Merge is per-day max(), never
+    // sum: there is no per-device tracking, so a day present on both sides
+    // usually counts the SAME listening on each side — summing would
+    // double-count multi-device same-day listening, while max adopts the fuller
+    // side without ever shrinking local buckets.
+
+    /** Newest days carried in `daily_json` (~15 chars/entry fits 370 in 8192). */
+    private const val DAILY_JSON_CAP = 370
 
     /**
      * Pulls the cloud `listening_stats` doc (docId = [userId]) when local stats
@@ -672,7 +685,10 @@ actual object SyncEngine {
      * resets on day rollover, so [UserUsageRepository.restoreStats] adopts
      * cloud `minutes_today` only when cloud `updated_at` falls on today's
      * epoch day — otherwise it restores as 0. `days_streak`/`total_seconds`/
-     * uniques carry over as-is.
+     * uniques carry over as-is. `daily_json` (when present) is parsed and
+     * merged per-day with max() against local daily buckets, then applied via
+     * [UserUsageRepository.restoreDaily] — so offline listening accumulated on
+     * another device restores here and converges on the next push.
      */
     private suspend fun pullStatsIfEmpty(db: Databases, userId: String): Boolean {
         if (!isLocalStatsEmpty()) return false
@@ -687,8 +703,16 @@ actual object SyncEngine {
         if (updatedAt == null || !sameEpochDay(updatedAt, System.currentTimeMillis())) {
             minutes = 0
         }
-        if (total <= 0L && streak <= 1 && minutes <= 0 && uniquesReciters <= 0 && uniquesSurahs <= 0) {
+        val cloudDaily = parseDailyJson((data["daily_json"] as? String).orEmpty())
+        if (total <= 0L && streak <= 1 && minutes <= 0 && uniquesReciters <= 0 && uniquesSurahs <= 0 && cloudDaily.isEmpty()) {
             return false // cloud snapshot itself is empty; let push converge
+        }
+        // Daily buckets merge (per-day max — see section header) before the
+        // aggregate restore, so a fresh login adopts the cloud series; a later
+        // push then re-uploads the merged map and the series converges.
+        val mergedDaily = mergeDailyMax(UserUsageRepository.dailySeconds.value, cloudDaily)
+        if (mergedDaily.isNotEmpty()) {
+            UserUsageRepository.restoreDaily(mergedDaily)
         }
         UserUsageRepository.restoreStats(
             StatsSnapshot(
@@ -703,7 +727,7 @@ actual object SyncEngine {
         Log.i(
             TAG,
             "stats pull: adopted cloud total=${total}s streak=$streak minutesToday=$minutes " +
-                "reciters=$uniquesReciters surahs=$uniquesSurahs" +
+                "reciters=$uniquesReciters surahs=$uniquesSurahs days=${mergedDaily.size}" +
                 (if (updatedAt != null) " updatedAt=$updatedAt" else "") + "."
         )
         return true
@@ -717,7 +741,7 @@ actual object SyncEngine {
             return
         }
         val s = UserUsageRepository.stats.value
-        val data: Map<String, Any?> = mapOf(
+        val full: Map<String, Any?> = mapOf(
             "user_id" to userId,
             "days_streak" to s.daysStreak,
             "minutes_today" to s.minutesToday,
@@ -725,8 +749,92 @@ actual object SyncEngine {
             "unique_surahs" to s.uniqueSurahsCount,
             "total_seconds" to s.totalSecondsListened,
             "updated_at" to System.currentTimeMillis(),
+            "daily_json" to encodeDailyJson(UserUsageRepository.dailySeconds.value),
         )
-        upsert(db, STATS, userId, data)
+        // `daily_json` (string 8192, optional) is sent when the cloud
+        // collection has it; when the attribute isn't provisioned yet the
+        // server rejects unknown attributes, so fall back to a daily-less
+        // upsert once and keep syncing the other fields.
+        try {
+            upsert(db, STATS, userId, full)
+        } catch (e: Exception) {
+            if (!isUnknownAttribute(e, "daily_json")) throw e
+            Log.w(TAG, "stats.daily_json not provisioned yet; pushing without it.")
+            upsert(db, STATS, userId, full - "daily_json")
+        }
+    }
+
+    /**
+     * Compact daily-series JSON: `{"<epochDay>":seconds,...}`, oldest first,
+     * capped at [DAILY_JSON_CAP] newest days. Zero/negative values dropped.
+     * Never throws (falls back to `"{}"`).
+     */
+    private fun encodeDailyJson(daily: Map<Long, Long>): String {
+        try {
+            val entries = daily.entries
+                .filter { it.key >= 0L && it.value > 0L }
+                .sortedBy { it.key }
+                .takeLast(DAILY_JSON_CAP)
+            if (entries.isEmpty()) return "{}"
+            return buildString(entries.size * 16 + 2) {
+                append('{')
+                entries.forEachIndexed { index, (day, secs) ->
+                    if (index > 0) append(',')
+                    append('"').append(day).append('"').append(':').append(secs)
+                }
+                append('}')
+            }
+        } catch (_: Exception) {
+            return "{}"
+        }
+    }
+
+    /**
+     * Lenient parse of [encodeDailyJson] output: non-numeric keys/values and
+     * non-positive entries are skipped. Missing/blank/malformed input yields
+     * an empty map. Never throws.
+     */
+    private fun parseDailyJson(raw: String): Map<Long, Long> {
+        if (raw.isBlank()) return emptyMap()
+        return try {
+            val obj = json.parseToJsonElement(raw).jsonObject
+            val out = LinkedHashMap<Long, Long>(obj.size)
+            for ((key, value) in obj) {
+                val day = key.toLongOrNull() ?: continue
+                if (day < 0L) continue
+                val secs = try {
+                    value.jsonPrimitive.longOrNull
+                        ?: value.jsonPrimitive.content.toDoubleOrNull()?.toLong()
+                } catch (_: Exception) {
+                    null
+                } ?: continue
+                if (secs <= 0L) continue
+                out[day] = secs
+            }
+            out
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    /**
+     * Per-day `max()` merge of the local and cloud daily series (rationale:
+     * see the stats section header). Sanitizes both sides (drops negative
+     * days / non-positive seconds). Never throws.
+     */
+    private fun mergeDailyMax(local: Map<Long, Long>, cloud: Map<Long, Long>): Map<Long, Long> {
+        try {
+            if (cloud.isEmpty()) return local.filter { it.key >= 0L && it.value > 0L }
+            if (local.isEmpty()) return cloud.filter { it.key >= 0L && it.value > 0L }
+            val merged = local.filter { it.key >= 0L && it.value > 0L }.toMutableMap()
+            for ((day, secs) in cloud) {
+                if (day < 0L || secs <= 0L) continue
+                merged[day] = maxOf(merged[day] ?: 0L, secs)
+            }
+            return merged
+        } catch (_: Exception) {
+            return local
+        }
     }
 
     /**
