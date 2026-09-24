@@ -513,6 +513,21 @@ actual object SyncEngine {
             val slug = (data["slug"] as? String)?.trim()?.takeIf { it.isNotEmpty() } ?: return null
             val enabled = data["enabled"] as? Boolean ?: true
             if (!enabled) return null
+            // Catalog fallback chain: explicit `catalog` first, then the
+            // `catalog_key = "<catalog>:<slug>"` prefix (legacy docs predate
+            // the catalog attribute), else MP3QURAN via catalogOf default.
+            val catalogRaw = (data["catalog"] as? String)?.takeIf { it.isNotBlank() }
+                ?: (data["catalog_key"] as? String)
+                    ?.substringBefore(':')
+                    ?.takeIf { it.isNotBlank() }
+            // `available_surahs` is a comma-separated string per collections.json,
+            // but tolerate list/number shapes so one odd doc never drops a row.
+            val availableSurahs = when (val v = data["available_surahs"]) {
+                is String -> v
+                is List<*> -> v.joinToString(",") { it.toString() }
+                is Number -> v.toInt().toString()
+                else -> ""
+            }
             Reciter(
                 slug = slug,
                 nameEn = (data["name_en"] as? String)?.takeIf { it.isNotBlank() } ?: slug,
@@ -524,8 +539,8 @@ actual object SyncEngine {
                 audioFolder = (data["audio_folder"] as? String) ?: "",
                 country = (data["country"] as? String) ?: "",
                 serverUrl = (data["server_url"] as? String) ?: "",
-                availableSurahList = (data["available_surahs"] as? String) ?: "",
-                catalog = com.ghais.data.repository.ReciterCloudCache.catalogOf(data["catalog"]),
+                availableSurahList = availableSurahs,
+                catalog = com.ghais.data.repository.ReciterCloudCache.catalogOf(catalogRaw),
                 description = (data["description"] as? String) ?: "",
                 isTeacher = (data["is_teacher"] as? Boolean) ?: false,
                 imageFileId = (data["image_file_id"] as? String)?.takeIf { it.isNotBlank() },

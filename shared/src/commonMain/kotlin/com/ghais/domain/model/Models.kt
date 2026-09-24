@@ -69,13 +69,13 @@ data class Reciter(
 
     fun isSurahAvailable(surahId: Int): Boolean {
         if (availableSurahList.isBlank()) return true
-        val ids = availableSurahList.split(",").mapNotNull { it.trim().toIntOrNull() }
+        val ids = parseAvailableSurahIds(availableSurahList)
         return ids.isEmpty() || ids.contains(surahId)
     }
 
     fun getAvailableSurahIds(): List<Int> {
         if (availableSurahList.isBlank()) return (1..114).toList()
-        val ids = availableSurahList.split(",").mapNotNull { it.trim().toIntOrNull() }
+        val ids = parseAvailableSurahIds(availableSurahList)
         return if (ids.isEmpty()) (1..114).toList() else ids
     }
 
@@ -113,6 +113,41 @@ data class Reciter(
             "ahmed-alajamy", "alajamy", "ajamy" -> "https://server10.mp3quran.net/ajm/$pad.mp3"
             else -> "https://server8.mp3quran.net/afs/$pad.mp3"
         }
+    }
+}
+
+/**
+ * Lenient parser for `Reciter.availableSurahList` / Appwrite `available_surahs`.
+ *
+ * Accepts comma/semicolon/whitespace-separated ids AND inclusive ranges
+ * (`"1-114"`, the shape the admin sync script writes), tolerates stray
+ * punctuation, and keeps only 1..114. Unparseable input yields an empty list
+ * so callers keep the established "blank-or-garbage means all 114" contract.
+ * Never throws.
+ */
+fun parseAvailableSurahIds(raw: String): List<Int> {
+    if (raw.isBlank()) return emptyList()
+    return try {
+        val out = LinkedHashSet<Int>()
+        for (part in raw.split(',', ';', ' ', '\n', '\t', '|')) {
+            val t = part.trim().trim('.', '(', ')', '[', ']', '"', '\'')
+            if (t.isEmpty()) continue
+            val dash = t.indexOf('-')
+            if (dash > 0) {
+                val start = t.substring(0, dash).trim().toIntOrNull()
+                val end = t.substring(dash + 1).trim().toIntOrNull()
+                if (start != null && end != null && start in 1..114 && end in 1..114) {
+                    val lo = minOf(start, end)
+                    val hi = maxOf(start, end)
+                    for (id in lo..hi) out.add(id)
+                }
+                continue
+            }
+            t.toIntOrNull()?.let { if (it in 1..114) out.add(it) }
+        }
+        out.toList()
+    } catch (_: Exception) {
+        emptyList()
     }
 }
 
