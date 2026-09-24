@@ -41,6 +41,53 @@ data class AyahVerse(
  */
 object QuranAyahRepository {
 
+    const val BASMALAH = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
+
+    fun hasBasmalahHeader(surahId: Int): Boolean = surahId != 1 && surahId != 9
+
+    fun cleanQuranicText(raw: String): String {
+        var s = raw.replace("\u25CC", "").replace("\u200B", "").replace("\uFEFF", "")
+        s = s.replace(Regex(" {2,}"), " ")
+        return s.trim()
+    }
+
+    private fun isTashkeel(c: Char): Boolean {
+        val v = c.code
+        return (v in 0x064B..0x065F) || v == 0x0670 || (v in 0x06D6..0x06ED)
+    }
+
+    fun stripBasmalahPrefix(surahId: Int, ayahNo: Int, text: String): String {
+        if (surahId == 1 || surahId == 9 || ayahNo != 1) return text
+        val stripped = StringBuilder()
+        val origIndices = mutableListOf<Int>()
+        for (i in text.indices) {
+            val c = text[i]
+            if (isTashkeel(c)) continue
+            stripped.append(c)
+            origIndices.add(i)
+        }
+        val bare = "بسم الله الرحمن الرحيم"
+        val s = stripped.toString()
+        for (lead in 0..2) {
+            if (s.length >= lead + bare.length && s.startsWith(bare, lead)) {
+                val lastStrippedIdx = lead + bare.length - 1
+                if (lastStrippedIdx >= origIndices.size) continue
+                val cutOriginal = origIndices[lastStrippedIdx] + 1
+                if (cutOriginal >= text.length) return text
+                val rest = text.substring(cutOriginal).trimStart()
+                if (rest.isEmpty()) return text
+                return rest
+            }
+        }
+        return text
+    }
+
+    fun sanitizeVerseText(surahId: Int, ayahNo: Int, raw: String): String {
+        val cleaned = cleanQuranicText(raw)
+        val stripped = stripBasmalahPrefix(surahId, ayahNo, cleaned)
+        return cleanQuranicText(stripped)
+    }
+
     // ------------------------------------------------------------------
     // Bundled Seeds for Instant Offline Access
     // ------------------------------------------------------------------
@@ -140,13 +187,30 @@ object QuranAyahRepository {
         }
     }
 
-    private fun textKey(surahId: Int): String = "ayah_text_v1_$surahId"
-    private fun textIndexKey(): String = "ayah_text_v1_index"
+    private fun textKey(surahId: Int): String = "ayah_text_v2_$surahId"
+    private fun textIndexKey(): String = "ayah_text_v2_index"
 
     init {
-        // Pre-populate cache with bundled seeds
-        cache.putAll(BUNDLED_SEEDS)
+        // Pre-populate cache with bundled seeds (sanitized copies; BUNDLED_SEEDS stays raw)
+        cache.putAll(
+            BUNDLED_SEEDS.mapValues { (_, verses) ->
+                verses.map { v -> v.copy(textUthmani = sanitizeVerseText(v.surahId, v.ayahNo, v.textUthmani)) }
+            }
+        )
         loadPersistedText()
+        clearLegacyV1Keys()
+    }
+
+    private fun clearLegacyV1Keys() {
+        val settings = textSettings ?: return
+        try {
+            val oldIndex = settings.getStringOrNull("ayah_text_v1_index")
+            oldIndex?.split(",")?.mapNotNull { it.trim().toIntOrNull() }?.forEach { id ->
+                try { settings.remove("ayah_text_v1_$id") } catch (_: Exception) { }
+            }
+            settings.remove("ayah_text_v1_index")
+        } catch (_: Exception) {
+        }
     }
 
     private fun loadPersistedText() {
@@ -159,6 +223,7 @@ object QuranAyahRepository {
                 try {
                     val raw = settings.getStringOrNull(textKey(surahId)) ?: continue
                     val verses = json.decodeFromString<List<AyahVerse>>(raw)
+                        .map { v -> v.copy(textUthmani = sanitizeVerseText(v.surahId, v.ayahNo, v.textUthmani)) }
                     if (verses.isNotEmpty()) {
                         cache[surahId] = verses
                         restored = true
@@ -264,9 +329,10 @@ object QuranAyahRepository {
 
         // Check bundled seed
         BUNDLED_SEEDS[surahId]?.let {
-            mutex.withLock { cache[surahId] = it }
+            val cleaned = it.map { v -> v.copy(textUthmani = sanitizeVerseText(v.surahId, v.ayahNo, v.textUthmani)) }
+            mutex.withLock { cache[surahId] = cleaned }
             bumpCacheGen()
-            return it
+            return cleaned
         }
 
         // Fallback generator using Surah metadata
@@ -311,8 +377,9 @@ object QuranAyahRepository {
             val eObj = englishAyahs.getOrNull(i)?.jsonObject
 
             val ayahNo = uObj["numberInSurah"]?.jsonPrimitive?.int ?: (i + 1)
-            val textUthmani = uObj["text"]?.jsonPrimitive?.content ?: ""
+            val rawText = uObj["text"]?.jsonPrimitive?.content ?: ""
             val translation = eObj?.get("text")?.jsonPrimitive?.content ?: ""
+            val textUthmani = sanitizeVerseText(surahId, ayahNo, rawText)
 
             result.add(
                 AyahVerse(
