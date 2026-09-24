@@ -24,8 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -48,10 +46,6 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
-
-private val NoirGrayscale: ColorFilter by lazy {
-    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-}
 
 data class RegionRecitersScreen(val nation: String) : Screen {
     @Composable
@@ -280,13 +274,12 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                                             model = photo,
                                             contentDescription = reciter.nameEn,
                                             contentScale = ContentScale.Crop,
-                                            colorFilter = NoirGrayscale,
                                             modifier = Modifier.matchParentSize()
                                         )
                                         Box(
                                             modifier = Modifier
                                                 .matchParentSize()
-                                                .background(Color.Black.copy(alpha = 0.35f))
+                                                .background(Color.Black.copy(alpha = 0f))
                                         )
                                     }
                                 } else {

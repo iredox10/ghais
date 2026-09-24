@@ -36,8 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -54,14 +52,6 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 
 private val AvatarShape = RoundedCornerShape(24.dp)
-
-/**
- * Strict Noir Glass grayscale filter — portraits stay recognisable,
- * zero accent hue. Mirrors NoirArtworkWell (home).
- */
-private val NoirGrayscale: ColorFilter by lazy {
-    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-}
 
 @Composable
 fun NationReelBlock(
@@ -210,14 +200,13 @@ fun ReciterReelCard(
                             model = photoUrl,
                             contentDescription = reciter.nameEn,
                             contentScale = ContentScale.Crop,
-                            colorFilter = NoirGrayscale,
                             modifier = Modifier.fillMaxSize()
                         )
                         // Darkening scrim: plate reads engraved, never glowing.
                         Box(
                             modifier = Modifier
                                 .matchParentSize()
-                                .background(Color.Black.copy(alpha = 0.35f))
+                                .background(Color.Black.copy(alpha = 0f))
                         )
                     } else {
                         Text(

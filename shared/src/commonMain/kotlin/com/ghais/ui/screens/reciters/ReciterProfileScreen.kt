@@ -52,8 +52,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -364,16 +362,8 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
 }
 
 /**
- * True-grayscale filter — reciter portraits stay recognisable while remaining
- * strictly monochrome (mirrors the Home NoirArtworkWell recipe).
- */
-private val NoirGrayscale: ColorFilter by lazy {
-    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-}
-
-/**
  * Hero plate for the reciter (mirrors the Home "resume plate" pattern):
- * grayscale portrait with chromium ring + monogram fallback, identity text,
+ * color portrait with chromium ring + monogram fallback, identity text,
  * stat chips, segmented library meter, and chrome/ghost actions.
  *
  * Presentation only — all callbacks preserve the original screen logic.
@@ -526,9 +516,8 @@ private fun ReciterNoirHeroPlate(
 }
 
 /**
- * Grayscale portrait plate: clay well + chromium (specular) ring, darkening
- * scrim so the photo reads engraved, monogram fallback mirroring the profile
- * identity pill, and a chromium verified dot.
+ * Color portrait plate: clay well + chromium (specular) ring, monogram
+ * fallback mirroring the profile identity pill, and a chromium verified dot.
  */
 @Composable
 private fun ReciterNoirAvatar(
@@ -553,14 +542,12 @@ private fun ReciterNoirAvatar(
                     model = photoUrl,
                     contentDescription = nameEn,
                     contentScale = ContentScale.Crop,
-                    colorFilter = NoirGrayscale,
                     modifier = Modifier.fillMaxSize()
                 )
-                // Darkening scrim: keeps the plate recessed instead of glowing.
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.35f))
+                        .background(Color.Black.copy(alpha = 0f))
                 )
             } else {
                 Text(

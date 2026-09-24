@@ -39,8 +39,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -397,14 +395,7 @@ private fun NoirReciterCard(
                             model = cloudPhoto ?: photoUrl,
                             contentDescription = reciter.nameEn,
                             contentScale = ContentScale.Crop,
-                            colorFilter = NoirReciterGrayscale,
                             modifier = Modifier.fillMaxSize()
-                        )
-                        // Darkening scrim: keeps the plate recessed, never glowing.
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .background(Color.Black.copy(alpha = 0.35f))
                         )
                     }
                 } else {

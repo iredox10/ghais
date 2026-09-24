@@ -21,8 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
@@ -152,11 +150,6 @@ val ALL_VERIFIED_RECITERS = listOf(
         photoUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuDgsbtNwrTvZMDxhet9KzTJPINfQqnQ2Gc74H1NotuIf_y1ZYbY3ChOWF2Rvly3n97R741_TRWgpd9CXEZUIhOCQJMCUWrHGCDLra3ozOJUdRllZlWJVjFumo6IU0Nn21IafKwYHzi0oGVNgAiqQ1feu1y0UAX2l0_E-k108XS4KFJbXV7nSETDDmeqfDUHp5Kp-KE3necEvLlvnSTmqvOEUjLwtC3P4ta3bURWLF70RzPfdAx2C1nDGw"
     )
 )
-
-/** True-grayscale filter — portraits stay recognisable while strictly monochrome. */
-private val NoirGrayscale: ColorFilter by lazy {
-    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-}
 
 /**
  * Noir Glass — strict monochrome redesign.
@@ -573,14 +566,13 @@ private fun ReciterPhotoWell(reciter: VerifiedReciter) {
                     model = reciter.photoUrl,
                     contentDescription = reciter.nameEn,
                     contentScale = ContentScale.Crop,
-                    colorFilter = NoirGrayscale,
                     modifier = Modifier.fillMaxSize()
                 )
                 // Darkening scrim keeps the plate recessed instead of glowing.
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .background(Color.Black.copy(alpha = 0.35f))
+                        .background(Color.Black.copy(alpha = 0f))
                 )
             } else {
                 Text(
