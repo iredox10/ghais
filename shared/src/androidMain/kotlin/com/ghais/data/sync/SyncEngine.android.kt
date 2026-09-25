@@ -577,6 +577,7 @@ actual object SyncEngine {
                 country = (data["country"] as? String) ?: "",
                 serverUrl = (data["server_url"] as? String) ?: "",
                 availableSurahList = availableSurahs,
+                surahFileMap = (data["full_surah_file_map"] as? String) ?: "",
                 catalog = com.ghais.data.repository.ReciterCloudCache.catalogOf(catalogRaw),
                 description = (data["description"] as? String) ?: "",
                 isTeacher = (data["is_teacher"] as? Boolean) ?: false,
