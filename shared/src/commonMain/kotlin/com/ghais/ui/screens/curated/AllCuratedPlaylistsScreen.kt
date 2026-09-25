@@ -25,8 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
@@ -54,11 +52,6 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
 
-/** True-grayscale filter — cover art stays recognisable while strictly monochrome. */
-private val NoirGrayscale: ColorFilter by lazy {
-    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-}
-
 private val NoirPlaylistCardShape = RoundedCornerShape(20.dp)
 private val NoirPlaylistArtShape = RoundedCornerShape(14.dp)
 
@@ -67,7 +60,7 @@ private val NoirPlaylistArtShape = RoundedCornerShape(14.dp)
  *
  * Canvas #050506 via [NoirScreenRoot] (glow zone -> absolute black + grain).
  * Surfaces are alpha-white (cardFillSoft) + 1px [GhaisNoir.BorderCard] +
- * 22% top-only specular + diagonal sheen. Artwork is saturation-0 with a
+ * 22% top-only specular + diagonal sheen. Artwork is natural-colour with a
  * black scrim so it reads engraved. Text ladder 100/62/38/24%. Zero hue.
  *
  * Signature, filter logic and navigation preserved:
@@ -437,7 +430,7 @@ private fun CategoryChipsRow(
 /**
  * 2-column Noir playlist card:
  * - cardFillSoft + 1px BorderCard + top-only specular + diagonal sheen.
- * - Grayscale artwork in an engraved well + black scrim, mood tag pill
+ * - Natural-colour artwork in an engraved well + black scrim, mood tag pill
  *   top-end, chrome play disc bottom-end.
  * - Title 100%, subtitle 62%, meta pill ghost. Zero hue.
  *
@@ -467,7 +460,7 @@ private fun CuratedPlaylistCard(
         )
 
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Artwork well — grayscale image + darkening scrim, engraved read
+            // Artwork well — natural-colour image + darkening scrim, engraved read
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -481,7 +474,6 @@ private fun CuratedPlaylistCard(
                         model = playlist.coverUrl,
                         contentDescription = playlist.title,
                         contentScale = ContentScale.Crop,
-                        colorFilter = NoirGrayscale,
                         modifier = Modifier.fillMaxSize()
                     )
                     // Darkening scrim keeps the plate recessed instead of glowing.

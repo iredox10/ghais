@@ -316,7 +316,7 @@ fun QueueSheet(
                         // NoirListRow recipe: soft fill (+ active wash when playing),
                         // 1px card border (specular-bright when active), top specular.
                         // TrackItem carries no artwork (imageUrl is always null), so the
-                        // typographic number well is the grayscale thumb — same as the
+                        // typographic number well is the monochrome thumb — same as the
                         // explore SurahNoirRow.
                         Row(
                             modifier = Modifier

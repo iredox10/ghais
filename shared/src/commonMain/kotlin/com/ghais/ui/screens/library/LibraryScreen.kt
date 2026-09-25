@@ -50,8 +50,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
@@ -95,7 +93,7 @@ import kotlin.math.sin
  * ambient glow + film grain). Tab signature, search/filter state and navigation
  * targets are unchanged; only the surface language changed: zero accent hue,
  * alpha-white glass tiles, top-only specular hairlines, chrome pills and
- * monochrome playlist artwork. State reads through fill elevation, weight
+ * natural-colour playlist artwork. State reads through fill elevation, weight
  * and opacity.
  */
 object LibraryScreen : Tab {
@@ -735,16 +733,11 @@ private fun NoirLibraryEmpty() {
     }
 }
 
-/** True-grayscale filter — cover art stays recognisable, strictly monochrome. */
-private val NoirEditorialGrayscale: ColorFilter by lazy {
-    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-}
-
 /**
  * Editorial shelf tile: same Noir bento shell as [NoirLibraryTile] (soft
  * glass fill + 1px card border + top-only specular, sheen + bottom scrim),
- * but bound to a live [EditorialPlaylist]. Cover art renders grayscale from
- * `cover_url` (recessed plate + darkening scrim, mirroring the curated hero);
+ * but bound to a live [EditorialPlaylist]. Cover art renders in natural colour
+ * from `cover_url` (recessed plate + darkening scrim, mirroring the curated hero);
  * blank URLs fall back to a clay icon-well. Whole tile + chrome play disc
  * both tap-to-play via the existing `AudioEngine.playQueue` path.
  */
@@ -832,7 +825,6 @@ private fun NoirEditorialTile(
                             model = playlist.coverUrl,
                             contentDescription = playlist.title,
                             contentScale = ContentScale.Crop,
-                            colorFilter = NoirEditorialGrayscale,
                             modifier = Modifier.fillMaxSize()
                         )
                     }

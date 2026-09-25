@@ -52,8 +52,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -88,7 +86,7 @@ import kotlinx.coroutines.launch
  * Curated Playlist Detail Screen — strict Noir Glass monochrome.
  *
  * True-black canvas, alpha-white fills, ghost hairlines with a top-only
- * specular, grayscale hero art, chrome primary CTA + ghost secondaries,
+ * specular, natural-colour hero art, chrome primary CTA + ghost secondaries,
  * segmented library meter, and [NoirListRow] track rows. Zero hue — state
  * reads through fill elevation, chromium, weight and opacity.
  *
@@ -322,15 +320,7 @@ data class CuratedPlaylistDetailScreen(val playlistId: String) : Screen {
 }
 
 /**
- * True-grayscale filter — cover art stays recognisable while remaining
- * strictly monochrome.
- */
-private val NoirGrayscale: ColorFilter by lazy {
-    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-}
-
-/**
- * Hero plate (mirrors the reciter hero-plate pattern): grayscale cover art
+ * Hero plate (mirrors the reciter hero-plate pattern): natural-colour cover art
  * with chromium ring + darkening scrim, identity text, stat chips, segmented
  * listening meter, and chrome/ghost actions.
  *
@@ -362,7 +352,6 @@ private fun CuratedNoirHeroPlate(
                         model = playlist.coverUrl,
                         contentDescription = playlist.title,
                         contentScale = ContentScale.Crop,
-                        colorFilter = NoirGrayscale,
                         modifier = Modifier.fillMaxSize()
                     )
                     // Darkening scrim: keeps the plate recessed instead of glowing.

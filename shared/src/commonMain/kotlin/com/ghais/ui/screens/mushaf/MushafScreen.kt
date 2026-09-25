@@ -72,10 +72,10 @@ data class MushafAyahData(
 
 /**
  * Strict Noir Glass Mushaf — true-black canvas (glow zone -> #050506 +
- * ambient glow + film grain), grayscale hero banner, ayah blocks in the
+ * ambient glow + film grain), monochrome hero banner, ayah blocks in the
  * NoirListRow recipe (engraved number well, chrome/ghost affordances).
- * Zero hue — tajweed distinction reads through weight only, state reads
- * through fill elevation, chromium and opacity.
+ * Monochrome chrome keeps tajweed distinction and state readable through
+ * fill elevation, chromium and opacity.
  *
  * The Mushaf page is dark paper (near-black #0E0E10, NOT pure white) for
  * eye comfort. Arabic/uthmani stays at 100% white on all dark wells —
@@ -235,7 +235,7 @@ object MushafScreen : Tab {
                     Spacer(modifier = Modifier.height(14.dp))
                 }
 
-                // 2. Surah ornamentation header banner (grayscale hero).
+                // 2. Surah ornamentation header banner.
                 item {
                     SurahHeaderBanner()
                     Spacer(modifier = Modifier.height(16.dp))
@@ -571,8 +571,8 @@ private fun MushafControlCapsule(
 }
 
 /**
- * Grayscale surah banner: monochrome sacred-geometry backdrop, ghost info
- * pills, engraved rosette with uthmani at 100% white, luminous Bismillah.
+ * Monochrome surah banner: sacred-geometry backdrop, ghost info pills,
+ * engraved rosette with uthmani at 100% white, luminous Bismillah.
  */
 @Composable
 private fun SurahHeaderBanner() {

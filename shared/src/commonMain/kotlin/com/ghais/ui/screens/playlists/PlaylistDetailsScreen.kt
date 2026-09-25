@@ -83,7 +83,7 @@ import com.ghais.ui.theme.GhaisTypography
  *
  * Styled in strict Noir Glass monochrome: true-black canvas, alpha-white
  * fills, ghost hairlines with a top-only specular, chrome CTAs, and
- * grayscale artwork. Zero hue — state reads through fill elevation,
+ * monochrome cover artwork. Zero hue — state reads through fill elevation,
  * chromium, weight and opacity.
  *
  * Presentation only. Queue / play / favorites logic and navigation
@@ -219,7 +219,7 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
 
                             Spacer(modifier = Modifier.height(14.dp))
 
-                            // Hero plate: grayscale art + identity + stats +
+                            // Hero plate: monochrome cover art + identity + stats +
                             // kept meter + chrome/ghost actions.
                             PlaylistNoirHeroPlate(
                                 playlist = playlist,
@@ -293,7 +293,7 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
 
 /**
  * Hero plate for the playlist (mirrors the reciter "resume plate" pattern):
- * grayscale cover art with chromium ring + darkening scrim, identity text,
+ * monochrome cover art with chromium ring + darkening scrim, identity text,
  * stat chips, segmented kept meter, and chrome/ghost actions.
  *
  * Presentation only — all callbacks preserve the original screen logic.
