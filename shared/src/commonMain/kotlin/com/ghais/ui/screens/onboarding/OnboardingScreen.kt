@@ -64,6 +64,7 @@ import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.OnboardingStore
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.data.repository.RecitationSchedule
 import com.ghais.data.repository.SchedulesStore
 import com.ghais.data.repository.resolveFollowedQari
@@ -105,7 +106,7 @@ object OnboardingScreen : Screen {
         var reminderOn by remember { mutableStateOf(false) }
         var hour by remember { mutableStateOf(7) }
         var minute by remember { mutableStateOf(0) }
-        val reciters = remember { QuranDataRepository.getBrowseReciters().take(8) }
+        val reciters = rememberBrowseReciters().take(8)
 
         fun goTo(page: Int) {
             scope.launch { pagerState.animateScrollToPage(page.coerceIn(0, LastPage)) }

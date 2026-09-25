@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirInsetField
 import com.ghais.ui.components.noir.noirClickable
@@ -73,7 +74,7 @@ fun ReciterPickerSheet(
     if (!visible) return
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val reciters = remember { QuranDataRepository.getBrowseReciters() }
+    val reciters = rememberBrowseReciters()
     var query by remember { mutableStateOf("") }
 
     val filtered = remember(query, reciters) {

@@ -51,6 +51,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.data.repository.CustomRoutinesStore
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.rememberMergedReciters
 import com.ghais.data.repository.RoutineItem
 import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.NoirListRow
@@ -76,7 +77,7 @@ class RoutineEditorScreen(val routineId: String? = null) : Screen {
         var isPublic by remember { mutableStateOf(existing?.isPublic ?: false) }
         var items by remember { mutableStateOf(existing?.items ?: emptyList()) }
 
-        val reciters = remember { QuranDataRepository.getReciters() }
+        val reciters = rememberMergedReciters()
         val surahs = remember { QuranDataRepository.getSurahs() }
 
         var selectedReciterSlug by remember {

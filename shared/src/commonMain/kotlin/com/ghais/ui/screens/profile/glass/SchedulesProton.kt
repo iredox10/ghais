@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.rememberMergedReciters
 import com.ghais.data.repository.RecitationSchedule
 import com.ghais.data.repository.SchedulesStore
 import com.ghais.ui.components.noir.IconWell
@@ -169,7 +170,7 @@ private fun SchedEditorSheet(
     onDismiss: () -> Unit,
     onSave: (RecitationSchedule) -> Unit
 ) {
-    val reciters = remember { QuranDataRepository.getReciters() }
+    val reciters = rememberMergedReciters()
     var hour by remember(initial) { mutableStateOf(initial?.hour?.coerceIn(0, 23) ?: 5) }
     var minute by remember(initial) { mutableStateOf(initial?.minute?.coerceIn(0, 59) ?: 30) }
     var reciterSlug by remember(initial) {
