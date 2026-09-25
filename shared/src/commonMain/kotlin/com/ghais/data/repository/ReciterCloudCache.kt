@@ -2,6 +2,11 @@ package com.ghais.data.repository
 
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.ReciterCatalog
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import com.ghais.data.seed.QuranData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +26,30 @@ object ReciterCloudCache {
 
     fun setCloudReciters(reciters: List<Reciter>) {
         _cloudReciters.value = reciters
+    }
+
+    /**
+     * Cloud pull injected once by `SyncEngine.init` on Android (same pattern
+     * as [com.ghais.data.repository.BroadcastRepository.cloudFetcher]); null
+     * on platforms without the Appwrite client, where [refresh] is a no-op.
+     */
+    var catalogFetcher: (suspend () -> List<Reciter>)? = null
+
+    /**
+     * Refreshes the overlay from the cloud catalog. Returns true when the
+     * cache was replaced. An empty result (offline, error, or a pull that
+     * parsed nothing) keeps the previous cache so a transient failure never
+     * blanks the catalog back to bundled-only.
+     */
+    suspend fun refresh(): Boolean {
+        return try {
+            val list = catalogFetcher?.invoke() ?: return false
+            if (list.isEmpty()) return false
+            setCloudReciters(list)
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     /** Cloud docs keyed by catalog key (`"mp3quran:<slug>"`). */
@@ -67,4 +96,38 @@ object ReciterCloudCache {
             else -> ReciterCatalog.MP3QURAN
         }
     }
+
+    /**
+     * Cloud catalog keyed by catalog key, exposed for callers that need to
+     * know whether a row came from Appwrite (e.g. a follow resolving to a
+     * reciter that only exists in the admin panel).
+     */
+    fun cloudBySlug(slug: String): Reciter? {
+        if (slug.isBlank()) return null
+        val clean = slug.trim()
+        return _cloudReciters.value.firstOrNull { it.slug.equals(clean, ignoreCase = true) }
+    }
+}
+
+/**
+ * Cloud-merged catalog as Compose state.
+ *
+ * The cloud pull lands asynchronously (first sync, offline→online, or an
+ * admin publish while the app is open), so a screen that captured the list in
+ * a keyless `remember {}` would keep showing the pre-sync catalog. Collecting
+ * [ReciterCloudCache.cloudReciters] and keying the recomputation on it means
+ * reciters uploaded from the admin panel appear as soon as they sync, without
+ * the user restarting the app.
+ */
+@Composable
+fun rememberMergedReciters(): List<Reciter> {
+    val cloud by ReciterCloudCache.cloudReciters.collectAsState()
+    return remember(cloud) { ReciterCloudCache.mergedWith(QuranData.RECITERS) }
+}
+
+/** [rememberMergedReciters] with one row per human — see `getBrowseReciters`. */
+@Composable
+fun rememberBrowseReciters(): List<Reciter> {
+    val cloud by ReciterCloudCache.cloudReciters.collectAsState()
+    return remember(cloud) { QuranDataRepository.getBrowseReciters() }
 }

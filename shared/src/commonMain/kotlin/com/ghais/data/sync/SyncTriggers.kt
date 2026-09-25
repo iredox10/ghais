@@ -6,6 +6,7 @@ import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.KhatmaStore
 import com.ghais.data.repository.OnboardingStore
+import com.ghais.data.repository.ReciterCloudCache
 import com.ghais.data.repository.ReciterSearchHistoryStore
 import com.ghais.data.repository.SchedulesStore
 import com.ghais.data.repository.UserUsageRepository
@@ -35,6 +36,10 @@ import kotlinx.coroutines.launch
  * - **Debounced push:** any local change to favorites / follows / routines /
  *   schedules / khatma plans / listening stats schedules a pass 8s out; rapid successive edits reset the
  *   timer so bursts of toggles collapse into a single pass.
+ * - **Reciter catalog heartbeat:** an independent, session-free pull of the
+ *   public reciter catalog every 15 minutes (plus once at startup), so a
+ *   reciter published in the admin panel reaches users who are not otherwise
+ *   triggering a sync.
  *
  * Deliberately excludes `AudioEngine.currentTrack` / position (too chatty —
  * position ticks would keep the debounce window pinned open).
@@ -44,6 +49,9 @@ import kotlinx.coroutines.launch
 @OptIn(FlowPreview::class)
 object SyncTriggers {
     private var started = false
+
+    /** How often the public reciter catalog is re-pulled while the app runs. */
+    private const val RECITER_CATALOG_REFRESH_MS = 15 * 60 * 1000L
 
     fun start(scope: CoroutineScope) {
         if (started) return
@@ -165,6 +173,21 @@ object SyncTriggers {
                         SyncEngine.syncNow()
                     }
                 }
+        }
+
+        // Reciter catalog heartbeat: the admin panel publishes reciters to
+        // Appwrite, and the catalog is the only thing that carries them to the
+        // app. A full user sync is not guaranteed to fire while someone is
+        // just listening, so pull the (public-read) catalog on a timer as well
+        // as at startup. Cheap enough at 15 minutes, and the cache is only
+        // replaced on a non-empty result, so offline runs are no-ops.
+        scope.launch {
+            while (true) {
+                if (NetworkMonitor.isOnline.value) {
+                    ReciterCloudCache.refresh()
+                }
+                delay(RECITER_CATALOG_REFRESH_MS)
+            }
         }
     }
 }

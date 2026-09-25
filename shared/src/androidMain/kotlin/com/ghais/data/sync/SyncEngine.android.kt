@@ -124,6 +124,16 @@ actual object SyncEngine {
         if (BroadcastRepository.cloudFetcher == null) {
             BroadcastRepository.cloudFetcher = { fetchBroadcasts() }
         }
+        // Wire the public reciter catalog pull into ReciterCloudCache so the
+        // catalog can refresh on a timer, independently of a user sync
+        // (PUBLIC_READ collection). This is what makes a reciter uploaded in
+        // the admin panel appear for users without any local action.
+        if (com.ghais.data.repository.ReciterCloudCache.catalogFetcher == null) {
+            com.ghais.data.repository.ReciterCloudCache.catalogFetcher = {
+                val ctx = appContext
+                if (ctx == null) emptyList() else fetchReciterCatalog(databases(ctx))
+            }
+        }
     }
 
     actual suspend fun syncNow() {
@@ -517,6 +527,24 @@ actual object SyncEngine {
      */
     suspend fun refreshReciterCatalog(db: Databases) {
         try {
+            val out = fetchReciterCatalog(db)
+            if (out.isNotEmpty()) {
+                com.ghais.data.repository.ReciterCloudCache.setCloudReciters(out)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "reciter catalog refresh failed", e)
+        }
+    }
+
+    /**
+     * Public-read reciter catalog pull (Appwrite `reciters`, see
+     * `collections.json`). Split out of [refreshReciterCatalog] so the
+     * periodic, session-free refresh in `SyncTriggers` can reuse it without
+     * running a full user sync. Returns an empty list on any failure, which
+     * callers treat as "keep the current cache".
+     */
+    suspend fun fetchReciterCatalog(db: Databases): List<Reciter> {
+        return try {
             val out = ArrayList<Reciter>(300)
             var offset = 0
             while (true) {
@@ -537,11 +565,10 @@ actual object SyncEngine {
                 if (page.size < 100) break
                 offset += page.size
             }
-            if (out.isNotEmpty()) {
-                com.ghais.data.repository.ReciterCloudCache.setCloudReciters(out)
-            }
+            out
         } catch (e: Exception) {
-            Log.w(TAG, "reciter catalog refresh failed", e)
+            Log.w(TAG, "reciter catalog fetch failed", e)
+            emptyList()
         }
     }
 
