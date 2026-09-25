@@ -307,27 +307,8 @@ class NowPlayingScreen : Screen {
 
         NoirScreenRoot(
             modifier = Modifier
+                .fillMaxSize()
                 .onSizeChanged { screenHeightPx = it.height.toFloat() }
-                .graphicsLayer {
-                    val fraction = if (screenHeightPx > 0f) {
-                        (dragOffsetY / screenHeightPx).coerceIn(0f, 1f)
-                    } else {
-                        0f
-                    }
-                    // Minimize by shrinking toward the mini bar, anchored at the
-                    // bottom, instead of sliding the sheet off-screen. The
-                    // player's upper half is empty backdrop, so a downward slide
-                    // spent the whole gesture over black and handed off to the
-                    // bar with nothing on screen — the blank frame. Shrinking
-                    // keeps the artwork, title and transport in view all the way
-                    // down, converging on where the mini bar lands.
-                    transformOrigin = TransformOrigin(0.5f, 1f)
-                    val shrink = 1f - 0.18f * fraction
-                    scaleX = shrink
-                    scaleY = shrink
-                    translationY = screenHeightPx * 0.05f * fraction
-                    alpha = 1f - 0.45f * fraction
-                }
                 .pointerInput(controlsVisible, uiBusy) {
                     detectTapGestures(
                         onTap = { poke() },
@@ -415,6 +396,30 @@ class NowPlayingScreen : Screen {
                     }
                 }
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        // The canvas, glow and grain above stay full-screen and
+                        // static; only the content shrinks. Transforming the
+                        // whole NoirScreenRoot instead left a visible black
+                        // rectangle around the receding player — the backdrop
+                        // the gesture was supposed to hide.
+                        //
+                        // Responsive mapping: the gesture completes over ~40% of
+                        // the screen height (was a full-height pull) and the
+                        // content tracks the finger at half rate, so a short
+                        // swipe reads as an immediate response instead of lag.
+                        val travel = if (screenHeightPx > 0f) screenHeightPx * 0.4f else 1f
+                        val fraction = (dragOffsetY / travel).coerceIn(0f, 1f)
+                        transformOrigin = TransformOrigin(0.5f, 1f)
+                        val shrink = 1f - 0.16f * fraction
+                        scaleX = shrink
+                        scaleY = shrink
+                        translationY = dragOffsetY * 0.5f
+                        alpha = 1f - 0.55f * fraction
+                    }
+            ) {
             // Ambient video is the hero — only a light veil + bottom grade
             // for legibility, so the video stays the focus of the player.
             AmbientVideoView(selectedType = selectedAmbientType, modifier = Modifier.fillMaxSize())
@@ -890,6 +895,7 @@ class NowPlayingScreen : Screen {
             if (showQueue) QueueSheet(onDismiss = { showQueue = false })
             if (showAmbient) AmbientMixerSheet(mixer = mixer, onDismissRequest = { showAmbient = false })
             if (showTafseer) TafseerSheet(onDismiss = { showTafseer = false })
+        }
         }
     }
 }
