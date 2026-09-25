@@ -47,7 +47,9 @@ import com.ghais.ui.components.noir.NoirInsetField
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.screens.home.NoirArtworkWell
 import com.ghais.ui.screens.player.NowPlayingScreen
+import com.ghais.ui.screens.reciters.rememberCloudPhoto
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import kotlin.time.Clock
@@ -392,6 +394,7 @@ private fun HistoryNoirRow(
     val photoUrl = remember(group.key) {
         resolveFollowedQari(group.reciterSlug)?.photoUrl
     }
+    val cloudPhoto = rememberCloudPhoto(group.reciterSlug)
     val thumbUrl = group.coverUrl.takeIf { it.isNotBlank() } ?: photoUrl
 
     Row(
@@ -437,7 +440,20 @@ private fun HistoryNoirRow(
             }
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+
+        NoirArtworkWell(
+            coverUrl = cloudPhoto ?: photoUrl.orEmpty(),
+            monogram = group.reciterName.firstOrNull()?.uppercase() ?: "Q",
+            shape = CircleShape,
+            size = 44.dp,
+            monogramSize = 16.sp,
+            ring = true,
+            grayscale = false,
+            scrimAlpha = 0f
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
