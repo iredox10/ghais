@@ -36,6 +36,7 @@ import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.screens.reciters.rememberCloudPhoto
 import com.ghais.ui.theme.GhaisNoir
 
 /**
@@ -84,6 +85,10 @@ fun HomeFollowedRow(onReciter: (String) -> Unit) {
         // Followed slugs can alias to the same human (mishary/alafasy);
         // `resolved` is already distinct by slug, so this key is unique.
         items(resolved, key = { it.first }) { (slug, name, photoUrl) ->
+            // Cloud portrait first: the admin panel owns reciter photos, and
+            // followed qaris outside the small bundled roster have no static
+            // image — without this they rendered as bare monograms.
+            val cloudPhoto = rememberCloudPhoto(slug)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
@@ -91,7 +96,7 @@ fun HomeFollowedRow(onReciter: (String) -> Unit) {
                     .noirClickable { onReciter(slug) }
             ) {
                 NoirArtworkWell(
-                    coverUrl = photoUrl,
+                    coverUrl = cloudPhoto ?: photoUrl,
                     monogram = name.firstOrNull()?.uppercase() ?: "Q",
                     shape = CircleShape,
                     size = 84.dp,

@@ -80,7 +80,14 @@ fun resolveFollowedQari(rawSlug: String): ResolvedQari? {
         reciter
     }
 
-    val photo = verified?.photoUrl ?: detailed?.photoUrl
+    // Admin-uploaded portrait wins: the cloud catalog is the source of truth
+    // for reciter photos, and the bundled rosters only cover a handful of
+    // names, so following anyone else produced a monogram instead of a face.
+    val photo = ReciterCloudCache.cloudImageForSlug(rawSlug)
+        ?: ReciterCloudCache.cloudImageForSlug(canonical.slug)
+        ?: canonical.imageUrl
+        ?: verified?.photoUrl
+        ?: detailed?.photoUrl
     return ResolvedQari(
         storedSlug = rawSlug,
         reciter = canonical,
