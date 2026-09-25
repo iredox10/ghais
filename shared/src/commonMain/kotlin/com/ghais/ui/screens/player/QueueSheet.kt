@@ -15,11 +15,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
@@ -28,11 +31,16 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -40,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirInsetField
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
@@ -66,8 +75,20 @@ fun QueueSheet(
     val currentTrack by AudioEngine.currentTrack.collectAsState()
     val isAyahMode by AudioEngine.isAyahMode.collectAsState()
     val engineDurationMs by AudioEngine.durationMs.collectAsState()
+    var query by remember { mutableStateOf("") }
 
     val coroutineScope = rememberCoroutineScope()
+    val normalizedQuery = query.trim().lowercase()
+    val filteredQueue = queue.withIndex().filter { indexed ->
+        val item = indexed.value
+        normalizedQuery.isBlank() || listOf(
+            item.surahNameEn,
+            item.surahNameAr,
+            item.reciterName,
+            item.surahId.toString(),
+            "ayah ${item.ayahNo}"
+        ).any { it.lowercase().contains(normalizedQuery) }
+    }
     fun animateDismiss() {
         coroutineScope.launch {
             sheetState.hide()
@@ -160,6 +181,63 @@ fun QueueSheet(
                 }
             }
 
+            NoirInsetField(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = if (query.isNotEmpty()) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                        modifier = Modifier.size(20.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (query.isEmpty()) {
+                            Text(
+                                text = "Search surahs or reciter",
+                                color = GhaisNoir.TextDisabled,
+                                fontSize = 13.5.sp
+                            )
+                        }
+                        BasicTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            textStyle = TextStyle(
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            cursorBrush = SolidColor(GhaisNoir.TextPrimary),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    if (query.isNotEmpty()) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                                .background(GhaisNoir.Fill2, CircleShape)
+                                .noirClickable { query = "" },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear",
+                                tint = GhaisNoir.TextSecondary,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             if (queue.isEmpty()) {
@@ -193,15 +271,29 @@ fun QueueSheet(
                         )
                     }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+            } else if (filteredQueue.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp),
+                    contentAlignment = Alignment.Center
                 ) {
+                    Text(
+                        text = "No surahs match \"$query\"",
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 14.sp
+                    )
+                }
+            } else LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                     itemsIndexed(
-                        items = queue,
-                        key = { index, item -> "surah_${item.surahId}_$index" }
-                    ) { index, item ->
+                        items = filteredQueue,
+                        key = { _, entry -> "surah_${entry.value.surahId}_${entry.index}" }
+                    ) { _, entry ->
+                        val index = entry.index
+                        val item = entry.value
                         val isActive = index == currentIndex || (currentIndex == -1 && currentTrack?.surahId == item.surahId)
 
                         val itemDuration = if (isActive && engineDurationMs > 0L) {
@@ -343,7 +435,6 @@ fun QueueSheet(
                         }
                     }
                 }
-            }
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
