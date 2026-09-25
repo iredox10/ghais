@@ -11,6 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,8 +68,11 @@ fun NoirArtworkWell(
     monogramSize: TextUnit = 22.sp,
     ring: Boolean = false,
     grayscale: Boolean = true,
-    scrimAlpha: Float = 0.35f
+    scrimAlpha: Float = 0.35f,
+    errorFallbackUrl: String? = null
 ) {
+    var imageFailed by remember(coverUrl) { mutableStateOf(false) }
+    val effectiveUrl = if (imageFailed) errorFallbackUrl.orEmpty() else coverUrl
     Box(
         modifier = modifier
             .size(size)
@@ -74,12 +81,15 @@ fun NoirArtworkWell(
             .border(1.dp, if (ring) GhaisNoir.SpecularTop else GhaisNoir.BorderCard, shape),
         contentAlignment = Alignment.Center
     ) {
-        if (coverUrl.isNotBlank()) {
+        if (effectiveUrl.isNotBlank()) {
             AsyncImage(
-                model = coverUrl,
+                model = effectiveUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 colorFilter = if (grayscale) NoirGrayscale else null,
+                onState = { state ->
+                    if (state is coil3.compose.AsyncImagePainter.State.Error) imageFailed = true
+                },
                 modifier = Modifier.fillMaxSize()
             )
             // Darkening scrim: keeps the plate recessed instead of glowing.
