@@ -76,6 +76,7 @@ import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
 import com.ghais.ui.util.appendGluedRosette
 import com.ghais.ui.util.ayahRosetteContent
+import com.ghais.ui.util.toArabicDigits
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -149,8 +150,9 @@ fun TafseerSheet(
 
     // Resolve current playing track as fallback when parameters are omitted
     val currentTrack by AudioEngine.currentTrack.collectAsState()
+    val cacheGen by QuranAyahRepository.cacheGen.collectAsState()
 
-    val entry = remember(currentTrack, surahId, ayahNo, arabicText, englishTranslation) {
+    val entry = remember(currentTrack, surahId, ayahNo, arabicText, englishTranslation, cacheGen) {
         resolveTafseerEntry(
             explicitSurahId = surahId,
             explicitAyahNo = ayahNo,
@@ -412,7 +414,7 @@ fun TafseerSheet(
                         Column(modifier = Modifier.fillMaxWidth()) {
                             // Centered Basmalah above verse-1 quotes (every surah
                             // except 1 — where verse 1 IS the Basmalah — and 9).
-                            if (entry.ayahNo == 1 &&
+                            if (entry.arabicText.isNotBlank() && entry.ayahNo == 1 &&
                                 QuranAyahRepository.hasBasmalahHeader(entry.surahId)
                             ) {
                                 Text(
@@ -428,20 +430,32 @@ fun TafseerSheet(
                                         .padding(bottom = 8.dp)
                                 )
                             }
-                            Text(
-                                text = buildAnnotatedString {
-                                    append(entry.arabicText)
-                                    appendGluedRosette(entry.ayahNo)
-                                },
-                                inlineContent = ayahRosetteContent(24.sp, 11.sp),
-                                fontFamily = GhaisTypography.quranFont,
-                                color = GhaisNoir.TextPrimary,
-                                fontSize = 24.sp,
-                                lineHeight = 48.sp,
-                                textAlign = TextAlign.Right,
-                                fontWeight = FontWeight.Normal,
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
-                            )
+                            if (entry.arabicText.isNotBlank()) {
+                                Text(
+                                    text = buildAnnotatedString {
+                                        append(entry.arabicText)
+                                        appendGluedRosette(entry.ayahNo)
+                                    },
+                                    inlineContent = ayahRosetteContent(24.sp, 11.sp),
+                                    fontFamily = GhaisTypography.quranFont,
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 24.sp,
+                                    lineHeight = 48.sp,
+                                    textAlign = TextAlign.Right,
+                                    fontWeight = FontWeight.Normal,
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                                )
+                            } else {
+                                Text(
+                                    text = "Verse text unavailable",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 20.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -784,7 +798,7 @@ private fun TafseerAyahBadge(number: Int) {
             )
         }
         Text(
-            text = number.toString(),
+            text = toArabicDigits(number),
             color = GhaisNoir.TextPrimary,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold
@@ -819,10 +833,8 @@ private fun resolveTafseerEntry(
     val knownEntry = KNOWN_TAFSEER_ENTRIES[Pair(sId, aNo)]
     val repoImmediate = QuranTafseerRepository.getTafseerImmediate(sId, aNo)
 
-    val uthmani = explicitArabicText
-        ?: track?.textUthmani?.takeIf { it.isNotBlank() }
-        ?: knownEntry?.arabicText
-        ?: defaultArabicForAyah(sId, aNo, surahAr)
+    val verse = QuranAyahRepository.getAyahImmediate(sId, aNo)
+    val uthmani = if (verse.isPlaceholder) "" else verse.textUthmani
 
     val translation = explicitTranslation
         ?: knownEntry?.translation

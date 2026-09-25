@@ -57,9 +57,9 @@ import com.ghais.ui.theme.GhaisTypography
 
 /**
  * Strict Noir Glass Surah detail — true-black canvas (glow zone -> #050506 +
- * ambient glow + film grain), grayscale hero plate, and ayah rows in the
+ * ambient glow + film grain), monochrome hero plate, and ayah rows in the
  * NoirListRow recipe (number in engraved well, chrome/ghost affordances).
- * Zero hue — state reads through fill elevation, chromium, weight, opacity.
+ * Monochrome chrome keeps state readable through fill elevation, chromium, weight, opacity.
  *
  * Arabic/uthmani text stays at 100% white on dark wells — never dimmed.
  * Signatures, playback/queue/favorite logic and navigation are untouched.
@@ -81,12 +81,14 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
         var masteryVersion by remember { mutableStateOf(0) }
 
         // Generate ayahs for this surah with authentic Uthmani text
-        val ayahs = remember(surahId) {
+        val cacheGen by QuranAyahRepository.cacheGen.collectAsState()
+        val ayahs = remember(surahId, cacheGen) {
             (1..surah.ayahsCount).map { ayahNo ->
+                val verse = QuranAyahRepository.getAyahImmediate(surah.id, ayahNo)
                 Ayah(
                     surahId = surah.id,
                     ayahNo = ayahNo,
-                    textUthmani = QuranAyahRepository.getAyahImmediate(surah.id, ayahNo).textUthmani
+                    textUthmani = if (verse.isPlaceholder) "…" else verse.textUthmani
                 )
             }
         }
@@ -232,7 +234,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                         .padding(paddingValues),
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
-                    // Editorial header + grayscale hero plate.
+                    // Editorial header + monochrome hero plate.
                     item {
                         Column(
                             modifier = Modifier
@@ -372,7 +374,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
 }
 
 /**
- * Grayscale hero plate (mirrors the reciter-profile hero): surah identity +
+ * Monochrome hero plate (mirrors the reciter-profile hero): surah identity +
  * ghost meta chips + chrome Play All + ghost reciter/add actions.
  * Presentation only — all callbacks preserve the original screen logic.
  */
