@@ -1,5 +1,6 @@
 package com.ghais.ui.screens.search
 
+import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.QuranData
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.Surah
@@ -24,7 +25,7 @@ object SearchEngine {
 
     private val referenceRegex = Regex("""^(\d{1,3})\s*[:\-]\s*(\d{1,3})$""")
 
-    fun search(query: String): SearchResults {
+    fun search(query: String, reciters: List<Reciter> = QuranDataRepository.getBrowseReciters()): SearchResults {
         val trimmed = query.trim()
         if (trimmed.isEmpty()) return SearchResults(query)
         
@@ -40,7 +41,7 @@ object SearchEngine {
             it.id.toString() == trimmed
         }
         
-        val reciters = QuranData.RECITERS.filter {
+        val matchedReciters = reciters.filter {
             it.nameEn.lowercase().contains(lowerQuery) ||
             it.nameAr.contains(trimmed) ||
             it.slug.lowercase().contains(lowerQuery)
@@ -49,7 +50,7 @@ object SearchEngine {
         return SearchResults(
             query = query,
             surahs = surahs,
-            reciters = reciters,
+            reciters = matchedReciters,
             ayahReference = ayahRef
         )
     }

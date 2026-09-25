@@ -50,6 +50,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.ReciterSearchHistoryStore
+import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
@@ -98,24 +99,30 @@ class ReciterSearchScreen : Screen {
         }
 
         val recentSlugs by ReciterSearchHistoryStore.recentSlugs.collectAsState()
-        val recentReciters = remember(recentSlugs) {
+        // Reactive cloud-merged catalog: a reciter uploaded from the admin
+        // panel becomes searchable (and its history row resolvable) as soon
+        // as the catalog syncs, without restarting the app.
+        val browseReciters = rememberBrowseReciters()
+
+        val recentReciters = remember(recentSlugs, browseReciters) {
             // Collapse aliases to the browse winner so one human is one row
             // (and so catalogKey keys below stay unique).
             recentSlugs
-                .mapNotNull { QuranDataRepository.getBrowseReciterBySlug(it) }
+                .mapNotNull { slug -> browseReciters.firstOrNull { it.slug.equals(slug, ignoreCase = true) } }
                 .distinctBy { it.catalogKey() }
         }
 
-        val results = remember(debouncedQuery) {
+        val results = remember(debouncedQuery, browseReciters) {
             val q = debouncedQuery.trim()
             if (q.isBlank()) emptyList()
-            // getBrowseReciters: one row per human (the raw catalog holds an
-            // MP3Quran + an EveryAyah row for the same reciter, which used to
-            // render twice and crash the list on duplicate keys).
-            else QuranDataRepository.getBrowseReciters().filter {
+            // One row per human (the raw catalog holds an MP3Quran + an
+            // EveryAyah row for the same reciter, which used to render twice
+            // and crash the list on duplicate keys).
+            else browseReciters.filter {
                 it.nameEn.contains(q, ignoreCase = true) ||
                     it.nameAr.contains(q, ignoreCase = true) ||
-                    it.country.contains(q, ignoreCase = true)
+                    it.country.contains(q, ignoreCase = true) ||
+                    it.slug.contains(q, ignoreCase = true)
             }
         }
 

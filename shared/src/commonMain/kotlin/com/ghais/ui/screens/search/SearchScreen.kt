@@ -35,6 +35,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.SearchHistoryStore
+import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.data.seed.QuranData
 import com.ghais.domain.model.Reciter
@@ -86,7 +87,10 @@ class SearchScreen : Screen {
             }
         }
 
-        val searchResults = remember(query) { SearchEngine.search(query) }
+        // Keyed on the cloud-merged catalog so reciters uploaded from the
+        // admin panel become searchable as soon as the catalog syncs.
+        val browseReciters = rememberBrowseReciters()
+        val searchResults = remember(query, browseReciters) { SearchEngine.search(query, browseReciters) }
 
         // Shared queue builder — unchanged playback logic, surah entry point varies.
         // Filtered to surahs the reciter actually has audio for; entry falls
