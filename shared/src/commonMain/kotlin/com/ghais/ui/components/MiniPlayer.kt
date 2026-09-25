@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ghais.player.AudioEngine
 import com.ghais.ui.screens.player.NowPlayingScreen
+import com.ghais.ui.screens.reciters.rememberCloudPhoto
 import com.ghais.ui.theme.GhaisColors
 import com.ghais.ui.theme.GhaisShapes
 
@@ -205,7 +206,7 @@ fun MiniPlayer(
                     ) {
                         // Left: reciter photo thumbnail
                         coil3.compose.AsyncImage(
-                            model = miniPlayerPhotoFor(track.reciterSlug),
+                            model = rememberCloudPhoto(track.reciterSlug) ?: miniPlayerPhotoFor(track.reciterSlug),
                             contentDescription = track.reciterName,
                             contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                             modifier = Modifier
