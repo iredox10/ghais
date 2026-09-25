@@ -150,6 +150,7 @@ class NowPlayingScreen : Screen {
         var isDragging by remember { mutableStateOf(false) }
         var screenHeightPx by remember { mutableStateOf(0f) }
         var settleJob by remember { mutableStateOf<Job?>(null) }
+        var dismissJob by remember { mutableStateOf<Job?>(null) }
         var lastDragTime by remember { mutableStateOf(0L) }
         var dragVelocityY by remember { mutableStateOf(0f) }
 
@@ -172,7 +173,10 @@ class NowPlayingScreen : Screen {
                 if (isDismissed || isDismissing) return@remember
                 isDismissing = true
                 settleJob?.cancel()
-                coroutineScope.launch {
+                // Tracked so a new drag during the exit tween can take the
+                // gesture back instead of being popped out from under the user.
+                dismissJob?.cancel()
+                dismissJob = coroutineScope.launch {
                     val start = dragOffsetY
                     val target = if (screenHeightPx > 0f) screenHeightPx else start + 1200f
                     animate(
@@ -335,6 +339,7 @@ class NowPlayingScreen : Screen {
                         // decision: a cancelled dismiss tween must never leave
                         // isDismissing latched with a stranded offset.
                         settleJob?.cancel()
+                        dismissJob?.cancel()
                         isDismissing = false
                         isDragging = true
                         poke()
