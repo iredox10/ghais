@@ -41,7 +41,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,7 +58,9 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ghais.player.AudioEngine
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.reciters.rememberCloudPhoto
+import com.ghais.ui.screens.reciters.resolveReciterPhoto
 import com.ghais.ui.theme.GhaisColors
+import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 
 /**
@@ -205,14 +209,11 @@ fun MiniPlayer(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Left: reciter photo thumbnail
-                        coil3.compose.AsyncImage(
-                            model = rememberCloudPhoto(track.reciterSlug) ?: miniPlayerPhotoFor(track.reciterSlug),
-                            contentDescription = track.reciterName,
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFF242426))
+                        val reciterPhoto = rememberCloudPhoto(track.reciterSlug)
+                            ?: miniPlayerPhotoFor(track.reciterSlug)
+                        MiniPlayerPhoto(
+                            photoUrl = reciterPhoto,
+                            reciterName = track.reciterName
                         )
 
                         Spacer(modifier = Modifier.width(10.dp))
@@ -296,23 +297,58 @@ fun MiniPlayer(
     }
 }
 
+@Composable
+private fun MiniPlayerPhoto(
+    photoUrl: String?,
+    reciterName: String,
+    modifier: Modifier = Modifier
+) {
+    var imageFailed by remember(photoUrl) { mutableStateOf(false) }
+    val effectivePhotoUrl = if (imageFailed) null else photoUrl
+
+    Box(
+        modifier = modifier
+            .size(42.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0xFF242426)),
+        contentAlignment = Alignment.Center
+    ) {
+        if (!effectivePhotoUrl.isNullOrBlank()) {
+            coil3.compose.AsyncImage(
+                model = effectivePhotoUrl,
+                contentDescription = reciterName,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                onState = { state ->
+                    if (state is coil3.compose.AsyncImagePainter.State.Error) imageFailed = true
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Text(
+                text = miniPlayerMonogram(reciterName),
+                color = GhaisNoir.TextPrimary,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+private fun miniPlayerMonogram(reciterName: String): String =
+    reciterName
+        .trim()
+        .split(Regex("\\s+"))
+        .mapNotNull { word -> word.firstOrNull()?.takeIf(Char::isLetter)?.uppercase() }
+        .take(2)
+        .joinToString("")
+        .ifBlank { "Q" }
+
 /**
  * Maps a playback reciter slug to the closest display photo.
- * Falls back to the app logo when no photo exists.
+ * Returns null when no reciter photo exists.
  */
-private fun miniPlayerPhotoFor(reciterSlug: String): String {
-    val photos = com.ghais.data.seed.GhaisAssets.VerifiedReciters
-    val match = when (reciterSlug) {
-        "alafasy" -> photos.firstOrNull { it.slug == "mishary" }
-        "sudais" -> photos.firstOrNull { it.slug == "al-sudais" }
-        "muaiqly" -> photos.firstOrNull { it.slug == "al-muaiqly" }
-        "dossari" -> photos.firstOrNull { it.slug == "al-dossari" }
-        "abdulbaset_murattal", "abdulbaset_mujawwad" ->
-            photos.firstOrNull { it.slug == "abdul-basit" }
-        else -> photos.firstOrNull { it.slug == reciterSlug }
-    }
-    return match?.photoUrl ?: com.ghais.data.seed.GhaisAssets.LogoUrl
-}
+private fun miniPlayerPhotoFor(reciterSlug: String): String? =
+    resolveReciterPhoto(reciterSlug)
 
 /**
  * Animated live equalizer bars for the mini player thumbnail.
