@@ -60,7 +60,9 @@ import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.NoirSegmentedProgress
 import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.screens.home.NoirArtworkWell
 import com.ghais.ui.screens.home.NoirStatChip
+import com.ghais.ui.screens.reciters.rememberReciterPhoto
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisTypography
 import kotlin.time.Clock
@@ -90,15 +92,19 @@ object StatsScreen : Screen {
             }
         }
 
-        val topQari = remember(history) {
+        val qariPlayCounts = remember(history) {
             history.filter { it.reciterSlug.isNotBlank() }
                 .groupingBy { it.reciterSlug }
                 .eachCount()
-                .maxByOrNull { it.value }
         }
-        val topQariName = remember(topQari) {
-            if (topQari == null) null
-            else resolveFollowedQari(topQari.key)?.reciter?.nameEn ?: topQari.key
+        val topQaris = remember(qariPlayCounts) {
+            qariPlayCounts.map { (slug, plays) ->
+                val name = resolveFollowedQari(slug)?.reciter?.nameEn ?: slug
+                Triple(slug, name, plays)
+            }.sortedWith(
+                compareByDescending<Triple<String, String, Int>> { it.third }
+                    .thenBy { it.second }
+            ).take(5)
         }
 
         val surahPlays by UserUsageRepository.surahPlays.collectAsState()
@@ -495,24 +501,33 @@ object StatsScreen : Screen {
                         Column {
                             Text(
                                 text = "Top Qari",
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Most played • all time",
                                 color = GhaisNoir.TextTertiary,
                                 fontSize = 12.sp
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            if (topQariName != null && topQari != null) {
-                                Text(
-                                    text = topQariName,
-                                    color = GhaisNoir.TextPrimary,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = "${topQari.value} plays",
-                                    color = GhaisNoir.TextTertiary,
-                                    fontSize = 12.sp
-                                )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            if (topQaris.isNotEmpty()) {
+                                topQaris.forEachIndexed { index, entry ->
+                                    TopQariRow(
+                                        rank = index + 1,
+                                        slug = entry.first,
+                                        name = entry.second,
+                                        plays = entry.third
+                                    )
+                                    if (index < topQaris.lastIndex) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(1.dp)
+                                                .background(GhaisNoir.BorderGhost)
+                                        )
+                                    }
+                                }
                             } else {
                                 Text(
                                     text = "—",
@@ -596,6 +611,55 @@ object StatsScreen : Screen {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TopQariRow(
+    rank: Int,
+    slug: String,
+    name: String,
+    plays: Int
+) {
+    val photo = rememberReciterPhoto(slug)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = rank.toString(),
+            color = GhaisNoir.TextTertiary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.width(20.dp)
+        )
+        NoirArtworkWell(
+            coverUrl = photo.orEmpty(),
+            monogram = name.firstOrNull()?.uppercase() ?: "Q",
+            shape = CircleShape,
+            size = 36.dp,
+            monogramSize = 14.sp,
+            ring = true,
+            grayscale = true,
+            scrimAlpha = 0f
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = name,
+            color = GhaisNoir.TextPrimary,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = "$plays plays",
+            color = GhaisNoir.TextTertiary,
+            fontSize = 12.sp
+        )
     }
 }
 
