@@ -2,10 +2,12 @@ package com.ghais.ui.screens.memorization
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlayArrow
@@ -32,7 +35,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,14 +55,17 @@ import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.Surah
 import com.ghais.player.AudioEngine
 import com.ghais.player.DownloadKeys
+import com.ghais.player.PlayerBackHandler
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.GhostPillButton
+import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirListRow
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSegmentedProgress
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
+import com.ghais.ui.screens.player.QueueSheet
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisTypography
 
@@ -81,6 +89,14 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
 
         val currentTrack by AudioEngine.currentTrack.collectAsState()
         val isAyahMode by AudioEngine.isAyahMode.collectAsState()
+        val queue by AudioEngine.queue.collectAsState()
+        var showQueue by remember { mutableStateOf(false) }
+        val ownsQueue = isAyahMode && queue.isNotEmpty() &&
+            currentTrack?.reciterSlug.equals(reciter.slug, ignoreCase = true)
+
+        PlayerBackHandler(enabled = showQueue) {
+            showQueue = false
+        }
 
         val downloaded by QuranDownloads.downloadedKeys.collectAsState()
         val dlProgress by QuranDownloads.progress.collectAsState()
@@ -210,6 +226,21 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                                 )
                             }
 
+                            if (ownsQueue) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    IconWell(
+                                        icon = Icons.AutoMirrored.Filled.QueueMusic,
+                                        size = 40.dp,
+                                        iconSize = 20.dp,
+                                        contentDescription = "Up Next",
+                                        modifier = Modifier.noirClickable { showQueue = true }
+                                    )
+                                }
+                            }
+
                             Spacer(modifier = Modifier.height(12.dp))
                         }
                     }
@@ -285,6 +316,7 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                     }
                 }
             }
+            if (showQueue) QueueSheet(onDismiss = { showQueue = false })
         }
     }
 }
