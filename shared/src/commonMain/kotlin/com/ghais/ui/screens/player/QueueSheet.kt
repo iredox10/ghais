@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -86,8 +87,8 @@ fun QueueSheet(
             item.surahNameAr,
             item.reciterName,
             item.surahId.toString(),
-            "ayah ${item.ayahNo}"
-        ).any { it.lowercase().contains(normalizedQuery) }
+            QuranDataRepository.getSurahById(item.surahId)?.ayahsCount?.toString().orEmpty()
+        ).any { it.isNotBlank() && it.lowercase().contains(normalizedQuery) }
     }
     fun animateDismiss() {
         coroutineScope.launch {
@@ -109,6 +110,7 @@ fun QueueSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .imePadding()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
             // Sheet chrome: IconWell header + ghost close well.
@@ -286,6 +288,7 @@ fun QueueSheet(
                 }
             } else LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                     itemsIndexed(
