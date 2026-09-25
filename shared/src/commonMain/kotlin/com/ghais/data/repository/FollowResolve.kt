@@ -40,7 +40,18 @@ fun resolveFollowedQari(rawSlug: String): ResolvedQari? {
     }
     val mp3 = ALL_MP3QURAN_RECITERS.find { it.slug.lowercase() == normalized }
 
-    if (verified == null && detailed == null && legacy == null && mp3 == null) return null
+    if (verified == null && detailed == null && legacy == null && mp3 == null) {
+        // Admin-only reciter: no bundled seed matches, so resolve it from the
+        // cloud catalog (Appwrite `reciters`). Without this, following a
+        // reciter uploaded from the admin panel left it invisible on the
+        // followed screen and the home "qari you follow" row.
+        val cloud = QuranDataRepository.getBrowseReciterBySlug(rawSlug) ?: return null
+        return ResolvedQari(
+            storedSlug = rawSlug,
+            reciter = cloud,
+            photoUrl = cloud.imageUrl,
+        )
+    }
 
     // Canonical reciter: legacy model wins (navigation + photoForSlug speak it),
     // then MP3Quran entry (already a Reciter), then synthesize from detailed.

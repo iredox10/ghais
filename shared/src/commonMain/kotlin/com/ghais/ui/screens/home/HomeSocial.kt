@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.FollowStore
+import com.ghais.data.repository.ReciterCloudCache
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.ui.components.noir.IconWell
@@ -46,7 +47,9 @@ import com.ghais.ui.theme.GhaisNoir
 @Composable
 fun HomeFollowedRow(onReciter: (String) -> Unit) {
     val followedSlugs by FollowStore.followedSlugs.collectAsState()
-    val resolved = remember(followedSlugs) {
+    // Re-resolve on catalog sync so an admin-uploaded reciter shows up here.
+    val cloudCatalog by ReciterCloudCache.cloudReciters.collectAsState()
+    val resolved = remember(followedSlugs, cloudCatalog) {
         followedSlugs.mapNotNull { slug ->
             resolveFollowedQari(slug)?.let { qari ->
                 Triple(qari.reciter.slug, qari.reciter.nameEn, qari.photoUrl.orEmpty())

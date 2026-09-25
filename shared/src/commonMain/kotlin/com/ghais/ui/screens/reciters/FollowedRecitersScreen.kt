@@ -31,6 +31,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
+import com.ghais.data.repository.ReciterCloudCache
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.IconWell
@@ -48,8 +49,11 @@ object FollowedRecitersScreen : Screen {
         val navigator = LocalNavigator.currentOrThrow
         var searchQuery by remember { mutableStateOf("") }
         val followedSlugs by FollowStore.followedSlugs.collectAsState()
+        // Re-resolve when the cloud catalog changes: a followed slug that only
+        // exists in Appwrite (admin upload) resolves once that sync lands.
+        val cloudCatalog by ReciterCloudCache.cloudReciters.collectAsState()
 
-        val reciters = remember(followedSlugs) {
+        val reciters = remember(followedSlugs, cloudCatalog) {
             followedSlugs.mapNotNull { slug -> resolveFollowedQari(slug) }
         }
         val filtered = remember(reciters, searchQuery) {
