@@ -33,6 +33,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
+import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirInsetField
 import com.ghais.ui.components.noir.NoirScreenRoot
@@ -175,8 +176,41 @@ class AllRecitersScreen : Screen {
             listOf("All", "Murattal", "Mujawwad", "Taraweeh", "Egypt", "Saudi Arabia")
         }
 
-        val filteredReciters = remember(searchQuery, selectedFilter) {
-            ALL_VERIFIED_RECITERS.filter { reciter ->
+        // Cloud-merged catalog (bundled seeds + Appwrite `reciters`). The
+        // curated roster below only supplies follower counts and fallback
+        // photos now — reciters uploaded from the admin panel are appended so
+        // they are browsable here too.
+        val browseReciters = rememberBrowseReciters()
+        val reciterRows = remember(browseReciters) {
+            val cloudBySlug = browseReciters.associateBy { it.slug.trim().lowercase() }
+            val curated = ALL_VERIFIED_RECITERS.map { row ->
+                val match = cloudBySlug[row.slug.trim().lowercase()] ?: return@map row
+                row.copy(
+                    nameEn = match.nameEn,
+                    nameAr = match.nameAr,
+                    country = match.country,
+                    style = match.style,
+                    photoUrl = match.imageUrl?.takeIf { it.isNotBlank() } ?: row.photoUrl,
+                )
+            }
+            val curatedSlugs = curated.mapTo(HashSet()) { it.slug.trim().lowercase() }
+            curated + browseReciters
+                .filter { it.slug.trim().lowercase() !in curatedSlugs }
+                .map { reciter ->
+                    VerifiedReciter(
+                        slug = reciter.slug,
+                        nameEn = reciter.nameEn,
+                        nameAr = reciter.nameAr,
+                        country = reciter.country,
+                        style = reciter.style,
+                        followers = "",
+                        photoUrl = reciter.imageUrl.orEmpty(),
+                    )
+                }
+        }
+
+        val filteredReciters = remember(reciterRows, searchQuery, selectedFilter) {
+            reciterRows.filter { reciter ->
                 val matchesQuery = if (searchQuery.isBlank()) {
                     true
                 } else {
@@ -478,6 +512,12 @@ private fun ReciterNoirRow(
     ) {
         ReciterPhotoWell(reciter = reciter)
 
+        val metaLine = if (reciter.followers.isBlank()) {
+            reciter.country
+        } else {
+            "${reciter.country} · ${reciter.followers}"
+        }
+
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -520,7 +560,7 @@ private fun ReciterNoirRow(
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "${reciter.country} · ${reciter.followers}",
+                    text = metaLine,
                     color = GhaisNoir.TextTertiary,
                     fontSize = 11.sp,
                     maxLines = 1,

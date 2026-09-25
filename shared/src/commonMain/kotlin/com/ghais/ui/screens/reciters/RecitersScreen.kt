@@ -52,7 +52,7 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
-import com.ghais.data.seed.QuranData
+import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
@@ -93,8 +93,13 @@ class RecitersScreen : Tab {
             ?: LocalNavigator.current?.parent
             ?: LocalNavigator.current
 
-        val groups = remember {
-            QuranData.RECITERS
+        // Cloud-merged catalog (bundled seeds + Appwrite `reciters`), so a
+        // reciter uploaded from the admin panel shows up here on the next
+        // catalog sync instead of only in search. Reactive to the cache.
+        val browseReciters = rememberBrowseReciters()
+
+        val groups = remember(browseReciters) {
+            browseReciters
                 .groupBy { it.country.ifBlank { "Other" } }
                 .entries
                 .sortedByDescending { (_, reciters) -> reciters.size }
@@ -110,7 +115,7 @@ class RecitersScreen : Tab {
                 // ---------------------------------------------------------
                 item {
                     NoirRecitersHeader(
-                        totalReciters = QuranData.RECITERS.size,
+                        totalReciters = browseReciters.size,
                         nationCount = groups.size
                     )
                     Spacer(Modifier.height(16.dp))

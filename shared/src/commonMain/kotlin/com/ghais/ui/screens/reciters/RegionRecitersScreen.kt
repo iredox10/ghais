@@ -37,7 +37,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
-import com.ghais.data.seed.QuranData
+import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.NoirScreenRoot
@@ -56,8 +56,9 @@ data class RegionRecitersScreen(val nation: String) : Screen {
         val isPlaying by AudioEngine.isPlaying.collectAsState()
         val followedSlugs by FollowStore.followedSlugs.collectAsState()
 
-        val reciters = remember(nation) {
-            QuranData.RECITERS.filter { it.country == nation }
+        val browseReciters = rememberBrowseReciters()
+        val reciters = remember(nation, browseReciters) {
+            browseReciters.filter { it.country == nation }
         }
         val filtered = remember(reciters, searchQuery) {
             if (searchQuery.isBlank()) reciters
