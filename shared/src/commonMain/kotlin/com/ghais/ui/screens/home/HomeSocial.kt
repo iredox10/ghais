@@ -42,7 +42,7 @@ import com.ghais.ui.theme.GhaisNoir
 /**
  * Phase 4 — "Qari you follow".
  *
- * Portraits are pulled to true grayscale inside a clay well, and the followed
+ * Portraits render in natural colour inside a clay well, and the followed
  * state is expressed by a chromium specular ring rather than a coloured border.
  */
 @Composable

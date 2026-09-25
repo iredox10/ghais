@@ -264,7 +264,7 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = rowModifier.padding(12.dp)
                             ) {
-                                // Grayscale artwork well — engraved tile, dimmed scrim
+                                // Natural-colour artwork well — engraved tile, dimmed scrim
                                 val photo = rememberCloudPhoto(reciter.slug) ?: photoForSlug(reciter.slug)
                                 if (photo != null) {
                                     Box(

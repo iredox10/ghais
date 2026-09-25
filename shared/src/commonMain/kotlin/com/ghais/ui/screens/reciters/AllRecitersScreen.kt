@@ -158,7 +158,8 @@ val ALL_VERIFIED_RECITERS = listOf(
  *
  * Canvas #050506 via [NoirScreenRoot] (glow zone -> absolute black + grain).
  * Surfaces are alpha-white (Fill2 -> FillDeep) + 1px [GhaisNoir.BorderCard] +
- * 22% top-only specular. Text ladder 100/62/38/24%. Zero hue.
+ * 22% top-only specular. Text ladder 100/62/38/24%. Surfaces and chrome
+ * remain zero-hue; reciter photos retain natural colour.
  *
  * Signature, search/filter logic and navigation preserved:
  * `navigator.pop()` back, `rootNavigator.push(ReciterProfileScreen(slug))` on row tap.
@@ -490,7 +491,7 @@ private fun ReciterFilterChipsRow(
 
 /**
  * Reciter row in the [com.ghais.ui.components.noir.NoirListRow] language:
- * soft card fill + 1px card border + 22% top-only specular, grayscale
+ * soft card fill + 1px card border + 22% top-only specular, natural-colour
  * photo well with monogram fallback, dual text, ghost style chip,
  * circular chevron affordance. Tapping navigates to
  * `ReciterProfileScreen(reciter.slug)` (signature preserved).
@@ -587,8 +588,8 @@ private fun ReciterNoirRow(
 }
 
 /**
- * Grayscale portrait in a clay well (home `NoirArtworkWell` pattern):
- * desaturated photo + 35% black scrim so it reads engraved, monogram
+ * Natural-colour portrait in a clay well (home `NoirArtworkWell` pattern),
+ * with a black scrim layer retained for the recessed treatment, monogram
  * fallback in [IconWell] language, chrome verified dot (zero hue).
  */
 @Composable

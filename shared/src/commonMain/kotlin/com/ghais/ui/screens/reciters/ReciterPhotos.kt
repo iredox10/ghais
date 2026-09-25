@@ -146,10 +146,10 @@ fun rememberReciterPhoto(slug: String?): String? {
  *
  * All reciter photo/avatar rendering must go through [NoirReciterAvatar] (or
  * the section-level [NoirReciterArtwork] in NoirReciterSections.kt), which
- * delegates to the shared home [NoirArtworkWell]: grayscale
- * [ColorFilter.colorMatrix] (saturation 0), monogram fallback in a clay well,
- * optional chromium ring. [photoForSlug] above is intentionally untouched so
- * existing callers (RecitersScreen, RegionRecitersScreen,
+ * delegates to the shared home [NoirArtworkWell]: natural-colour artwork by
+ * default with an optional explicit grayscale treatment, monogram fallback in
+ * a clay well, optional chromium ring. [photoForSlug] above is intentionally
+ * untouched so existing callers (RecitersScreen, RegionRecitersScreen,
  * FollowedRecitersScreen) keep compiling with no edits.
  */
 
@@ -163,13 +163,14 @@ fun monogramForReciter(nameEn: String): String =
     nameEn.firstOrNull { it.isLetter() }?.uppercase() ?: "ق"
 
 /**
- * Grayscale reciter avatar in a clay well with monogram fallback.
+ * Reciter avatar in a clay well with monogram fallback. Portraits render in
+ * natural colour by default, with an optional explicit grayscale treatment.
  *
  * Cloud upgrade: when [slug] is provided and [remotePhotoFetcher] is wired,
  * the local [photoUrl]/monogram renders instantly and the cloud portrait
  * swaps in only on null→url (never blank, never flashes, never blocks the
- * UI). [slug] defaults to null so existing callers are unaffected. Color is
- * opt-in per call site by setting [grayscale] to false.
+ * UI). [slug] defaults to null so existing callers are unaffected. The
+ * monochrome treatment is opt-in per call site by setting [grayscale] to true.
  *
  * @param photoUrl nullable local portrait URL; blank/null renders the monogram well.
  * @param nameEn English name used for the monogram + content description.
@@ -188,7 +189,7 @@ fun NoirReciterAvatar(
     monogramSize: TextUnit = 28.sp,
     ring: Boolean = false,
     slug: String? = null,
-    grayscale: Boolean = true,
+    grayscale: Boolean = false,
     scrimAlpha: Float = 0.35f,
 ) {
     val remoteUrl = rememberCloudPhoto(slug)

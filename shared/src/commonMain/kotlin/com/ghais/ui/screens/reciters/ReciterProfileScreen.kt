@@ -106,8 +106,8 @@ private const val ReciterArtworkOverscanWidth = 1.08f
  * full discography of Surahs.
  *
  * Styled in strict Noir Glass monochrome: true-black canvas, alpha-white fills,
- * ghost hairlines with a top-only specular, chrome CTAs, and grayscale imagery.
- * Zero hue — state reads through fill elevation, chromium, weight and opacity.
+ * ghost hairlines with a top-only specular, chrome CTAs, and natural-colour artwork.
+ * Surrounding chrome and state remain monochrome; artwork retains its own colour.
  *
  * Presentation only. Playback / queue / download / follow logic is untouched.
  */
@@ -477,7 +477,6 @@ private fun ReciterNoirHeroPlate(
                         model = photoUrl,
                         contentDescription = reciter.nameEn,
                         contentScale = ContentScale.Crop,
-                        colorFilter = NoirReciterGrayscale,
                         onState = { state ->
                             if (state is coil3.compose.AsyncImagePainter.State.Error) photoFailed = true
                         },

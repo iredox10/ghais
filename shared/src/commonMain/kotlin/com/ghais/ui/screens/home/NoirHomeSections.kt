@@ -42,9 +42,9 @@ import com.ghais.ui.theme.GhaisShapes
  */
 
 /**
- * True-grayscale filter — cover art and Qari portraits stay recognisable while
- * remaining strictly monochrome. Instantiated once (ColorMatrix is immutable
- * in use) so recompositions never re-allocate it.
+ * Optional true-grayscale filter for the explicit monochrome image path.
+ * Instantiated once (ColorMatrix is immutable in use) so recompositions never
+ * re-allocate it.
  */
 private val NoirGrayscale: ColorFilter by lazy {
     ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
@@ -54,9 +54,9 @@ private val NoirGrayscale: ColorFilter by lazy {
  * Recessed artwork plate. Falls back to a monogram when there is no artwork,
  * mirroring the Profile identity pill.
  *
- * [grayscale] keeps the Noir monochrome look by default. Call sites that need
- * real color can opt out by passing false. [scrimAlpha] controls the dark
- * overlay applied only when artwork is present.
+ * [grayscale] applies the optional monochrome image treatment when true;
+ * images render in their natural colour by default. [scrimAlpha] controls the
+ * dark overlay applied only when artwork is present.
  */
 @Composable
 fun NoirArtworkWell(
@@ -67,7 +67,7 @@ fun NoirArtworkWell(
     size: Dp = 64.dp,
     monogramSize: TextUnit = 22.sp,
     ring: Boolean = false,
-    grayscale: Boolean = true,
+    grayscale: Boolean = false,
     scrimAlpha: Float = 0.35f,
     errorFallbackUrl: String? = null
 ) {

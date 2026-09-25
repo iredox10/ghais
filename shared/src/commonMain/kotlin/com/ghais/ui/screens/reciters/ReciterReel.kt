@@ -182,7 +182,7 @@ fun ReciterReelCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Noir artwork well: clay well + grayscale portrait + recess scrim.
+            // Noir artwork well: clay well + natural-colour portrait + recess scrim.
             Box(
                 modifier = Modifier.size(128.dp),
                 contentAlignment = Alignment.Center

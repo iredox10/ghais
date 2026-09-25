@@ -68,7 +68,7 @@ import com.ghais.ui.theme.GhaisShapes
 import kotlinx.coroutines.delay
 
 /**
- * Noir reciter search — strict monochrome, zero hue.
+ * Noir reciter search — monochrome chrome with natural-colour portraits.
  *
  * Top: back well + autofocused engraved search field. Blank query shows the
  * "Recent searches" section (rows resolved via [QuranDataRepository.getReciterBySlug],
@@ -382,7 +382,7 @@ private fun ReciterSearchField(
 }
 
 /**
- * Recent-search row in the NoirListRow language: grayscale avatar well,
+ * Recent-search row in the NoirListRow language: natural-colour avatar well,
  * dual text, trailing play disc for direct play, per-item remove (X well).
  * Row tap opens the reciter profile.
  */
@@ -471,7 +471,7 @@ private fun RecentReciterRow(
 }
 
 /**
- * Live-result row in the NoirListRow language: grayscale avatar well,
+ * Live-result row in the NoirListRow language: natural-colour avatar well,
  * dual text, ghost circular play affordance. Row tap opens the reciter profile.
  */
 @Composable

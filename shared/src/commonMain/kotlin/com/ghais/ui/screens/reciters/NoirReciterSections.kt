@@ -15,7 +15,7 @@ import com.ghais.ui.components.noir.NoirSectionHeader
  *
  * Thin reciter-specific wrappers over the shared primitives
  * ([NoirSectionHeader], [NoirReciterAvatar]) so reciter screens share one label
- * rhythm and one grayscale artwork recipe with Home/Profile. No new
+ * rhythm and one natural-colour artwork recipe with Home/Profile. No new
  * dependencies; no caller edits required (purely additive, backward-compatible).
  */
 
@@ -43,10 +43,9 @@ fun NoirReciterSectionHeader(
 }
 
 /**
- * Grayscale reciter artwork delegating to [NoirReciterAvatar] (single cloud/
- * local resolution point): saturation-0 photo in a clay well with monogram
- * fallback and optional chromium ring. Prefer this over raw AsyncImage in
- * reciter rows/cards.
+ * Natural-colour reciter artwork delegating to [NoirReciterAvatar] (single cloud/
+ * local resolution point): photo in a clay well with monogram fallback and
+ * optional chromium ring. Prefer this over raw AsyncImage in reciter rows/cards.
  *
  * @param slug reciter slug for the async cloud-photo lookup; null keeps the local [photoUrl] only.
  * @param grayscale whether to render the reciter photo in grayscale.
@@ -62,7 +61,7 @@ fun NoirReciterArtwork(
     monogramSize: TextUnit = 28.sp,
     ring: Boolean = false,
     slug: String? = null,
-    grayscale: Boolean = true,
+    grayscale: Boolean = false,
     scrimAlpha: Float = 0.35f,
 ) {
     NoirReciterAvatar(
