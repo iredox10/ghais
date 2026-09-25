@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.seed.JumpBackInItem
 import com.ghais.player.AudioEngine
@@ -40,6 +42,7 @@ import com.ghais.ui.components.noir.NoirHeroCard
 import com.ghais.ui.components.noir.NoirSegmentedProgress
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.screens.reciters.rememberCloudPhoto
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 
@@ -84,18 +87,33 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
     val hero = recent.first()
     val rail = recent.drop(1)
     val heroActive = isLive(hero, currentTrack?.surahId, currentTrack?.reciterSlug)
+    val heroPhoto = rememberCloudPhoto(hero.reciterSlug)
 
     NoirHeroCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                NoirArtworkWell(
-                    coverUrl = hero.coverUrl,
-                    monogram = monogramOf(hero),
-                    shape = RoundedCornerShape(20.dp),
-                    size = 76.dp,
-                    monogramSize = 26.sp,
-                    ring = heroActive
-                )
+                if (heroPhoto != null) {
+                    NoirArtworkWell(
+                        coverUrl = heroPhoto,
+                        monogram = reciterMonogramOf(hero),
+                        shape = CircleShape,
+                        size = 76.dp,
+                        monogramSize = 26.sp,
+                        ring = true,
+                        grayscale = false,
+                        scrimAlpha = 0f,
+                        errorFallbackUrl = hero.coverUrl
+                    )
+                } else {
+                    NoirArtworkWell(
+                        coverUrl = hero.coverUrl,
+                        monogram = monogramOf(hero),
+                        shape = RoundedCornerShape(20.dp),
+                        size = 76.dp,
+                        monogramSize = 26.sp,
+                        ring = heroActive
+                    )
+                }
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -188,6 +206,8 @@ private fun NoirRecentPlate(
     playing: Boolean,
     onPlay: () -> Unit
 ) {
+    val reciterPhoto = rememberCloudPhoto(item.reciterSlug)
+
     Row(
         modifier = Modifier
             .width(272.dp)
@@ -205,14 +225,28 @@ private fun NoirRecentPlate(
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        NoirArtworkWell(
-            coverUrl = item.coverUrl,
-            monogram = monogramOf(item),
-            shape = RoundedCornerShape(14.dp),
-            size = 52.dp,
-            monogramSize = 18.sp,
-            ring = active
-        )
+        if (reciterPhoto != null) {
+            NoirArtworkWell(
+                coverUrl = reciterPhoto,
+                monogram = reciterMonogramOf(item),
+                shape = CircleShape,
+                size = 52.dp,
+                monogramSize = 18.sp,
+                ring = true,
+                grayscale = false,
+                scrimAlpha = 0f,
+                errorFallbackUrl = item.coverUrl
+            )
+        } else {
+            NoirArtworkWell(
+                coverUrl = item.coverUrl,
+                monogram = monogramOf(item),
+                shape = RoundedCornerShape(14.dp),
+                size = 52.dp,
+                monogramSize = 18.sp,
+                ring = active
+            )
+        }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -264,6 +298,9 @@ private fun progressOf(item: JumpBackInItem): Float = item.progress.coerceIn(0f,
 
 private fun monogramOf(item: JumpBackInItem): String =
     item.title.firstOrNull()?.uppercase() ?: "Q"
+
+private fun reciterMonogramOf(item: JumpBackInItem): String =
+    QuranDataRepository.getReciterBySlug(item.reciterSlug).nameEn.firstOrNull()?.uppercase() ?: "Q"
 
 private fun isLive(item: JumpBackInItem, surahId: Int?, reciterSlug: String?): Boolean =
     surahId != null && reciterSlug != null &&
