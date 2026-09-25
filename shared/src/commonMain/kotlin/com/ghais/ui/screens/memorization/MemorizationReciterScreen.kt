@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlayArrow
@@ -65,7 +64,6 @@ import com.ghais.ui.components.noir.NoirSegmentedProgress
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.screens.player.QueueSheet
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisTypography
 
@@ -89,14 +87,6 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
 
         val currentTrack by AudioEngine.currentTrack.collectAsState()
         val isAyahMode by AudioEngine.isAyahMode.collectAsState()
-        val queue by AudioEngine.queue.collectAsState()
-        var showQueue by remember { mutableStateOf(false) }
-        val ownsQueue = isAyahMode && queue.isNotEmpty() &&
-            currentTrack?.reciterSlug.equals(reciter.slug, ignoreCase = true)
-
-        PlayerBackHandler(enabled = showQueue) {
-            showQueue = false
-        }
 
         val downloaded by QuranDownloads.downloadedKeys.collectAsState()
         val dlProgress by QuranDownloads.progress.collectAsState()
@@ -226,20 +216,6 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                                 )
                             }
 
-                            if (ownsQueue) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.End
-                                ) {
-                                    IconWell(
-                                        icon = Icons.AutoMirrored.Filled.QueueMusic,
-                                        size = 40.dp,
-                                        iconSize = 20.dp,
-                                        contentDescription = "Up Next",
-                                        modifier = Modifier.noirClickable { showQueue = true }
-                                    )
-                                }
-                            }
 
                             Spacer(modifier = Modifier.height(12.dp))
                         }
@@ -316,7 +292,6 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                     }
                 }
             }
-            if (showQueue) QueueSheet(onDismiss = { showQueue = false })
         }
     }
 }
