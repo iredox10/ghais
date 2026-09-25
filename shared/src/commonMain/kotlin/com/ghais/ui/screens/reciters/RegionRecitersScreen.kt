@@ -60,7 +60,9 @@ data class RegionRecitersScreen(val nation: String) : Screen {
         val browseReciters = rememberBrowseReciters()
         val reciters = remember(nation, browseReciters) {
             val wanted = reciterCountryKey(nation)
-            browseReciters.filter { reciterCountryKey(it.country) == wanted }
+            browseReciters
+                .filter { reciterCountryKey(it.country) == wanted }
+                .sortedBy { it.nameEn.trim().lowercase() }
         }
         val filtered = remember(reciters, searchQuery) {
             if (searchQuery.isBlank()) reciters

@@ -101,7 +101,8 @@ class RecitersScreen : Tab {
 
         // Grouped on the flag-insensitive country key so an admin-created
         // "Saudi Arabia" joins the bundled "Saudi Arabia 🇸🇦" section instead of
-        // forming a second, near-identical nation. The label keeps the richest
+        // forming a second, near-identical nation. Nations and the reciters
+        // inside them are both alphabetical, and the label keeps the richest
         // raw spelling in the group (the one that still carries its flag).
         val groups = remember(browseReciters) {
             browseReciters
@@ -113,9 +114,10 @@ class RecitersScreen : Tab {
                         .maxByOrNull { it.count { ch -> !ch.isLetterOrDigit() && ch != ' ' } }
                         ?.takeIf { reciterCountryKey(it) == key }
                         ?: reciters.first().country.ifBlank { "Other" }
-                    label to reciters
+                    val sorted = reciters.sortedBy { it.nameEn.trim().lowercase() }
+                    label to sorted
                 }
-                .sortedByDescending { (_, reciters) -> reciters.size }
+                .sortedBy { (label, _) -> reciterCountryKey(label).ifBlank { label.lowercase() } }
         }
 
         NoirScreenRoot {
