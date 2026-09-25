@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -104,13 +105,10 @@ fun MiniPlayer(
     val isAyah = track.ayahNo > 0
     val displayTitle = if (isAyah) "${track.surahNameEn} • Ayah ${track.ayahNo}" else track.surahNameEn
 
-    val subtitleText = if (isAyah) {
-        "${track.reciterName} • Surah ${track.surahId} of 114"
-    } else if (queue.size > 1 && currentIndex in queue.indices) {
-        "${track.reciterName} • Surah ${track.surahId} of 114 • Track ${currentIndex + 1} of ${queue.size}"
-    } else {
-        "${track.reciterName} • Surah ${track.surahId} of 114"
-    }
+    // Reciter only: the surah/track counters ("Surah 2 of 114 • Track 2 of
+    // 114") were noise on a 90dp bar — the title and the progress hairline
+    // already say what is playing and how far in.
+    val subtitleText = track.reciterName
 
     // Glassmorphic black background
     val glassGradient = Brush.verticalGradient(
@@ -244,11 +242,27 @@ fun MiniPlayer(
 
                         Spacer(modifier = Modifier.width(4.dp))
 
-                        // Right: white play + skip-next (reference design)
+                        // Right: prev + play/pause + next
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            horizontalArrangement = Arrangement.spacedBy(0.dp)
                         ) {
+                            // Previous is always live: inside the first 3s of a
+                            // track it restarts the track, past that it steps
+                            // back — both are valid user intents, so unlike
+                            // "next" it never needs disabling.
+                            IconButton(
+                                onClick = { AudioEngine.skipPrevious() },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SkipPrevious,
+                                    contentDescription = "Previous",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+
                             IconButton(
                                 onClick = { AudioEngine.togglePlayPause() },
                                 modifier = Modifier.size(40.dp)
