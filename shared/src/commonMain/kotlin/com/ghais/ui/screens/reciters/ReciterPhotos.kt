@@ -2,6 +2,7 @@ package com.ghais.ui.screens.reciters
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -15,15 +16,36 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.ReciterCloudCache
 import com.ghais.data.seed.GhaisAssets
+import com.ghais.data.seed.QuranDataRepository as SeedRepository
 import com.ghais.ui.screens.home.NoirArtworkWell
+
+private fun reciterPhotoOrNull(photoUrl: String?): String? =
+    photoUrl?.trim()?.takeIf {
+        it.isNotBlank() &&
+            it != GhaisAssets.LogoUrl &&
+            !it.contains("placeholder", ignoreCase = true)
+    }
+
+private fun cloudPhotoForSlug(slug: String): String? {
+    if (slug.isBlank()) return null
+    val clean = normalizeReciterSlug(slug)
+    return reciterPhotoOrNull(ReciterCloudCache.cloudImageForSlug(clean))
+        ?: reciterPhotoOrNull(
+            ReciterCloudCache.cloudReciters.value.firstOrNull {
+                normalizeReciterSlug(it.slug) == clean
+            }?.imageUrl
+        )
+}
 
 fun photoForSlug(slug: String): String? {
     // Cloud first (admin-uploaded via Appwrite `reciters.image_url`), then local.
-    com.ghais.data.repository.ReciterCloudCache.cloudImageForSlug(slug)?.let { return it }
-    val clean = slug.lowercase().replace('_', '-')
+    cloudPhotoForSlug(slug)?.let { return it }
+    val clean = normalizeReciterSlug(slug)
     val verified = ALL_VERIFIED_RECITERS.find {
-        val vSlug = it.slug.lowercase().replace('_', '-')
+        val vSlug = normalizeReciterSlug(it.slug)
         vSlug == clean ||
         (clean.contains("alafasy") || clean.contains("mishary")) && (vSlug == "mishary" || vSlug == "alafasy") ||
         clean.contains("sudais") && vSlug.contains("sudais") ||
@@ -34,20 +56,52 @@ fun photoForSlug(slug: String): String? {
         clean.contains("minshawi") && vSlug.contains("minshawi") ||
         clean.contains("husary") && vSlug.contains("husary")
     }
-    if (verified != null) return verified.photoUrl
+    if (verified != null) return reciterPhotoOrNull(verified.photoUrl)
 
     val photos = GhaisAssets.VerifiedReciters
-    return when {
-        clean.contains("alafasy") || clean.contains("mishary") -> photos.firstOrNull { it.slug == "mishary" }?.photoUrl
-        clean.contains("sudais") -> photos.firstOrNull { it.slug == "al-sudais" }?.photoUrl
-        clean.contains("muaiqly") -> photos.firstOrNull { it.slug == "al-muaiqly" }?.photoUrl
-        clean.contains("dossari") -> photos.firstOrNull { it.slug == "al-dossari" }?.photoUrl
-        clean.contains("basit") || clean.contains("abdulbaset") -> photos.firstOrNull { it.slug == "abdul-basit" }?.photoUrl
-        clean.contains("husary") -> ALL_VERIFIED_RECITERS.firstOrNull { it.slug == "husary" }?.photoUrl
-        clean.contains("minshawi") -> ALL_VERIFIED_RECITERS.firstOrNull { it.slug == "minshawi" }?.photoUrl
-        clean.contains("shuraim") || clean.contains("shuraym") -> ALL_VERIFIED_RECITERS.firstOrNull { it.slug == "shuraim" }?.photoUrl
-        else -> null
-    }
+    return reciterPhotoOrNull(
+        when {
+            clean.contains("alafasy") || clean.contains("mishary") -> photos.firstOrNull { normalizeReciterSlug(it.slug) == "mishary" }?.photoUrl
+            clean.contains("sudais") -> photos.firstOrNull { normalizeReciterSlug(it.slug) == "al-sudais" }?.photoUrl
+            clean.contains("muaiqly") -> photos.firstOrNull { normalizeReciterSlug(it.slug) == "al-muaiqly" }?.photoUrl
+            clean.contains("dossari") -> photos.firstOrNull { normalizeReciterSlug(it.slug) == "al-dossari" }?.photoUrl
+            clean.contains("basit") || clean.contains("abdulbaset") -> photos.firstOrNull { normalizeReciterSlug(it.slug) == "abdul-basit" }?.photoUrl
+            clean.contains("husary") -> ALL_VERIFIED_RECITERS.firstOrNull { normalizeReciterSlug(it.slug) == "husary" }?.photoUrl
+            clean.contains("minshawi") -> ALL_VERIFIED_RECITERS.firstOrNull { normalizeReciterSlug(it.slug) == "minshawi" }?.photoUrl
+            clean.contains("shuraim") || clean.contains("shuraym") -> ALL_VERIFIED_RECITERS.firstOrNull { normalizeReciterSlug(it.slug) == "shuraim" }?.photoUrl
+            else -> null
+        }
+    )
+}
+
+private fun normalizeReciterSlug(slug: String): String =
+    slug.trim().lowercase().replace('_', '-')
+
+fun resolveReciterPhoto(slug: String?): String? {
+    if (slug.isNullOrBlank()) return null
+    val clean = normalizeReciterSlug(slug)
+
+    cloudPhotoForSlug(clean)?.let { return it }
+
+    val browseReciter = QuranDataRepository.getBrowseReciterBySlug(clean)
+        ?: QuranDataRepository.getBrowseReciters().firstOrNull {
+            normalizeReciterSlug(it.slug) == clean
+        }
+    val directReciter = QuranDataRepository.getReciterBySlug(clean)
+    val aliasCloudPhoto = reciterPhotoOrNull(browseReciter?.imageUrl)
+        ?: reciterPhotoOrNull(
+            directReciter.takeIf { normalizeReciterSlug(it.slug) == clean }?.imageUrl
+        )
+    aliasCloudPhoto?.let { return it }
+
+    val canonicalSlug = browseReciter?.slug?.let(::normalizeReciterSlug)
+    photoForSlug(clean)?.let { return it }
+
+    val detailedReciter = SeedRepository.getReciterBySlug(clean)
+        ?: canonicalSlug?.let { SeedRepository.getReciterBySlug(it) }
+    reciterPhotoOrNull(detailedReciter?.photoUrl)?.let { return it }
+
+    return null
 }
 
 /**
@@ -61,31 +115,30 @@ fun photoForSlug(slug: String): String? {
  */
 var remotePhotoFetcher: (suspend (String) -> String?)? = null
 
-/**
- * Lazily resolve a reciter's cloud portrait ([remotePhotoFetcher]) for
- * [slug], remembering the result per slug.
- *
- * The catalog pull ([ReciterCloudCache]) only refreshes on sync, so a photo
- * uploaded in the admin after the last sync would otherwise stay invisible
- * until the next one. Every reciter row that renders a photo should prefer
- * this over a bare [photoForSlug] call, so admin edits appear on next open.
- * Returns null while loading / on any failure, letting callers fall back to
- * their local photo.
- */
 @Composable
-fun rememberCloudPhoto(slug: String?): String? {
+fun rememberCloudPhoto(slug: String?): String? =
+    rememberReciterPhoto(slug)
+
+@Composable
+fun rememberReciterPhoto(slug: String?): String? {
+    val cloudCatalog by ReciterCloudCache.cloudReciters.collectAsState()
+    val resolvedPhoto = remember(slug, cloudCatalog) { resolveReciterPhoto(slug) }
     var remoteUrl by remember(slug) { mutableStateOf<String?>(null) }
-    if (!slug.isNullOrBlank() && remoteUrl == null) {
+    var fetchAttempted by remember(slug) { mutableStateOf(false) }
+
+    if (resolvedPhoto == null && !slug.isNullOrBlank() && !fetchAttempted) {
         LaunchedEffect(slug) {
+            fetchAttempted = true
             val fetched = try {
                 remotePhotoFetcher?.invoke(slug)
             } catch (_: Exception) {
                 null
             }
-            if (!fetched.isNullOrBlank()) remoteUrl = fetched
+            reciterPhotoOrNull(fetched)?.let { remoteUrl = it }
         }
     }
-    return remoteUrl
+
+    return resolvedPhoto ?: remoteUrl
 }
 
 /**
