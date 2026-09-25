@@ -48,6 +48,9 @@ data class Reciter(
     val imageFileId: String? = null,
     val enabled: Boolean = true
 ) {
+    private companion object {
+        val HEX = "0123456789ABCDEF"
+    }
     /** Stable catalog-scoped identity: "<catalog.wire>:<slug>". */
     fun catalogKey(): String = "${catalog.wire}:$slug"
 
@@ -106,7 +109,32 @@ data class Reciter(
             .trim()
         if (value.isEmpty()) return null
         if (value == "$pad.mp3" || value == "$pad.MP3") return null
-        return value
+        return encodeUrlPath(value)
+    }
+
+    /**
+     * Percent-encodes an archive file path while keeping `/` separators and
+     * the unreserved set intact, so filenames containing spaces or non-ASCII
+     * characters still resolve over HTTP.
+     */
+    private fun encodeUrlPath(value: String): String {
+        val out = StringBuilder(value.length + 8)
+        for (byte in value.encodeToByteArray()) {
+            val code = byte.toInt() and 0xFF
+            val char = code.toChar()
+            val safe = (code in 'a'.code..'z'.code) ||
+                (code in 'A'.code..'Z'.code) ||
+                (code in '0'.code..'9'.code) ||
+                char == '-' || char == '_' || char == '.' || char == '~' || char == '/'
+            if (safe) {
+                out.append(char)
+            } else {
+                out.append('%')
+                out.append(HEX[(code shr 4) and 0xF])
+                out.append(HEX[code and 0xF])
+            }
+        }
+        return out.toString()
     }
 
     fun getFullSurahUrl(surahId: Int): String {
