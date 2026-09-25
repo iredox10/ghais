@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
@@ -21,11 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -35,7 +29,6 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import coil3.compose.AsyncImage
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.resolveFollowedQari
@@ -56,18 +49,12 @@ import kotlin.time.Clock
 
 private const val HISTORY_WINDOW_MS = 30L * 24 * 60 * 60 * 1000
 
-/** True-grayscale filter — thumbs stay recognisable while strictly monochrome. */
-private val NoirGrayscale: ColorFilter by lazy {
-    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-}
-
 private data class HistorySurahGroup(
     val key: String,
     val surahId: Int,
     val reciterSlug: String,
     val title: String,
     val reciterName: String,
-    val coverUrl: String,
     val lastPlayedMs: Long,
     val playsCount: Int,
     val positionMs: Long,
@@ -92,9 +79,9 @@ private fun relativeTime(timestampMs: Long): String {
  *
  * Canvas #050506 via [NoirScreenRoot] (glow zone -> absolute black + grain).
  * Engraved [NoirInsetField] search (white cursor, 24% hint, ghost clear),
- * history rows in the NoirListRow language with grayscale thumbs + 35% scrim,
- * ghost-well empty state, ghost circular replay affordance. Zero hue — state
- * reads through fill elevation, weight and opacity.
+ * history rows in the NoirListRow language with natural-colour reciter portraits,
+ * ghost-well empty state, and ghost circular replay affordance. Monochrome chrome
+ * lets state read through fill elevation, weight and opacity.
  *
  * Signature, grouping/filter/replay logic and navigation preserved.
  */
@@ -184,7 +171,6 @@ object HistoryScreen : Screen {
                         title = latest.title.ifBlank { "Surah ${latest.surahId}" },
                         reciterName = resolvedName
                             ?: latest.subtitle.substringBefore("•").trim().ifEmpty { latest.reciterSlug },
-                        coverUrl = latest.coverUrl,
                         lastPlayedMs = perSurah.maxOf { it.lastPlayedTimestampMs },
                         // All-time qualified plays (sibling-owned surahPlays) win;
                         // fall back to in-window entry count so a visible-but-
@@ -382,9 +368,8 @@ object HistoryScreen : Screen {
 
 /**
  * History row in the NoirListRow language: soft card fill + 1px card border +
- * 22% top-only specular, grayscale thumb (desaturated + 35% black scrim,
- * monogram fallback), dual text, 38% timestamp, ghost circular replay
- * affordance with white glyph + ghost chevron.
+ * 22% top-only specular, natural-colour reciter portrait (monogram fallback),
+ * dual text, 38% timestamp, and ghost circular replay affordance.
  */
 @Composable
 private fun HistoryNoirRow(
@@ -395,7 +380,6 @@ private fun HistoryNoirRow(
         resolveFollowedQari(group.reciterSlug)?.photoUrl
     }
     val cloudPhoto = rememberCloudPhoto(group.reciterSlug)
-    val thumbUrl = group.coverUrl.takeIf { it.isNotBlank() } ?: photoUrl
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -408,40 +392,6 @@ private fun HistoryNoirRow(
             .noirClickable(onReplay)
             .padding(12.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(GhaisNoir.wellFill())
-                .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(18.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            if (thumbUrl != null) {
-                AsyncImage(
-                    model = thumbUrl,
-                    contentDescription = group.title,
-                    contentScale = ContentScale.Crop,
-                    colorFilter = NoirGrayscale,
-                    modifier = Modifier.fillMaxSize()
-                )
-                // Darkening scrim keeps the plate recessed instead of glowing.
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(Color.Black.copy(alpha = 0.35f))
-                )
-            } else {
-                Text(
-                    text = group.title.take(1).uppercase(),
-                    color = GhaisNoir.TextPrimary,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.width(8.dp))
-
         NoirArtworkWell(
             coverUrl = cloudPhoto ?: photoUrl.orEmpty(),
             monogram = group.reciterName.firstOrNull()?.uppercase() ?: "Q",
@@ -485,27 +435,18 @@ private fun HistoryNoirRow(
                 maxLines = 1
             )
             Spacer(modifier = Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
-                        .background(GhaisNoir.Fill2, CircleShape)
-                        .noirClickable(onReplay),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.PlayArrow,
-                        contentDescription = "Replay",
-                        tint = GhaisNoir.TextPrimary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                    .background(GhaisNoir.Fill2, CircleShape)
+                    .noirClickable(onReplay),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = GhaisNoir.TextTertiary,
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = "Replay",
+                    tint = GhaisNoir.TextPrimary,
                     modifier = Modifier.size(18.dp)
                 )
             }

@@ -642,7 +642,7 @@ private fun TopQariRow(
             size = 36.dp,
             monogramSize = 14.sp,
             ring = true,
-            grayscale = true,
+            grayscale = false,
             scrimAlpha = 0f
         )
         Spacer(modifier = Modifier.width(8.dp))
