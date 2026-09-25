@@ -33,6 +33,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
+import com.ghais.data.repository.reciterCountryKey
 import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirInsetField
@@ -226,8 +227,8 @@ class AllRecitersScreen : Screen {
                     "Murattal" -> reciter.style.equals("Murattal", ignoreCase = true)
                     "Mujawwad" -> reciter.style.equals("Mujawwad", ignoreCase = true)
                     "Taraweeh" -> reciter.style.equals("Taraweeh", ignoreCase = true)
-                    "Egypt" -> reciter.country.equals("Egypt", ignoreCase = true)
-                    "Saudi Arabia" -> reciter.country.equals("Saudi Arabia", ignoreCase = true)
+                    "Egypt" -> reciterCountryKey(reciter.country) == "egypt"
+                    "Saudi Arabia" -> reciterCountryKey(reciter.country) == "saudi arabia"
                     else -> true
                 }
 

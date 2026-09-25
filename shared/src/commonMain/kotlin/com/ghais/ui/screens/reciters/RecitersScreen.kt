@@ -52,6 +52,7 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.reciterCountryKey
 import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.TrackItem
@@ -98,10 +99,22 @@ class RecitersScreen : Tab {
         // catalog sync instead of only in search. Reactive to the cache.
         val browseReciters = rememberBrowseReciters()
 
+        // Grouped on the flag-insensitive country key so an admin-created
+        // "Saudi Arabia" joins the bundled "Saudi Arabia 🇸🇦" section instead of
+        // forming a second, near-identical nation. The label keeps the richest
+        // raw spelling in the group (the one that still carries its flag).
         val groups = remember(browseReciters) {
             browseReciters
-                .groupBy { it.country.ifBlank { "Other" } }
-                .entries
+                .groupBy { reciterCountryKey(it.country).ifBlank { "other" } }
+                .map { (key, reciters) ->
+                    val label = reciters
+                        .map { it.country.trim() }
+                        .filter { it.isNotBlank() }
+                        .maxByOrNull { it.count { ch -> !ch.isLetterOrDigit() && ch != ' ' } }
+                        ?.takeIf { reciterCountryKey(it) == key }
+                        ?: reciters.first().country.ifBlank { "Other" }
+                    label to reciters
+                }
                 .sortedByDescending { (_, reciters) -> reciters.size }
         }
 

@@ -6,6 +6,26 @@ import com.ghais.domain.model.ReciterCatalog
 import com.ghais.domain.model.Surah
 
 /**
+ * Country grouping key for a reciter, normalized so the same country always
+ * groups together.
+ *
+ * Bundled seeds carry a flag suffix (`"Egypt 🇪🇬"`) while reciters created in
+ * the admin panel store the plain name (`"Egypt"`). Comparing the raw strings
+ * split one country into two sections and made a region screen miss rows it
+ * should contain, so flags, variation selectors and zero-width joiners are
+ * stripped before comparison. Case and spacing are normalized too.
+ */
+fun reciterCountryKey(country: String): String =
+    country
+        .replace(COUNTRY_DECORATION, " ")
+        .replace(WHITESPACE, " ")
+        .trim()
+        .lowercase()
+
+private val COUNTRY_DECORATION = Regex("[\\p{So}\\p{Cf}\\uFE0E\\uFE0F]+")
+private val WHITESPACE = Regex("\\s+")
+
+/**
  * Repository providing access to Quranic data such as reciters and surahs.
  */
 object QuranDataRepository {

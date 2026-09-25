@@ -110,4 +110,32 @@ class CloudReciterVisibilityTest {
     fun testRefreshIsNoopWithoutFetcher() = runBlocking {
         assertEquals(false, ReciterCloudCache.refresh())
     }
+
+    @Test
+    fun testCountryKeyIgnoresFlagSuffix() {
+        // Bundled seeds store a flag, admin-created rows do not. They must be
+        // one country, or the browse screen grows a duplicate section and a
+        // region screen silently drops half its reciters.
+        assertEquals(
+            reciterCountryKey("Saudi Arabia 🇸🇦"),
+            reciterCountryKey("Saudi Arabia"),
+        )
+        assertEquals(reciterCountryKey("Egypt 🇪🇬"), reciterCountryKey("  egypt  "))
+        assertEquals("saudi arabia", reciterCountryKey("Saudi Arabia 🇸🇦"))
+        assertEquals("egypt", reciterCountryKey("Egypt 🇪🇬"))
+    }
+
+    @Test
+    fun testAdminReciterJoinsExistingCountryGroup() {
+        val egyptBundled = QuranDataRepository.getReciters().first {
+            reciterCountryKey(it.country) == "egypt"
+        }
+        val adminRow = archiveReciter.copy(slug = "ia-egypt-demo", country = "Egypt")
+        ReciterCloudCache.setCloudReciters(listOf(adminRow))
+
+        val egyptRows = QuranDataRepository.getBrowseReciters()
+            .filter { reciterCountryKey(it.country) == reciterCountryKey(egyptBundled.country) }
+        assertTrue(egyptRows.any { it.slug == "ia-egypt-demo" })
+        assertTrue(egyptRows.size > 1)
+    }
 }
