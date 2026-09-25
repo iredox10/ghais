@@ -41,6 +41,7 @@ data class Reciter(
     val country: String = "",
     val serverUrl: String = "",
     val availableSurahList: String = "",
+    val surahFileMap: String = "",
     val catalog: ReciterCatalog = ReciterCatalog.MP3QURAN,
     val description: String = "",
     val isTeacher: Boolean = false,
@@ -86,11 +87,33 @@ data class Reciter(
      * mp3quran mapping applies (EveryAyah has no full-surah endpoint, so
      * EVERYAYAH reciters reuse the same MP3QURAN full-surah URLs).
      */
+    /**
+     * Resolves the per-surah filename from `full_surah_file_map` (a JSON
+     * object of `"<surahId>": "<file name>"`), used by archive.org reciters
+     * whose files are not named `<3-digit>.mp3`. Returns null when no map is
+     * present or the surah is absent, so the caller falls back to the
+     * canonical `<3-digit>.mp3` shape.
+     */
+    private fun resolveMappedFile(surahId: Int, pad: String): String? {
+        val map = surahFileMap
+        if (map.isBlank()) return null
+        val key = surahId.toString()
+        val pattern = Regex("\"" + Regex.escape(key) + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"")
+        val match = pattern.find(map) ?: return null
+        val value = match.groupValues[1]
+            .replace("\\\\", "\\")
+            .replace("\\\"", "\"")
+            .trim()
+        if (value.isEmpty()) return null
+        if (value == "$pad.mp3" || value == "$pad.MP3") return null
+        return value
+    }
+
     fun getFullSurahUrl(surahId: Int): String {
         val pad = surahId.toString().padStart(3, '0')
         if (serverUrl.isNotBlank()) {
             val base = if (serverUrl.endsWith("/")) serverUrl else "$serverUrl/"
-            return "$base$pad.mp3"
+            return resolveMappedFile(surahId, pad)?.let { "$base$it" } ?: "$base$pad.mp3"
         }
         // Catalog-aware branch kept behavior-identical: both catalogs share
         // the MP3QURAN full-surah mapping below.
