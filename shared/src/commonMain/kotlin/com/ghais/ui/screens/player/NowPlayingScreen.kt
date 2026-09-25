@@ -66,8 +66,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -84,11 +82,10 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ghais.ui.navigation.LocalRootNavigator
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import coil3.compose.AsyncImage
+import kotlin.math.abs
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.repository.QuranDataRepository
-import com.ghais.data.seed.GhaisAssets
 import com.ghais.domain.model.RepeatMode
 import com.ghais.player.AmbientMixer
 import com.ghais.player.AudioEngine
@@ -96,7 +93,6 @@ import com.ghais.player.PlayerBackHandler
 import com.ghais.player.displayName
 import com.ghais.player.videoKeys
 import com.ghais.ui.components.noir.ChromeFab
-import com.ghais.ui.components.noir.NoirHeroCard
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
@@ -113,7 +109,7 @@ import com.ghais.ui.theme.GhaisShapes
  *
  * Presentation only. Screen signature, drag-to-dismiss, AudioEngine / queue /
  * repeat / sleep / favorite wiring, sheet wiring and navigation are untouched.
- * Zero hue: canvas #050506 + glow + grain, grayscale artwork with scrim and
+ * Zero hue: canvas #050506 + glow + grain, natural-colour artwork with scrim and
  * chromium ring, chrome/ghost controls, NoirSegmentedProgress meter language,
  * text ladder 100 / 62 / 38 / 24%.
  */
@@ -321,14 +317,9 @@ class NowPlayingScreen : Screen {
                 }
                 .pointerInput(Unit) {
                     awaitEachGesture {
-                        // requireUnconsumed=false so the drag can start anywhere —
-                        // over video, cards, buttons — before children consume.
                         val down = awaitFirstDown(requireUnconsumed = false)
                         lastDragTime = 0L
                         dragVelocityY = 0f
-                        // Wait for vertical touch-slop only: horizontal scrubs
-                        // (progress bar) stay unconsumed so the child keeps them,
-                        // vertical swipes are claimed here first.
                         val slopChange = awaitVerticalTouchSlopOrCancellation(
                             pointerId = down.id
                         ) { change, _ ->
@@ -508,10 +499,11 @@ class NowPlayingScreen : Screen {
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Video-first: clear the middle so the ambient video breathes.
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.weight(if (isAyahMode) 0.35f else 1f))
 
                 // Synchronized Ayah Lyrics card — animated when Ayah mode is active.
                 AnimatedVisibility(
+                    modifier = Modifier.weight(1f, fill = false),
                     visible = isAyahMode,
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()
@@ -719,17 +711,17 @@ class NowPlayingScreen : Screen {
                                     val widthPx = size.width.toFloat()
                                     if (widthPx <= 0f) return@awaitEachGesture
 
-                                    down.consume()
                                     scrubFraction = (down.position.x / widthPx).coerceIn(0f, 1f)
                                     isScrubbing = true
 
                                     val pointerId = down.id
+                                    var gestureAxis: Int? = null
                                     while (true) {
                                         val event = awaitPointerEvent()
                                         val change = event.changes.firstOrNull { it.id == pointerId } ?: break
                                         if (change.changedToUp()) {
                                             change.consume()
-                                            if (totalMs > 0L) {
+                                            if (gestureAxis != 2 && totalMs > 0L) {
                                                 AudioEngine.seekTo((scrubFraction * totalMs).toLong())
                                             }
                                             break
@@ -737,8 +729,21 @@ class NowPlayingScreen : Screen {
                                         if (change.isConsumed) {
                                             break
                                         }
-                                        change.consume()
-                                        scrubFraction = (change.position.x / widthPx).coerceIn(0f, 1f)
+                                        val dx = change.position.x - down.position.x
+                                        val dy = change.position.y - down.position.y
+                                        if (gestureAxis == null &&
+                                            maxOf(abs(dx), abs(dy)) > viewConfiguration.touchSlop
+                                        ) {
+                                            gestureAxis = if (abs(dx) > abs(dy)) 1 else 2
+                                        }
+                                        if (gestureAxis == 2) {
+                                            isScrubbing = false
+                                            return@awaitEachGesture
+                                        }
+                                        if (gestureAxis == 1) {
+                                            change.consume()
+                                            scrubFraction = (change.position.x / widthPx).coerceIn(0f, 1f)
+                                        }
                                     }
                                     isScrubbing = false
                                 }

@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -90,6 +92,7 @@ fun NowPlayingLyricsCard(
     val isGapActive by AudioEngine.isRecitationGapActive.collectAsState()
     val gapCountdown by AudioEngine.recitationGapCountdown.collectAsState()
     val hifzRange by AudioEngine.hifzRange.collectAsState()
+    val loadingSurahs by QuranAyahRepository.loadingSurahs.collectAsState()
 
     val displayAyahNo = currentTrack?.ayahNo?.takeIf { it > 0 }
         ?: currentAyahVerse?.ayahNo
@@ -101,11 +104,18 @@ fun NowPlayingLyricsCard(
         ?: currentAyahVerse?.surahId?.let { "Surah $it" }
         ?: ""
 
-    val activeArabic = currentAyahVerse?.textUthmani?.takeIf { it.isNotBlank() }
-        ?: currentTrack?.textUthmani?.takeIf { it.isNotBlank() }
-        ?: ""
-
-    val translationText = currentAyahVerse?.translation?.takeIf { it.isNotBlank() }
+    val isCurrentVerseUnavailable = currentAyahVerse?.isPlaceholder != false ||
+        !QuranAyahRepository.isAyahAvailable(surahId, displayAyahNo)
+    val activeArabic = if (isCurrentVerseUnavailable) {
+        ""
+    } else {
+        currentAyahVerse?.textUthmani?.takeIf { it.isNotBlank() } ?: ""
+    }
+    val translationText = if (isCurrentVerseUnavailable) {
+        null
+    } else {
+        currentAyahVerse?.translation?.takeIf { it.isNotBlank() }
+    }
 
     // MINIMAL Ayah mode: transparent surface, no card fills/borders/sheens.
     // Spacing + hairline dividers only. Verse stays prominent.
@@ -249,64 +259,79 @@ fun NowPlayingLyricsCard(
             // Active verse — transparent, prominent. No inset, no indicator bar.
             // Arabic Uthmani in quranFont (25.sp, RTL) + enclosed rosette, 2.0x line height.
             // Basmalah header renders as a centered line above ayah 1 (except surahs 1 & 9).
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+            ) {
                     val showBasmalahHeader =
                         displayAyahNo == 1 && QuranAyahRepository.hasBasmalahHeader(surahId)
-                    // Arabic block runs RTL (basmalah header + verse Row); translation stays LTR.
-                    if (showBasmalahHeader || activeArabic.isNotBlank()) {
-                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                if (showBasmalahHeader) {
-                                    Text(
-                                        text = QuranAyahRepository.BASMALAH,
-                                        fontFamily = GhaisTypography.quranFont,
-                                        fontSize = 21.sp,
-                                        fontWeight = FontWeight.Normal,
-                                        color = GhaisNoir.TextSecondary,
-                                        textAlign = TextAlign.Center,
-                                        lineHeight = 42.sp,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(bottom = 8.dp)
-                                    )
-                                }
-                                // Arabic verse — QCF Hafs Uthmani text (100% white, RTL)
-                                // with the enclosed end-of-ayah rosette glued to the
-                                // last word (inline content). Normal weight:
-                                // synthetic bold perturbs mark shaping on dense stacks.
-                                if (activeArabic.isNotBlank()) {
-                                    Text(
-                                        text = buildAnnotatedString {
-                                            append(activeArabic)
-                                            appendGluedRosette(displayAyahNo)
-                                        },
-                                        inlineContent = ayahRosetteContent(
-                                            ornamentSize = 26.sp,
-                                            digitSize = 11.sp
-                                        ),
-                                        fontFamily = GhaisTypography.quranFont,
-                                        fontSize = 25.sp,
-                                        fontWeight = FontWeight.Normal,
-                                        color = GhaisNoir.TextPrimary,
-                                        textAlign = TextAlign.End,
-                                        lineHeight = 50.sp,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
+                    if (isCurrentVerseUnavailable) {
+                        Text(
+                            text = if (surahId in loadingSurahs) "Loading ayah…" else "Ayah unavailable offline",
+                            fontSize = 14.5.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = GhaisNoir.TextTertiary,
+                            lineHeight = 21.sp
+                        )
+                    } else {
+                        // Arabic block runs RTL (basmalah header + verse Row); translation stays LTR.
+                        if (showBasmalahHeader || activeArabic.isNotBlank()) {
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    if (showBasmalahHeader) {
+                                        Text(
+                                            text = QuranAyahRepository.BASMALAH,
+                                            fontFamily = GhaisTypography.quranFont,
+                                            fontSize = 21.sp,
+                                            fontWeight = FontWeight.Normal,
+                                            color = GhaisNoir.TextSecondary,
+                                            textAlign = TextAlign.Center,
+                                            lineHeight = 42.sp,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(bottom = 8.dp)
+                                        )
+                                    }
+                                    // Arabic verse — QCF Hafs Uthmani text (100% white, RTL)
+                                    // with the enclosed end-of-ayah rosette glued to the
+                                    // last word (inline content). Normal weight:
+                                    // synthetic bold perturbs mark shaping on dense stacks.
+                                    if (activeArabic.isNotBlank()) {
+                                        Text(
+                                            text = buildAnnotatedString {
+                                                append(activeArabic)
+                                                appendGluedRosette(displayAyahNo)
+                                            },
+                                            inlineContent = ayahRosetteContent(
+                                                ornamentSize = 26.sp,
+                                                digitSize = 11.sp
+                                            ),
+                                            fontFamily = GhaisTypography.quranFont,
+                                            fontSize = 25.sp,
+                                            fontWeight = FontWeight.Normal,
+                                            color = GhaisNoir.TextPrimary,
+                                            textAlign = TextAlign.End,
+                                            lineHeight = 50.sp,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    // English translation — secondary
-                    if (!translationText.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = translationText,
-                            fontSize = 14.5.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = GhaisNoir.TextSecondary,
-                            lineHeight = 21.sp
-                        )
+                        // English translation — secondary
+                        if (!translationText.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = translationText,
+                                fontSize = 14.5.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = GhaisNoir.TextSecondary,
+                                lineHeight = 21.sp
+                            )
+                        }
                     }
             }
 
