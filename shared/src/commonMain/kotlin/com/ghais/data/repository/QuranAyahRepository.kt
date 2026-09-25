@@ -29,7 +29,8 @@ data class AyahVerse(
     val ayahNo: Int,
     val textUthmani: String,
     val translation: String = "",
-    val transliteration: String = ""
+    val transliteration: String = "",
+    val isPlaceholder: Boolean = false
 )
 
 /**
@@ -167,7 +168,7 @@ object QuranAyahRepository {
 
     /**
      * Bumped on every cache write (network fetch, bundled seed adoption,
-     * generated fallback, disk restore). UI collects this and re-reads
+     * disk restore). UI collects this and re-reads
      * [getAyahImmediate] so a placeholder swaps to real text the moment the
      * fetch lands instead of sticking until the track changes.
      */
@@ -216,6 +217,18 @@ object QuranAyahRepository {
         }
     }
 
+    private fun isStoredPlaceholder(v: AyahVerse): Boolean =
+        v.isPlaceholder || v.textUthmani.startsWith("آية رقم")
+
+    private fun isSurahListComplete(surahId: Int, verses: List<AyahVerse>): Boolean {
+        if (verses.isEmpty()) return false
+        if (verses.any { it.isPlaceholder }) return false
+        val expected = QuranData.SURAHS.firstOrNull { it.id == surahId }?.ayahsCount ?: return true
+        val present = verses.mapTo(mutableSetOf()) { it.ayahNo }
+        if (present.size != verses.size) return false
+        return (1..expected).all { it in present }
+    }
+
     private fun loadPersistedText() {
         val settings = textSettings ?: return
         try {
@@ -227,9 +240,11 @@ object QuranAyahRepository {
                     val raw = settings.getStringOrNull(textKey(surahId)) ?: continue
                     val verses = json.decodeFromString<List<AyahVerse>>(raw)
                         .map { v -> v.copy(textUthmani = sanitizeVerseText(v.surahId, v.ayahNo, v.textUthmani)) }
-                    if (verses.isNotEmpty()) {
+                    if (verses.isNotEmpty() && verses.none { isStoredPlaceholder(it) }) {
                         cache[surahId] = verses
                         restored = true
+                    } else {
+                        persistTextIndex(ids - surahId)
                     }
                 } catch (_: Exception) {
                     // Corrupt entry: drop it from the index, keep going.
@@ -252,14 +267,15 @@ object QuranAyahRepository {
     /**
      * Warms the verse-text cache for offline reading and persists it to disk.
      * Fire-and-forget from download actions: fetches from network when needed
-     * (bundled seeds persist immediately), skips generated placeholders.
+     * (bundled seeds persist immediately), persists only complete, real sets.
      */
     fun prefetchSurah(surahId: Int) {
         scope.launch {
             try {
                 val verses = getAyahsForSurah(surahId)
                 if (verses.isEmpty()) return@launch
-                if (verses.first().textUthmani.startsWith("آية رقم")) return@launch
+                if (verses.any { it.isPlaceholder }) return@launch
+                if (!isSurahListComplete(surahId, verses)) return@launch
                 mutex.withLock {
                     try {
                         textSettings?.putString(textKey(surahId), json.encodeToString(verses))
@@ -275,12 +291,15 @@ object QuranAyahRepository {
         }
     }
 
+    fun isAyahAvailable(surahId: Int, ayahNo: Int): Boolean =
+        cache[surahId]?.any { it.ayahNo == ayahNo && !it.isPlaceholder } == true
+
     /**
      * Synchronously returns cached or bundled Ayah verse if available,
      * otherwise triggers background fetch and returns a clean baseline placeholder.
      */
     fun getAyahImmediate(surahId: Int, ayahNo: Int): AyahVerse {
-        val cached = cache[surahId]?.firstOrNull { it.ayahNo == ayahNo }
+        val cached = cache[surahId]?.firstOrNull { it.ayahNo == ayahNo && !it.isPlaceholder }
         if (cached != null) return cached
 
         // Trigger background fetch if not already in flight
@@ -290,6 +309,10 @@ object QuranAyahRepository {
             }
         }
 
+        return placeholderAyah(surahId, ayahNo)
+    }
+
+    private fun placeholderAyah(surahId: Int, ayahNo: Int): AyahVerse {
         val surah = QuranData.SURAHS.firstOrNull { it.id == surahId }
         val surahNameAr = surah?.nameAr ?: ""
         val surahNameEn = surah?.nameEn ?: ""
@@ -301,7 +324,8 @@ object QuranAyahRepository {
             } else {
                 "آية رقم $ayahNo من سورة $surahNameAr"
             },
-            translation = "Ayah $ayahNo of Surah $surahNameEn"
+            translation = "Ayah $ayahNo of Surah $surahNameEn",
+            isPlaceholder = true
         )
     }
 
@@ -311,13 +335,13 @@ object QuranAyahRepository {
      */
     suspend fun getAyahsForSurah(surahId: Int): List<AyahVerse> {
         mutex.withLock {
-            cache[surahId]?.let { return it }
+            cache[surahId]?.takeIf { isSurahListComplete(surahId, it) }?.let { return it }
         }
 
         _loadingSurahs.value = _loadingSurahs.value + surahId
         try {
             val fetched = fetchSurahFromApi(surahId)
-            if (!fetched.isNullOrEmpty()) {
+            if (!fetched.isNullOrEmpty() && isSurahListComplete(surahId, fetched)) {
                 mutex.withLock {
                     cache[surahId] = fetched
                 }
@@ -341,22 +365,7 @@ object QuranAyahRepository {
         // Fallback generator using Surah metadata
         val surah = QuranData.SURAHS.firstOrNull { it.id == surahId }
         val count = surah?.ayahsCount ?: 7
-        val generated = (1..count).map { ayahNo ->
-            AyahVerse(
-                surahId = surahId,
-                ayahNo = ayahNo,
-                textUthmani = if (ayahNo == 1 && surahId == 1) {
-                    "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
-                } else {
-                    "آية رقم $ayahNo من سورة ${surah?.nameAr ?: ""}"
-                },
-                translation = "Verse $ayahNo of Surah ${surah?.nameEn ?: ""}"
-            )
-        }
-        mutex.withLock {
-            cache[surahId] = generated
-        }
-        bumpCacheGen()
+        val generated = (1..count).map { ayahNo -> placeholderAyah(surahId, ayahNo) }
         return generated
     }
 
