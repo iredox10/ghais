@@ -1,6 +1,8 @@
 package com.ghais
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -120,10 +122,17 @@ fun App() {
                                     ) togetherWith fadeOut(animationSpec = tween(200))
                                 }
                                 isInitialNowPlaying -> {
-                                    fadeIn(animationSpec = tween(200)) togetherWith slideOutVertically(
-                                        targetOffsetY = { it },
-                                        animationSpec = tween(350, easing = FastOutSlowInEasing)
-                                    )
+                                    // The player animates its own exit (see
+                                    // NowPlayingScreen.animateOutAndDismiss) and
+                                    // the screen underneath is opaque, so the
+                                    // stack must not animate on top of it: the
+                                    // incoming screen is drawn from frame one
+                                    // (EnterTransition.None) and the player is
+                                    // simply removed when its own tween lands.
+                                    // Fading/sliding both sides here is what
+                                    // produced the blank frame between the full
+                                    // player and the mini player.
+                                    EnterTransition.None togetherWith ExitTransition.None
                                 }
                                 else -> {
                                     val (initialOffset, targetOffset) = when (navigator.lastEvent) {

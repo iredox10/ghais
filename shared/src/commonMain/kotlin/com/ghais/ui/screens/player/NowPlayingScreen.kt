@@ -2,6 +2,7 @@ package com.ghais.ui.screens.player
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -67,6 +68,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -159,6 +161,31 @@ class NowPlayingScreen : Screen {
                 }
             }
         }
+        // Every dismissal (swipe, back button, close button) runs through this
+        // one exit: the content animates itself off-screen and only then pops.
+        // The stack transition for NowPlaying is a no-op (see App.kt), so this
+        // is the only motion — previously the drag tween and the stack exit
+        // both animated the same content and reset the offset mid-flight,
+        // which is what exposed the empty frame between player and mini bar.
+        val animateOutAndDismiss: () -> Unit = remember(rootNavigator, navigator) {
+            {
+                if (isDismissed || isDismissing) return@remember
+                isDismissing = true
+                settleJob?.cancel()
+                coroutineScope.launch {
+                    val start = dragOffsetY
+                    val target = if (screenHeightPx > 0f) screenHeightPx else start + 1200f
+                    animate(
+                        initialValue = start,
+                        targetValue = target,
+                        animationSpec = tween(260, easing = FastOutSlowInEasing)
+                    ) { value, _ ->
+                        dragOffsetY = value
+                    }
+                    dismissPlayer()
+                }
+            }
+        }
         val currentTrack by AudioEngine.currentTrack.collectAsState()
         val isPlaying by AudioEngine.isPlaying.collectAsState()
         val isAyahMode by AudioEngine.isAyahMode.collectAsState()
@@ -217,7 +244,7 @@ class NowPlayingScreen : Screen {
                 showVolume = false
                 showTafseer = false
             } else {
-                dismissPlayer()
+                animateOutAndDismiss()
             }
         }
 
@@ -282,13 +309,24 @@ class NowPlayingScreen : Screen {
             modifier = Modifier
                 .onSizeChanged { screenHeightPx = it.height.toFloat() }
                 .graphicsLayer {
-                    translationY = dragOffsetY
-                    // Fade content as it slides away — delightful exit cue.
-                    alpha = if (screenHeightPx > 0f) {
-                        (1f - (dragOffsetY / screenHeightPx).coerceIn(0f, 1f) * 0.9f).coerceIn(0.1f, 1f)
+                    val fraction = if (screenHeightPx > 0f) {
+                        (dragOffsetY / screenHeightPx).coerceIn(0f, 1f)
                     } else {
-                        1f
+                        0f
                     }
+                    // Minimize by shrinking toward the mini bar, anchored at the
+                    // bottom, instead of sliding the sheet off-screen. The
+                    // player's upper half is empty backdrop, so a downward slide
+                    // spent the whole gesture over black and handed off to the
+                    // bar with nothing on screen — the blank frame. Shrinking
+                    // keeps the artwork, title and transport in view all the way
+                    // down, converging on where the mini bar lands.
+                    transformOrigin = TransformOrigin(0.5f, 1f)
+                    val shrink = 1f - 0.18f * fraction
+                    scaleX = shrink
+                    scaleY = shrink
+                    translationY = screenHeightPx * 0.05f * fraction
+                    alpha = 1f - 0.45f * fraction
                 }
                 .pointerInput(controlsVisible, uiBusy) {
                     detectTapGestures(
@@ -357,22 +395,7 @@ class NowPlayingScreen : Screen {
                             (dragVelocityY > flingVelocityThresholdPxPerSec &&
                                 dragOffsetY > minTravelForFlingPx)
                         if (shouldDismiss && !isDismissing) {
-                            isDismissing = true
-                            settleJob = coroutineScope.launch {
-                                val target = if (screenHeightPx > 0f) screenHeightPx else dragOffsetY + 1200f
-                                animate(
-                                    initialValue = dragOffsetY,
-                                    targetValue = target,
-                                    animationSpec = tween(durationMillis = 280)
-                                ) { value, _ ->
-                                    dragOffsetY = value
-                                }
-                                // Snap back to fully visible before popping so
-                                // Voyager's exit transition starts from a clean
-                                // state — never a pre-faded double-fade frame.
-                                dragOffsetY = 0f
-                                dismissPlayer()
-                            }
+                            animateOutAndDismiss()
                         } else if (!isDismissing) {
                             settleJob = coroutineScope.launch {
                                 animate(
@@ -455,7 +478,7 @@ class NowPlayingScreen : Screen {
                             modifier = Modifier
                                 .size(width = 64.dp, height = 36.dp)
                                 .clip(RoundedCornerShape(18.dp))
-                                .clickable { dismissPlayer() },
+                                .clickable { animateOutAndDismiss() },
                             contentAlignment = Alignment.Center
                         ) {
                             Box(
