@@ -91,6 +91,13 @@
           "note": "Comma-separated surah IDs for mp3quran rows. Empty = all 114 (everyayah rows)."
         },
         {
+          "key": "full_surah_file_map",
+          "type": "string",
+          "size": 16384,
+          "required": false,
+          "note": "Per-surah filename map JSON for split full-surah archives (see Reciter.surahFileMap in Models.kt). Written by the admin archive routes. Was missing from this mirror until 2026-09-25 (present in the admin APP_SCHEMA and in production)."
+        },
+        {
           "key": "description",
           "type": "string",
           "size": 1024,
@@ -137,6 +144,14 @@
             "catalog_key"
           ],
           "note": "Replaces slug_unique (deleted 2026-09-24): slug alone cannot be unique once mp3quran + everyayah variants coexist."
+        },
+        {
+          "key": "slug_idx",
+          "type": "key",
+          "attributes": [
+            "slug"
+          ],
+          "note": "Non-unique (slug is shared across catalogs). Added 2026-09-25: the app runs Query.equal(\"slug\", slug) per history row / per avatar (SyncEngine.android.kt), which was a full collection scan under catalog_key_unique alone."
         }
       ]
     },
@@ -628,9 +643,10 @@
         {
           "key": "daily_json",
           "type": "string",
-          "size": 4096,
+          "size": 8192,
           "required": false,
-          "default": null
+          "default": null,
+          "note": "Per-device daily series {\"<epochDay>\":{\"<devId>\":seconds}}. Must stay >= the writer cap DAILY_JSON_MAX_CHARS = 8192 (SyncEngine.android.kt), which drops oldest days until the payload is under the cap; a smaller attribute size makes real writes fail with a non-unknown-attribute error. Was 4096 until 2026-09-25."
         }
       ],
       "indexes": [
@@ -810,10 +826,7 @@
       "$id": "reciter_stats",
       "name": "Reciter Stats",
       "permissions": [
-        "read(\"any\")",
-        "create(\"users\")",
-        "update(\"users\")",
-        "delete(\"users\")"
+        "read(\"any\")"
       ],
       "documentSecurity": true,
       "attributes": [
@@ -826,7 +839,8 @@
         {
           "key": "followers_count",
           "type": "integer",
-          "required": false
+          "required": false,
+          "note": "Server-owned global counter. reciter_stats is provisioned READ-ONLY for clients (read(\"any\") only) because the app ships no API key, so with create/update permission any signed-in user could forge the count shown to every other user. Writes come from the admin server (APP_SCHEMA in quranify-admin/server/index.js) via its API key, which bypasses collection permissions. Client reads go through FollowStore.countFetcher (SyncEngine)."
         },
         {
           "key": "likes_count",
