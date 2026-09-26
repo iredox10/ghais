@@ -94,3 +94,19 @@ fun resolveFollowedQari(rawSlug: String): ResolvedQari? {
         photoUrl = photo,
     )
 }
+
+/**
+ * Human-readable stand-in name for a reciter slug that no catalog resolves.
+ *
+ * Followed slugs can outlive their catalog entry (a renamed reciter, or an
+ * admin-uploaded slug that has not synced yet). Such a follow must still be
+ * visible — dropping it made the UI report "no qari followed" while
+ * [FollowStore] still held the record — but borrowing another reciter's name
+ * would be a lie. Deriving the label from the slug itself states exactly what
+ * is known.
+ */
+fun String.prettifySlug(): String =
+    trim().lowercase().split('-', '_')
+        .filter { it.isNotBlank() }
+        .joinToString(" ") { part -> part.replaceFirstChar { it.uppercase() } }
+        .ifBlank { this }

@@ -32,6 +32,9 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.ReciterCloudCache
+import com.ghais.data.repository.ResolvedQari
+import com.ghais.data.repository.prettifySlug
+import com.ghais.domain.model.Reciter
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.IconWell
@@ -55,7 +58,23 @@ object FollowedRecitersScreen : Screen {
         val cloudCatalog by ReciterCloudCache.cloudReciters.collectAsState()
 
         val reciters = remember(followedSlugs, cloudCatalog) {
-            followedSlugs.mapNotNull { slug -> resolveFollowedQari(slug) }
+            // Keep a followed slug that no catalog can resolve instead of
+            // dropping it. Dropping made the header read "0 following" while
+            // FollowStore still held the record — the follow existed, the UI
+            // claimed it did not. An unresolvable slug is shown under a name
+            // derived from the slug itself (never a borrowed reciter's name)
+            // with a monogram until its catalog entry arrives.
+            followedSlugs.map { slug ->
+                resolveFollowedQari(slug) ?: ResolvedQari(
+                    storedSlug = slug,
+                    reciter = Reciter(
+                        slug = slug,
+                        nameEn = slug.prettifySlug(),
+                        nameAr = ""
+                    ),
+                    photoUrl = null
+                )
+            }
         }
         val filtered = remember(reciters, searchQuery) {
             if (searchQuery.isBlank()) reciters

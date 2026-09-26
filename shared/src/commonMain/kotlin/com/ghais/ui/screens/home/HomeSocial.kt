@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.ReciterCloudCache
 import com.ghais.data.repository.UserUsageRepository
+import com.ghais.data.repository.prettifySlug
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
@@ -51,10 +52,17 @@ fun HomeFollowedRow(onReciter: (String) -> Unit) {
     // Re-resolve on catalog sync so an admin-uploaded reciter shows up here.
     val cloudCatalog by ReciterCloudCache.cloudReciters.collectAsState()
     val resolved = remember(followedSlugs, cloudCatalog) {
-        followedSlugs.mapNotNull { slug ->
-            resolveFollowedQari(slug)?.let { qari ->
-                Triple(qari.reciter.slug, qari.reciter.nameEn, qari.photoUrl.orEmpty())
-            }
+        // Keep an unresolvable slug rather than dropping it. mapNotNull here
+        // made the whole section claim "No Qari followed yet" while
+        // FollowStore still held the record. The fallback name comes from the
+        // slug, so it never borrows another reciter's identity.
+        followedSlugs.map { slug ->
+            val qari = resolveFollowedQari(slug)
+            Triple(
+                qari?.reciter?.slug ?: slug,
+                qari?.reciter?.nameEn ?: slug.prettifySlug(),
+                qari?.photoUrl.orEmpty()
+            )
         // Two followed slugs can resolve to the SAME reciter (mishary +
         // alafasy are the same person), which would both duplicate the row
         // and collide on the LazyRow key below.
