@@ -12,10 +12,14 @@ import com.ghais.data.repository.EditorialPlaylistItem
 import com.ghais.data.repository.EditorialRepository
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
+import com.ghais.data.repository.HifzMasteryStore
 import com.ghais.data.repository.KhatmaStore
+import com.ghais.data.repository.MasteryStatus
 import com.ghais.data.repository.OnboardingStore
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.RecitationSchedule
 import com.ghais.data.repository.SchedulesStore
+import com.ghais.data.repository.SearchHistoryStore
 import com.ghais.domain.model.Reciter
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.domain.model.KhatmaPlan
@@ -30,10 +34,14 @@ import io.appwrite.Query
 import io.appwrite.exceptions.AppwriteException
 import io.appwrite.services.Databases
 import java.security.MessageDigest
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -59,11 +67,51 @@ import kotlinx.serialization.json.longOrNull
  * existing `AuthRepository.init(this)` line).
  *
  * Flow: DISABLED when unconfigured/signed-out; else SYNCING, then per
- * collection pull-if-empty + push-always, each in its own try/catch (first
- * failure wins for [lastError]). Push skips only when local state is still
- * empty but the cloud holds a snapshot (fresh login), so an empty local
- * never clobbers the restore source. `lastSyncedAt` is set on full success only.
- * All network runs on Dispatchers.IO. Failures go to Log.e("GhaisSync").
+ * collection pull + push, each in its own try/catch (first failure wins for
+ * [lastError]). `lastSyncedAt` is set on full success only. All network runs
+ * on Dispatchers.IO. Failures go to Log.e("GhaisSync").
+ *
+ * ## Pull is a MERGE, not an adopt-only-on-empty
+ *
+ * Gating a pull on "local is empty" is only correct while the ONLY way local
+ * can be non-empty is "the user already synced here". That stopped being true:
+ * [com.ghais.data.repository.UserUsageRepository] and the stores it lives
+ * beside now adopt pre-auth (signed-out) listening, likes, follows and plans
+ * into the freshly-bound account, and a track started in the 2s between login
+ * and the first pass also lands locally. So "one stale local row" is the NORMAL
+ * state of a new device, and an empty-gated pull silently skipped the whole
+ * cloud history for it — while the paired push, which converges to the exact
+ * local set, then DELETED that history from the cloud. Every pull here is
+ * therefore a union that keeps local data and adopts the rows local lacks:
+ * - HISTORY / STATS: per-key union, local wins the slot (see
+ *   [pullHistory] / [pullStats]); aggregates are per-field `max`, so a cloud
+ *   value can only ever add to the local snapshot, never shrink it.
+ * - LIKES / FOLLOWS / KHATMA / SCHEDULES / HIFZ_MASTERY / SEARCH_HISTORY: set
+ *   union, which also makes the paired push prune a no-op instead of a
+ *   delete-everything-the-cloud-has pass.
+ * Only the genuinely single-valued, live-state collections keep an
+ * empty-gate, because there "local is newer" is the correct answer:
+ * [pullPlaybackIfEmpty] (the position being played right now), [pullUserPrefsIfEmpty]
+ * (a goal just chosen on this device) and [pullRoutineBackupsIfEmpty]
+ * (whose store has no id-preserving merge — see the note there, and the prune
+ * quarantine that keeps its delete half from ever firing blind).
+ *
+ * Every per-user list read is PAGINATED ([listForUser]): Appwrite returns a
+ * bounded default page, so a single unpaginated read both under-restored a
+ * heavy account and — because the prune loops converge the cloud to the exact
+ * local set — deleted everything past the page it never saw.
+ *
+ * ## Push robustness
+ *
+ * `SyncTriggers`' only listening-related trigger is `debounce(8000)` over
+ * `AudioEngine.currentTrack`/`isPlaying` and `UserUsageRepository.stats`, but
+ * `stats.totalSecondsListened` ticks about once a second DURING playback, so
+ * the debounce window never elapses while audio plays: forty minutes of
+ * listening followed by a force-quit uploaded nothing. That file is not ours
+ * to edit, so the guarantee is made here — see the listening push heartbeat
+ * ([startListeningPushPump]), which pushes STATS/HISTORY/PLAYBACK on its own
+ * cadence whenever local listening state has actually moved, and skips the
+ * network entirely when it has not.
  */
 actual object SyncEngine {
 
@@ -78,10 +126,31 @@ actual object SyncEngine {
     private const val TELEMETRY_PREF_PREFIX = "ghais_telemetry_last_upload_"
     private const val ROUTINE_DOC_PREFIX = "rtn-"
 
+    // Declared here rather than in the sibling-owned `SyncModels.kt`, which this
+    // file does not edit — same as TELEMETRY / PLAYLISTS above. Ids only: the
+    // attribute names they are read and written by live in
+    // `appwrite/collections.json`, which no code hardcodes a copy of.
+    private const val HIFZ_MASTERY = "hifz_mastery"
+    private const val SEARCH_HISTORY = "search_history"
+
+    /**
+     * `audioUrl` scheme the likes pull uses for a cloud like whose reciter slug
+     * is blank or unknown, so the row is still identity-stable in
+     * [FavoritesStore]. Mirrors the same constant on the store side.
+     */
+    private const val LIKES_PLACEHOLDER_PREFIX = "appwrite://likes/"
+
     // Must match the local cap enforced by `UserUsageRepository.recordProgress`
     // and `restoreHistory`. A higher value only inflates the pull query and
     // the push `take`, since the local list can never exceed 15.
     private const val HISTORY_CAP = 15
+
+    // Must match `SearchHistoryStore`'s own MAX_SIZE: a higher value only
+    // inflates the pull query, since the local list can never exceed it.
+    private const val SEARCH_HISTORY_CAP = 15
+
+    /** Column size of `search_history.query` (string 128, required). */
+    private const val SEARCH_HISTORY_QUERY_MAX_CHARS = 128
 
     // Database/collection ids come from the sibling-owned SyncModels.kt
     // (same package: DB_ID, LIKES, PLAYBACK, FOLLOWS, STATS, SCHEDULES, HISTORY).
@@ -105,6 +174,36 @@ actual object SyncEngine {
     // mechanism UserUsageRepository uses; raw keys, no owner prefix — this is
     // device state, not user state).
     private val telemetryPrefs: Settings by lazy { Settings() }
+
+    // ------------------------------------------------- listening push pump
+    //
+    // See the class KDoc: `SyncTriggers` cannot fire its debounced pass while
+    // audio is playing, so the "my listening reached the cloud" guarantee is
+    // made here, in a self-contained loop that needs no trigger wiring.
+    //
+    // The scope is process-lifetime and never cancelled: the loop is idle
+    // (a `delay` and two flow reads) whenever there is no session, no network
+    // or nothing to push, and it exits only with the process. SupervisorJob so
+    // a thrown tick can never take the process down with it.
+
+    /** Idle cadence of the heartbeat; also its retry cadence after a failure. */
+    private const val LISTENING_PUSH_INTERVAL_MS = 20_000L
+
+    /** Cadence used to re-push state that moved while a pass was in flight. */
+    private const val LISTENING_PUSH_RETRY_MS = 5_000L
+
+    /**
+     * Cap on consecutive quick retries. Bounded on purpose: a listener who
+     * keeps playing keeps changing the state (that is the normal case, and the
+     * retry only fires when it moved DURING a pass, i.e. mid-network), and a
+     * device with a wrong clock could otherwise re-push on every tick forever.
+     */
+    private const val LISTENING_MAX_QUICK_RETRIES = 3
+
+    private val pumpScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    @Volatile
+    private var pumpStarted: Boolean = false
 
     /**
      * Extra (non-expect) member: caches the app context for the cookie jar.
@@ -139,6 +238,12 @@ actual object SyncEngine {
                 if (ctx == null) emptyList() else fetchReciterCatalog(databases(ctx))
             }
         }
+        // Listening push heartbeat. Started here (not in a `start()` call
+        // SyncTriggers owns) because `init` is the one entry point the app
+        // already guarantees to call exactly once, before sign-in, and the
+        // loop gates itself on a live session every tick — so it costs nothing
+        // while signed out and needs no trigger file to be wired.
+        startListeningPushPump()
     }
 
     actual suspend fun syncNow() {
@@ -162,6 +267,9 @@ actual object SyncEngine {
         if (_status.value == SyncStatus.SYNCING) return
         _status.value = SyncStatus.SYNCING
         var firstError: String? = null
+        // Listening state at the moment the pass started, so the tail can tell
+        // whether it moved WHILE we were pushing it (see below).
+        val listeningAtStart = listeningStateFingerprint()
         withContext(Dispatchers.IO) {
             val db = databases(ctx)
             suspend fun runCollection(name: String, block: suspend () -> Unit) {
@@ -182,11 +290,11 @@ actual object SyncEngine {
                 }
             }
             runCollection(LIKES) {
-                pullLikesIfEmpty(db, userId)
-                pushLikes(db, userId)
+                val cloudHasData = pullLikes(db, userId)
+                pushLikes(db, userId, cloudHasData)
             }
             runCollection(FOLLOWS) {
-                pullFollowsIfEmpty(db, userId)
+                pullFollows(db, userId)
                 pushFollows(db, userId)
             }
             // Best-effort follower-count refresh from public reciter_stats
@@ -205,25 +313,49 @@ actual object SyncEngine {
                 pushPlayback(db, userId, cloudHasData)
             }
             runCollection(STATS) {
-                val cloudHasData = pullStatsIfEmpty(db, userId)
+                val cloudHasData = pullStats(db, userId)
                 pushStats(db, userId, cloudHasData)
             }
             runCollection(HISTORY) {
-                val cloudHasData = pullHistoryIfEmpty(db, userId)
+                val cloudHasData = pullHistory(db, userId)
                 pushHistory(db, userId, cloudHasData)
             }
-            runCollection(SCHEDULES) { pushSchedules(db, userId) }
+            runCollection(SCHEDULES) {
+                val cloudHasData = pullSchedules(db, userId)
+                pushSchedules(db, userId, cloudHasData)
+            }
             runCollection(KHATMA) {
-                val cloudHasData = pullKhatmaIfEmpty(db, userId)
+                val cloudHasData = pullKhatma(db, userId)
                 pushKhatma(db, userId, cloudHasData)
+            }
+            runCollection(HIFZ_MASTERY) {
+                // Bind before touching the store. `HifzMasteryStore`'s snapshot
+                // API is namespace-scoped and, unbound, reports and writes the
+                // DEVICE-GLOBAL `local` profile — which the next sign-in would
+                // then adopt (see its `setOwner` KDoc). `SyncTriggers`' session
+                // collector does not bind this store yet, so this pass does.
+                // It is idempotent (`setOwner` returns early on the same id), so
+                // it is a no-op the moment that collector does own the binding,
+                // and `syncNow` only ever runs signed-in, so the owner passed is
+                // always a real account — never "local".
+                HifzMasteryStore.setOwner(userId)
+                val cloudHasData = pullHifzMastery(db, userId)
+                pushHifzMastery(db, userId, cloudHasData)
+            }
+            runCollection(SEARCH_HISTORY) {
+                // Same reason as the block above: bind before read/write, or the
+                // snapshot lands in the device-global `local` namespace.
+                SearchHistoryStore.setOwner(userId)
+                val cloudHasData = pullSearchHistory(db, userId)
+                pushSearchHistory(db, userId, cloudHasData)
             }
             runCollection(PLAYLISTS) {
                 refreshEditorial()
                 pushRoutines(db, userId)
             }
             runCollection(ROUTINE_BACKUPS) {
-                val cloudHasData = pullRoutineBackupsIfEmpty(db, userId)
-                pushRoutineBackups(db, userId, cloudHasData)
+                val pull = pullRoutineBackupsIfEmpty(db, userId)
+                pushRoutineBackups(db, userId, pull)
             }
             runCollection(USER_PREFS) {
                 pullUserPrefsIfEmpty(db, userId)
@@ -260,6 +392,184 @@ actual object SyncEngine {
             _lastError.value = firstError
             _status.value = SyncStatus.ERROR
         }
+        // A pass takes seconds, and seconds of playback accrue during it, so
+        // the state we just uploaded is already stale by the time we finish.
+        // Tell the heartbeat to come back on its quick retry instead of
+        // waiting out the full interval; it re-checks the fingerprint itself
+        // and no-ops when nothing actually moved.
+        if (listeningAtStart != listeningStateFingerprint()) {
+            listeningPushUrgent = true
+        }
+    }
+
+    // --------------------------------------------------- listening heartbeat
+    //
+    // Why this exists (see the class KDoc for the trigger-side story):
+    // `SyncTriggers` debounces `stats` + `currentTrack`/`isPlaying` by 8s, and
+    // `stats.totalSecondsListened` changes about once a second while audio
+    // plays, so the debounce NEVER elapses during a listen. A user who listened
+    // for forty minutes and force-quit pushed nothing, and the next thing that
+    // uploads is a manual pull. The trigger file belongs to another owner, so
+    // the push guarantee is made from this side instead.
+    //
+    // Design constraints this satisfies:
+    // - Only the three listening collections are pushed (STATS, HISTORY,
+    //   PLAYBACK). The other eight stay owned by the debounced full pass, so
+    //   the heartbeat can never race the thing it would duplicate.
+    // - Cheap when idle: a fingerprint of exactly the state those three pushes
+    //   would upload gates every tick, so an unchanged state costs zero
+    //   requests — not even the list read. A paused, finished listen costs one
+    //   fingerprint per interval and nothing else.
+    // - Bounded: one pass at a time (the loop is sequential and a full
+    //   `syncNow` in flight makes the tick skip), at most
+    //   [LISTENING_MAX_QUICK_RETRIES] quick retries back to back, and
+    //   [LISTENING_PUSH_INTERVAL_MS] between steady-state passes.
+    // - Pull-then-push per collection, identical to the full pass, so the
+    //   "empty local must not clobber the cloud snapshot" guards still apply
+    //   (a push-only heartbeat would overwrite a new device's stats with
+    //   zeros, because `pushStats`' cloud guard is fed by the pull).
+    // - Inert while signed out, offline, unconfigured or un-initialised: the
+    //   tick is a flow read plus a `delay`.
+
+    /** Set by [syncNow] when listening state moved during its pass. */
+    @Volatile
+    private var listeningPushUrgent: Boolean = false
+
+    /** Starts the heartbeat once; safe to call from every `init`. */
+    private fun startListeningPushPump() {
+        if (pumpStarted) return
+        pumpStarted = true
+        pumpScope.launch { listeningPushPump() }
+    }
+
+    private suspend fun listeningPushPump() {
+        var lastPushed: String? = null
+        var wasPlaying = false
+        var quickRetries = 0
+        while (true) {
+            var nextDelayMs = LISTENING_PUSH_INTERVAL_MS
+            val urgent = listeningPushUrgent
+            listeningPushUrgent = false
+            try {
+                val userId = AuthRepository.session.value?.userId
+                val ctx = appContext
+                // Null checks are inline (not folded into a `canPush` boolean)
+                // so `userId`/`ctx` smart-cast into the pass below.
+                if (userId != null &&
+                    ctx != null &&
+                    AppwriteConfig.isConfigured() &&
+                    NetworkMonitor.isOnline.value &&
+                    // A full pass is already walking every collection; skip
+                    // rather than duplicate its work in parallel.
+                    _status.value != SyncStatus.SYNCING
+                ) {
+                    val playing = AudioEngine.isPlaying.value
+                    val fingerprint = listeningStateFingerprint()
+                    val moved = fingerprint != lastPushed
+                    // `wasPlaying` covers the pause/stop edge: the position
+                    // freezes there, so that is the last tick that can still
+                    // carry the final resume point to the cloud.
+                    if (moved && (playing || wasPlaying)) {
+                        if (pushListeningOnce(ctx, userId)) {
+                            // Re-read AFTER the pass: if the state moved while
+                            // we were pushing it, what is on the cloud is
+                            // already stale, so come back quickly — bounded, so
+                            // a device whose clock runs fast cannot turn this
+                            // into an unbounded retry loop.
+                            val after = listeningStateFingerprint()
+                            lastPushed = after
+                            quickRetries = if (after != fingerprint &&
+                                quickRetries < LISTENING_MAX_QUICK_RETRIES
+                            ) {
+                                quickRetries + 1
+                            } else {
+                                0
+                            }
+                            if (quickRetries > 0) nextDelayMs = LISTENING_PUSH_RETRY_MS
+                        } else {
+                            // Leave `lastPushed` alone so the next tick retries.
+                            Log.w(TAG, "listening heartbeat pass failed; retrying next tick.")
+                        }
+                    }
+                    wasPlaying = playing
+                } else {
+                    // Signed out / offline / busy: forget the fingerprint so a
+                    // returning session re-pushes instead of assuming the cloud
+                    // already holds this state.
+                    lastPushed = null
+                    wasPlaying = false
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "listening heartbeat tick failed", e)
+            }
+            if (urgent && !listeningPushUrgent) nextDelayMs = LISTENING_PUSH_RETRY_MS
+            delay(nextDelayMs)
+        }
+    }
+
+    /**
+     * One pull+push pass over the three listening collections, sharing
+     * [syncNow]'s per-collection fault isolation (a failure here must never
+     * escalate: it only logs, and the next tick retries). Returns false when
+     * the pass did not complete cleanly, so the caller can retry.
+     */
+    private suspend fun pushListeningOnce(
+        ctx: android.content.Context,
+        userId: String,
+    ): Boolean = withContext(Dispatchers.IO) {
+        var clean = true
+        val db = databases(ctx)
+        suspend fun runCollection(name: String, block: suspend () -> Unit) {
+            try {
+                block()
+            } catch (e: Exception) {
+                clean = false
+                if (isNotFound(e)) {
+                    Log.w(TAG, "Collection '$name' not found; skipping.")
+                } else {
+                    Log.e(TAG, "$name heartbeat push failed", e)
+                }
+            }
+        }
+        runCollection(PLAYBACK) {
+            pushPlayback(db, userId, pullPlaybackIfEmpty(db, userId))
+        }
+        runCollection(STATS) {
+            pushStats(db, userId, pullStats(db, userId))
+        }
+        runCollection(HISTORY) {
+            pushHistory(db, userId, pullHistory(db, userId))
+        }
+        clean
+    }
+
+    /**
+     * Compact fingerprint of exactly the local state the three listening
+     * pushes would upload: the player identity + position, the stats
+     * aggregates, the per-day and per-surah series, and every history row's
+     * identity/position/timestamp.
+     *
+     * Deliberately a plain `String` built from primitives and flow values (no
+     * hashing of the maps beyond `hashCode`, no allocation per entry beyond
+     * the builder): it runs on every tick of a loop that must stay free while
+     * audio plays. `Map.hashCode()` is content-based, so a changed bucket
+     * changes the fingerprint.
+     */
+    private fun listeningStateFingerprint(): String = buildString(160) {
+        val track = AudioEngine.currentTrack.value
+        append(track?.reciterSlug ?: "-").append('/').append(track?.surahId ?: 0)
+        append('@').append(AudioEngine.currentPositionMs.value)
+        val s = UserUsageRepository.stats.value
+        append('|').append(s.totalSecondsListened).append(',').append(s.daysStreak)
+        append(',').append(s.minutesToday).append(',').append(s.uniqueRecitersCount)
+        append(',').append(s.uniqueSurahsCount)
+        append("|d").append(UserUsageRepository.dailySeconds.value.hashCode())
+        append("|p").append(UserUsageRepository.surahPlays.value.hashCode())
+        for (item in UserUsageRepository.history.value) {
+            append(';').append(item.reciterSlug).append('#').append(item.surahId)
+            append('@').append(item.positionMs)
+            append('/').append(item.lastPlayedTimestampMs)
+        }
     }
 
     // ------------------------------------------------------------------ setup
@@ -282,11 +592,78 @@ actual object SyncEngine {
         e is AppwriteException && e.code == 404
 
     // ------------------------------------------------------------------ likes
+    //
+    // Cloud shape: `likes{user_id,surah_id,ayah_no,level,reciter_slug,track_json}`.
+    // `track_json` is the whole [TrackItem] as `Json.encodeToString` — the same
+    // encoding `history` uses (see [pushHistory]) and for the same reason: the
+    // scalar columns cannot express a favourite. `textUthmani` (the Arabic a
+    // favourites row displays) and `durationMs` (rendered as "unknown duration"
+    // when 0) exist ONLY inside it, so before it was written a restore rebuilt
+    // both from nothing. The columns stay authoritative for identity — the doc
+    // id and the prune are keyed on (reciter, surah, ayah) — and `track_json`
+    // supplies the payload for a doc whose (surah, ayah) matches.
 
-    private suspend fun pullLikesIfEmpty(db: Databases, userId: String) {
-        if (FavoritesStore.favoriteTracks.value.isNotEmpty()) return
-        val docs = listForUser(db, LIKES, userId) ?: return
-        FavoritesStore.clear()
+    /**
+     * Column size of `likes.track_json` (string 16384, optional). A [TrackItem]
+     * is normally a few hundred characters, but a full-surah favourite can carry
+     * a whole surah of `textUthmani`, and an over-long attribute is rejected as
+     * a WHOLE document — so [likeTrackJson] drops the Arabic text rather than
+     * let one pathological row cost every other favourite its write.
+     */
+    private const val LIKES_TRACK_JSON_MAX_CHARS = 16384
+
+    /**
+     * `likes` attributes the cloud may not have provisioned yet, in the order
+     * they are shed when the server rejects a write as unknown-attribute (see
+     * [pushLikes]). Both ARE in `appwrite/collections.json` today; the list is
+     * kept for a deployment that predates them, because losing a reciter slug or
+     * a track payload is recoverable while a rejected document loses the whole
+     * favourites push with it.
+     */
+    private val LIKES_OPTIONAL_ATTRS = listOf("reciter_slug", "track_json")
+
+    /**
+     * Unions the cloud `likes` docs into [FavoritesStore] — it does NOT gate on
+     * local emptiness any more (see the class KDoc: pre-auth likes are adopted
+     * into a freshly-bound account, and one like tapped in the 2s before the
+     * first pass is enough to hide the whole cloud set, which the paired
+     * [pushLikes] would then delete).
+     *
+     * [FavoritesStore.clear] is still called, but only while the list is empty,
+     * which is exactly when the store needs it: until `clear` has run, the
+     * store's `add` diverts new entries into its pending adoption buffer, so a
+     * restore into an empty store would be invisible — and a like tapped on an
+     * empty list would never show. Calling it on a NON-empty list would be
+     * actively harmful (it empties the list, so every local row would have to
+     * be re-added, rewriting the whole list to disk on every pass), and it buys
+     * nothing there: with a non-empty list `add` never diverts, so a plain
+     * union below is equivalent.
+     *
+     * Cloud rows whose `likeKey` is already held by a playable local entry are
+     * skipped: [FavoritesStore.add] would be a no-op for them anyway (it
+     * upserts by the store's own identity — audio URL widened to the cloud
+     * doc-id tuple, so a playable row also upgrades its leftover
+     * `appwrite://likes/<docId>` placeholder), and skipping keeps the common
+     * "cloud == local" pass from rewriting every like to disk.
+     *
+     * Returns true when the cloud holds at least one like document (restored or
+     * not — the caller must then skip pushing an empty local list, which would
+     * delete the account's whole cloud favourites set). False when the
+     * collection is missing or empty, so push converges.
+     */
+    private suspend fun pullLikes(db: Databases, userId: String): Boolean {
+        val docs = listForUser(db, LIKES, userId) ?: return false
+        if (FavoritesStore.favoriteTracks.value.isEmpty()) {
+            FavoritesStore.clear()
+        }
+        if (docs.isEmpty()) return false
+        val known = mutableSetOf<String>()
+        for (track in FavoritesStore.favoriteTracks.value) {
+            if (!track.audioUrl.startsWith(LIKES_PLACEHOLDER_PREFIX)) {
+                known += likeKey(track.surahId, track.ayahNo)
+            }
+        }
+        var adopted = 0
         for (doc in docs) {
             val data = doc.data
             val surahId = (data["surah_id"] as? Number)?.toInt() ?: continue
@@ -299,7 +676,17 @@ actual object SyncEngine {
             // synthetic placeholder so FavoritesStore's audioUrl-identity dedup
             // keeps working; such items play after the gap closes.
             val rawSlug = (data["reciter_slug"] as? String)?.trim().orEmpty()
-            val playable = buildPlayableLike(rawSlug, surahId, ayahNo)
+            val key = likeKey(surahId, ayahNo)
+            if (key in known) continue
+            known += key
+            // `track_json` first: it is the favourite as it was saved, so it
+            // restores `textUthmani` and `durationMs` that the columns cannot
+            // carry. A legacy document (or one written before the attribute was
+            // provisioned) has none, and falls through to the same column
+            // rebuild — and then to the same `appwrite://likes/<docId>`
+            // placeholder — as before this attribute existed.
+            val playable = decodeLikeTrack(data["track_json"], surahId, ayahNo)
+                ?: buildPlayableLike(rawSlug, surahId, ayahNo)
             if (playable != null) {
                 FavoritesStore.add(playable)
             } else {
@@ -311,11 +698,20 @@ actual object SyncEngine {
                         surahNameEn = "",
                         surahNameAr = "",
                         ayahNo = ayahNo,
-                        audioUrl = "appwrite://likes/${doc.id}",
+                        audioUrl = "$LIKES_PLACEHOLDER_PREFIX${doc.id}",
                     )
                 )
             }
+            adopted++
         }
+        if (adopted > 0) {
+            Log.i(
+                TAG,
+                "likes pull: unioned $adopted new cloud like(s) into " +
+                    "${FavoritesStore.favoriteTracks.value.size} local (cloud had ${docs.size})."
+            )
+        }
+        return true
     }
 
     /**
@@ -348,6 +744,59 @@ actual object SyncEngine {
     }
 
     /**
+     * `likes.track_json`: the local [TrackItem] verbatim as
+     * `Json.encodeToString`, the encoding [pushHistory] already uses for
+     * `history.track_json`. A placeholder row (one this device could not
+     * resolve) serialises like any other; the pull recognises its URL and
+     * rebuilds it, so a placeholder is never restored as a placeholder.
+     *
+     * Trims to the payload minus `textUthmani` when the full one does not fit
+     * [LIKES_TRACK_JSON_MAX_CHARS], and to `""` if even that does not — a blank
+     * payload is simply treated as absent by [decodeLikeTrack], which is the
+     * right degradation: the reciter, surah and audio URL (what actually makes
+     * the row playable) survive, and the Arabic text is the only thing lost.
+     */
+    private fun likeTrackJson(track: TrackItem): String {
+        val full = runCatching { json.encodeToString(track) }.getOrNull() ?: return ""
+        if (full.length <= LIKES_TRACK_JSON_MAX_CHARS) return full
+        val trimmed = runCatching { json.encodeToString(track.copy(textUthmani = "")) }
+            .getOrNull()
+            ?: return ""
+        return if (trimmed.length <= LIKES_TRACK_JSON_MAX_CHARS) trimmed else ""
+    }
+
+    /**
+     * The [TrackItem] a cloud like's `track_json` carries, or null when the
+     * document has no usable one — the caller then falls back to
+     * [buildPlayableLike]'s column rebuild, and then to the `appwrite://likes/`
+     * placeholder.
+     *
+     * A payload is refused (→ null, never thrown, so one bad document cannot
+     * abort the pass) unless:
+     * - it decodes at all;
+     * - it AGREES with the document's own `surah_id` / `ayah_no`. Those columns
+     *   are what the doc id and [pushLikes]' prune are keyed on, so a payload
+     *   that disagrees with them would restore a favourite under an identity the
+     *   cloud does not have, and the paired push would then delete its own doc;
+     * - it names a reciter and carries a real audio URL — not blank, and not an
+     *   `appwrite://likes/` placeholder — so a row whose reciter the catalog can
+     *   no longer resolve still takes the identity-stable placeholder path.
+     */
+    private fun decodeLikeTrack(raw: Any?, surahId: Int, ayahNo: Int): TrackItem? {
+        val payload = (raw as? String)?.trim().orEmpty()
+        if (payload.isEmpty()) return null
+        val track = try {
+            json.decodeFromString<TrackItem>(payload)
+        } catch (_: Exception) {
+            return null
+        }
+        if (track.surahId != surahId || track.ayahNo != ayahNo) return null
+        if (track.reciterSlug.isBlank() || track.audioUrl.isBlank()) return null
+        if (track.audioUrl.startsWith(LIKES_PLACEHOLDER_PREFIX)) return null
+        return track
+    }
+
+    /**
      * Null-returning twin of [QuranDataRepository.getReciterBySlug] (which falls
      * back to Alafasy and never returns null): mirrors its smart-normalization
      * predicate so "unknown" slugs are detectable and can use the synthetic
@@ -373,51 +822,147 @@ actual object SyncEngine {
         }
     }
 
-    private suspend fun pushLikes(db: Databases, userId: String) {
+    /**
+     * Converges the cloud `likes` set to the local favourites.
+     *
+     * Empty-local guard (same shape as [pushHistory] / [pushStats]): with local
+     * favourites empty and the cloud holding any, the prune below would delete
+     * the account's ENTIRE cloud favourites set and the upsert loop would
+     * recreate none. That is the normal state of a fresh device whose restore
+     * could not be applied, so the push is skipped and the pull's return value
+     * decides.
+     *
+     * ## Prune invariant (the "conservative, never aggressive" rule)
+     *
+     * The doc id is [likeDocId] = `sha256("<userId>|<slug>|<surahId>|<ayahNo>")`,
+     * so a doc is identified by the (reciter, surah, ayah) TRIPLE. The prune
+     * used to key on `surahId:ayahNo` alone, which made one local row stand in
+     * for every reciter's doc for that ayah: favouriting the same ayah from two
+     * reciters produced two cloud docs that one local key covered, so
+     * un-favouriting either deleted both and the next restore brought the other
+     * back. The key now carries the slug — canonicalised through
+     * [findReciterOrNull] on BOTH sides, so a device that stores the alias
+     * `"mishary"` and a device that stores the canonical `"alafasy"` agree
+     * instead of deleting each other's doc.
+     *
+     * The catch is that the local store is keyed by AUDIO URL, not by the doc
+     * triple (`FavoritesStore.sameFavorite`), and two catalog rows for the same
+     * person can resolve to the same file (the MP3Quran full-surah and
+     * EveryAyah twins, and any two rows sharing a server URL), in which case
+     * ONE local row is the only local representation of TWO cloud docs. A
+     * strict triple match would therefore delete a like the user never
+     * removed and that this device cannot even show separately. So a doc is
+     * deleted only on POSITIVE PROOF that this device holds no like for it:
+     * 1. a local row whose canonical (slug, surah, ayah) equals the doc's — keep;
+     * 2. a local row playing the exact URL the doc's own (reciter, surah, ayah)
+     *    would play (rebuilt with the same [buildPlayableLike] the pull uses) —
+     *    keep: that row is this doc's like, whatever slug it happens to carry;
+     * 3. a doc whose `reciter_slug` is absent or no longer in the catalog, so
+     *    its identity is unknowable: keep whenever ANY local row likes that
+     *    ayah, delete only when the user likes no reciter's version of it;
+     * 4. a local row for the same ayah whose slug or audio URL is blank (a
+     *    placeholder the pull could not resolve) — the row cannot be attributed,
+     *    so it protects every doc for that ayah: keep.
+     * Anything the device cannot place is kept; only a doc that is
+     * positively unmatched is deleted. Cost of a wrong keep: an inert
+     * document, re-checked (and eventually deleted, or restored as a
+     * placeholder) on a later pass. Cost of a wrong delete: a lost like.
+     */
+    private suspend fun pushLikes(db: Databases, userId: String, cloudHasData: Boolean) {
         val local = FavoritesStore.favoriteTracks.value
+        if (local.isEmpty()) {
+            if (cloudHasData) {
+                Log.i(TAG, "pushLikes skipped (local empty, cloud has data).")
+            }
+            return
+        }
         val existing = listForUser(db, LIKES, userId) ?: return
-        val localKeys = local.map { likeKey(it.surahId, it.ayahNo) }.toSet()
-        // Per-pass flag: cleared on the first unknown-attribute rejection so the
-        // rest of this pass goes slug-less; next pass retries with the slug.
-        var includeReciterSlug = true
+        // Local index for the four keep-conditions above. Built once per pass
+        // and only over the (small) local list; the per-doc work below is a set
+        // lookup, plus a URL rebuild for the docs whose slug does not match.
+        val localDocKeys = HashSet<String>(local.size * 2)
+        val localAyahKeys = HashSet<String>(local.size * 2)
+        val localAudioUrls = HashSet<String>(local.size * 2)
+        val unattributableAyahKeys = HashSet<String>()
+        for (track in local) {
+            val ayahKey = likeKey(track.surahId, track.ayahNo)
+            localDocKeys += likeDocKey(canonicalReciterSlug(track.reciterSlug), track.surahId, track.ayahNo)
+            localAyahKeys += ayahKey
+            if (track.audioUrl.isBlank() || track.reciterSlug.isBlank()) {
+                unattributableAyahKeys += ayahKey
+            } else {
+                localAudioUrls += track.audioUrl
+            }
+        }
+        // Per-pass set of attributes the cloud has rejected as unknown so far.
+        // Grows only, at most one entry per rejection (see the upsert loop).
+        var shed = emptySet<String>()
         for (doc in existing) {
             val data = doc.data
-            val key = likeKey(
-                (data["surah_id"] as? Number)?.toInt() ?: continue,
-                (data["ayah_no"] as? Number)?.toInt() ?: 0,
-            )
-            if (key !in localKeys) {
-                try {
-                    db.deleteDocument(DB_ID, LIKES, doc.id)
-                } catch (e: Exception) {
-                    Log.e(TAG, "delete stale like ${doc.id} failed", e)
+            val surahId = (data["surah_id"] as? Number)?.toInt() ?: continue
+            val ayahNo = (data["ayah_no"] as? Number)?.toInt() ?: 0
+            val ayahKey = likeKey(surahId, ayahNo)
+            if (ayahKey in unattributableAyahKeys) continue
+            val rawSlug = (data["reciter_slug"] as? String)?.trim().orEmpty()
+            val docSlug = canonicalReciterSlug(rawSlug)
+            val knownReciter = if (rawSlug.isEmpty()) null else findReciterOrNull(rawSlug)
+            var keep = false
+            if (knownReciter == null) {
+                // Rule 3: identity unknowable — only a doc for an ayah the user
+                // likes not at all can be called stale.
+                keep = ayahKey in localAyahKeys
+            } else {
+                val playable = buildPlayableLike(docSlug, surahId, ayahNo)
+                if (playable == null) {
+                    // Rule 2 unavailable (surah gone from the catalog): nothing
+                    // can be proven, so keep.
+                    keep = true
+                } else {
+                    // Rules 1 and 2.
+                    keep = likeDocKey(docSlug, surahId, ayahNo) in localDocKeys ||
+                        playable.audioUrl in localAudioUrls
                 }
+            }
+            if (keep) continue
+            try {
+                db.deleteDocument(DB_ID, LIKES, doc.id)
+            } catch (e: Exception) {
+                Log.e(TAG, "delete stale like ${doc.id} failed", e)
             }
         }
         for (track in local) {
-            // `reciter_slug` (string 64, optional) is sent when the cloud
-            // collection has it; when the sibling hasn't added the attribute
-            // yet the server rejects unknown attributes, so fall back to a
-            // slug-less upsert once (flag) and keep syncing the other fields.
             val full: Map<String, Any?> = mapOf(
                 "user_id" to userId,
                 "surah_id" to track.surahId,
                 "ayah_no" to track.ayahNo,
                 "level" to "like",
                 "reciter_slug" to track.reciterSlug,
+                "track_json" to likeTrackJson(track),
             )
             val docId = likeDocId(userId, track.reciterSlug, track.surahId, track.ayahNo)
-            if (includeReciterSlug) {
+            // `reciter_slug` (string 64) and `track_json` (string 16384) are both
+            // optional server-side and both in `collections.json` today; when a
+            // deployment has not provisioned one yet the server rejects the WHOLE
+            // document as unknown-attribute, so shed it and keep syncing every
+            // other field. The loop (not a single retry) matters: a deployment
+            // can be missing BOTH, and one retry would give up on the second and
+            // fail the whole collection block. It terminates because `shed` only
+            // grows and is bounded by [LIKES_OPTIONAL_ATTRS]; anything that is
+            // not an unknown-attribute rejection is rethrown untouched.
+            var attempt = full.filterKeys { it !in shed }
+            while (true) {
                 try {
-                    upsert(db, LIKES, docId, full)
-                    continue
+                    upsert(db, LIKES, docId, attempt)
+                    break
                 } catch (e: Exception) {
-                    if (!isUnknownAttribute(e, "reciter_slug")) throw e
-                    Log.w(TAG, "likes.reciter_slug not provisioned yet; pushing without it.")
-                    includeReciterSlug = false
+                    val attr = LIKES_OPTIONAL_ATTRS.firstOrNull {
+                        it in attempt && isUnknownAttribute(e, it)
+                    } ?: throw e
+                    Log.w(TAG, "likes.$attr not provisioned yet; pushing without it.")
+                    shed += attr
+                    attempt = full.filterKeys { it !in shed }
                 }
             }
-            upsert(db, LIKES, docId, full - "reciter_slug")
         }
     }
 
@@ -435,17 +980,56 @@ actual object SyncEngine {
 
     private fun likeKey(surahId: Int, ayahNo: Int): String = "$surahId:$ayahNo"
 
+    /**
+     * The (reciter, surah, ayah) identity [likeDocId] hashes, WITHOUT the user
+     * id — i.e. the tuple a local row can be matched to a cloud doc on. Both
+     * sides are passed through [canonicalReciterSlug] first (see [pushLikes]).
+     */
+    private fun likeDocKey(reciterSlug: String, surahId: Int, ayahNo: Int): String =
+        "$reciterSlug|${likeKey(surahId, ayahNo)}"
+
+    /**
+     * The reciter's canonical [Reciter.slug] for [slug], falling back to the raw
+     * lowercased spelling when the catalog no longer knows it.
+     *
+     * This is what makes the [pushLikes] prune key agree across devices: the
+     * cloud `reciter_slug` is written from whichever alias the pushing device
+     * had (`mishary` vs `alafasy`, `al-muiqly` vs `muaiqly`, see
+     * [findReciterOrNull]), so a raw comparison would let each device prune the
+     * other's live doc. The fallback keeps unknown slugs comparable with each
+     * other instead of collapsing them all into one bucket.
+     */
+    private fun canonicalReciterSlug(slug: String): String =
+        findReciterOrNull(slug)?.slug?.lowercase() ?: slug.trim().lowercase()
+
     // ---------------------------------------------------------------- follows
 
-    private suspend fun pullFollowsIfEmpty(db: Databases, userId: String) {
-        if (FollowStore.followedSlugs.value.isNotEmpty()) return
+    /**
+     * Unions the cloud `follows` slugs into [FollowStore] — no local-emptiness
+     * gate any more (class KDoc: a reciter followed while signed out is adopted
+     * into the new account, and one local follow was enough to hide the whole
+     * cloud set, which the paired [pushFollows] then deleted).
+     *
+     * A follow is a bare slug with no payload to reconcile, so the union is
+     * exact: the push's prune is keyed off the same slug set, which makes it a
+     * no-op after this pull instead of a delete-everything-the-cloud-has pass.
+     * [FollowStore.setAll] is only called when the cloud actually adds a slug,
+     * so a converged pass writes nothing.
+     */
+    private suspend fun pullFollows(db: Databases, userId: String) {
         val docs = listForUser(db, FOLLOWS, userId) ?: return
-        // Bulk replace: no per-slug count refresh (syncNow refreshes once).
-        val slugs = docs.mapNotNull { it.data["reciter_slug"] as? String }
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .toSet()
-        FollowStore.setAll(slugs)
+        if (docs.isEmpty()) return
+        // Bulk merge, no per-slug count refresh (syncNow refreshes once).
+        val local = FollowStore.followedSlugs.value
+        val merged = local.toMutableSet()
+        for (doc in docs) {
+            val slug = (doc.data["reciter_slug"] as? String)?.trim().orEmpty()
+            if (slug.isNotEmpty()) merged += slug
+        }
+        if (merged.size == local.size) return
+        val added = merged.size - local.size
+        FollowStore.setAll(merged)
+        Log.i(TAG, "follows pull: unioned $added new cloud slug(s) into ${merged.size} local.")
     }
 
     private suspend fun pushFollows(db: Databases, userId: String) {
@@ -948,6 +1532,13 @@ actual object SyncEngine {
     // merged-then-written (cloud doc is read first; every device entry is kept
     // and only this device's own entry is overwritten) so concurrent devices
     // stop clobbering each other.
+    //
+    // `surah_plays` (all-time per-surah play counts) rides along as a
+    // `{"<surahId>":plays}` object string; it has no per-device split, so the
+    // pull maxes it per surah the same way the daily buckets are maxed.
+    //
+    // Pull is a MERGE (per-field `max` for the aggregates, per-day `max` for the
+    // series) rather than an adopt-only-when-local-is-empty — see [pullStats].
 
     /** Newest days carried in `daily_json` (count ceiling; the 8192-char cap binds first in v2). */
     private const val DAILY_JSON_CAP = 150
@@ -959,37 +1550,71 @@ actual object SyncEngine {
     private const val DAILY_JSON_MAX_CHARS = 8192
 
     /**
-     * Pulls the cloud `listening_stats` doc (docId = [userId]) when local stats
-     * are still at fresh-install defaults, and applies it via
-     * [UserUsageRepository.restoreStats] so a fresh login adopts the cloud
-     * snapshot instead of starting from zero.
+     * Stats attributes that may not be provisioned on the deployment being
+     * talked to, in the order they are shed when the server rejects a write as
+     * unknown-attribute (see [upsertStatsPayload]).
+     *
+     * BOTH are in `appwrite/collections.json` for `listening_stats` today
+     * (`daily_json` string 8192, `surah_plays` string 2048, both optional), so
+     * on a freshly provisioned database neither is ever shed. The list is kept
+     * anyway, and this is the reason to keep it: `collections.json` describes
+     * what a NEW database looks like, and a database that was provisioned before
+     * those two attributes were added still rejects any document carrying them.
+     * The failure it prevents is silent and total — the server rejects the WHOLE
+     * stats document, so an unshed `daily_json` would cost the user their
+     * lifetime total, streak and daily series, not just the daily series.
+     */
+    private val STATS_OPTIONAL_ATTRS = listOf("surah_plays", "daily_json")
+
+    /**
+     * Pulls the cloud `listening_stats` doc (docId = [userId]) and MERGES it
+     * into local stats — it no longer requires local stats to be at fresh-install
+     * defaults (see the class KDoc: a second of listening before the first pass
+     * was enough to hide the account's whole lifetime total, streak and daily
+     * series forever).
+     *
+     * Merge semantics, all never-shrinking:
+     * - aggregates: per-field `max(local, cloud)`. The cloud row is the account
+     *   total across devices, so `max` is the only rule that can add what
+     *   another device earned without ever discarding what this one has (a
+     *   stale cloud row can only be behind, never ahead). `restoreStats` takes
+     *   the larger of each aggregate internally too, so this is belt and
+     *   braces — the reason it is done here is `minutes_today`, which
+     *   `restoreStats` REPLACES (it is a today-scoped value, not a running
+     *   total), and which must therefore be passed in already maxed.
+     * - `minutes_today` date semantics: adopted only when cloud `updated_at`
+     *   falls on the current epoch day, exactly as before; otherwise the local
+     *   value is kept. The merged snapshot is then stamped with `now` rather
+     *   than the cloud's `updated_at`, because `restoreStats` zeroes
+     *   `secondsToday` whenever the stamp it is given is not from today — a
+     *   stale cloud stamp would wipe a live local today-minutes value.
+     * - `daily_json` (when present) is parsed in BOTH shapes — v2 per-device
+     *   `{"day":{"dev":secs}}` and legacy flat `{"day":secs}` (legacy counts as
+     *   other-device `"legacy"` seconds). The own-device slice merges per-day
+     *   with max() against local daily buckets via
+     *   [UserUsageRepository.restoreDaily] (local buckets stay this-device-only);
+     *   all other devices' seconds are summed per day (excluding this device's
+     *   id) into the memory-only [UserUsageRepository.remoteDailySeconds] — so
+     *   offline listening accumulated on another device restores here and
+     *   converges on next push.
+     * - `surah_plays` (when present) is decoded and handed to
+     *   [UserUsageRepository.restoreSurahPlays], which per-surah maxes it
+     *   against the local counts.
+     *
+     * `restoreStats` is only called when some aggregate would actually GROW, so
+     * a converged pass costs no settings writes; the daily / surah-play merges
+     * are already no-ops inside the store when nothing changed.
      *
      * Returns true when the cloud holds a usable snapshot (caller must then
      * skip pushing when local is still empty, otherwise local zeros would
-     * overwrite it). Returns false when local stats are already non-zero
-     * (never overwrite those) or the cloud has nothing, so push proceeds.
-     *
-     * `minutes_today` date semantics: [UserUsageRepository] derives it from
-     * seconds-listened-today for the CURRENT epoch day (`now/86400000`) and
-     * resets on day rollover, so [UserUsageRepository.restoreStats] adopts
-     * cloud `minutes_today` only when cloud `updated_at` falls on today's
-     * epoch day — otherwise it restores as 0. `days_streak`/`total_seconds`/
-     * uniques carry over as-is. `daily_json` (when present) is parsed in BOTH
-     * shapes — v2 per-device `{"day":{"dev":secs}}` and legacy flat
-     * `{"day":secs}` (legacy counts as other-device `"legacy"` seconds).
-     * The own-device slice merges per-day with max() against local daily
-     * buckets via [UserUsageRepository.restoreDaily] (local buckets stay
-     * this-device-only); all other devices' seconds are summed per day
-     * (excluding this device's id) into the memory-only
-     * [UserUsageRepository.remoteDailySeconds] — so offline listening
-     * accumulated on another device restores here and converges on next push.
+     * overwrite it). Returns false when the cloud has nothing, so push
+     * converges.
      */
-    private suspend fun pullStatsIfEmpty(db: Databases, userId: String): Boolean {
-        if (!isLocalStatsEmpty()) return false
+    private suspend fun pullStats(db: Databases, userId: String): Boolean {
         val doc = getDocument(db, STATS, userId) ?: return false
         val data = doc.data
         val total = asLong(data["total_seconds"]) ?: 0L
-        val streak = asInt(data["days_streak"]) ?: 1
+        val streak = asInt(data["days_streak"]) ?: 0
         val uniquesReciters = asInt(data["unique_reciters"]) ?: 0
         val uniquesSurahs = asInt(data["unique_surahs"]) ?: 0
         val updatedAt = asLong(data["updated_at"])
@@ -1005,7 +1630,11 @@ actual object SyncEngine {
         // never merged into local buckets). Always set — even empty — so a
         // pull with no cloud daily data clears a stale map.
         UserUsageRepository.setRemoteDailySeconds(remoteOthers)
-        if (total <= 0L && streak <= 1 && minutes <= 0 && uniquesReciters <= 0 && uniquesSurahs <= 0 && ownDaily.isEmpty() && remoteOthers.isEmpty()) {
+        val cloudPlays = decodeSurahPlays((data["surah_plays"] as? String).orEmpty())
+        if (total <= 0L && streak <= 0 && minutes <= 0 && uniquesReciters <= 0 &&
+            uniquesSurahs <= 0 && ownDaily.isEmpty() && remoteOthers.isEmpty() &&
+            cloudPlays.isEmpty()
+        ) {
             return false // cloud snapshot itself is empty; let push converge
         }
         // Daily buckets merge (per-day max of the OWN device slice only — see
@@ -1017,34 +1646,64 @@ actual object SyncEngine {
         if (mergedDaily.isNotEmpty()) {
             UserUsageRepository.restoreDaily(mergedDaily)
         }
-        UserUsageRepository.restoreStats(
-            StatsSnapshot(
-                daysStreak = streak,
-                minutesToday = minutes,
-                uniqueRecitersCount = uniquesReciters,
-                uniqueSurahsCount = uniquesSurahs,
-                totalSecondsListened = total,
-                updatedAtMs = updatedAt,
+        // Per-surah play counts: per-surah max() inside the store, same
+        // never-shrink rule as the daily buckets.
+        if (cloudPlays.isNotEmpty()) {
+            UserUsageRepository.restoreSurahPlays(cloudPlays)
+        }
+        val local = UserUsageRepository.stats.value
+        val merged = StatsSnapshot(
+            daysStreak = maxOf(local.daysStreak, streak),
+            minutesToday = maxOf(local.minutesToday, minutes),
+            uniqueRecitersCount = maxOf(local.uniqueRecitersCount, uniquesReciters),
+            uniqueSurahsCount = maxOf(local.uniqueSurahsCount, uniquesSurahs),
+            totalSecondsListened = maxOf(local.totalSecondsListened, total),
+            updatedAtMs = System.currentTimeMillis(),
+        )
+        val grew = merged.daysStreak > local.daysStreak ||
+            merged.minutesToday > local.minutesToday ||
+            merged.uniqueRecitersCount > local.uniqueRecitersCount ||
+            merged.uniqueSurahsCount > local.uniqueSurahsCount ||
+            merged.totalSecondsListened > local.totalSecondsListened
+        if (grew) {
+            UserUsageRepository.restoreStats(merged)
+            Log.i(
+                TAG,
+                "stats pull: merged cloud into local — total=${merged.totalSecondsListened}s " +
+                    "(cloud $total) streak=${merged.daysStreak} minutesToday=${merged.minutesToday} " +
+                    "reciters=${merged.uniqueRecitersCount} surahs=${merged.uniqueSurahsCount} " +
+                    "days=${mergedDaily.size} surahPlayDays=${cloudPlays.size}."
             )
-        )
-        Log.i(
-            TAG,
-            "stats pull: adopted cloud total=${total}s streak=$streak minutesToday=$minutes " +
-                "reciters=$uniquesReciters surahs=$uniquesSurahs days=${mergedDaily.size}" +
-                (if (updatedAt != null) " updatedAt=$updatedAt" else "") + "."
-        )
+        } else {
+            Log.i(
+                TAG,
+                "stats pull: cloud is behind local (cloud total=$total vs local " +
+                    "${local.totalSecondsListened}); kept local. days=${mergedDaily.size} " +
+                    "surahPlayDays=${cloudPlays.size}."
+            )
+        }
         return true
     }
 
     /**
      * Pushes stats with a per-device v2 `daily_json`
      * (`{"<epochDay>":{"<devId>":secs}}`, newest [DAILY_JSON_CAP] days, kept
-     * under [DAILY_JSON_MAX_CHARS] chars by dropping oldest days first).
+     * under [DAILY_JSON_MAX_CHARS] chars by dropping oldest days first) plus the
+     * all-time `surah_plays` object ([encodeSurahPlays]).
      *
      * Merge-then-write: the current cloud doc is read first and its device
      * maps are unioned (every device entry kept, only this device's own entry
      * overwritten with the local buckets) before upsert, which narrows the
-     * multi-writer clobber window vs a blind overwrite.
+     * multi-writer clobber window vs a blind overwrite. That read is also what
+     * makes the heartbeat safe: it must never write a `daily_json` built from
+     * an empty "cloud" side, or it would drop every OTHER device's days from
+     * the collection.
+     *
+     * `surah_plays` has no per-device split, so it is written as this device
+     * sees it; [UserUsageRepository.restoreSurahPlays] per-surah maxes it on the
+     * way back in, which makes a two-device account converge on the higher
+     * count rather than the sum (the same trade-off, and for the same reason, as
+     * the daily buckets).
      *
      * Residual race (documented, accepted): read-modify-write is not atomic —
      * two devices pushing concurrently can interleave (both read, then last
@@ -1052,7 +1711,9 @@ actual object SyncEngine {
      * Bounded damage: each writer only mutates its own devId key, so only the
      * concurrent update is lost (never another device's history), and the next
      * push re-uploads the full local buckets, self-healing on the following
-     * sync.
+     * sync. The heartbeat does not widen this window: it skips its tick while a
+     * full pass is in flight, and the two only overlap if a full pass starts
+     * mid-heartbeat-pass, in which case they write the same local values.
      */
     private suspend fun pushStats(db: Databases, userId: String, cloudHasData: Boolean) {
         if (cloudHasData && isLocalStatsEmpty()) {
@@ -1077,17 +1738,93 @@ actual object SyncEngine {
             "total_seconds" to s.totalSecondsListened,
             "updated_at" to System.currentTimeMillis(),
             "daily_json" to dailyJson,
+            "surah_plays" to encodeSurahPlays(UserUsageRepository.surahPlays.value),
         )
-        // `daily_json` (string 8192, optional) is sent when the cloud
-        // collection has it; when the attribute isn't provisioned yet the
-        // server rejects unknown attributes, so fall back to a daily-less
-        // upsert once and keep syncing the other fields.
+        // `daily_json` (string 8192, optional) and `surah_plays` (string 2048,
+        // optional) are sent when the cloud collection has them; when an
+        // attribute isn't provisioned yet the server rejects the WHOLE write as
+        // unknown-attribute, so drop them one at a time (per pass) and keep the
+        // other fields syncing rather than losing the entire stats push.
+        upsertStatsPayload(db, userId, full, STATS_OPTIONAL_ATTRS)
+    }
+
+    /**
+     * Upserts the single-doc-per-user stats payload, shedding optional
+     * attributes the cloud has not provisioned yet.
+     *
+     * [droppable] is consumed in order, at most one per attempt: the server
+     * rejects the whole document for the first unprovisioned attribute it meets,
+     * so one retry per attribute is enough (depth is bounded by its size). Any
+     * other failure is rethrown into the caller's `runCollection` guard.
+     */
+    private suspend fun upsertStatsPayload(
+        db: Databases,
+        userId: String,
+        payload: Map<String, Any?>,
+        droppable: List<String>,
+    ) {
         try {
-            upsert(db, STATS, userId, full)
+            upsert(db, STATS, userId, payload)
         } catch (e: Exception) {
-            if (!isUnknownAttribute(e, "daily_json")) throw e
-            Log.w(TAG, "stats.daily_json not provisioned yet; pushing without it.")
-            upsert(db, STATS, userId, full - "daily_json")
+            val attr = droppable.firstOrNull { isUnknownAttribute(e, it) } ?: throw e
+            Log.w(TAG, "stats.$attr not provisioned yet; pushing without it.")
+            upsertStatsPayload(db, userId, payload - attr, droppable - attr)
+        }
+    }
+
+    /**
+     * `listening_stats.surah_plays`: per-surah all-time play counts as a JSON
+     * object string, `{"18":7,"36":2}` — keys as strings (JSON object keys
+     * always are) and values as plain integers, the same encoder convention as
+     * `daily_json`. Mirrors [UserUsageRepository.surahPlays] exactly; the
+     * decoder [decodeSurahPlays] is lenient about quoted numbers.
+     */
+    private fun encodeSurahPlays(plays: Map<Int, Long>): String {
+        if (plays.isEmpty()) return "{}"
+        return try {
+            buildString(plays.size * 12 + 2) {
+                append('{')
+                var first = true
+                for ((surahId, count) in plays) {
+                    if (surahId !in 1..114 || count <= 0L) continue
+                    if (!first) append(',')
+                    first = false
+                    append('"').append(surahId).append("\":").append(count)
+                }
+                append('}')
+            }
+        } catch (_: Exception) {
+            "{}"
+        }
+    }
+
+    /**
+     * Lenient inverse of [encodeSurahPlays]: out-of-range surah ids, blank keys,
+     * non-numeric and non-positive counts and malformed entries are all
+     * skipped. Missing/blank/malformed input yields an empty map. Never throws.
+     */
+    private fun decodeSurahPlays(raw: String): Map<Int, Long> {
+        if (raw.isBlank()) return emptyMap()
+        return try {
+            val obj = json.parseToJsonElement(raw).jsonObject
+            val out = LinkedHashMap<Int, Long>(obj.size)
+            for ((key, value) in obj) {
+                val surahId = key.trim().toIntOrNull() ?: continue
+                if (surahId !in 1..114) continue
+                val prim = try {
+                    value.jsonPrimitive
+                } catch (_: Exception) {
+                    null
+                } ?: continue
+                val count = prim.longOrNull
+                    ?: prim.content.toDoubleOrNull()?.toLong()
+                    ?: continue
+                if (count <= 0L) continue
+                out[surahId] = count
+            }
+            out
+        } catch (_: Exception) {
+            emptyMap()
         }
     }
 
@@ -1336,11 +2073,15 @@ actual object SyncEngine {
     }
 
     /**
-     * True when local stats are still at fresh-install defaults
-     * (`daysStreak = 1`, `minutesToday = 0`, `totalSeconds = 0`, uniques of 1
-     * are just the `"mishary"`/`"18"` placeholders [UserUsageRepository]
-     * seeds when storage is empty). Anything beyond that counts as real local
-     * activity that pull must never overwrite.
+     * True when local stats are still at fresh-install defaults (no seconds
+     * listened today or ever, no streak, no uniques). Anything beyond that
+     * counts as real local activity.
+     *
+     * Only the PUSH's clobber guard still uses this, to avoid overwriting a
+     * cloud snapshot with local zeros. The pull no longer gates on it — it
+     * merges per field (see [pullStats]) — so this is deliberately NOT the
+     * "safe to overwrite" test any more, just the "is there anything worth
+     * keeping locally" test.
      */
     private fun isLocalStatsEmpty(): Boolean {
         val s = UserUsageRepository.stats.value
@@ -1353,38 +2094,88 @@ actual object SyncEngine {
 
     // ---------------------------------------------------------------- history
     //
-    // Pull-if-empty + push-capped (push skips when local is still empty but
-    // cloud has data, so a fresh login never clobbers its restore source with
-    // an empty state — no-data-loss guard, same as playback/stats).
+    // Merge-pull + push-capped (push skips when local is still empty but cloud
+    // has data, so a fresh login never clobbers its restore source with an empty
+    // state — no-data-loss guard, same as playback/stats).
     //
     // Cloud shape: `history{user_id,track_json,played_at_ms,position_ms}` (index on
     // `user_id,played_at_ms`). `track_json = Json.encodeToString(TrackItem)`
     // ([TrackItem] is `@Serializable` and carries no position, so the live
     // `positionMs` travels as top-level `position_ms`; rebuilt from the local
     // [JumpBackInItem] via reciter/surah lookups so the JSON carries real
-    // display names + audio URL). Doc ids are stable per entry:
-    // `"h-<sanitizedSlug>-<surahId>-<playedAtMs>"` (max 36 chars). Push sends
-    // at most [HISTORY_CAP] recent entries and deletes cloud docs beyond the
-    // local set so reorders/removals converge.
+    // display names + audio URL).
+    //
+    // Doc ids are stable per ROW, not per listen: `recordProgress` keeps at most
+    // one entry per `(surahId, reciterSlug)` and stamps it once per session, so
+    // a row is the unit the user sees. The id is
+    // `"h-" + sha256("<userId>|<slug>|<surahId>")[0..24)` (26 chars) — the
+    // [likeDocId]/[followDocId] shape. Two consequences, both deliberate:
+    // - The user's `userId` is hashed IN, which the previous
+    //   `"h-<slug>-<surahId>-<playedAtMs>"` scheme did not do. `history` has
+    //   `documentSecurity: true`, so a slug-only id would make the second user
+    //   to listen to the same surah get 409 on create and then 401/403 on the
+    //   `upsert` fallback, failing the whole collection block.
+    // - One doc per (user, reciter, surah) means the doc set is bounded by the
+    //   same [HISTORY_CAP] as the local list, so a restore really does bring
+    //   back [HISTORY_CAP] distinct rows instead of however many duplicates
+    //   (two devices, one session change) happened to be in the collection.
+    //   It also means an update-in-place: `$createdAt` survives, so the resume
+    //   row stops being re-created and re-pruned on every listen session.
+    //
+    // Migration: ids written by the old scheme are orphaned by the change, and
+    // the existing prune is what retires them — a doc whose id is not in
+    // `localIds` is deleted in the same pass that writes the new one, so there
+    // is no permanent double set and nothing to migrate out of band. Content is
+    // never at risk, because the pull reads by `user_id` + `played_at_ms` and
+    // never looks at ids. The one real risk is a fleet running BOTH schemes at
+    // once: an old build and a new one will each delete the other's docs for the
+    // same row on every pass. That is doc-level churn (a resume position that
+    // flip-flops), never data loss, and it resolves as soon as every device is
+    // on the new build.
+    //
+    // Prune safety (asked explicitly, so stated explicitly): the prune can no
+    // longer delete "another device's live doc" for a row this device holds,
+    // because there is only ONE doc per row now and this device's copy of it is
+    // in `localIds`. The blast radius is unchanged from the old scheme: a doc
+    // whose `(reciter, surah)` is absent from this device's local top-15 is
+    // still deleted, which is the pre-existing last-writer-wins-the-collection
+    // semantics shared by likes/follows/khatma (and the reason the merge-pull
+    // above exists — the union guarantees those 15 rows are the 15 the user
+    // actually has, not a stale subset). The `unresolvedSurahs` quarantine still
+    // covers rows whose slug we cannot resolve, legacy-id rows included.
 
     /**
-     * Pulls the cloud `history` docs (ordered by `played_at_ms` desc) when
-     * local history is still empty, and applies them via
-     * [UserUsageRepository.restoreHistory] so a fresh login adopts the cloud
-     * copy instead of starting from zero.
+     * Pulls the cloud `history` docs (ordered by `played_at_ms` desc) and
+     * UNIONS them into local history via [UserUsageRepository.restoreHistory].
      *
-     * Returns true when the cloud holds at least one usable snapshot (caller
-     * must then skip pushing an empty state, otherwise the still-empty local
-     * state would overwrite it). Returns false when local history is non-empty
-     * (never overwritten — no-clobber guard) or the cloud has nothing usable,
-     * so push proceeds.
+     * No local-emptiness gate any more: on a device that restored one stale row,
+     * or that started a track in the 2s between login and the first pass, the
+     * gate skipped the cloud history FOREVER — and the paired [pushHistory],
+     * which converges the cloud to the exact local set, then deleted it.
      *
-     * After a successful restore the local history is non-empty, so the
-     * paired [pushHistory] converges normally (re-uploads the restored
-     * entries). [TrackItem] is `@Serializable`, decoded with the shared [Json].
+     * Merge semantics (local wins, cloud only ever adds):
+     * - Identity is the row `(reciterSlug, surahId)`, which is exactly what
+     *   `UserUsageRepository` keys on, and exactly what the new doc id hashes.
+     *   `restoreHistory` itself keeps the local row for a key it already holds
+     *   and appends the rest, so it can never roll local data back.
+     * - Cloud rows are matched against local rows through [historyRowKey], which
+     *   resolves the slug to its canonical catalog spelling first. Without
+     *   that, a local row saved as `"mishary"` and a cloud row written as
+     *   `"alafasy"` (the two spellings of one reciter) would both be kept and
+     *   burn two of the [HISTORY_CAP] slots on one surah. Pre-filtering here
+     *   changes nothing in the store — it would have dropped those rows anyway
+     *   on its own key — it just stops them consuming the cap.
+     * - What the cloud cannot do is REPLACE a stale local row with a newer one
+     *   for the same key: `restoreHistory` has no overwrite path, and adding
+     *   one is the store owner's call, not this file's. Net effect: the cloud
+     *   is authoritative for rows this device has never played, and this device
+     *   is authoritative for rows it has.
+     *
+     * Returns true when the cloud holds at least one usable row (the caller
+     * must then skip pushing an empty local state, which would overwrite it).
+     * Returns false when the cloud has nothing usable, so push proceeds.
      */
-    private suspend fun pullHistoryIfEmpty(db: Databases, userId: String): Boolean {
-        if (UserUsageRepository.history.value.isNotEmpty()) return false
+    private suspend fun pullHistory(db: Databases, userId: String): Boolean {
         val docs = listHistoryForUser(db, userId) ?: return false
         if (docs.isEmpty()) return false
         val items = docs.mapNotNull { doc ->
@@ -1402,13 +2193,46 @@ actual object SyncEngine {
         }
         if (items.isEmpty()) return false // cloud snapshot itself is empty; let push converge
         val ordered = items.sortedByDescending { it.second }
-        UserUsageRepository.restoreHistory(ordered)
+        val localBefore = UserUsageRepository.history.value
+        val localKeys = localBefore.mapTo(mutableSetOf()) { historyRowKey(it.reciterSlug, it.surahId) }
+        // `restoreHistory` sorts by playedAt desc and caps at HISTORY_CAP, so
+        // newest-first order is preserved and the newest cloud rows are the
+        // ones that survive the cap.
+        val fresh = ordered.filter { (track, _, _) ->
+            localKeys.add(historyRowKey(track.reciterSlug, track.surahId))
+        }
+        if (fresh.isEmpty()) {
+            Log.i(
+                TAG,
+                "history pull: nothing to merge — local already holds all ${ordered.size} cloud row(s)."
+            )
+            return true
+        }
+        UserUsageRepository.restoreHistory(fresh)
+        val mergedSize = UserUsageRepository.history.value.size
         Log.i(
             TAG,
-            "history pull: restored ${UserUsageRepository.history.value.size} entries " +
-                "(cloud had ${ordered.size}, most recent playedAt=${ordered.firstOrNull()?.second})."
+            "history pull: merged ${fresh.size} cloud row(s) into local history " +
+                "(${localBefore.size} -> $mergedSize; cloud had " +
+                "${ordered.size}, most recent playedAt=${ordered.firstOrNull()?.second})."
         )
         return true
+    }
+
+    /**
+     * Identity of one history row for merge purposes: the reciter's CANONICAL
+     * catalog slug plus the surah id. The canonicalisation is what makes
+     * `"mishary"` (a pre-catalog alias, and the shape a local row can still
+     * carry) and `"alafasy"` (what the pusher writes, from [Reciter.slug])
+     * compare equal, so one surah never occupies two rows.
+     */
+    private fun historyRowKey(reciterSlug: String, surahId: Int): String {
+        val canonical = try {
+            findReciterOrNull(reciterSlug)?.slug
+        } catch (_: Exception) {
+            null
+        } ?: reciterSlug.trim().lowercase()
+        return "$canonical#$surahId"
     }
 
     private suspend fun pushHistory(db: Databases, userId: String, cloudHasData: Boolean) {
@@ -1422,6 +2246,8 @@ actual object SyncEngine {
             return
         }
         val existing = listHistoryForUser(db, userId) ?: return
+        val existingById = HashMap<String, io.appwrite.models.Document<Map<String, Any>>>(existing.size * 2)
+        for (doc in existing) existingById[doc.id] = doc
         val now = System.currentTimeMillis()
         val localIds = mutableSetOf<String>()
         // Prune invariant: the loop below may only delete a cloud doc this
@@ -1445,7 +2271,7 @@ actual object SyncEngine {
                 unresolvedSurahs += item.surahId
                 // Best-effort protection in case the writing device used the
                 // same raw slug (already-known reciter, blank audio URL).
-                localIds += historyDocId(item.reciterSlug, item.surahId, playedAt)
+                localIds += historyDocId(userId, item.reciterSlug, item.surahId)
                 Log.w(
                     TAG,
                     "history push: skipping unresolvable entry " +
@@ -1453,13 +2279,45 @@ actual object SyncEngine {
                 )
                 return@forEachIndexed
             }
-            val docId = historyDocId(track.reciterSlug, track.surahId, playedAt)
+            val docId = historyDocId(userId, track.reciterSlug, track.surahId)
+            // Registered BEFORE any skip below: a row this device holds must
+            // never be pruned, whether or not we ended up writing it.
             localIds.add(docId)
+            val positionMs = item.positionMs.coerceAtLeast(0L)
+            val trackJson = json.encodeToString(track)
+            val cloudDoc = existingById[docId]
+            if (cloudDoc != null) {
+                val cloudPlayedAt = asLong(cloudDoc.data["played_at_ms"])
+                val cloudPosition = asLong(cloudDoc.data["position_ms"])
+                val cloudTrackJson = cloudDoc.data["track_json"] as? String
+                if (cloudTrackJson == trackJson &&
+                    cloudPlayedAt == playedAt &&
+                    cloudPosition == positionMs
+                ) {
+                    // Byte-identical: the common case for the settled rows of
+                    // every pass. Skipping them is what makes the push cheap
+                    // enough to run on the heartbeat's cadence.
+                    return@forEachIndexed
+                }
+                if (cloudPlayedAt != null && cloudPlayedAt > playedAt) {
+                    // Another device (or a later session on this one) has a
+                    // NEWER listen of the same row. Writing our older one would
+                    // move the shared row backwards for every device, so keep
+                    // theirs; `localIds` already protects it from the prune, and
+                    // the next pass re-evaluates once local catches up.
+                    Log.i(
+                        TAG,
+                        "history push: keeping newer cloud row $docId " +
+                            "(cloud playedAt=$cloudPlayedAt > local $playedAt)."
+                    )
+                    return@forEachIndexed
+                }
+            }
             val data: Map<String, Any?> = mapOf(
                 "user_id" to userId,
-                "track_json" to json.encodeToString(track),
+                "track_json" to trackJson,
                 "played_at_ms" to playedAt,
-                "position_ms" to item.positionMs.coerceAtLeast(0L),
+                "position_ms" to positionMs,
             )
             upsert(db, HISTORY, docId, data)
         }
@@ -1552,25 +2410,120 @@ actual object SyncEngine {
         }
     }
 
-    private fun historyDocId(slug: String, surahId: Int, playedAtMs: Long): String {
-        val s = sanitizeId(slug).take(12)
-        return "h-$s-$surahId-$playedAtMs".take(36)
-    }
+    /**
+     * History doc id: `"h-" + sha256("<userId>|<slug>|<surahId>")[0..24)` (26
+     * chars) — one document per ROW, i.e. per (user, reciter, surah), which is
+     * the unit `recordProgress` maintains and the unit the user sees.
+     *
+     * Stable across position ticks (position lives in an attribute, not the id)
+     * and across listen sessions, so a replay updates the row in place instead
+     * of creating a new document and pruning the old one. `userId` is hashed in
+     * because `history` is `documentSecurity: true`: a slug-only id would make
+     * the second user to play a surah collide with the first (409 on create,
+     * 401/403 on the update fallback) and fail the whole collection block.
+     *
+     * See the history section header for the migration story (old
+     * timestamp-keyed docs are retired by the prune in the same pass).
+     */
+    private fun historyDocId(userId: String, slug: String, surahId: Int): String =
+        "h-${shortHash("$userId|${slug.trim().lowercase()}|$surahId")}"
 
     // --------------------------------------------------------------- schedules
+    //
+    // Merge-pull + push-with-guard, the same shape as the other set
+    // collections. `schedules` carries the WHOLE serialised
+    // [RecitationSchedule] in `schedule_json` plus `schedule_id` and
+    // `enabled`, so no schema change is involved.
+    //
+    // This block used to be push-ONLY: [pushSchedules] pruned first, and on a
+    // fresh device (empty local) the first pass after login therefore deleted
+    // every `schedule_id` the account had — for EVERY device, since the delete
+    // is on the shared cloud copy. The pull is what makes the prune sound:
+    // [SchedulesStore.restoreAllFromCloud] merges and preserves ids, so after
+    // it local ⊇ cloud ids and the prune can only retire docs this device
+    // really has dropped.
+    //
+    // Prune key: a doc is live when ANY of three keys is held locally — its
+    // `schedule_id` attribute, the id inside its `schedule_json`, or its own
+    // document id (which is `scheduleDocId` = the schedule id, truncated). The
+    // push writes the first two from the same object so they agree, and
+    // accepting any one of them means an inconsistent or partially written doc
+    // is kept rather than deleted — the only safe direction here.
 
-    private suspend fun pushSchedules(db: Databases, userId: String) {
+    /**
+     * Union-pulls the cloud `schedules` docs into [SchedulesStore].
+     *
+     * No local-emptiness gate and no replace, for the reason in the section
+     * header: either would re-open the mass-delete hole the guarded prune
+     * closes. The store's merge keeps a locally present id untouched and adds
+     * the rest with its id verbatim, which is exactly what makes the paired
+     * [pushSchedules] prune a no-op right after this pull.
+     *
+     * Decoding is defensive: a document with a missing/blank `schedule_json`, a
+     * malformed payload, or a blank id is SKIPPED, never thrown, so one bad row
+     * can neither abort the pass nor (via the push) be treated as proof that
+     * the rest of the account's schedules are gone.
+     *
+     * Returns true when the cloud holds at least one schedule document
+     * (including documents that did not parse — the caller must then skip
+     * pushing an empty local set rather than prune against an unusable
+     * snapshot). False when the collection is missing or empty, so push
+     * converges.
+     */
+    private suspend fun pullSchedules(db: Databases, userId: String): Boolean {
+        val docs = listForUser(db, SCHEDULES, userId) ?: return false
+        if (docs.isEmpty()) return false
+        val remote = docs.mapNotNull { doc ->
+            val raw = (doc.data["schedule_json"] as? String)?.trim().orEmpty()
+            if (raw.isEmpty()) return@mapNotNull null
+            val schedule = try {
+                json.decodeFromString<RecitationSchedule>(raw)
+            } catch (_: Exception) {
+                null
+            } ?: return@mapNotNull null
+            if (schedule.id.isBlank()) return@mapNotNull null
+            schedule
+        }
+        if (remote.isEmpty()) {
+            Log.w(
+                TAG,
+                "schedules pull: cloud holds ${docs.size} document(s) but none carried a " +
+                    "decodable schedule — local left untouched, push guarded."
+            )
+            return true
+        }
+        val added = SchedulesStore.restoreAllFromCloud(remote)
+        Log.i(
+            TAG,
+            "schedules pull: merged ${remote.size} cloud schedule(s) into " +
+                "${SchedulesStore.schedules.value.size} local (+$added new)."
+        )
+        return true
+    }
+
+    private suspend fun pushSchedules(db: Databases, userId: String, cloudHasData: Boolean) {
         val local = SchedulesStore.schedules.value
+        if (local.isEmpty()) {
+            if (cloudHasData) {
+                // Fresh login whose cloud snapshot couldn't be applied locally
+                // yet: don't overwrite it with nothing.
+                Log.i(TAG, "pushSchedules skipped (local empty, cloud has data).")
+            }
+            return
+        }
         val existing = listForUser(db, SCHEDULES, userId) ?: return
-        val localIds = local.map { it.id }.toSet()
+        val localIds = local.mapTo(mutableSetOf()) { it.id }
         for (doc in existing) {
-            val scheduleId = doc.data["schedule_id"] as? String ?: doc.id
-            if (scheduleId !in localIds) {
-                try {
-                    db.deleteDocument(DB_ID, SCHEDULES, doc.id)
-                } catch (e: Exception) {
-                    Log.e(TAG, "delete stale schedule ${doc.id} failed", e)
-                }
+            val attributeId = (doc.data["schedule_id"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+            val payloadId = schedulePayloadId(doc)
+            val live = (attributeId != null && attributeId in localIds) ||
+                (payloadId != null && payloadId in localIds) ||
+                doc.id in localIds
+            if (live) continue
+            try {
+                db.deleteDocument(DB_ID, SCHEDULES, doc.id)
+            } catch (e: Exception) {
+                Log.e(TAG, "delete stale schedule ${doc.id} failed", e)
             }
         }
         // RecitationSchedule is @Serializable: full fidelity via JSON string.
@@ -1585,61 +2538,131 @@ actual object SyncEngine {
         }
     }
 
+    /**
+     * The schedule id carried inside a cloud doc's `schedule_json`, or null when
+     * it is missing/malformed. Used as a SECOND, payload-derived prune key so a
+     * doc whose `schedule_id` attribute disagrees with its own payload is kept
+     * rather than deleted.
+     */
+    private fun schedulePayloadId(
+        doc: io.appwrite.models.Document<Map<String, Any>>,
+    ): String? = try {
+        val raw = (doc.data["schedule_json"] as? String)?.trim().orEmpty()
+        if (raw.isEmpty()) {
+            null
+        } else {
+            json.decodeFromString<RecitationSchedule>(raw).id.trim().takeIf { it.isNotEmpty() }
+        }
+    } catch (_: Exception) {
+        null
+    }
+
     // --------------------------------------------------------------- khatma plans
     //
-    // Pull-if-empty + push (push skips when local is still empty but cloud
+    // Merge-pull + push (push skips when local is still empty but cloud
     // holds data, so a fresh login never clobbers its restore source with an
     // empty state — no-data-loss guard, same as playback/stats/history).
     //
     // Cloud shape: `khatma_plans{user_id,title,total_days,current_surah,
-    // current_ayah,percent}` (index on `user_id`). The collection carries no
-    // plan id / streak / date attributes, so doc ids are stable per plan:
-    // `"khatma-<sanitizedPlanId>"` (max 36 chars) and the pull derives the
-    // plan id back from the doc id. Streak/dates don't round-trip: restored
-    // plans start at streak 0 with `startDateMs = lastProgressMs = now`, and
-    // `totalAyahsRead` is derived from `percent` (`percent * 6236`).
+    // current_ayah,percent,streak,total_ayahs_read,start_date_ms,last_progress_ms}`
+    // (index on `user_id`). The collection still carries no plan id, so doc ids
+    // stay stable per plan: `"khatma-<sanitizedPlanId>"` (max 36 chars) and the
+    // pull derives the plan id back from the doc id.
+    //
+    // The last four attributes are what make a restored plan the SAME plan
+    // rather than a plausible copy of it. [KhatmaStore.planOrder] sorts by
+    // `startDateMs` DESCENDING and `activePlan()` is the first element, so a
+    // fabricated `startDateMs = now` did not just lose a streak — it promoted
+    // the wrong plan to the one the user is looking at. They are all optional
+    // server-side and all in `collections.json` today, so the push writes them
+    // and the pull reads them; the fabrication below survives ONLY as the
+    // legacy-document fallback (see [pullKhatma]).
 
     /**
-     * Pulls the cloud `khatma_plans` docs when local plans are still empty,
-     * and applies them via [KhatmaStore.restoreAll] so a fresh login adopts
-     * the cloud copy instead of starting from zero.
-     *
-     * Returns true when the cloud holds at least one usable plan (caller must
-     * then skip pushing an empty state, otherwise the still-empty local state
-     * would overwrite it). Returns false when local plans are non-empty
-     * (never overwritten — no-clobber guard) or the cloud has nothing usable,
-     * so push proceeds.
+     * `khatma_plans` attributes the cloud may not have provisioned yet, in the
+     * order they are shed when the server rejects a write as unknown-attribute
+     * (see [pushKhatma]). All four ARE in `appwrite/collections.json` today;
+     * the list is kept for a deployment that predates them, because a plan
+     * restored without its streak is a much smaller loss than a khatma push
+     * that never syncs at all.
      */
-    private suspend fun pullKhatmaIfEmpty(db: Databases, userId: String): Boolean {
-        if (KhatmaStore.plans.value.isNotEmpty()) return false
+    private val KHATMA_OPTIONAL_ATTRS = listOf(
+        "streak",
+        "total_ayahs_read",
+        "start_date_ms",
+        "last_progress_ms",
+    )
+
+    /**
+     * Pulls the cloud `khatma_plans` docs and UNIONS them with the local plans.
+     *
+     * No local-emptiness gate any more (class KDoc): a plan created while
+     * signed out is adopted into the freshly-bound account, and that was enough
+     * for the paired [pushKhatma] — which prunes by plan id — to delete every
+     * plan the account actually had in the cloud.
+     *
+     * Union, not overwrite: [KhatmaStore.restoreAll] REPLACES the store, so the
+     * local plans are put back in the same call. A plan id present on both
+     * sides keeps the LOCAL object untouched — the cloud carries the plan's
+     * streak and dates but no per-plan `updated_at`, so there is no ordering to
+     * reconcile them by and nothing to merge INSIDE a plan, only to add or keep
+     * — which is also what makes the push's prune a no-op right after this pull.
+     */
+    private suspend fun pullKhatma(db: Databases, userId: String): Boolean {
         val docs = listForUser(db, KHATMA, userId) ?: return false
         if (docs.isEmpty()) return false
         val now = System.currentTimeMillis()
-        val restored = docs.mapNotNull { doc ->
+        val local = KhatmaStore.plans.value
+        val localIds = local.mapTo(mutableSetOf()) { it.id }
+        val fromCloud = docs.mapNotNull { doc ->
             val data = doc.data
             val planId = doc.id.removePrefix("khatma-").takeIf { it.isNotBlank() }
                 ?: return@mapNotNull null
             val title = (data["title"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
                 ?: return@mapNotNull null
+            if (!localIds.add(planId)) return@mapNotNull null // local wins the id
             val targetDays = asInt(data["total_days"])?.coerceAtLeast(1) ?: 30
             val surah = asInt(data["current_surah"])?.coerceIn(1, 114) ?: 1
             val ayah = asInt(data["current_ayah"])?.coerceAtLeast(1) ?: 1
             val percent = asDouble(data["percent"])?.toFloat()?.coerceIn(0f, 1f) ?: 0f
+            // The four progress attributes are all OPTIONAL server-side, so each
+            // is read on its own and the fabrication survives only for the
+            // document that genuinely predates it:
+            // - `total_ayahs_read`: a real 0 (a plan nobody has read on yet) is
+            //   DISTINGUISHED from an absent attribute — `asInt` returns 0 for
+            //   both, so only a null/missing value falls through to the `percent`
+            //   estimate, which is all a legacy document can offer.
+            // - `start_date_ms` / `last_progress_ms`: 0 is not a meaningful
+            //   instant for either (KhatmaStore itself reads `lastProgressMs <= 0`
+            //   as "no progress yet"), and a 0 start date would sort the plan to
+            //   the BOTTOM of planOrder and hand `activePlan()` to a different
+            //   plan — the exact failure these attributes exist to prevent. So 0
+            //   is treated as absent and keeps the pre-existing `now` fallback.
+            // - `streak`: absent means the old behaviour, 0.
+            val totalAyahsRead = asInt(data["total_ayahs_read"])?.coerceAtLeast(0)
+                ?: (percent * 6236f).toInt().coerceIn(0, 6236)
             KhatmaPlan(
                 id = planId,
                 title = title,
                 targetDays = targetDays,
                 currentSurahId = surah,
                 currentAyahNo = ayah,
-                streak = 0,
-                startDateMs = now,
-                lastProgressMs = now,
-                totalAyahsRead = (percent * 6236f).toInt().coerceIn(0, 6236),
+                streak = asInt(data["streak"])?.coerceAtLeast(0) ?: 0,
+                startDateMs = asLong(data["start_date_ms"])?.takeIf { it > 0L } ?: now,
+                lastProgressMs = asLong(data["last_progress_ms"])?.takeIf { it > 0L } ?: now,
+                totalAyahsRead = totalAyahsRead,
             )
         }
-        if (restored.isEmpty()) return false // cloud snapshot itself is empty; let push converge
-        KhatmaStore.restoreAll(restored)
-        Log.i(TAG, "khatma pull: restored ${restored.size} plan(s).")
+        if (fromCloud.isEmpty()) {
+            Log.i(TAG, "khatma pull: nothing to merge — local already holds all ${docs.size} plan(s).")
+            return true
+        }
+        KhatmaStore.restoreAll(local + fromCloud)
+        Log.i(
+            TAG,
+            "khatma pull: merged ${fromCloud.size} cloud plan(s) into ${local.size} local " +
+                "(cloud had ${docs.size})."
+        )
         return true
     }
 
@@ -1665,16 +2688,407 @@ actual object SyncEngine {
                 }
             }
         }
+        var shed = emptySet<String>()
         for (plan in local) {
-            val data: Map<String, Any?> = mapOf(
+            val full: Map<String, Any?> = mapOf(
                 "user_id" to userId,
                 "title" to plan.title,
                 "total_days" to plan.targetDays,
                 "current_surah" to plan.currentSurahId,
                 "current_ayah" to plan.currentAyahNo,
                 "percent" to plan.progressPercentage.toDouble(),
+                "streak" to plan.streak,
+                "total_ayahs_read" to plan.totalAyahsRead,
+                "start_date_ms" to plan.startDateMs,
+                "last_progress_ms" to plan.lastProgressMs,
             )
-            upsert(db, KHATMA, khatmaDocId(plan.id), data)
+            val docId = khatmaDocId(plan.id)
+            // Shed-on-unknown-attribute, same posture as [pushLikes]: the server
+            // rejects the WHOLE document for the first unprovisioned attribute it
+            // meets, so drop that one and retry the same doc without it rather
+            // than let an older deployment lose the whole khatma push. Looped
+            // because all four can be missing at once; terminates because `shed`
+            // only grows and is bounded by [KHATMA_OPTIONAL_ATTRS].
+            var attempt = full.filterKeys { it !in shed }
+            while (true) {
+                try {
+                    upsert(db, KHATMA, docId, attempt)
+                    break
+                } catch (e: Exception) {
+                    val attr = KHATMA_OPTIONAL_ATTRS.firstOrNull {
+                        it in attempt && isUnknownAttribute(e, it)
+                    } ?: throw e
+                    Log.w(TAG, "khatma_plans.$attr not provisioned yet; pushing without it.")
+                    shed += attr
+                    attempt = full.filterKeys { it !in shed }
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ hifz mastery
+    //
+    // Union-pull + push-with-guard, the same shape as every other set
+    // collection in this file (see the class KDoc for why a pull may never be
+    // gated on local emptiness when the paired push prunes).
+    //
+    // Cloud shape: `hifz_mastery{user_id,surah_id,ayah_no,status}` with a
+    // `user_surah_ayah_idx` KEY index on the first three. That is the whole
+    // collection, and it is why [HifzSnapshot.statuses] is deliberately not
+    // `@Serializable`: the map is encoded as N documents, one per (user, ayah),
+    // never as a JSON blob. The `status` column carries the `MasteryStatus`
+    // enum NAME (`NEW` / `REVIEW_NEEDED` / `MASTERED`), which is exactly the
+    // spelling the store persists locally, so a row is a value, not an index.
+    //
+    // `MasteryStatus.NEW` is never written: the store treats an unset ayah and
+    // a `NEW` ayah as the same thing (`exportSnapshot` omits it,
+    // `importSnapshot` skips it), so a `NEW` document would be a row no side of
+    // this sync can represent.
+    //
+    // ## The four scalars do NOT round-trip — a schema gap, not a choice
+    //
+    // [HifzSnapshot] also carries `dailyGoalCount`, `streakDays`,
+    // `todayReviewedCount` and `lastReviewDay`, and the collection has NO column
+    // for any of them. So they cannot be pushed, and — the part that matters —
+    // they must not be INVENTED on the way back: `importSnapshot` is
+    // authoritative (it clears the namespace first), so importing a snapshot
+    // built from cloud documents alone would reset a returning user's daily
+    // goal to the default and their review streak to 0 on every single pass.
+    // [pullHifzMastery] therefore merges the CLOUD statuses into the LOCAL
+    // snapshot and re-imports that, which leaves the scalars exactly as the
+    // device had them. Closing the gap needs four integer columns on
+    // `hifz_mastery` in `appwrite/collections.json` (a file this one does not
+    // own); until then a hifz profile is per-ayah cross-device and
+    // per-device for its counters.
+    //
+    // Conflict rule: `hifz_mastery` has one row per ayah and no per-row
+    // `updated_at`, so two devices that cycled the same ayah differently cannot
+    // be reconciled — the last writer's value wins, which is the same
+    // last-writer-wins-per-row semantics [pushLikes]/[pushSchedules] already
+    // have, and the reason the pull resolves collisions LOCAL-wins: a status
+    // this device just set is the freshest evidence it has.
+
+    /**
+     * Union-pulls the cloud `hifz_mastery` docs into [HifzMasteryStore].
+     *
+     * No local-emptiness gate: pre-auth mastery is adopted into a freshly-bound
+     * account, and one ayah memorised while signed out was enough for a gated
+     * pull to skip the cloud forever while the paired [pushHifzMastery] pruned
+     * it away.
+     *
+     * Decoding is defensive per document — a missing/blank `status`, an
+     * unparseable enum name, an out-of-range `surah_id`/`ayah_no` or a `NEW`
+     * status is SKIPPED, never thrown, so one bad row can neither abort the pass
+     * nor (via the push) count as proof that the rest of the account's mastery
+     * is gone. A cloud snapshot with nothing usable in it returns true anyway,
+     * which keeps the push from pruning against a snapshot it could not read.
+     *
+     * Returns true when the cloud holds at least one document (the caller must
+     * then skip pushing an empty local profile). False when the collection is
+     * missing or empty, so push converges.
+     */
+    private suspend fun pullHifzMastery(db: Databases, userId: String): Boolean {
+        val docs = listForUser(db, HIFZ_MASTERY, userId) ?: return false
+        if (docs.isEmpty()) return false
+        val fromCloud = HashMap<Pair<Int, Int>, MasteryStatus>(docs.size * 2)
+        var skipped = 0
+        for (doc in docs) {
+            val data = doc.data
+            val surahId = asInt(data["surah_id"])?.takeIf { it in 1..114 }
+            val ayahNo = asInt(data["ayah_no"])?.takeIf { it > 0 }
+            val name = (data["status"] as? String)?.trim()?.uppercase()
+            val status = name?.let { candidate ->
+                try {
+                    MasteryStatus.valueOf(candidate)
+                } catch (_: Exception) {
+                    null
+                }
+            }
+            if (surahId == null || ayahNo == null || status == null || status == MasteryStatus.NEW) {
+                skipped++
+                continue
+            }
+            fromCloud[surahId to ayahNo] = status
+        }
+        if (fromCloud.isEmpty()) {
+            Log.w(
+                TAG,
+                "hifz pull: cloud holds ${docs.size} document(s) but none carried a usable " +
+                    "status — local left untouched, push guarded."
+            )
+            return true
+        }
+        val local = HifzMasteryStore.exportSnapshot()
+        // Union, local wins the ayah (Pair is a data class, so `+` is a
+        // per-coordinate merge). `importSnapshot` is AUTHORITATIVE — it clears
+        // the namespace before writing — so the local map has to go back in
+        // explicitly, or an ayah memorised here and not yet pushed would be
+        // destroyed by the very pull meant to protect it. The scalars ride along
+        // untouched; see the section header for why they must not be invented.
+        val merged = local.statuses + fromCloud
+        val added = merged.size - local.statuses.size
+        if (added == 0) {
+            Log.i(
+                TAG,
+                "hifz pull: nothing to merge — local already holds all ${fromCloud.size} cloud ayah(s)."
+            )
+            return true
+        }
+        HifzMasteryStore.importSnapshot(local.copy(statuses = merged))
+        Log.i(
+            TAG,
+            "hifz pull: merged $added cloud ayah(s) into ${local.statuses.size} local " +
+                "(cloud had ${docs.size}, $skipped unusable)."
+        )
+        return true
+    }
+
+    private suspend fun pushHifzMastery(db: Databases, userId: String, cloudHasData: Boolean) {
+        val snapshot = HifzMasteryStore.exportSnapshot()
+        // `exportSnapshot` already omits `NEW`, but the filter is kept explicit:
+        // a `NEW` row must never claim a doc id, because that would make the
+        // prune below KEEP a document that means "this ayah is unset".
+        val statuses = snapshot.statuses.filterValues { it != MasteryStatus.NEW }
+        if (statuses.isEmpty()) {
+            if (cloudHasData) {
+                // Fresh login whose cloud snapshot could not be applied locally
+                // yet: don't overwrite it with an empty profile.
+                Log.i(TAG, "pushHifzMastery skipped (local empty, cloud has data).")
+            }
+            return
+        }
+        val existing = listForUser(db, HIFZ_MASTERY, userId) ?: return
+        val existingById = HashMap<String, io.appwrite.models.Document<Map<String, Any>>>(existing.size * 2)
+        for (doc in existing) existingById[doc.id] = doc
+        val localDocIds = mutableSetOf<String>()
+        for ((coord, status) in statuses) {
+            val docId = hifzMasteryDocId(userId, coord.first, coord.second)
+            // Registered BEFORE any skip below: a row this device holds must
+            // never be pruned, whether or not we ended up writing it.
+            localDocIds += docId
+            val cloudDoc = existingById[docId]
+            if (cloudDoc != null && (cloudDoc.data["status"] as? String)?.trim() == status.name) {
+                // Already exactly this. The settled case for nearly every row of
+                // every pass, and what keeps a heavy profile cheap to push.
+                continue
+            }
+            val data: Map<String, Any?> = mapOf(
+                "user_id" to userId,
+                "surah_id" to coord.first,
+                "ayah_no" to coord.second,
+                "status" to status.name,
+            )
+            upsert(db, HIFZ_MASTERY, docId, data)
+        }
+        // Sound because [pullHifzMastery] ran first in the same block and unioned
+        // the cloud in: after it, local ⊇ cloud, so a doc missing from
+        // `localDocIds` is one this device really has dropped.
+        for (doc in existing) {
+            if (doc.id in localDocIds) continue
+            try {
+                db.deleteDocument(DB_ID, HIFZ_MASTERY, doc.id)
+            } catch (e: Exception) {
+                Log.e(TAG, "delete stale hifz doc ${doc.id} failed", e)
+            }
+        }
+    }
+
+    // ---------------------------------------------------------- search history
+    //
+    // Union-pull + push-with-guard, once more the same shape. Cloud shape:
+    // `search_history{user_id,query,ranked_at_ms}` with a `user_ranked_idx` KEY
+    // index on (user_id, ranked_at_ms) AND a `user_query_unique` UNIQUE index on
+    // (user_id, query) — so this is one document per (user, query), ranked by
+    // `ranked_at_ms`, never a JSON list blob. The unique index is also why the
+    // doc id hashes the lowercased query: `SearchHistoryStore.record` dedupes
+    // case-insensitively, so "Allah" and "allah" are one query to the user and
+    // must be one document here.
+    //
+    // Recency has to be synthesised: the store keeps an ordered
+    // `List<String>` and no per-query timestamp, so `ranked_at_ms` is written as
+    // `now - index` (index 0 = most recent) — the same stagger [pushHistory] uses
+    // for entries that carry no timestamp of their own. That value moves on
+    // every pass by construction, so "already settled" cannot be a byte
+    // comparison of the whole row; [pushSearchHistory] compares the ORDER
+    // instead, which is the part that actually matters, and writes nothing when
+    // the cloud already carries it.
+    //
+    // Cap-vs-union trade-off, identical to `history` (see that section header):
+    // two devices' histories can total more than [SEARCH_HISTORY_CAP], and the
+    // cap wins — this device's own 15 are adopted ahead of the cloud's, and the
+    // prune retires the rest. Deliberate, and the reason a pull may never be
+    // gated on local emptiness.
+
+    /**
+     * Newest-first `search_history` list for [userId], capped at
+     * [SEARCH_HISTORY_CAP]. The `user_id,ranked_at_ms` index serves this exact
+     * order, and the store caps its own list at the same number, so one page is
+     * the whole restore — no pagination walk needed (unlike [listForUser], whose
+     // collections are unbounded).
+     *
+     * Null when the collection doesn't exist yet; any other failure throws into
+     * the per-collection `runCollection` guard.
+     */
+    private suspend fun listSearchHistoryForUser(
+        db: Databases,
+        userId: String,
+    ): List<io.appwrite.models.Document<Map<String, Any>>>? {
+        return try {
+            db.listDocuments(
+                DB_ID,
+                SEARCH_HISTORY,
+                listOf(
+                    Query.equal("user_id", userId),
+                    Query.orderDesc("ranked_at_ms"),
+                    Query.limit(SEARCH_HISTORY_CAP),
+                ),
+            ).documents
+        } catch (e: AppwriteException) {
+            if (e.code == 404) {
+                Log.w(TAG, "Collection '$SEARCH_HISTORY' not found; skipping.")
+                null
+            } else {
+                throw e
+            }
+        }
+    }
+
+    /**
+     * Union-pulls the cloud `search_history` docs into [SearchHistoryStore].
+     *
+     * No local-emptiness gate (class KDoc): queries typed while signed out are
+     * adopted into the account, and one of them was enough to make a gated pull
+     * skip the cloud forever while the paired [pushSearchHistory] deleted it.
+     *
+     * `importSnapshot` REPLACES the list, so the device's own queries are merged
+     * in ahead of the cloud's by [mergeSearchQueries] — the list the store ends up
+     * with is a superset of the local one, in the local order.
+     *
+     * Returns true when the cloud holds at least one document (including
+     * documents that carried no usable `query` — the caller must then skip
+     * pushing an empty local list rather than prune against an unreadable
+     * snapshot). False when the collection is missing or empty.
+     */
+    private suspend fun pullSearchHistory(db: Databases, userId: String): Boolean {
+        val docs = listSearchHistoryForUser(db, userId) ?: return false
+        if (docs.isEmpty()) return false
+        val fromCloud = docs.mapNotNull { doc ->
+            (doc.data["query"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+        }
+        if (fromCloud.isEmpty()) {
+            Log.w(
+                TAG,
+                "search_history pull: cloud holds ${docs.size} document(s) but none carried a " +
+                    "query — local left untouched, push guarded."
+            )
+            return true
+        }
+        val local = SearchHistoryStore.exportSnapshot()
+        val merged = mergeSearchQueries(local, fromCloud)
+        if (merged == local) {
+            Log.i(
+                TAG,
+                "search_history pull: nothing to merge — local already holds all " +
+                    "${fromCloud.size} cloud query/queries."
+            )
+            return true
+        }
+        SearchHistoryStore.importSnapshot(merged)
+        Log.i(
+            TAG,
+            "search_history pull: merged ${fromCloud.size} cloud query/queries into " +
+                "${local.size} local (now ${SearchHistoryStore.recentQueries.value.size})."
+        )
+        return true
+    }
+
+    /**
+     * Most-recent-first union of this device's [local] queries with the cloud's
+     * [fromCloud], LOCAL FIRST.
+     *
+     * Local-first is the ordering rule because a query typed here is by
+     * definition fresher than one this device has never seen — the cloud list is
+     * another device's recency, already stamped. Queries are matched
+     * case-insensitively (the doc id is, and `SearchHistoryStore.record` dedupes
+     * that way), so a re-typed query keeps the local spelling instead of
+     * consuming a second slot. The cap is applied by the store's own
+     * normalization inside `importSnapshot`, not here, so a restored list and a
+     * loaded one are indistinguishable.
+     */
+    private fun mergeSearchQueries(local: List<String>, fromCloud: List<String>): List<String> {
+        val out = ArrayList<String>(local.size + fromCloud.size)
+        val seen = HashSet<String>((local.size + fromCloud.size) * 2)
+        for (query in local + fromCloud) {
+            val clean = query.trim()
+            if (clean.isEmpty()) continue
+            if (seen.add(clean.lowercase())) out += clean
+        }
+        return out
+    }
+
+    private suspend fun pushSearchHistory(db: Databases, userId: String, cloudHasData: Boolean) {
+        val local = SearchHistoryStore.exportSnapshot()
+        if (local.isEmpty()) {
+            if (cloudHasData) {
+                Log.i(TAG, "pushSearchHistory skipped (local empty, cloud has data).")
+            }
+            return
+        }
+        val existing = listForUser(db, SEARCH_HISTORY, userId) ?: return
+        // Settle check: `ranked_at_ms` is re-stamped every pass (see the section
+        // header), so equality is decided on the ORDER the cloud would restore,
+        // which is the only part of this push a user can observe. When it already
+        // matches, the doc id sets match too — the id hashes the same
+        // lowercased query — so the prune below would find nothing to delete and
+        // the whole collection costs one list read.
+        val cloudOrder = existing
+            .sortedByDescending { asLong(it.data["ranked_at_ms"]) ?: Long.MIN_VALUE }
+            .map { ((it.data["query"] as? String)?.trim().orEmpty()).lowercase() }
+        if (cloudOrder == local.map { it.trim().lowercase() }) {
+            Log.i(TAG, "search_history push: cloud already carries the local order; nothing to write.")
+            return
+        }
+        val now = System.currentTimeMillis()
+        val localDocIds = mutableSetOf<String>()
+        var skipped = 0
+        for ((index, raw) in local.withIndex()) {
+            val query = raw.trim()
+            // `query` is string 128 REQUIRED, and `record` caps the LIST at 15
+            // without capping an entry's LENGTH — so an over-long search is
+            // skipped here rather than allowed to fail the whole write and, with
+            // it, the entire collection block.
+            if (query.isEmpty() || query.length > SEARCH_HISTORY_QUERY_MAX_CHARS) {
+                skipped++
+                Log.w(
+                    TAG,
+                    "search_history push: skipping a ${query.length}-char query " +
+                        "(column max $SEARCH_HISTORY_QUERY_MAX_CHARS)."
+                )
+                continue
+            }
+            val docId = searchHistoryDocId(userId, query)
+            localDocIds += docId
+            val rankedAt = now - index
+            val data: Map<String, Any?> = mapOf(
+                "user_id" to userId,
+                "query" to query,
+                "ranked_at_ms" to rankedAt,
+            )
+            upsert(db, SEARCH_HISTORY, docId, data)
+        }
+        if (skipped > 0) {
+            Log.w(TAG, "search_history push: $skipped local quer(y/ies) did not fit the column.")
+        }
+        // Sound because [pullSearchHistory] ran first in the same block and unioned
+        // the cloud in: after it, local ⊇ cloud, so a doc missing from
+        // `localDocIds` is one this device really has dropped.
+        for (doc in existing) {
+            if (doc.id in localDocIds) continue
+            try {
+                db.deleteDocument(DB_ID, SEARCH_HISTORY, doc.id)
+            } catch (e: Exception) {
+                Log.e(TAG, "delete stale search_history doc ${doc.id} failed", e)
+            }
         }
     }
 
@@ -1888,55 +3302,144 @@ actual object SyncEngine {
     // `playlists`/`playlist_items` publish flow above, which stays unchanged:
     // private routines must never leak into the public catalog.
     //
-    // Pull-if-empty restores via [CustomRoutinesStore.restoreAllJson], which
-    // only replaces an empty local store (never clobbers) and skips malformed
-    // entries per-item. The boolean still protects the cloud copy by skipping
-    // the empty-push whenever the cloud holds backups.
+    // The pull restores via [CustomRoutinesStore.mergeJson], which unions by
+    // routine id, preserves the ids it decodes, and skips malformed entries
+    // per-item. It replaced an empty-gated `restoreAllJson`: that gate meant a
+    // device which had adopted one signed-out routine never restored the rest
+    // of its cloud backups at all.
+    //
+    // ## KNOWN GAP (store-side, unchanged) + what this side does about it
+    //
+    // This is the one remaining `*IfEmpty` gate, and it is a real data-loss
+    // path: a routine created while signed out is adopted into the new account,
+    // so the store is no longer empty, the gate skips the cloud restore, and
+    // [pushRoutineBackups] would then prune every cloud backup whose
+    // `routine_id` the local store lacks.
+    //
+    // The id-preserving merge cannot be written from this file, and the reason
+    // is more specific than "the store mints ids":
+    // [CustomRoutinesStore.restoreAllJson] DOES preserve the ids it decodes - it
+    // is gated purely on the store being empty (`if (_routines.value.isNotEmpty())
+    // return 0`) - and the other two entry points cannot stand in for it:
+    // [CustomRoutinesStore.update] only REPLACES an entry whose id is already
+    // present (it maps over the current list; it never inserts), and
+    // [CustomRoutinesStore.create] inserts under a freshly minted
+    // `"rtn-<now>-<rand>"` id. Re-adding cloud routines through `create` would
+    // preserve the CONTENT but change every id, so the paired push would write
+    // new docs and prune the originals - a bigger regression than the one being
+    // fixed. The clean fix is one store-side method (an id-preserving `mergeJson`
+    // that unions into a non-empty store, the routine-side twin of
+    // [SchedulesStore.restoreAllFromCloud]); that is the store owner's call, so
+    // the gap stays documented here.
+    //
+    // What this file does do is make the push's DELETE half conditional on
+    // proof instead of assuming the restore happened: the pull hands its push
+    // the set of `routine_id`s it read from the cloud, and the prune only runs
+    // when every one of them is present in the local store. When the store was
+    // non-empty at pull time (the gap) that check fails, the deletes are
+    // quarantined and logged, and the uploads still go out - so the destructive
+    // case is unreachable from here. The cost is confined to convergence: while
+    // any cloud backup is unmatched, backups of routines deleted on THIS device
+    // stay on the cloud until some pass has a local store that covers them all.
+    // Inert documents, never lost routines.
+
+    /**
+     * Outcome of [pullRoutineBackupsIfEmpty], carried into the paired push.
+     *
+     * @param cloudHasData true when the cloud holds at least one backup document.
+     * @param cloudIds every `routine_id` the pull saw in the cloud, so the push
+     *   can tell a COMPLETE restore (prune allowed - and a no-op besides, since
+     *   the restore is id-preserving) from a skipped one (prune quarantined).
+     */
+    private class RoutineBackupPull(
+        val cloudHasData: Boolean,
+        val cloudIds: Set<String>,
+    )
 
     /**
      * Restores the cloud `routine_backups` snapshot into an empty local
-     * [CustomRoutinesStore]. Returns true when the cloud holds at least one
-     * backup (restored or not — caller must then skip pushing, otherwise the
-     * still-empty local state would overwrite it). Returns false when local
-     * routines exist or the cloud has nothing, so push proceeds.
+     * [CustomRoutinesStore]. Reports whether the cloud holds any backup (caller
+     * must then skip pushing, otherwise the still-empty local state would
+     * overwrite it) and which `routine_id`s it saw, which is what arms the
+     * push's prune quarantine - see the KNOWN GAP above.
      */
-    private suspend fun pullRoutineBackupsIfEmpty(db: Databases, userId: String): Boolean {
-        if (CustomRoutinesStore.routines.value.isNotEmpty()) return false
-        val docs = listForUser(db, ROUTINE_BACKUPS, userId) ?: return false
-        val rawJsons = docs.mapNotNull { doc ->
-            (doc.data["routine_json"] as? String)?.takeIf { it.isNotBlank() }
+    private suspend fun pullRoutineBackupsIfEmpty(
+        db: Databases,
+        userId: String,
+    ): RoutineBackupPull {
+        val docs = listForUser(db, ROUTINE_BACKUPS, userId)
+            ?: return RoutineBackupPull(cloudHasData = false, cloudIds = emptySet())
+        val cloudIds = LinkedHashSet<String>()
+        val rawJsons = ArrayList<String>(docs.size)
+        for (doc in docs) {
+            val routineId = (doc.data["routine_id"] as? String)?.trim()
+            if (!routineId.isNullOrEmpty()) cloudIds += routineId
+            val raw = (doc.data["routine_json"] as? String)?.takeIf { it.isNotBlank() }
+            if (raw != null) rawJsons += raw
         }
-        if (rawJsons.isEmpty()) return false
-        val restored = CustomRoutinesStore.restoreAllJson(rawJsons)
+        if (rawJsons.isEmpty()) {
+            // Every doc is payload-less, so nothing here was ever restorable.
+            // These are NOT counted as covered: they cannot be quarantined by a
+            // store-side merge either, and an unreadable row is a prune
+            // candidate, not a reason to disable the prune forever.
+            return RoutineBackupPull(cloudHasData = false, cloudIds = emptySet())
+        }
+        // `mergeJson` unions by routine id and preserves the ids it decodes, so
+        // it is correct whether or not the local store already holds routines.
+        // `restoreAllJson` was store-gated on an EMPTY store, which is why this
+        // pull used to skip a device that had adopted a signed-out routine - and
+        // why the paired push had to quarantine its prune.
+        val restored = CustomRoutinesStore.mergeJson(rawJsons)
         if (restored > 0) {
             Log.i(TAG, "routine_backups pull: restored $restored routine(s) from cloud.")
         } else {
             Log.i(
                 TAG,
                 "routine_backups pull: cloud holds ${rawJsons.size} backup(s) but none parseable" +
-                    " — keeping local empty, push skipped."
+                    " - keeping local empty, push skipped."
             )
         }
-        return true
+        return RoutineBackupPull(cloudHasData = true, cloudIds = cloudIds)
     }
 
-    private suspend fun pushRoutineBackups(db: Databases, userId: String, cloudHasData: Boolean) {
+    private suspend fun pushRoutineBackups(
+        db: Databases,
+        userId: String,
+        pull: RoutineBackupPull,
+    ) {
         val local = CustomRoutinesStore.routines.value
-        if (local.isEmpty() && cloudHasData) {
+        if (local.isEmpty() && pull.cloudHasData) {
             // Fresh login whose cloud snapshot couldn't be applied locally yet:
             // don't overwrite it with nothing.
             Log.i(TAG, "pushRoutineBackups skipped (local empty, cloud has data).")
             return
         }
         val existing = listForUser(db, ROUTINE_BACKUPS, userId) ?: return
-        val localIds = local.map { it.id }.toSet()
-        for (doc in existing) {
-            val routineId = doc.data["routine_id"] as? String ?: continue
-            if (routineId !in localIds) {
-                try {
-                    db.deleteDocument(DB_ID, ROUTINE_BACKUPS, doc.id)
-                } catch (e: Exception) {
-                    Log.e(TAG, "delete stale routine backup ${doc.id} failed", e)
+        val localIds = local.mapTo(mutableSetOf()) { it.id }
+        // Prune only on PROOF that the local set covers the whole cloud
+        // snapshot. The pull now merges with `mergeJson`, which preserves ids,
+        // so after a successful pass every cloud `routine_id` has a local
+        // counterpart and this holds. It stays a proof rather than an
+        // assumption because a missed delete is recoverable and a deleted
+        // backup is not.
+        val unmatched = pull.cloudIds.filterNot { it in localIds }
+        val canPrune = unmatched.isEmpty()
+        if (!canPrune) {
+            Log.w(
+                TAG,
+                "routine_backups prune quarantined: ${unmatched.size} cloud backup(s) have no " +
+                    "id-preserved local counterpart - uploads continue, deletes do not."
+            )
+        }
+        if (canPrune) {
+            for (doc in existing) {
+                val routineId = doc.data["routine_id"] as? String ?: continue
+                if (routineId !in localIds) {
+                    try {
+                        db.deleteDocument(DB_ID, ROUTINE_BACKUPS, doc.id)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "delete stale routine backup ${doc.id} failed", e)
+                    }
                 }
             }
         }
@@ -2128,21 +3631,81 @@ actual object SyncEngine {
         return aMs / 86_400_000L == bMs / 86_400_000L
     }
 
+    /**
+     * Page size for [listForUser] (same 100-doc page [fetchReciterCatalog] uses).
+     */
+    private const val USER_PAGE_SIZE = 100
+
+    /**
+     * Hard ceiling on how many docs one [listForUser] walk will collect, ~50
+     * pages. Far above any real per-user count in these collections (favourites,
+     * follows, khatma plans, schedules, routine backups), so it only exists to
+     * stop a server that ignores `offset` from spinning forever. Hitting it is
+     * logged, and — because the walk is read-only — the affected pass simply
+     * sees a window of the collection: the prune loops below only ever consider
+     * the docs they were handed, so documents past the ceiling are never
+     * deleted, only not refreshed.
+     */
+    private const val USER_DOCS_MAX = 5000
+
+    /**
+     * Every `user_id == userId` document in [collection], PAGINATED.
+     *
+     * Pagination is not an optimisation here, it is a correctness requirement:
+     * this used to pass only `Query.equal("user_id", userId)`, so Appwrite's
+     * bounded default page silently truncated the read. A user with more
+     * favourites/follows/plans/schedules/backups than one page restored only
+     * that many — and because the restore then made the local list non-empty,
+     * the `*IfEmpty` gate never re-ran and the rest was never recovered. Worse,
+     * the PRUNE loops below converge the cloud to the exact local set, so every
+     * document the truncated read never saw was deleted as "stale".
+     *
+     * Failure semantics are deliberately unchanged and all-or-nothing: a 404
+     * (collection not provisioned) returns null exactly as before, and any
+     * other error THROWS into the per-collection `runCollection` guard. A
+     * partial read therefore never reaches a caller — and a partial read must
+     * never reach a prune, because "not in this list" is only evidence of
+     * absence when the list is the whole collection.
+     */
     private suspend fun listForUser(
         db: Databases,
         collection: String,
         userId: String,
     ): List<io.appwrite.models.Document<Map<String, Any>>>? {
-        return try {
-            db.listDocuments(DB_ID, collection, listOf(Query.equal("user_id", userId))).documents
-        } catch (e: AppwriteException) {
-            if (e.code == 404) {
-                Log.w(TAG, "Collection '$collection' not found; skipping.")
-                null
-            } else {
+        val out = ArrayList<io.appwrite.models.Document<Map<String, Any>>>(USER_PAGE_SIZE)
+        var offset = 0
+        while (true) {
+            val page = try {
+                db.listDocuments(
+                    DB_ID,
+                    collection,
+                    listOf(
+                        Query.equal("user_id", userId),
+                        Query.limit(USER_PAGE_SIZE),
+                        Query.offset(offset),
+                    ),
+                ).documents
+            } catch (e: AppwriteException) {
+                if (e.code == 404) {
+                    Log.w(TAG, "Collection '$collection' not found; skipping.")
+                    return null
+                }
                 throw e
             }
+            if (page.isEmpty()) break
+            out.addAll(page)
+            if (page.size < USER_PAGE_SIZE) break
+            offset += page.size
+            if (out.size >= USER_DOCS_MAX) {
+                Log.w(
+                    TAG,
+                    "Collection '$collection' list for this user hit the $USER_DOCS_MAX cap;" +
+                        " the prune for this collection is now working on a partial view."
+                )
+                break
+            }
         }
+        return out
     }
 
     private suspend fun upsert(
@@ -2217,6 +3780,40 @@ actual object SyncEngine {
 
     private fun khatmaDocId(planId: String): String =
         "khatma-${sanitizeId(planId)}".take(36)
+
+    /**
+     * Hifz doc id: `"hifz-" + sha256("<userId>|<surahId>|<ayahNo>")[0..24)`
+     * (29 chars) — one document per (user, ayah), which is exactly the grain of
+     * the collection's `user_surah_ayah_idx` key index and of the store's own
+     * `mastery_{surahId}_{ayahNo}` key.
+     *
+     * `userId` is hashed in, as everywhere else in this file, because
+     * `hifz_mastery` is `documentSecurity: true`: a coordinate-only id would make
+     * the second user to memorise 2:255 get 409 on create and then 401/403 on
+     * the `upsert` fallback, which rethrows and fails the whole collection
+     * block. The status is an ATTRIBUTE, not part of the id, so cycling an ayah
+     * updates one document in place instead of creating and pruning a new one on
+     * every tap.
+     */
+    private fun hifzMasteryDocId(userId: String, surahId: Int, ayahNo: Int): String =
+        "hifz-${shortHash("$userId|$surahId|$ayahNo")}"
+
+    /**
+     * Search-history doc id: `"shr-" + sha256("<userId>|<query lowercased>")[0..24)`
+     * (28 chars) — one document per (user, query), matching the collection's
+     * `user_query_unique` unique index.
+     *
+     * Hashed on the LOWERCASED query because `SearchHistoryStore.record` dedupes
+     * case-insensitively and stores the spelling the user last typed, so "Allah"
+     * and "allah" are one query to the user; keying the id on the raw spelling
+     * would let the unique index hold two documents for one query whenever two
+     * devices disagreed about its capitalisation. `userId` is in the hash for the
+     * same `documentSecurity` reason as every other id here. `ranked_at_ms` is an
+     * attribute, so repeating a search re-stamps the existing row instead of
+     * appending a duplicate.
+     */
+    private fun searchHistoryDocId(userId: String, query: String): String =
+        "shr-${shortHash("$userId|${query.trim().lowercase()}")}"
 
     private fun jsonString(s: String): String = buildString {
         append('"')
