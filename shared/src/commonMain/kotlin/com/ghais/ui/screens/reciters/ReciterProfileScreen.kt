@@ -94,6 +94,7 @@ import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
+import com.ghais.ui.util.bidiIsolate
 
 private val ReciterExpandedHeight = 360.dp
 private val ReciterCollapsedHeight = 64.dp
@@ -775,7 +776,7 @@ private fun ReciterNoirSurahRow(
     ) {
         NoirListRow(
             title = "${surah.id}. ${surah.nameEn}",
-            subtitle = "${surah.nameAr} • ${surah.ayahsCount} Ayahs • $durationText$stateSuffix",
+            subtitle = "${bidiIsolate(surah.nameAr)} • ${surah.ayahsCount} Ayahs • $durationText$stateSuffix",
             icon = Icons.Default.MusicNote,
             chevron = false,
             // Unrecorded rows are dimmed + non-clickable (tertiary read via alpha).

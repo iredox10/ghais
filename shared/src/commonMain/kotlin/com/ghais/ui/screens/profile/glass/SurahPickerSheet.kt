@@ -49,6 +49,7 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.util.bidiIsolate
 
 /**
  * Noir surah picker sheet for the schedule editor ("From surah" / "To surah").
@@ -314,9 +315,10 @@ fun SurahPickerSheet(
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "${surah.nameAr} • ${surah.ayahsCount} ayahs",
+                                    text = "${bidiIsolate(surah.nameAr)} • ${surah.ayahsCount} ayahs",
                                     color = GhaisNoir.TextSecondary,
                                     fontSize = 12.sp,
+                                    letterSpacing = 0.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )

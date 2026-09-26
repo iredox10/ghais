@@ -312,9 +312,9 @@ private fun MemorizationReciterCard(
                         style = GhaisTypography.arabicBody,
                         fontFamily = GhaisTypography.quranFont,
                         fontSize = 14.sp,
-                        color = GhaisNoir.TextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        lineHeight = 25.sp,
+                        letterSpacing = 0.sp,
+                        color = GhaisNoir.TextSecondary
                     )
 
                     Spacer(Modifier.height(2.dp))

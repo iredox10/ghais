@@ -76,6 +76,7 @@ import com.ghais.ui.screens.surah.SurahDetailScreen
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
+import com.ghais.ui.util.bidiIsolate
 
 /**
  * One playlist's own screen: cover art, name, description,
@@ -455,7 +456,7 @@ private fun PlaylistNoirSurahRow(
     ) {
         NoirListRow(
             title = "${surah.id}. ${surah.nameEn}",
-            subtitle = "${surah.nameAr} • ${surah.ayahsCount} Ayahs • $durationText$stateSuffix",
+            subtitle = "${bidiIsolate(surah.nameAr)} • ${surah.ayahsCount} Ayahs • $durationText$stateSuffix",
             icon = Icons.Default.MusicNote,
             chevron = false,
             onClick = onRowClick,

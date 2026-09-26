@@ -219,6 +219,8 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                                 text = surah.nameAr,
                                 color = GhaisNoir.TextPrimary,
                                 fontSize = 20.sp,
+                                lineHeight = 36.sp,
+                                letterSpacing = 0.sp,
                                 fontWeight = FontWeight.Normal,
                                 fontFamily = GhaisTypography.quranFont,
                                 modifier = Modifier.padding(end = 16.dp)
@@ -308,6 +310,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                                     color = GhaisNoir.TextPrimary,
                                     fontSize = 22.sp,
                                     lineHeight = 44.sp,
+                                    letterSpacing = 0.sp,
                                     textAlign = TextAlign.Center,
                                     fontFamily = GhaisTypography.quranFont
                                 )
@@ -319,9 +322,9 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                         val mastery = remember(masteryVersion, ayah.ayahNo) {
                             HifzMasteryStore.getStatus(surah.id, ayah.ayahNo)
                         }
-                        // AyahRow does no RTL CompositionLocalProvider itself
-                        // (verified) — direction is provided per-row here so the
-                        // English header/hero above stay LTR.
+                        // AyahRow provides its own RTL direction; this wrapper is
+                        // kept so the row's cross-axis alignment resolves the same
+                        // way whether or not it is called from here.
                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                             AyahRow(
                                 ayah = ayah,
@@ -414,10 +417,10 @@ private fun SurahNoirHeroPlate(
                         text = surahNameAr,
                         color = GhaisNoir.TextPrimary,
                         fontSize = 30.sp,
+                        lineHeight = 54.sp,
+                        letterSpacing = 0.sp,
                         fontWeight = FontWeight.Normal,
-                        fontFamily = GhaisTypography.quranFont,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        fontFamily = GhaisTypography.quranFont
                     )
                     Spacer(modifier = Modifier.height(3.dp))
                     Text(

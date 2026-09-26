@@ -66,6 +66,7 @@ import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisTypography
+import com.ghais.ui.util.bidiIsolate
 
 data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
 
@@ -175,6 +176,8 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                                 style = GhaisTypography.arabicBody,
                                 fontFamily = GhaisTypography.quranFont,
                                 fontSize = 20.sp,
+                                lineHeight = 36.sp,
+                                letterSpacing = 0.sp,
                                 color = GhaisNoir.TextPrimary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -248,7 +251,7 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             NoirListRow(
                                 title = "${surah.id}. ${surah.nameEn}",
-                                subtitle = "${surah.nameAr} • ${surah.ayahsCount} Ayahs • ${surah.revelationType}",
+                                subtitle = "${bidiIsolate(surah.nameAr)} • ${surah.ayahsCount} Ayahs • ${surah.revelationType}",
                                 icon = Icons.AutoMirrored.Filled.MenuBook,
                                 chevron = false,
                                 onClick = { playSurahInAyahMode(surah.id) },
