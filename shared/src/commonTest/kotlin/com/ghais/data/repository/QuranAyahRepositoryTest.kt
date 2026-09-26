@@ -133,6 +133,24 @@ class QuranAyahRepositoryTest {
     }
 
     @Test
+    fun testCleanQuranicTextStopsRenderingUthmaniMarksAsFilledDiscs() {
+        // U+06DF / U+06E3 / U+06EB are the hamza-less + pause annotation marks.
+        // QCF_Hafs draws all three as the same 1255x1255 filled disc inside a
+        // dashed ring, which reads as a stray circle dropped into the verse, so
+        // they are stripped. None of them carries recitation meaning.
+        assertEquals("ءَامَنُوا", QuranAyahRepository.cleanQuranicText("ءَامَنُوا\u06DF"))
+        assertEquals("نَصْر", QuranAyahRepository.cleanQuranicText("نَصْر\u06E3"))
+        assertEquals("مَاء", QuranAyahRepository.cleanQuranicText("مَاء\u06EB"))
+        // Stripping must not weld two words together, and must not eat the
+        // neighbouring word space.
+        assertEquals("وَ مَا", QuranAyahRepository.cleanQuranicText("وَ\u06DF مَا"))
+        // U+06DE (rub el hizb) and U+06E9 (sajdah) are meaningful ornaments in
+        // this font and must survive.
+        assertTrue(QuranAyahRepository.cleanQuranicText("۞بِسْمِ").contains('\u06DE'))
+        assertTrue(QuranAyahRepository.cleanQuranicText("عِندَ\u06E9 رَبِّهِۦ").contains('\u06E9'))
+    }
+
+    @Test
     fun testHasBasmalahHeader() {
         assertTrue(QuranAyahRepository.BASMALAH.isNotBlank())
         assertFalse(QuranAyahRepository.hasBasmalahHeader(1))

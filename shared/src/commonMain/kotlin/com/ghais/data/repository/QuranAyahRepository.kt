@@ -48,6 +48,14 @@ object QuranAyahRepository {
 
     fun cleanQuranicText(raw: String): String {
         var s = raw.replace("\u25CC", "").replace("\u200B", "").replace("\uFEFF", "")
+        // Uthmani hamza-less / pause annotation marks. They carry no recitation
+        // meaning, and `QCF_Hafs` draws all three as the SAME large filled disc
+        // ringed by a dashed circle (glyph `uni06DF`/`uni06E3`/`uni06EB`, each
+        // 1255x1255 units — 3.5x the size of the sibling "small" marks). Inline
+        // in a verse they read as a stray circle dropped into the text, so drop
+        // them. U+06DE (rub el hizb) and U+06E9 (sajdah) are meaningful and
+        // render as proper ornaments, so those are deliberately kept.
+        s = s.replace("\u06DF", "").replace("\u06E3", "").replace("\u06EB", "")
         s = s.replace("لْ  ء", "لْء").replace("لْ ء", "لْء")
         s = s.replace("ء  ا", "ءا").replace("ء ا", "ءا")
         s = s.replace(Regex(" +(?=[\u064B-\u065F\u0670\u06D6-\u06ED])"), "")
