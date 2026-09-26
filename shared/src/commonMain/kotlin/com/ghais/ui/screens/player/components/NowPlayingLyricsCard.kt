@@ -60,7 +60,6 @@ import com.ghais.domain.model.TrackItem
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.util.appendGluedRosette
-import com.ghais.ui.util.ayahRosetteContent
 import com.ghais.ui.theme.GhaisTypography
 
 /**
@@ -70,7 +69,7 @@ import com.ghais.ui.theme.GhaisTypography
  *   Hairline dividers + spacing only.
  * - Header: single slim row — X ghost well + "AYAH {ayahNo}" text +
  *   sync dot + Surah name. No pills, no chevrons (transport covers prev/next).
- * - Verse: prominent Arabic Uthmani in quranFont (25.sp, RTL,
+ * - Verse: prominent Arabic Uthmani in quranScript (25.sp, RTL,
  *   2.0x line height) + enclosed rosette, translation secondary (14.5.sp).
  *   No transliteration, no tools row (loop/tafseer/learning/download live in
  *   their own screens), no NEXT preview, no Record & Compare.
@@ -257,7 +256,7 @@ fun NowPlayingLyricsCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Active verse — transparent, prominent. No inset, no indicator bar.
-            // Arabic Uthmani in quranFont (25.sp, RTL) + enclosed rosette, 2.0x line height.
+            // Arabic Uthmani in quranScript (25.sp, RTL) + enclosed rosette, 2.0x line height.
             // Basmalah header renders as a centered line above ayah 1 (except surahs 1 & 9).
             Column(
                 modifier = Modifier
@@ -283,7 +282,7 @@ fun NowPlayingLyricsCard(
                                     if (showBasmalahHeader) {
                                         Text(
                                             text = QuranAyahRepository.BASMALAH,
-                                            fontFamily = GhaisTypography.quranFont,
+                                            style = GhaisTypography.quranScript,
                                             fontSize = 21.sp,
                                             fontWeight = FontWeight.Normal,
                                             color = GhaisNoir.TextSecondary,
@@ -304,15 +303,13 @@ fun NowPlayingLyricsCard(
                                                 append(activeArabic)
                                                 appendGluedRosette(displayAyahNo)
                                             },
-                                            inlineContent = ayahRosetteContent(
-                                                ornamentSize = 26.sp,
-                                                digitSize = 11.sp
-                                            ),
-                                            fontFamily = GhaisTypography.quranFont,
+                                            style = GhaisTypography.quranScript,
                                             fontSize = 25.sp,
                                             fontWeight = FontWeight.Normal,
                                             color = GhaisNoir.TextPrimary,
-                                            textAlign = TextAlign.End,
+                                            // Start, not End: inside the Rtl provider
+                                            // above, End resolves to the LEFT edge.
+                                            textAlign = TextAlign.Start,
                                             lineHeight = 50.sp,
                                             modifier = Modifier.fillMaxWidth()
                                         )

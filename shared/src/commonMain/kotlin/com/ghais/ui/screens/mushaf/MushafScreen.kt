@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
@@ -44,12 +43,8 @@ import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
-import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
-import com.ghais.ui.util.AYAH_ROSETTE_ID
 import com.ghais.ui.util.appendGluedRosette
-import com.ghais.ui.util.ayahRosetteContent
-import com.ghais.ui.util.toArabicDigits
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -676,7 +671,7 @@ private fun SurahHeaderBanner() {
                             fontSize = 32.sp,
                             lineHeight = 64.sp,
                             fontWeight = FontWeight.Normal,
-                            fontFamily = GhaisTypography.quranFont,
+                            style = GhaisTypography.quranScript,
                             color = GhaisNoir.TextPrimary
                         )
                         Text(
@@ -711,7 +706,7 @@ private fun SurahHeaderBanner() {
                 text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Normal,
-                fontFamily = GhaisTypography.quranFont,
+                style = GhaisTypography.quranScript,
                 color = GhaisNoir.TextPrimary,
                 lineHeight = 52.sp,
                 textAlign = TextAlign.Center
@@ -910,9 +905,9 @@ private fun AyahBlock(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Uthmani text — 100% white, all Normal (single Regular file).
-            // Rosette is inline content (Canvas ring + centered digits), never
-            // a " ۝" string: the quran font renders the bare ornament detached
-            // from its digits.
+            // Rosette is plain text: the font's digit ligature draws the ring
+            // around the digits, so never emit a bare "۝" — that U+06DD is an
+            // empty ring and would double up.
             val arabicAnnotated = buildAnnotatedString {
                 val base = GhaisNoir.TextPrimary
 
@@ -952,10 +947,10 @@ private fun AyahBlock(
                         text = QuranAyahRepository.BASMALAH,
                         fontSize = (arabicFontSize * 0.85f).sp,
                         fontWeight = FontWeight.Normal,
-                        fontFamily = GhaisTypography.quranFont,
+                        style = GhaisTypography.quranScript,
                         color = GhaisNoir.TextPrimary,
                         textAlign = TextAlign.Center,
-                        lineHeight = (arabicFontSize * 0.85f * 2.1f).sp,
+                        lineHeight = (arabicFontSize * 0.85f * GhaisTypography.QURAN_LINE_HEIGHT_RATIO).sp,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 14.dp)
@@ -963,15 +958,13 @@ private fun AyahBlock(
                 }
                 Text(
                     text = arabicAnnotated,
-                    inlineContent = ayahRosetteContent(
-                        ornamentSize = (arabicFontSize * 0.75f).sp,
-                        digitSize = (arabicFontSize * 0.38f).sp
-                    ),
                     fontSize = arabicFontSize.sp,
                     fontWeight = FontWeight.Normal,
-                    fontFamily = GhaisTypography.quranFont,
-                    textAlign = TextAlign.End,
-                    lineHeight = (arabicFontSize * 2.1f).sp,
+                    style = GhaisTypography.quranScript,
+                    // Start, not End: inside the Rtl provider above, End
+                    // resolves to the LEFT edge.
+                    textAlign = TextAlign.Start,
+                    lineHeight = (arabicFontSize * GhaisTypography.QURAN_LINE_HEIGHT_RATIO).sp,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -1166,33 +1159,39 @@ private fun MushafPageViewCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Page header — engraved, monochrome.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "جُزْء ١٥",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = GhaisNoir.TextSecondary
-                )
-                Text(
-                    text = "سُورَةُ الكَهْفِ",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Normal,
-                    fontFamily = GhaisTypography.quranFont,
-                    color = GhaisNoir.TextPrimary
-                )
-                Text(
-                    text = "صَفْحَة ٢٩٣",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = GhaisNoir.TextSecondary
-                )
+            // Page header — engraved, monochrome. Runs RTL so the juz lands
+            // top-RIGHT and the page number top-LEFT, per printed Mushaf.
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "جُزْء ١٥",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.sp,
+                        color = GhaisNoir.TextSecondary
+                    )
+                    Text(
+                        text = "سُورَةُ الكَهْفِ",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Normal,
+                        style = GhaisTypography.quranScript,
+                        lineHeight = (13 * GhaisTypography.QURAN_LINE_HEIGHT_RATIO).sp,
+                        color = GhaisNoir.TextPrimary
+                    )
+                    Text(
+                        text = "صَفْحَة ٢٩٣",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.sp,
+                        color = GhaisNoir.TextSecondary
+                    )
+                }
             }
 
             HorizontalDivider(color = GhaisNoir.BorderGhost, thickness = 1.dp)
@@ -1200,24 +1199,21 @@ private fun MushafPageViewCard(
             Spacer(modifier = Modifier.height(14.dp))
 
             // Continuous uthmani — all Normal (single Regular file; no synthetic bold).
-            // Rosette is inline content (Canvas ring + centered digits), never
-            // a " ۝" string: the quran font renders the bare ornament detached
-            // from its digits.
+            // Rosette is plain text: the font's digit ligature draws the ring
+            // around the digits, so never emit a bare "۝" — that U+06DD is an
+            // empty ring and would double up.
             val pageText = buildAnnotatedString {
                 ayahs.forEach { ayah ->
-                    val isSelected = ayah.ayahNumber == activeAyah
-                    val weight = if (isSelected) FontWeight.Normal else FontWeight.Normal
-
                     if (isTajweed && ayah.tajweedPart != null) {
                         if (ayah.tajweedPrefix) {
                             withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = FontWeight.Normal)) {
                                 append(ayah.tajweedPart)
                             }
-                            withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = weight)) {
+                            withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = FontWeight.Normal)) {
                                 append(ayah.textUthmani)
                             }
                         } else {
-                            withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = weight)) {
+                            withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = FontWeight.Normal)) {
                                 append(ayah.textUthmani)
                             }
                             withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = FontWeight.Normal)) {
@@ -1225,7 +1221,7 @@ private fun MushafPageViewCard(
                             }
                         }
                     } else {
-                        withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = weight)) {
+                        withStyle(SpanStyle(color = GhaisNoir.TextPrimary, fontWeight = FontWeight.Normal)) {
                             append(ayah.textUthmani)
                             if (ayah.tajweedPart != null) {
                                 append(ayah.tajweedPart)
@@ -1245,10 +1241,10 @@ private fun MushafPageViewCard(
                         text = QuranAyahRepository.BASMALAH,
                         fontSize = ((arabicFontSize - 2) * 0.85f).sp,
                         fontWeight = FontWeight.Normal,
-                        fontFamily = GhaisTypography.quranFont,
+                        style = GhaisTypography.quranScript,
                         color = GhaisNoir.TextPrimary,
                         textAlign = TextAlign.Center,
-                        lineHeight = ((arabicFontSize - 2) * 0.85f * 2.1f).sp,
+                        lineHeight = ((arabicFontSize - 2) * 0.85f * GhaisTypography.QURAN_LINE_HEIGHT_RATIO).sp,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 14.dp)
@@ -1256,14 +1252,17 @@ private fun MushafPageViewCard(
                 }
                 Text(
                     text = pageText,
-                    inlineContent = ayahRosetteContent(
-                        ornamentSize = ((arabicFontSize - 2) * 0.75f).sp,
-                        digitSize = ((arabicFontSize - 2) * 0.38f).sp
-                    ),
                     fontSize = (arabicFontSize - 2).sp,
-                    fontFamily = GhaisTypography.quranFont,
-                    lineHeight = ((arabicFontSize - 2) * 2.1f).sp,
-                    textAlign = TextAlign.End,
+                    style = GhaisTypography.quranScript,
+                    lineHeight = ((arabicFontSize - 2) * GhaisTypography.QURAN_LINE_HEIGHT_RATIO).sp,
+                    // Required, not decorative: `style =` replaces LocalTextStyle
+                    // and the rosette is appended outside any span, so without
+                    // this the ring is the only glyph falling back to
+                    // LocalContentColor.
+                    color = GhaisNoir.TextPrimary,
+                    // Start, not End: inside the Rtl provider above, End
+                    // resolves to the LEFT edge.
+                    textAlign = TextAlign.Start,
                     modifier = Modifier
                         .fillMaxWidth()
                         .noirClickable(onClick = {
@@ -1280,6 +1279,7 @@ private fun MushafPageViewCard(
             Text(
                 text = "— ٢٩٣ —",
                 fontSize = 12.sp,
+                letterSpacing = 0.sp,
                 color = GhaisNoir.TextTertiary,
                 modifier = Modifier.padding(top = 8.dp)
             )
@@ -1328,14 +1328,12 @@ private fun TafsirDialog(
                         }
                         appendGluedRosette(ayah.ayahNumber)
                     },
-                    inlineContent = ayahRosetteContent(
-                        ornamentSize = 20.sp,
-                        digitSize = 10.sp
-                    ),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Normal,
-                    fontFamily = GhaisTypography.quranFont,
+                    style = GhaisTypography.quranScript,
                     color = GhaisNoir.TextPrimary,
+                    // This dialog sits OUTSIDE the Rtl provider, so End is
+                    // already the right edge here — leave it alone.
                     textAlign = TextAlign.End,
                     lineHeight = 36.sp,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)

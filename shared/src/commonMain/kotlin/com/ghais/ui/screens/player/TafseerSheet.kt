@@ -75,7 +75,6 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
 import com.ghais.ui.util.appendGluedRosette
-import com.ghais.ui.util.ayahRosetteContent
 import com.ghais.ui.util.toArabicDigits
 import kotlinx.coroutines.launch
 import kotlin.math.PI
@@ -348,7 +347,8 @@ fun TafseerSheet(
                     text = "سورة ${entry.surahNameAr}",
                     color = GhaisNoir.TextPrimary,
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.sp
                 )
             }
 
@@ -404,7 +404,8 @@ fun TafseerSheet(
                         Text(
                             text = "النص القرآني",
                             color = GhaisNoir.TextTertiary,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            letterSpacing = 0.sp
                         )
                     }
 
@@ -419,7 +420,7 @@ fun TafseerSheet(
                             ) {
                                 Text(
                                     text = QuranAyahRepository.BASMALAH,
-                                    fontFamily = GhaisTypography.quranFont,
+                                    style = GhaisTypography.quranScript,
                                     color = GhaisNoir.TextSecondary,
                                     fontSize = 20.sp,
                                     lineHeight = 40.sp,
@@ -436,8 +437,7 @@ fun TafseerSheet(
                                         append(entry.arabicText)
                                         appendGluedRosette(entry.ayahNo)
                                     },
-                                    inlineContent = ayahRosetteContent(24.sp, 11.sp),
-                                    fontFamily = GhaisTypography.quranFont,
+                                    style = GhaisTypography.quranScript,
                                     color = GhaisNoir.TextPrimary,
                                     fontSize = 24.sp,
                                     lineHeight = 48.sp,

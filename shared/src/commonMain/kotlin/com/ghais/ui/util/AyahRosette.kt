@@ -1,175 +1,55 @@
 package com.ghais.ui.util
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.InlineTextContent
-import androidx.compose.foundation.text.appendInlineContent
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.ghais.ui.theme.GhaisNoir
 
 /**
- * Enclosed ayah rosette: digits drawn INSIDE the ۝ ornament.
+ * End-of-ayah rosette for the bundled `QCF_Hafs` font (family
+ * `KFGQPC HAFS Uthmanic Script`, declared as
+ * [com.ghais.ui.theme.GhaisTypography.quranFont]).
  *
- * Problem it fixes: appending " ۝N" as plain text renders as two detached
- * shapes (empty bubble + trailing digits) because the QCF_Hafs font has no
- * contextual shaping that pulls digits inside U+06DD.
+ * The ornament is the font's own: an `rlig` ligature turns the Arabic-Indic
+ * digits U+0660..U+0669 — exactly what [toArabicDigits] emits — into a single
+ * composite glyph that contains the ayah-number ring with the digits already
+ * hand-placed inside it. All 286 ayah numbers resolve to the correct ring this
+ * way, and 286 is Al-Baqarah's last ayah, so coverage spans the whole Quran.
+ * The ring is an ordinary text glyph, so it flows and wraps with the verse and
+ * inherits the text colour — no `InlineTextContent`, no `Placeholder`, no
+ * baseline offset and no extra line height are involved.
  *
- * Two integration paths (pick per call site):
+ * TRAP — never emit U+06DD (ARABIC END OF AYAH). It is present in the font's
+ * cmap as a *bare empty ring* and referenced by zero GSUB/GPOS rules, so
+ * "U+06DD + digits" shapes to TWO glyphs: a correctly numbered ring followed
+ * by a second, empty one. Always append the digits alone.
  *
- * 1. Single-Text contexts (inline flow):
- *      Text(
- *          text = ayahWithRosette(verse, ayahNo),
- *          inlineContent = ayahRosetteContent(),
- *          fontFamily = GhaisTypography.quranFont, ...
- *      )
- *    The digits travel as the placeholder's alternate text, so the shared
- *    [ayahRosetteContent] map (keyed by [AYAH_ROSETTE_ID]) can draw the
- *    per-instance number with zero extra params.
+ * Three further rules the shaping depends on:
+ * - Use U+0660..U+0669 only. The extended-Arabic U+06F0..U+06F9 digits take
+ *   no part in the ligature and render as loose digits with no ring.
+ * - Keep the digits CONTIGUOUS. A space or ZWJ inside the number splits it
+ *   into several separately numbered rings.
+ * - [number] must be 1..286. The font only carries the digit-ligature for
+ *   those (Al-Baqarah's last ayah is 286, so the whole Quran is covered);
+ *   287+ shape to bare digits with NO ring and degrade silently.
  *
- * 2. Row/FlowRow contexts (robust, preferred for new code):
- *      Row { Text(verse, ...); AyahEndMark(number = ayahNo) }
- *    Verse Text maxLines/wrapping must then account for the trailing mark.
- *
- * 3. Annotated-string-only contexts (mushaf keeps strings):
- *    [ayahSignString] — plain-text fallback, same detached rendering as
- *    today, kept so string pipelines keep compiling.
- */
-const val AYAH_ROSETTE_ID = "ayah_rosette"
-
-/**
- * Appends " " + an [AYAH_ROSETTE_ID] inline-content placeholder for [number].
- *
- * No digit glyphs are appended as visible text — the digits are carried as
- * the placeholder's alternate text ([toArabicDigits]) and drawn inside the
- * ornament by [ayahRosetteContent]. Alternate text also doubles as the
- * accessibility label.
- */
-fun ayahWithRosette(text: String, number: Int): AnnotatedString =
-    buildAnnotatedString {
-        append(text)
-        append(" ")
-        appendInlineContent(AYAH_ROSETTE_ID, toArabicDigits(number))
-    }
-
-/**
- * Strand-proof inline marker for mushaf continuous text.
- *
- * NBSP glues the Canvas-ring marker to the preceding word so it can never
- * strand alone on the next line.
+ * Usage — append inside a `buildAnnotatedString` whose `Text` is styled with
+ * [com.ghais.ui.theme.GhaisTypography.quranFont] and an RTL layout direction:
+ * ```
+ * Text(
+ *     text = buildAnnotatedString {
+ *         append(ayah.textUthmani)
+ *         appendGluedRosette(ayah.ayahNumber)
+ *     },
+ *     fontFamily = GhaisTypography.quranFont,
+ *     ...
+ * )
+ * ```
  */
 fun AnnotatedString.Builder.appendGluedRosette(number: Int) {
+    // NBSP glues the rosette to the preceding word so continuous mushaf flow
+    // can never strand the mark alone on the next line; the trailing plain
+    // space then gives the NEXT ayah a break opportunity so a new verse can
+    // start a fresh line. Both sit outside the digit run, so the ligature
+    // still forms — do not "tidy" either space away.
     append("\u00A0")
-    appendInlineContent(AYAH_ROSETTE_ID, toArabicDigits(number))
+    append(toArabicDigits(number))
     append(" ")
-}
-
-/**
- * Shared inline-content map for [ayahWithRosette] output.
- *
- * The per-instance number arrives via the placeholder's alternate text
- * (see [ayahWithRosette]), which this draws centered inside the ornament.
- * A legacy "[rosette]" alternate text draws the ring with no digits.
- */
-@Composable
-fun ayahRosetteContent(
-    ornamentSize: TextUnit = 22.sp,
-    digitSize: TextUnit = 10.sp,
-): Map<String, InlineTextContent> {
-    val tint = GhaisNoir.TextPrimary
-    return mapOf(
-        AYAH_ROSETTE_ID to InlineTextContent(
-            placeholder = Placeholder(
-                width = ornamentSize,
-                height = ornamentSize,
-                placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
-            )
-        ) { alternateText ->
-            RosetteBox(
-                digits = if (alternateText == "[rosette]") "" else alternateText,
-                ornamentSize = ornamentSize,
-                digitSize = digitSize,
-                tint = tint,
-            )
-        }
-    )
-}
-
-/**
- * Standalone end-of-ayah mark for Row/FlowRow placement after a verse Text.
- *
- * Fixed-size [Box] ([ornamentSize] square) drawing the ring with Canvas
- * [drawCircle] (stroke 1.5.dp, [tint]) with the Arabic-Indic digits centered
- * inside via [Alignment.Center].
- */
-@Composable
-fun AyahEndMark(
-    number: Int,
-    ornamentSize: TextUnit = 24.sp,
-    digitSize: TextUnit = 11.sp,
-    tint: Color = GhaisNoir.TextPrimary,
-) {
-    RosetteBox(
-        digits = toArabicDigits(number),
-        ornamentSize = ornamentSize,
-        digitSize = digitSize,
-        tint = tint,
-    )
-}
-
-/**
- * Plain-string fallback for annotated-string-only contexts (mushaf).
- * Same detached rendering as the legacy call sites; prefer [AyahEndMark] or
- * [ayahWithRosette] + [ayahRosetteContent] for the true enclosed rosette.
- */
-fun ayahSignString(number: Int) = " ۝${toArabicDigits(number)}"
-
-@Composable
-private fun RosetteBox(
-    digits: String,
-    ornamentSize: TextUnit,
-    digitSize: TextUnit,
-    tint: Color,
-) {
-    val boxSize = with(LocalDensity.current) { ornamentSize.toDp() }
-    val strokeWidth = 1.5.dp
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier.size(boxSize),
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val strokePx = strokeWidth.toPx()
-            drawCircle(
-                color = tint,
-                radius = (size.minDimension - strokePx) / 2f,
-                style = Stroke(width = strokePx),
-            )
-        }
-        if (digits.isNotEmpty()) {
-            Text(
-                text = digits,
-                fontSize = digitSize,
-                fontWeight = FontWeight.Normal,
-                color = tint,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-            )
-        }
-    }
 }
