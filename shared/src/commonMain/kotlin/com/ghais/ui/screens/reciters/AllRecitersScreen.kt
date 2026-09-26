@@ -33,6 +33,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
+import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.reciterCountryKey
 import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.ui.components.noir.IconWell
@@ -54,7 +55,6 @@ data class VerifiedReciter(
     val nameAr: String,
     val country: String,
     val style: String,
-    val followers: String,
     val photoUrl: String
 )
 
@@ -67,7 +67,6 @@ val ALL_VERIFIED_RECITERS = listOf(
         nameAr = "مشاري راشد العفاسي",
         country = "Kuwait",
         style = "Murattal",
-        followers = "4.8M fans",
         photoUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuCVq7pqUhr_vS9hx1DOLeIcQ7oOf-d00g_cojjDLspmDlxOaQGBKbrZ372xlC7XtuhQTBfUHrTej_QIKrC1_RJzUrRLPQwbSae0rPEJ-PnW2FepBr_rO0F86S7MaqQrd8uELPi6_ip_6xuedtBym7Ag9yIZW_znPwtV706_u7vdSszFO0Go4EX6Fqw1-04de24SMZZW-f5PPH77Yk8BDtb2T2s2Fz5UKnd-ivOJLI1U66mNeJYMjGSgKQ"
     ),
     VerifiedReciter(
@@ -76,7 +75,6 @@ val ALL_VERIFIED_RECITERS = listOf(
         nameAr = "عبد الباسط عبد الصمد",
         country = "Egypt",
         style = "Mujawwad",
-        followers = "5.1M fans",
         photoUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuCDC0-4ROINJxYGSxbAWcYctH_0THHCxU5gubgORkVyhQMyl9AvpNpePXHQJdS67zKw8eMaouJ-zk1C5sAyIDHw4NqZxAP6m5LDQVhG2HBSP9sX2UjwEqyuvH-RACVPK_MlMFly-G9PwG0l8DyZPoP-iht8qz4j0_OxBwXdCpefdRao2p1fhn4_Rjwa8jkWOlDMtNhOBHVpCb-RHhRTDhvMJWsg81tFxI5rc8CMpg2ZyKYJLvJfvv7ZAQ"
     ),
     VerifiedReciter(
@@ -85,7 +83,6 @@ val ALL_VERIFIED_RECITERS = listOf(
         nameAr = "عبد الرحمن السديس",
         country = "Saudi Arabia",
         style = "Taraweeh",
-        followers = "3.9M fans",
         photoUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuBUUXSSQnjbh9PcmTg5THpn3mvDpVVxiH_GKcHhZGP-taghc9BmoJoNWE0ft_q3y_Oeka9G4qJLbGRkde06mO-L_0Jv9oBcMgSlZe8g65QBl6b7lOIJnL6D5CybQ8PVppePQ8RipIaS7EpYks3LNyldifo5N6m6aXBJiDrAcUUJaZYNjuBZ4kax_YHflvxYG-C3CRtpzbSiSwsZ4W5mxnhkFPZFAFDQovfCGAWpPVUlyzOOpY1xBfc22Q"
     ),
     VerifiedReciter(
@@ -94,7 +91,6 @@ val ALL_VERIFIED_RECITERS = listOf(
         nameAr = "ماهر المعيقلي",
         country = "Saudi Arabia",
         style = "Murattal",
-        followers = "3.2M fans",
         photoUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuCe9KI2uHdihkC6MNA1pT-CAxgMZw9htwZaNdc9ZwyJcugtxNLhv2mjYhKAFgFh7VPapZ-UR3W9WT4nzRJRbmv4R7iEnluD_2_taI1U8TBOySJNo8M3P4Dr2Iz8QSsVy-5jwmzKmbkPiWfVOzWVZEPkL3ELv5JYOZlMKy6vLl3AThQbeuMk7Vt-b0WdUU-mJLdC-32gRmBq-a3sgm_hQGdLrwCnAMYkIWyGnBwSlodGMJgVTdMAEgkSfw"
     ),
     VerifiedReciter(
@@ -103,7 +99,6 @@ val ALL_VERIFIED_RECITERS = listOf(
         nameAr = "محمد صديق المنشاوي",
         country = "Egypt",
         style = "Mujawwad",
-        followers = "4.6M fans",
         photoUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuCVq7pqUhr_vS9hx1DOLeIcQ7oOf-d00g_cojjDLspmDlxOaQGBKbrZ372xlC7XtuhQTBfUHrTej_QIKrC1_RJzUrRLPQwbSae0rPEJ-PnW2FepBr_rO0F86S7MaqQrd8uELPi6_ip_6xuedtBym7Ag9yIZW_znPwtV706_u7vdSszFO0Go4EX6Fqw1-04de24SMZZW-f5PPH77Yk8BDtb2T2s2Fz5UKnd-ivOJLI1U66mNeJYMjGSgKQ"
     ),
     VerifiedReciter(
@@ -112,7 +107,6 @@ val ALL_VERIFIED_RECITERS = listOf(
         nameAr = "محمود خليل الحصري",
         country = "Egypt",
         style = "Murattal",
-        followers = "4.2M fans",
         photoUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuA7ppBI-mBpDcMXZBQBLHr3cDTqVc0AUVJ1NJnwqguMxpA0hBzodlv2AaPxNbG-l-ebm1QYLeeBXgFrS-8mrWVkcKdVlIKvO0bCKSt073yPcQR76sTbT3wxoHkKtDy0c0ME9Ou7WCDSNKjcv6FDci6c_JCN8BMnzHc36UNKKfQYdfgK2HDpTNtdT1rSvv22AyjRX-Cm_lOXiOU7Af_MrE1Gp2ehp4QMy_ErC1iY2L1SB2BFyDYYbLLYbw"
     ),
     VerifiedReciter(
@@ -121,7 +115,6 @@ val ALL_VERIFIED_RECITERS = listOf(
         nameAr = "ياسر الدوسري",
         country = "Saudi Arabia",
         style = "Taraweeh",
-        followers = "2.7M fans",
         photoUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuACIOW-S_FSJrlW0ZRGDNhL-x4HzJEmJIwIzuMKDReZE6rWbmX-muvOypYAECz9PA1sMWdEwIKEkjCtcMuCGbOusGgV0w59lNHUgrWz1ZaKQkgeTj4s6CSnVAdEp7TKuaCDrm_cmvqfK5vmKO6djuBmBdgkC5HOFFoB6Tzu_foAFiAmVi-SWqEOZK5NmjsEGM4YJI7YP8wAVvrwB958PTOCl3Uq3tTQYro_H30leRqVQ4W7NfRbZDGBLQ"
     ),
     VerifiedReciter(
@@ -130,7 +123,6 @@ val ALL_VERIFIED_RECITERS = listOf(
         nameAr = "سعود الشريم",
         country = "Saudi Arabia",
         style = "Taraweeh",
-        followers = "3.4M fans",
         photoUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuBUUXSSQnjbh9PcmTg5THpn3mvDpVVxiH_GKcHhZGP-taghc9BmoJoNWE0ft_q3y_Oeka9G4qJLbGRkde06mO-L_0Jv9oBcMgSlZe8g65QBl6b7lOIJnL6D5CybQ8PVppePQ8RipIaS7EpYks3LNyldifo5N6m6aXBJiDrAcUUJaZYNjuBZ4kax_YHflvxYG-C3CRtpzbSiSwsZ4W5mxnhkFPZFAFDQovfCGAWpPVUlyzOOpY1xBfc22Q"
     ),
     VerifiedReciter(
@@ -139,7 +131,6 @@ val ALL_VERIFIED_RECITERS = listOf(
         nameAr = "إسلام صبحي",
         country = "Egypt",
         style = "Murattal",
-        followers = "2.1M fans",
         photoUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuCzOyQUcWQrLRalTR2UVt5Z61FZm1cBuurJEVrVvWaTHkjM_wmWbYuMiVPbFQQdy4nSbVo5uZRGlb1d4Tt0g5e5fTo2Ou2ZJextr0N1pLm9wyVpRTSD8kp35B-W9UQZIt985fydj0nseJuSmjOmpAkRgnbfVQQohu43Z1CW3EAn7amGbcZD7tlweCQ-JBaZhBJDvCmWu9rKzcD-qIWhGvGxKomXe4KBSWNdQso65BWAnXNujB3s3BaPiw"
     ),
     VerifiedReciter(
@@ -148,7 +139,6 @@ val ALL_VERIFIED_RECITERS = listOf(
         nameAr = "عمر هشام العربي",
         country = "Egypt",
         style = "Murattal",
-        followers = "1.5M fans",
         photoUrl = "${AIDA_PUBLIC_PREFIX}AB6AXuDgsbtNwrTvZMDxhet9KzTJPINfQqnQ2Gc74H1NotuIf_y1ZYbY3ChOWF2Rvly3n97R741_TRWgpd9CXEZUIhOCQJMCUWrHGCDLra3ozOJUdRllZlWJVjFumo6IU0Nn21IafKwYHzi0oGVNgAiqQ1feu1y0UAX2l0_E-k108XS4KFJbXV7nSETDDmeqfDUHp5Kp-KE3necEvLlvnSTmqvOEUjLwtC3P4ta3bURWLF70RzPfdAx2C1nDGw"
     )
 )
@@ -174,14 +164,20 @@ class AllRecitersScreen : Screen {
         var searchQuery by remember { mutableStateOf("") }
         var selectedFilter by remember { mutableStateOf("All") }
 
+        // Real follower counts from the public `reciter_stats` collection.
+        // A slug missing from the map is unknown, and renders nothing.
+        val followerCounts by FollowStore.followerCounts.collectAsState()
+
         val filterOptions = remember {
             listOf("All", "Murattal", "Mujawwad", "Taraweeh", "Egypt", "Saudi Arabia")
         }
 
         // Cloud-merged catalog (bundled seeds + Appwrite `reciters`). The
-        // curated roster below only supplies follower counts and fallback
-        // photos now — reciters uploaded from the admin panel are appended so
-        // they are browsable here too.
+        // curated roster below only supplies fallback photos now — reciters
+        // uploaded from the admin panel are appended so they are browsable
+        // here too. Follower counts are never hardcoded: they come from
+        // `FollowStore.followerCounts` (real `reciter_stats` reads) at render
+        // time, and stay hidden while unknown.
         val browseReciters = rememberBrowseReciters()
         val reciterRows = remember(browseReciters) {
             val cloudBySlug = browseReciters.associateBy { it.slug.trim().lowercase() }
@@ -205,7 +201,6 @@ class AllRecitersScreen : Screen {
                         nameAr = reciter.nameAr,
                         country = reciter.country,
                         style = reciter.style,
-                        followers = "",
                         photoUrl = reciter.imageUrl.orEmpty(),
                     )
                 }
@@ -299,6 +294,7 @@ class AllRecitersScreen : Screen {
                         ) { reciter ->
                             ReciterNoirRow(
                                 reciter = reciter,
+                                followerCount = followerCounts[reciter.slug],
                                 onClick = {
                                     rootNavigator.push(ReciterProfileScreen(reciter.slug))
                                 }
@@ -495,10 +491,15 @@ private fun ReciterFilterChipsRow(
  * photo well with monogram fallback, dual text, ghost style chip,
  * circular chevron affordance. Tapping navigates to
  * `ReciterProfileScreen(reciter.slug)` (signature preserved).
+ *
+ * [followerCount] is the real live count (null = unknown). When known it is
+ * appended to the meta line via [FollowStore.formatFollowerCount]; when
+ * unknown the meta line is just the country — no placeholder, no estimate.
  */
 @Composable
 private fun ReciterNoirRow(
     reciter: VerifiedReciter,
+    followerCount: Long?,
     onClick: () -> Unit
 ) {
     Row(
@@ -514,11 +515,11 @@ private fun ReciterNoirRow(
     ) {
         ReciterPhotoWell(reciter = reciter)
 
-        val metaLine = if (reciter.followers.isBlank()) {
-            reciter.country
-        } else {
-            "${reciter.country} · ${reciter.followers}"
-        }
+        // Truthful meta: country always, real follower count only when known.
+        val metaLine = listOfNotNull(
+            reciter.country,
+            followerCount?.let { FollowStore.formatFollowerCount(it) }
+        ).joinToString(" · ")
 
         Column(
             modifier = Modifier
