@@ -57,6 +57,7 @@ import com.ghais.ui.screens.surah.SurahDetailScreen
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import kotlinx.coroutines.delay
+import com.ghais.ui.util.realImageUrlOrNull
 
 /**
  * Noir Glass — strict monochrome redesign.
@@ -493,7 +494,7 @@ private fun ReciterNoirRow(
     val followedPhoto = remember(reciter.slug) {
         resolveFollowedQari(reciter.slug)?.photoUrl
     }
-    val photoUrl = reciter.imageUrl?.takeIf { it.isNotBlank() } ?: followedPhoto
+    val photoUrl = realImageUrlOrNull(reciter.imageUrl) ?: followedPhoto
 
     Row(
         modifier = Modifier

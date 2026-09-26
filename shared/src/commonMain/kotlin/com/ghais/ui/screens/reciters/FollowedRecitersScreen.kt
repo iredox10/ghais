@@ -42,6 +42,7 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.util.realImageUrlOrNull
 
 object FollowedRecitersScreen : Screen {
     @Composable
@@ -198,9 +199,11 @@ object FollowedRecitersScreen : Screen {
                                     .noirClickable { navigator.push(ReciterProfileScreen(reciter.slug)) }
                                     .padding(12.dp)
                             ) {
-                                val photo = rememberCloudPhoto(reciter.slug)
-                                    ?: qari.photoUrl
-                                    ?: photoForSlug(reciter.slug)
+                                val photo = realImageUrlOrNull(
+                                    rememberCloudPhoto(reciter.slug)
+                                        ?: qari.photoUrl
+                                        ?: photoForSlug(reciter.slug)
+                                )
                                 if (photo != null) {
                                     Box(
                                         modifier = Modifier

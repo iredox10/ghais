@@ -95,6 +95,7 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
 import com.ghais.ui.util.bidiIsolate
+import com.ghais.ui.util.realImageUrlOrNull
 
 private val ReciterExpandedHeight = 360.dp
 private val ReciterCollapsedHeight = 64.dp
@@ -431,25 +432,8 @@ private fun ReciterNoirHeroPlate(
     onToggleFollow: () -> Unit,
     onDownloadAll: () -> Unit
 ) {
-    val photoUrl = rememberReciterPhoto(reciter.slug) ?: meta.photoUrl
+    val photoUrl = realImageUrlOrNull(rememberReciterPhoto(reciter.slug) ?: meta.photoUrl)
     var photoFailed by remember(photoUrl) { mutableStateOf(false) }
-    val eyebrowLabel = remember(reciter.slug, meta.riwayah, meta.style, followerCount) {
-        buildString {
-            append("VERIFIED RECITER")
-            if (meta.riwayah.isNotBlank()) {
-                append(" • ")
-                append(meta.riwayah.uppercase())
-            }
-            if (meta.style.isNotBlank()) {
-                append(" • ")
-                append(meta.style.uppercase())
-            }
-            if (followerCount != null) {
-                append(" • ")
-                append(FollowStore.formatFollowerCount(followerCount))
-            }
-        }
-    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Box(
@@ -539,16 +523,6 @@ private fun ReciterNoirHeroPlate(
                                 alpha = 1f - smoothStep(0.58f, 0.82f, progressProvider())
                             }
                     ) {
-                        Text(
-                            text = eyebrowLabel,
-                            color = GhaisNoir.TextSecondary,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 1.2.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = reciter.nameEn,
                             style = GhaisTypography.displayEditorialBold,

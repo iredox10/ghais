@@ -21,13 +21,10 @@ import com.ghais.data.repository.ReciterCloudCache
 import com.ghais.data.seed.GhaisAssets
 import com.ghais.data.seed.QuranDataRepository as SeedRepository
 import com.ghais.ui.screens.home.NoirArtworkWell
+import com.ghais.ui.util.realImageUrlOrNull
 
 private fun reciterPhotoOrNull(photoUrl: String?): String? =
-    photoUrl?.trim()?.takeIf {
-        it.isNotBlank() &&
-            it != GhaisAssets.LogoUrl &&
-            !it.contains("placeholder", ignoreCase = true)
-    }
+    realImageUrlOrNull(photoUrl)
 
 private fun cloudPhotoForSlug(slug: String): String? {
     if (slug.isBlank()) return null

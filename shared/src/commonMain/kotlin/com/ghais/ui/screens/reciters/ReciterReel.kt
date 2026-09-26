@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +51,7 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.util.realImageUrlOrNull
 
 private val AvatarShape = RoundedCornerShape(24.dp)
 
@@ -195,9 +197,10 @@ fun ReciterReelCard(
                         .border(1.dp, GhaisNoir.BorderCard, AvatarShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (photoUrl != null) {
+                    val realPhoto = remember(photoUrl) { realImageUrlOrNull(photoUrl) }
+                    if (realPhoto != null) {
                         AsyncImage(
-                            model = photoUrl,
+                            model = realPhoto,
                             contentDescription = reciter.nameEn,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()

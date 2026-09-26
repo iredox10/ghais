@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.util.realImageUrlOrNull
 
 /**
  * Phase 4 — Noir Home shared chrome.
@@ -72,7 +73,8 @@ fun NoirArtworkWell(
     errorFallbackUrl: String? = null
 ) {
     var imageFailed by remember(coverUrl) { mutableStateOf(false) }
-    val effectiveUrl = if (imageFailed) errorFallbackUrl.orEmpty() else coverUrl
+    val requested = remember(coverUrl) { realImageUrlOrNull(coverUrl) }
+    val effectiveUrl = if (imageFailed) realImageUrlOrNull(errorFallbackUrl) else requested
     Box(
         modifier = modifier
             .size(size)
@@ -81,7 +83,7 @@ fun NoirArtworkWell(
             .border(1.dp, if (ring) GhaisNoir.SpecularTop else GhaisNoir.BorderCard, shape),
         contentAlignment = Alignment.Center
     ) {
-        if (effectiveUrl.isNotBlank()) {
+        if (effectiveUrl != null) {
             AsyncImage(
                 model = effectiveUrl,
                 contentDescription = null,
