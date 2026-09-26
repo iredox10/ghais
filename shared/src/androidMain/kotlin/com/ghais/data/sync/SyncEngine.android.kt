@@ -131,6 +131,16 @@ actual object SyncEngine {
     // attribute names they are read and written by live in
     // `appwrite/collections.json`, which no code hardcodes a copy of.
     private const val HIFZ_MASTERY = "hifz_mastery"
+
+    // The four hifz counters have no per-ayah row to live on, so they share one
+    // sentinel document at (surah_id = 0, ayah_no = 0). `HIFZ_SENTINEL_*` are
+    // the column names; the doc id is `hifzMasteryDocId(userId, 0, 0)`.
+    private const val HIFZ_SENTINEL_SURAH = 0
+    private const val HIFZ_SENTINEL_AYAH = 0
+    private const val HIFZ_ATTR_DAILY_GOAL = "daily_goal_count"
+    private const val HIFZ_ATTR_STREAK_DAYS = "streak_days"
+    private const val HIFZ_ATTR_TODAY_REVIEWED = "today_reviewed_count"
+    private const val HIFZ_ATTR_LAST_REVIEW_DAY = "last_review_day"
     private const val SEARCH_HISTORY = "search_history"
 
     /**
@@ -2745,57 +2755,50 @@ actual object SyncEngine {
     // `importSnapshot` skips it), so a `NEW` document would be a row no side of
     // this sync can represent.
     //
-    // ## The four scalars do NOT round-trip — a schema gap, not a choice
+    // ## The four scalars ride a sentinel row
     //
     // [HifzSnapshot] also carries `dailyGoalCount`, `streakDays`,
-    // `todayReviewedCount` and `lastReviewDay`, and the collection has NO column
-    // for any of them. So they cannot be pushed, and — the part that matters —
-    // they must not be INVENTED on the way back: `importSnapshot` is
-    // authoritative (it clears the namespace first), so importing a snapshot
-    // built from cloud documents alone would reset a returning user's daily
-    // goal to the default and their review streak to 0 on every single pass.
-    // [pullHifzMastery] therefore merges the CLOUD statuses into the LOCAL
-    // snapshot and re-imports that, which leaves the scalars exactly as the
-    // device had them. Closing the gap needs four integer columns on
-    // `hifz_mastery` in `appwrite/collections.json` (a file this one does not
-    // own); until then a hifz profile is per-ayah cross-device and
-    // per-device for its counters.
+    // `todayReviewedCount` and `lastReviewDay`, and none of them belongs to a
+    // single ayah — so they share one document at (surah_id = 0, ayah_no = 0).
+    // `importSnapshot` is authoritative (it clears the namespace first), so a
+    // snapshot rebuilt from cloud ayah rows ALONE would reset a returning user's
+    // daily goal and review streak on every pass. The pull therefore unions the
+    // cloud ayahs into the LOCAL snapshot and re-imports that, and separately
+    // adopts the sentinel counters.
     //
-    // Conflict rule: `hifz_mastery` has one row per ayah and no per-row
-    // `updated_at`, so two devices that cycled the same ayah differently cannot
-    // be reconciled — the last writer's value wins, which is the same
-    // last-writer-wins-per-row semantics [pushLikes]/[pushSchedules] already
-    // have, and the reason the pull resolves collisions LOCAL-wins: a status
-    // this device just set is the freshest evidence it has.
+    // Staleness: the sentinel carries no timestamp, so `last_review_day` is the
+    // ordering signal. Cloud counters are applied only when it is not older than
+    // the local one — applying an older device's counters would walk a live
+    // streak backwards.
 
-    /**
-     * Union-pulls the cloud `hifz_mastery` docs into [HifzMasteryStore].
-     *
-     * No local-emptiness gate: pre-auth mastery is adopted into a freshly-bound
-     * account, and one ayah memorised while signed out was enough for a gated
-     * pull to skip the cloud forever while the paired [pushHifzMastery] pruned
-     * it away.
-     *
-     * Decoding is defensive per document — a missing/blank `status`, an
-     * unparseable enum name, an out-of-range `surah_id`/`ayah_no` or a `NEW`
-     * status is SKIPPED, never thrown, so one bad row can neither abort the pass
-     * nor (via the push) count as proof that the rest of the account's mastery
-     * is gone. A cloud snapshot with nothing usable in it returns true anyway,
-     * which keeps the push from pruning against a snapshot it could not read.
-     *
-     * Returns true when the cloud holds at least one document (the caller must
-     * then skip pushing an empty local profile). False when the collection is
-     * missing or empty, so push converges.
-     */
     private suspend fun pullHifzMastery(db: Databases, userId: String): Boolean {
         val docs = listForUser(db, HIFZ_MASTERY, userId) ?: return false
         if (docs.isEmpty()) return false
         val fromCloud = HashMap<Pair<Int, Int>, MasteryStatus>(docs.size * 2)
         var skipped = 0
+        // The sentinel row (surah_id = 0, ayah_no = 0) carries the four scalar
+        // counters, which have no per-ayah row to live on. See HIFZ_SENTINEL.
+        var cloudGoal: Int? = null
+        var cloudStreak: Int? = null
+        var cloudToday: Int? = null
+        var cloudLastDay: Long? = null
         for (doc in docs) {
             val data = doc.data
             val surahId = asInt(data["surah_id"])?.takeIf { it in 1..114 }
             val ayahNo = asInt(data["ayah_no"])?.takeIf { it > 0 }
+            if (surahId == null || ayahNo == null) {
+                // Not an ayah row. The sentinel is the one expected shape here;
+                // anything else is unreadable and counted, not guessed at.
+                if (asInt(data["surah_id"]) == 0 && asInt(data["ayah_no"]) == 0) {
+                    cloudGoal = asInt(data[HIFZ_ATTR_DAILY_GOAL])?.takeIf { it >= 0 }
+                    cloudStreak = asInt(data[HIFZ_ATTR_STREAK_DAYS])?.takeIf { it >= 0 }
+                    cloudToday = asInt(data[HIFZ_ATTR_TODAY_REVIEWED])?.takeIf { it >= 0 }
+                    cloudLastDay = asInt(data[HIFZ_ATTR_LAST_REVIEW_DAY])?.toLong()?.takeIf { it >= 0L }
+                } else {
+                    skipped++
+                }
+                continue
+            }
             val name = (data["status"] as? String)?.trim()?.uppercase()
             val status = name?.let { candidate ->
                 try {
@@ -2804,7 +2807,7 @@ actual object SyncEngine {
                     null
                 }
             }
-            if (surahId == null || ayahNo == null || status == null || status == MasteryStatus.NEW) {
+            if (status == null || status == MasteryStatus.NEW) {
                 skipped++
                 continue
             }
@@ -2827,19 +2830,51 @@ actual object SyncEngine {
         // untouched; see the section header for why they must not be invented.
         val merged = local.statuses + fromCloud
         val added = merged.size - local.statuses.size
-        if (added == 0) {
+
+        // Scalars ride along only when the cloud row is not STALE. There is no
+        // timestamp on the sentinel, so `last_review_day` is the ordering
+        // signal: if the other device last reviewed on an earlier day than this
+        // one, its counters describe an older state and applying them would walk
+        // a live streak backwards. Equal days means same-day activity, where the
+        // cloud copy is the other device's view of the same day and wins.
+        val cloudIsStale = cloudLastDay != null && local.lastReviewDay != 0L &&
+            cloudLastDay < local.lastReviewDay
+        val scalarsChanged = !cloudIsStale && cloudGoal != null && (
+            cloudGoal != local.dailyGoalCount ||
+                cloudStreak != local.streakDays ||
+                cloudToday != local.todayReviewedCount ||
+                cloudLastDay != local.lastReviewDay
+            )
+        if (added == 0 && !scalarsChanged) {
             Log.i(
                 TAG,
                 "hifz pull: nothing to merge — local already holds all ${fromCloud.size} cloud ayah(s)."
             )
             return true
         }
-        HifzMasteryStore.importSnapshot(local.copy(statuses = merged))
-        Log.i(
-            TAG,
-            "hifz pull: merged $added cloud ayah(s) into ${local.statuses.size} local " +
-                "(cloud had ${docs.size}, $skipped unusable)."
+        HifzMasteryStore.importSnapshot(
+            local.copy(
+                statuses = merged,
+                dailyGoalCount = if (scalarsChanged) cloudGoal ?: local.dailyGoalCount else local.dailyGoalCount,
+                streakDays = if (scalarsChanged) cloudStreak ?: local.streakDays else local.streakDays,
+                todayReviewedCount = if (scalarsChanged) cloudToday ?: local.todayReviewedCount else local.todayReviewedCount,
+                lastReviewDay = if (scalarsChanged) cloudLastDay ?: local.lastReviewDay else local.lastReviewDay,
+            )
         )
+        if (scalarsChanged) {
+            Log.i(
+                TAG,
+                "hifz pull: adopted cloud counters goal=${cloudGoal} streak=${cloudStreak} " +
+                    "today=${cloudToday} lastReviewDay=${cloudLastDay}."
+            )
+        }
+        if (added > 0) {
+            Log.i(
+                TAG,
+                "hifz pull: merged $added cloud ayah(s) into ${local.statuses.size} local " +
+                    "(cloud had ${docs.size}, $skipped unusable)."
+            )
+        }
         return true
     }
 
@@ -2880,6 +2915,35 @@ actual object SyncEngine {
             )
             upsert(db, HIFZ_MASTERY, docId, data)
         }
+
+        // The sentinel row: one document carrying the four counters, which have
+        // no per-ayah row to live on. Registered in `localDocIds` for the same
+        // reason as an ayah row — this device holds it, so the prune must never
+        // treat it as dropped. Written unconditionally (it is one small upsert)
+        // because a counter is a value, not a set membership: there is no
+        // "already correct" cheap test worth the risk of missing an update.
+        val sentinelId = hifzMasteryDocId(userId, HIFZ_SENTINEL_SURAH, HIFZ_SENTINEL_AYAH)
+        localDocIds += sentinelId
+        val sentinelData: Map<String, Any?> = mapOf(
+            "user_id" to userId,
+            "surah_id" to HIFZ_SENTINEL_SURAH,
+            "ayah_no" to HIFZ_SENTINEL_AYAH,
+            "status" to MasteryStatus.NEW.name,
+            HIFZ_ATTR_DAILY_GOAL to snapshot.dailyGoalCount,
+            HIFZ_ATTR_STREAK_DAYS to snapshot.streakDays,
+            HIFZ_ATTR_TODAY_REVIEWED to snapshot.todayReviewedCount,
+            HIFZ_ATTR_LAST_REVIEW_DAY to snapshot.lastReviewDay,
+        )
+        val cloudSentinel = existingById[sentinelId]
+        val sentinelSettled = cloudSentinel != null &&
+            asInt(cloudSentinel.data[HIFZ_ATTR_DAILY_GOAL]) == snapshot.dailyGoalCount &&
+            asInt(cloudSentinel.data[HIFZ_ATTR_STREAK_DAYS]) == snapshot.streakDays &&
+            asInt(cloudSentinel.data[HIFZ_ATTR_TODAY_REVIEWED]) == snapshot.todayReviewedCount &&
+            asInt(cloudSentinel.data[HIFZ_ATTR_LAST_REVIEW_DAY])?.toLong() == snapshot.lastReviewDay
+        if (!sentinelSettled) {
+            upsert(db, HIFZ_MASTERY, sentinelId, sentinelData)
+        }
+
         // Sound because [pullHifzMastery] ran first in the same block and unioned
         // the cloud in: after it, local ⊇ cloud, so a doc missing from
         // `localDocIds` is one this device really has dropped.
