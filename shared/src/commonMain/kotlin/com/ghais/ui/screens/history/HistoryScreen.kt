@@ -56,7 +56,13 @@ private data class HistorySurahGroup(
     val title: String,
     val reciterName: String,
     val lastPlayedMs: Long,
-    val playsCount: Int,
+    /**
+     * This device's all-time qualifying play count for the WHOLE surah, or
+     * null when this device holds no counter entry for it. Null is a real
+     * state (cloud-restored history, sub-30s skim) and must never be faked
+     * into a number.
+     */
+    val qualifiedPlays: Int?,
     val positionMs: Long,
     val durationMs: Long,
 )
@@ -172,13 +178,19 @@ object HistoryScreen : Screen {
                         reciterName = resolvedName
                             ?: latest.subtitle.substringBefore("•").trim().ifEmpty { latest.reciterSlug },
                         lastPlayedMs = perSurah.maxOf { it.lastPlayedTimestampMs },
-                        // All-time qualified plays (sibling-owned surahPlays) win;
-                        // fall back to in-window entry count so a visible-but-
-                        // unqualified row (e.g. <30s skim) still reads "1 play".
-                        playsCount = maxOf(
-                            surahPlays[latest.surahId]?.toInt() ?: 0,
-                            perSurah.size
-                        ),
+                        // UserUsageRepository.surahPlays is keyed by surahId
+                        // ONLY: one play per listen session that reached 30s or
+                        // 95% (its "completion-or-30s" rule), all-time, in
+                        // local settings — owner-namespaced, cleared on account
+                        // switch and never synced to Appwrite. It is therefore
+                        // whole-surah + this-device data, not per-reciter and
+                        // not 30-day data, and perSurah.size is ~1 always
+                        // (history is deduped by surahId+raw reciterSlug), so it
+                        // is NOT used as a fallback. Absent entry -> null so the
+                        // row suppresses the claim instead of inventing a count.
+                        qualifiedPlays = surahPlays[latest.surahId]
+                            ?.toInt()
+                            ?.takeIf { it > 0 },
                         positionMs = latest.positionMs,
                         durationMs = latest.durationMs,
                     )
@@ -231,8 +243,13 @@ object HistoryScreen : Screen {
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+                        // Total of the UNFILTERED 30-day group list, so typing in
+                        // the search box never shrinks it. The unit is a grouped
+                        // recent (one surah by one canonical reciter) — one
+                        // surah played by two reciters is 2 entries — so it is
+                        // labelled "in history", not "surahs".
                         Text(
-                            text = "${filtered.size} surahs • last 30 days",
+                            text = "${groups.size} in history • last 30 days",
                             color = GhaisNoir.TextTertiary,
                             fontSize = 12.sp
                         )
@@ -246,7 +263,7 @@ object HistoryScreen : Screen {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "${filtered.size}",
+                            text = "${groups.size}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = GhaisNoir.TextSecondary
@@ -345,6 +362,19 @@ object HistoryScreen : Screen {
                         }
                     }
                 } else {
+                    // Play-count provenance, said once instead of per row: the
+                    // counter is whole-surah, this-device and all-time (the rows
+                    // themselves are a 30-day window), so "N plays" only reads
+                    // true with that scope attached. Hidden when no visible row
+                    // has a count.
+                    if (filtered.any { it.qualifiedPlays != null }) {
+                        Text(
+                            text = "Play counts: whole surah · this device · all time",
+                            color = GhaisNoir.TextTertiary,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(bottom = 10.dp)
+                        )
+                    }
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(top = 2.dp, bottom = 112.dp),
@@ -415,9 +445,14 @@ private fun HistoryNoirRow(
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(2.dp))
+            // No count -> no claim: the subtitle is just the reciter. The
+            // scope qualifier for a present count lives in the caption
+            // above the list.
             Text(
-                text = if (group.playsCount == 1) "${group.reciterName} • 1 play"
-                else "${group.reciterName} • ${group.playsCount} plays",
+                text = group.qualifiedPlays?.let { plays ->
+                    val count = if (plays == 1) "1 play" else "$plays plays"
+                    "${group.reciterName} • $count"
+                } ?: group.reciterName,
                 color = GhaisNoir.TextSecondary,
                 fontSize = 12.sp,
                 maxLines = 1,
