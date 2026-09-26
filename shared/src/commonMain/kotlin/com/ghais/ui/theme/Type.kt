@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import ghais.shared.generated.resources.Res
 import ghais.shared.generated.resources.QCF_Hafs
+import ghais.shared.generated.resources.NotoNaskhArabic_Regular
 import org.jetbrains.compose.resources.Font
 
 /**
@@ -207,6 +208,19 @@ object GhaisTypography {
     val quranFont: FontFamily
         @Composable
         get() = FontFamily(Font(Res.font.QCF_Hafs))
+
+    /**
+     * Numeral face for the ayah rosette drawn by
+     * [com.ghais.ui.util.ayahMarkContent].
+     *
+     * The rosette cannot use [quranFont] for its digits: QCF Hafs' `rlig`
+     * feature turns any run of U+0660..U+0669 into its ayah ornament, so the
+     * digits would fuse with the ring we draw ourselves. Noto Naskh has no
+     * such substitution and keeps U+0660..U+0669 as plain, legible digits.
+     */
+    val rosetteDigitFont: FontFamily
+        @Composable
+        get() = FontFamily(Font(Res.font.NotoNaskhArabic_Regular))
 
     /**
      * Quranic text style: QCF Hafs with tracking explicitly zeroed.
