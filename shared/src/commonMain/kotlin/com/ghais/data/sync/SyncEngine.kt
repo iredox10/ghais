@@ -12,21 +12,24 @@ import kotlinx.coroutines.flow.StateFlow
  *   offline always win over older cloud state.
  * - **Push:** debounced upload of the full local state per collection, using
  *   idempotent upserts with stable document IDs (no delete-then-insert):
- *   - likes: docId `"fav-<slug>-<surahId>-<ayahNo>"`
+ *   - likes: docId `"fav-" + sha256("<userId>|<slug>|<surahId>|<ayahNo>")[0..24)`
+ *     (28 chars; full-tuple hash — no truncation, distinct per user)
  *   - playback_state: docId = userId (single document per user)
  *   - listening_stats: docId = userId (single document per user)
- *   - follows: docId `"fol-<slug>"`
+ *   - follows: docId `"fol-" + sha256("<userId>|<slug>")[0..24)` (28 chars;
+ *     the userId is hashed in, so every user's follow is its own document
+ *     under `documentSecurity: true`, and long slugs are never truncated)
  *   - schedules: docId = `schedule.id`
  *   - history: docId `"h-<slug>-<surahId>-<playedAtMs>"` (max 36 chars)
   *   - routine_backups: docId `"rtn-<routineId>"`
   *   - user_prefs: docId = userId (single document per user)
   *   - khatma_plans: docId `"khatma-<planId>"` (sanitized, max 36 chars)
  * - **Fault isolation:** each collection is wrapped in its own try/catch in
- *   the android actual, so one missing collection (provisioned `history` /
- *   `user_prefs` / `routine_backups` / `reciter_stats` may not exist yet —
- *   the user creates them manually) must not break the other collections.
+ *   the android actual, so one collection that is missing from a given
+ *   deployment must not break the others.
  * - **Listening HISTORY syncs to [HISTORY]**
- *   (`history{user_id,track_json,played_at_ms}`, capped at 100 recent
+ *   (`history{user_id,track_json,played_at_ms,position_ms}`, capped at 15
+ *   recent
  *   entries): push uploads `track_json = Json.encodeToString(TrackItem)` per
  *   entry with stable `h-…` doc ids and prunes cloud docs beyond the local
  *   set; pull restores into an empty local history via
@@ -39,7 +42,7 @@ import kotlinx.coroutines.flow.StateFlow
  * | Local source | Collection | Document shape |
  * |---|---|---|
  * | FavoritesStore | [LIKES] (`likes{user_id,surah_id,ayah_no,level,reciter_slug?}`) | one doc per liked track; `ayah_no = track.ayahNo`, `level = "like"`. Push includes `reciter_slug` (string 64, optional) with a slug-less fallback while the attribute is unprovisioned; pull rebuilds a fully playable TrackItem (reciter name + audio URL via QuranDataRepository/Reciter, surah names via getSurahById) when the slug is present and known, else a synthetic `appwrite://likes/<docId>` placeholder |
- * | FollowStore | [FOLLOWS] (`follows{user_id,reciter_slug}`) | one doc per followed reciter; docId `"fol-<slug>"` |
+ * | FollowStore | [FOLLOWS] (`follows{user_id,reciter_slug}`) | one doc per followed reciter; docId `"fol-" + sha256("<userId>|<slug>")[0..24)` |
  * | UserUsageRepository.stats | [STATS] (`listening_stats{user_id,total_seconds,days_streak,minutes_today,unique_surahs,unique_reciters,updated_at}`) | single doc per user (docId = userId); aggregate snapshot only (history syncs to [HISTORY] separately). Pull adopts via `UserUsageRepository.restoreStats` only when local stats are at fresh defaults (never overwrites non-zero local); `minutes_today` is valid only when cloud `updated_at` is today (else restores as 0); zero-push still skipped to protect the cloud copy |
  * | AudioEngine.currentTrack + position | [PLAYBACK] (`playback_state{user_id,current_ref,position_ms,queue_json,updated_at}`) | single doc per user (docId = userId); `current_ref = "<slug>/<surahId>"`, `position_ms` = playback position, `queue_json` = single-track array. Pull restores via `AudioEngine.prepareTrack` (paused preload, no autoplay, no FGS boot) when the player is empty; push is skipped when local is empty but cloud holds data (fresh-login guard). Playback changes (track/pause) join the debounced push trigger; position ticks stay excluded |
  * | SchedulesStore | [SCHEDULES] (`schedules{user_id,schedule_id,schedule_json,enabled}`) | one doc per schedule; docId = `schedule.id`, `schedule_json = Json.encodeToString(schedule)` |

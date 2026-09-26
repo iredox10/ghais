@@ -29,6 +29,7 @@ import io.appwrite.Client
 import io.appwrite.Query
 import io.appwrite.exceptions.AppwriteException
 import io.appwrite.services.Databases
+import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -76,7 +77,11 @@ actual object SyncEngine {
     private const val TELEMETRY_THROTTLE_MS = 24L * 60 * 60 * 1000L
     private const val TELEMETRY_PREF_PREFIX = "ghais_telemetry_last_upload_"
     private const val ROUTINE_DOC_PREFIX = "rtn-"
-    private const val HISTORY_CAP = 100
+
+    // Must match the local cap enforced by `UserUsageRepository.recordProgress`
+    // and `restoreHistory`. A higher value only inflates the pull query and
+    // the push `take`, since the local list can never exceed 15.
+    private const val HISTORY_CAP = 15
 
     // Database/collection ids come from the sibling-owned SyncModels.kt
     // (same package: DB_ID, LIKES, PLAYBACK, FOLLOWS, STATS, SCHEDULES, HISTORY).
@@ -185,8 +190,11 @@ actual object SyncEngine {
                 pushFollows(db, userId)
             }
             // Best-effort follower-count refresh from public reciter_stats
-            // (covers login pull + debounced push after follow/unfollow; the
-            // server-side increment via Function lands on a later refresh).
+            // (covers login pull + debounced push after follow/unfollow; one
+            // batched list per TTL serves every slug — see reciterStatsSnapshot).
+            // The client never writes reciter_stats, so counts stay unknown
+            // (UI hides them) until the collection is populated out-of-band;
+            // a local follow does NOT increment anything.
             try {
                 FollowStore.refreshCounts(FollowStore.followedSlugs.value)
             } catch (e: Exception) {
@@ -465,18 +473,42 @@ actual object SyncEngine {
     // ------------------------------------------------------- reciter stats
     //
     // Public read-only counters (`reciter_stats{slug,followers_count,
-    // likes_count,updated_at}`, doc id = slug). Single-doc read per slug —
-    // never an N× fan-out over `follows`. Null on 404/any failure so the UI
-    // hides counts when unknown. Client never writes these docs.
+    // likes_count,updated_at}`) with a `slug` unique index. Read as ONE batched
+    // `listDocuments` (never an N× per-slug fan-out, never a per-slug
+    // `getDocument` that 404s and then retries) resolved into a slug → counts
+    // map cached for [RECITER_STATS_TTL_MS], so `FollowStore.refreshCounts`
+    // costs a single request per TTL window no matter how many reciters the
+    // user follows. Absent slug = unknown = hidden in the UI. The client never
+    // writes these docs, so a fresh account sees no counts at all.
+
+    /** How long one batched `reciter_stats` list is reused before re-reading. */
+    private const val RECITER_STATS_TTL_MS = 5L * 60 * 1000L
 
     /**
-     * Reads `followers_count` for [reciterSlug] from `reciter_stats`
-     * (direct doc id=slug first, `slug`-equal query limit 1 as fallback).
+     * Per-request cap on the batched `reciter_stats` list. Counters are
+     * cosmetic (one doc per catalog reciter) and the client never writes them,
+     * so a full page is the whole collection in practice; hitting the cap is
+     * logged rather than silently truncating.
+     */
+    private const val RECITER_STATS_MAX_DOCS = 200
+
+    /** Batched counters by slug → field → value; empty until the first read. */
+    @Volatile
+    private var reciterStatsCache: Map<String, Map<String, Any?>> = emptyMap()
+
+    /** Epoch-millis of the last batched read; 0 = never read yet. */
+    @Volatile
+    private var reciterStatsReadAtMs: Long = 0L
+
+    /**
+     * Reads `followers_count` for [reciterSlug] from the batched
+     * `reciter_stats` snapshot. Null when the slug has no doc (or the
+     * collection is missing/unreadable), i.e. "unknown".
      */
     suspend fun followerCount(reciterSlug: String): Long? =
         reciterStat(reciterSlug, "followers_count")
 
-    /** Reads `likes_count` for [reciterSlug] from `reciter_stats`. */
+    /** Reads `likes_count` for [reciterSlug] from the batched `reciter_stats` snapshot. */
     suspend fun likesCount(reciterSlug: String): Long? =
         reciterStat(reciterSlug, "likes_count")
 
@@ -488,30 +520,65 @@ actual object SyncEngine {
                 val slug = reciterSlug.trim()
                 if (slug.isEmpty()) return@withContext null
                 val db = databases(ctx)
-                val data: Map<String, Any?>? = try {
-                    db.getDocument(DB_ID, RECITER_STATS, slug).data
-                } catch (e: Exception) {
-                    if (!isNotFound(e)) {
-                        Log.w(TAG, "reciter_stats get '$slug' failed; trying query", e)
-                    }
-                    try {
-                        db.listDocuments(
-                            DB_ID,
-                            RECITER_STATS,
-                            listOf(Query.equal("slug", slug), Query.limit(1)),
-                        ).documents.firstOrNull()?.data
-                    } catch (e2: Exception) {
-                        if (!isNotFound(e2)) {
-                            Log.w(TAG, "reciter_stats query '$slug' failed", e2)
-                        }
-                        null
-                    }
-                }
-                (data?.get(field) as? Number)?.toLong()
+                (reciterStatsSnapshot(db)[slug]?.get(field) as? Number)?.toLong()
             } catch (_: Exception) {
                 null
             }
         }
+
+    /**
+     * Batched, TTL-cached `reciter_stats` read resolved into
+     * `slug → (field → value)`. One `listDocuments` serves every caller for
+     * [RECITER_STATS_TTL_MS].
+     *
+     * 404 is a legitimate "absent" answer — the collection is provisioned by
+     * hand and may not exist yet — so it short-circuits to an empty, CACHED
+     * snapshot instead of falling through to a second request. That empty
+     * result is the normal state for an unprovisioned collection, and caching
+     * it is what keeps a sync pass at one `reciter_stats` request instead of
+     * two per followed reciter. Never throws; on an unexpected failure the
+     * previous snapshot is kept.
+     */
+    private suspend fun reciterStatsSnapshot(
+        db: Databases,
+    ): Map<String, Map<String, Any?>> {
+        val now = System.currentTimeMillis()
+        val cached = reciterStatsCache
+        if (reciterStatsReadAtMs > 0L && now - reciterStatsReadAtMs < RECITER_STATS_TTL_MS) {
+            return cached
+        }
+        val fresh = try {
+            val docs = db.listDocuments(
+                DB_ID,
+                RECITER_STATS,
+                listOf(Query.limit(RECITER_STATS_MAX_DOCS)),
+            ).documents
+            if (docs.size >= RECITER_STATS_MAX_DOCS) {
+                Log.w(TAG, "reciter_stats list hit the $RECITER_STATS_MAX_DOCS cap; counts may be partial.")
+            }
+            val out = HashMap<String, Map<String, Any?>>(docs.size * 2)
+            for (doc in docs) {
+                // `slug` is the unique-indexed key; the doc id is not part of
+                // the contract, so key off the attribute and fall back to the
+                // doc id only when the attribute is missing.
+                val slug = (doc.data["slug"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: doc.id
+                out[slug] = doc.data
+            }
+            out
+        } catch (e: Exception) {
+            if (isNotFound(e)) {
+                Log.w(TAG, "Collection '$RECITER_STATS' not found; follower counts stay unknown.")
+                emptyMap()
+            } else {
+                Log.w(TAG, "reciter_stats list failed", e)
+                return cached
+            }
+        }
+        reciterStatsCache = fresh
+        reciterStatsReadAtMs = System.currentTimeMillis()
+        return fresh
+    }
 
     // ------------------------------------------------------- reciter catalog
     //
@@ -1357,21 +1424,35 @@ actual object SyncEngine {
         val existing = listHistoryForUser(db, userId) ?: return
         val now = System.currentTimeMillis()
         val localIds = mutableSetOf<String>()
+        // Prune invariant: the loop below may only delete a cloud doc this
+        // device can PROVE it no longer has. An entry whose reciter slug /
+        // audio URL no longer resolves (stale or renamed slug, missing surah)
+        // cannot be turned back into the doc id the writing device used (that
+        // id is built from the CANONICAL slug, which is unknowable here), so
+        // such a surah is quarantined: we still register the best-effort id we
+        // CAN compute, and every doc in that surah is exempt from the prune.
+        // Without this, one stale slug on one device silently deletes that
+        // surah's history on every other device.
+        val unresolvedSurahs = mutableSetOf<Int>()
         local.forEachIndexed { index, item ->
-            val track = buildHistoryTrack(item)
-            if (track == null) {
-                Log.w(
-                    TAG,
-                    "history push: skipping unresolvable entry " +
-                        "'${item.reciterSlug}/${item.surahId}'."
-                )
-                return@forEachIndexed
-            }
             // Zero-timestamp entries are in-session items not yet reloaded from
             // disk (PersistedHistoryItem stamps on save): stagger them so the
             // local most-recent-first order survives the played_at_ms ranking.
             val playedAt = item.lastPlayedTimestampMs.takeIf { it > 0L }
                 ?: (now - index)
+            val track = buildHistoryTrack(item)
+            if (track == null) {
+                unresolvedSurahs += item.surahId
+                // Best-effort protection in case the writing device used the
+                // same raw slug (already-known reciter, blank audio URL).
+                localIds += historyDocId(item.reciterSlug, item.surahId, playedAt)
+                Log.w(
+                    TAG,
+                    "history push: skipping unresolvable entry " +
+                        "'${item.reciterSlug}/${item.surahId}' (surah excluded from prune)."
+                )
+                return@forEachIndexed
+            }
             val docId = historyDocId(track.reciterSlug, track.surahId, playedAt)
             localIds.add(docId)
             val data: Map<String, Any?> = mapOf(
@@ -1383,14 +1464,38 @@ actual object SyncEngine {
             upsert(db, HISTORY, docId, data)
         }
         for (doc in existing) {
-            if (doc.id !in localIds) {
-                try {
-                    db.deleteDocument(DB_ID, HISTORY, doc.id)
-                } catch (e: Exception) {
-                    Log.e(TAG, "delete stale history ${doc.id} failed", e)
+            if (doc.id in localIds) continue
+            if (unresolvedSurahs.isNotEmpty()) {
+                val docSurahId = historyDocSurahId(doc)
+                if (docSurahId != null && docSurahId in unresolvedSurahs) {
+                    Log.i(
+                        TAG,
+                        "history prune: keeping ${doc.id} (surah $docSurahId has an " +
+                            "unresolvable local entry)."
+                    )
+                    continue
                 }
             }
+            try {
+                db.deleteDocument(DB_ID, HISTORY, doc.id)
+            } catch (e: Exception) {
+                Log.e(TAG, "delete stale history ${doc.id} failed", e)
+            }
         }
+    }
+
+    /**
+     * Surah id a cloud `history` doc belongs to, decoded from its `track_json`.
+     * Null when the payload is missing/malformed — such a doc is not a real
+     * entry of any device, so it stays prunable as before.
+     */
+    private fun historyDocSurahId(
+        doc: io.appwrite.models.Document<Map<String, Any>>,
+    ): Int? = try {
+        val raw = (doc.data["track_json"] as? String)?.trim().orEmpty()
+        if (raw.isEmpty()) null else json.decodeFromString<TrackItem>(raw).surahId
+    } catch (_: Exception) {
+        null
     }
 
     /**
@@ -2061,11 +2166,51 @@ actual object SyncEngine {
     private fun sanitizeId(s: String): String =
         s.replace(Regex("[^A-Za-z0-9-_]"), "-")
 
-    private fun likeDocId(userId: String, slug: String, surahId: Int, ayahNo: Int): String =
-        "fav-${sanitizeId(slug)}-$surahId-$ayahNo".take(36)
+    private const val HEX_DIGITS = "0123456789abcdef"
 
+    /**
+     * Deterministic [chars]-char (even, ≤ 64) SHA-256 hex prefix of the FULL
+     * [value], for doc ids that must fit Appwrite's 36-char limit without
+     * truncating their inputs.
+     *
+     * Why a hash and not `sanitizeId(...) + take(36)`: `takeslice` on a slug
+     * silently merges any two slugs sharing a ~32-char prefix, and prefixing
+     * with a truncated userId does the same across users. Hashing the whole
+     * input makes the id a function of every character, so two ids differ
+     * unless their full inputs share a digest prefix — 24 hex chars is 96 bits,
+     * i.e. birthday-safe across every account size this app will ever see.
+     */
+    private fun shortHash(value: String, chars: Int = 24): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
+        val sb = StringBuilder(chars)
+        var i = 0
+        while (sb.length < chars) {
+            val b = digest[i].toInt() and 0xff
+            sb.append(HEX_DIGITS[b ushr 4]).append(HEX_DIGITS[b and 0x0f])
+            i++
+        }
+        return sb.toString()
+    }
+
+    /**
+     * Like doc id: `"fav-" + sha256("<userId>|<slug>|<surahId>|<ayahNo>")[0..24)`
+     * (28 chars). Hashing the full tuple keeps the id unique per user even
+     * though `likes` is `documentSecurity: true` (two users liking the same
+     * ayah must not contend for one doc), and no longer truncates long slugs.
+     */
+    private fun likeDocId(userId: String, slug: String, surahId: Int, ayahNo: Int): String =
+        "fav-${shortHash("$userId|$slug|$surahId|$ayahNo")}"
+
+    /**
+     * Follow doc id: `"fol-" + sha256("<userId>|<slug>")[0..24)` (28 chars).
+     * The `userId` is part of the hashed input on purpose: with
+     * `documentSecurity: true` on `follows` a slug-only id means the second
+     * user to follow a reciter gets 409 on create and then 401/403 on the
+     * `upsert` fallback, which rethrows and fails the whole sync pass — that
+     * user's follow would never reach the cloud.
+     */
     private fun followDocId(userId: String, slug: String): String =
-        "fol-${sanitizeId(slug)}".take(36)
+        "fol-${shortHash("$userId|$slug")}"
 
     private fun scheduleDocId(userId: String, scheduleId: String): String =
         scheduleId.take(36)
