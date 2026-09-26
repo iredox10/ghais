@@ -26,7 +26,8 @@ import org.jetbrains.compose.resources.Font
  * - label-lg: 14sp / 20sp lineHeight, 0.01em letterSpacing
  * - label-md: 12sp / 16sp lineHeight, 0.02em letterSpacing
  * - label-sm: 11sp / 14sp lineHeight, 0.03em letterSpacing
- * - Arabic Ayah & Surah text: 1.8x line-height ratio to prevent tashkeel clipping
+ * - Arabic Ayah & Surah text: QURAN_LINE_HEIGHT_RATIO line-height ratio
+ *   to prevent tashkeel clipping
  */
 object GhaisTypography {
     // -------------------------------------------------------------------------
@@ -185,15 +186,44 @@ object GhaisTypography {
     )
 
     // -------------------------------------------------------------------------
-    // Arabic Scripture typography (1.8x line-height ratio for tashkeel diacritics)
+    // Arabic Scripture typography (QURAN_LINE_HEIGHT_RATIO line-height ratio
+    // for tashkeel diacritics)
     // QCF Hafs (KFGQPC HAFS Uthmanic Script v22, official bundle) — see
     // composeResources/font. Resource fonts load in composition, so the
     // family is a composable getter; pass it as Text's fontFamily alongside
     // the arabic* styles.
     // -------------------------------------------------------------------------
+
+    /**
+     * Single line-height ratio for every Quranic text surface.
+     *
+     * QCF Hafs' designed line box is 1.758 em (hhea ascender 2400 / descender
+     * -1200 at upem 2048), so 2.0 clears the tashkeel with headroom and is the
+     * ratio used app-wide. Hoisted here so the mushaf surfaces stop drifting
+     * onto their own 2.1.
+     */
+    const val QURAN_LINE_HEIGHT_RATIO = 2.0f
+
     val quranFont: FontFamily
         @Composable
         get() = FontFamily(Font(Res.font.QCF_Hafs))
+
+    /**
+     * Quranic text style: QCF Hafs with tracking explicitly zeroed.
+     *
+     * `MaterialTheme` hands out a `LocalTextStyle` carrying bodyLarge's
+     * `letterSpacing = (-0.005).em`, and any `Text` that does not override
+     * tracking inherits it. Arabic is a cursive script: non-zero tracking
+     * inserts gaps between joined letters, which breaks the cursive joins
+     * (CSS Text L3 §7.2.1 requires a UA to drop spacing it cannot apply
+     * safely; see also Google bug 442051322 for measurement loss/truncation
+     * on Arabic with tracking). Pass this as `style =` on Quranic `Text` so
+     * tracking is zero at the source. Inline `fontSize`/`lineHeight`/`color`/
+     * `fontWeight` still win over it.
+     */
+    val quranScript: TextStyle
+        @Composable
+        get() = TextStyle(fontFamily = quranFont, letterSpacing = 0.sp)
 
     val arabicTitle = TextStyle(
         fontWeight = FontWeight.Normal,

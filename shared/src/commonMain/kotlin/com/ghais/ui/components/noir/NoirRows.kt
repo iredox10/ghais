@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
@@ -89,7 +90,8 @@ fun NoirListRow(
                 text = subtitle,
                 color = GhaisNoir.TextSecondary,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Normal
+                fontWeight = FontWeight.Normal,
+                letterSpacing = subtitleLetterSpacing(subtitle)
             )
         }
         if (trailing != null) {
@@ -111,3 +113,15 @@ fun NoirListRow(
         }
     }
 }
+
+private val ARABIC_IN_SUBTITLE = Regex("[؀-ۿݐ-ݿﭐ-﷿ﹰ-ﻼ]")
+
+/**
+ * Subtitles often mix an Arabic surah name with a Latin count. The theme's
+ * `bodyLarge` tracking is negative, and per CSS Text L3 §7.2.1 tracking must
+ * not be inserted between the letters of a cursive script, so it is zeroed
+ * whenever the string actually contains Arabic. Latin-only subtitles keep
+ * inheriting the theme value untouched.
+ */
+private fun subtitleLetterSpacing(subtitle: String) =
+    if (ARABIC_IN_SUBTITLE.containsMatchIn(subtitle)) 0.sp else TextUnit.Unspecified
