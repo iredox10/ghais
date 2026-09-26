@@ -55,12 +55,26 @@ fun App() {
         val cachedSession by AuthRepository.cachedSession.collectAsState()
         val doneForUser by OnboardingStore.isDoneForCurrentUser.collectAsState()
         var forceOnboarding by remember { mutableStateOf(false) }
+        val signedInUserId = session?.userId ?: cachedSession?.userId
         LaunchedEffect(Unit) { AuthRepository.refreshSession() }
         LaunchedEffect(Unit) { SyncTriggers.start(this) }
         // OnboardingScreen exposes plain Screen.Content() with no onFinish/onComplete
         // callback (completion lands in OnboardingStore internally); clearing the
         // replay latch is therefore observed via doneForUser.
         LaunchedEffect(doneForUser) { if (doneForUser) forceOnboarding = false }
+        // Onboarding belongs to brand-new accounts only. Every other
+        // established session (returning login, session restored at launch,
+        // cached offline session) records the per-user flag as done, so the
+        // gate below and any later owner rebind can never drop that user back
+        // into onboarding. Keyed off the session user id rather than the store
+        // namespace because OnboardingStore.setOwner runs on SyncTriggers'
+        // own collector and may still be bound to "local" on this frame —
+        // doneForUser doubles as a key so that the first write landing in the
+        // wrong namespace is retried once setOwner reports the real value.
+        LaunchedEffect(signedInUserId, forceOnboarding, doneForUser) {
+            if (signedInUserId == null || forceOnboarding || doneForUser) return@LaunchedEffect
+            OnboardingStore.markDoneForCurrentUser()
+        }
         // Offline gate: no internet → refreshSession fails → session null even
         // for logged-in users. cachedSession is the last-known user from
         // persistent storage; when set, enter main content in offline mode
@@ -84,7 +98,7 @@ fun App() {
                     }
                 },
             ).Content()
-        } else if (forceOnboarding || !doneForUser) {
+        } else if (forceOnboarding) {
             OnboardingScreen.Content()
         } else {
             Navigator(MainScreen) { navigator ->

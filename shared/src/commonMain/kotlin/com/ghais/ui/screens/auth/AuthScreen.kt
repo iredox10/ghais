@@ -65,7 +65,15 @@ import kotlinx.coroutines.launch
  * @param onAuthenticated called on successful sign-in / sign-up (host pops/dismisses the gate).
  * `true` when a brand-new account was just created (host replays onboarding);
  * `false` for returning logins (host goes straight home).
- * Google sign-in always reports false (returning login); only email signup reports true.
+ *
+ * Email: `true` iff the Sign-up tab was used — Appwrite rejects an existing
+ * email with 409, so a successful `signUp` is always a fresh account.
+ *
+ * Google: there is no local "signup" intent to read, so newness is resolved by
+ * [resolveGoogleIsNewAccount] against the userId this device had cached
+ * *before* the OAuth round-trip. It fails OPEN (reports `true`) whenever the
+ * device holds no prior account, so a new Google user is never dropped on Home
+ * with a `null` goal.
  * @param onGuest legacy no-op kept for backward compatibility; no guest affordance is rendered.
  */
 class AuthScreen(
@@ -392,12 +400,21 @@ fun AuthScreenContent(
                         .noirClickable(onClick = {
                             if (loading || googleLoading) return@noirClickable
                             errorMessage = null
+                            // Snapshot BEFORE the round-trip: the successful
+                            // sign-in overwrites cachedSession with the account
+                            // that just logged in, which would erase the only
+                            // evidence that this device knew someone else.
+                            val userIdCachedBefore = AuthRepository.cachedSession.value?.userId
                             googleLoading = true
                             scope.launch {
                                 val result = AuthRepository.signInWithGoogle()
                                 googleLoading = false
                                 result
-                                    .onSuccess { onAuthenticated(false) }
+                                    .onSuccess {
+                                        onAuthenticated(
+                                            resolveGoogleIsNewAccount(userIdCachedBefore),
+                                        )
+                                    }
                                     .onFailure {
                                         errorMessage = it.message?.takeIf { msg -> msg.isNotBlank() }
                                             ?: "Authentication failed. Please try again."
@@ -434,6 +451,43 @@ fun AuthScreenContent(
 
             Spacer(Modifier.height(12.dp))
         }
+    }
+}
+
+/**
+ * Decides whether the Google account that just signed in is brand new.
+ *
+ * ## Signal
+ * [AuthRepository.cachedSession] — the last userId this device persisted —
+ * sampled *before* the OAuth round-trip. Purely local: no network, so it can
+ * never hang the sign-in path. `AuthRepository` exposes no account
+ * `createdAt` and no database probe, so a device-local comparison is the only
+ * newness signal reachable from this file.
+ *
+ * ## Outcome table
+ * | Pre-sign-in cached userId | Signed-in userId | Reported |
+ * |---|---|---|
+ * | null (fresh install / after sign-out) | any | `true` — nothing here has ever been established |
+ * | `A` | `B` | `true` — account switch to an account this device never held |
+ * | `A` | `A` | `false` — returning login on this device |
+ * | `A` | null (refresh failed) | `false` — mirror the pre-sign-in state, do not claim newness we cannot prove |
+ * | null | null (refresh failed) | `true` — device held no prior account; fail open |
+ *
+ * ## Failure direction
+ * Fails OPEN, deliberately: any case where newness cannot be *disproven*
+ * reports `true`, so a new Google user always reaches onboarding instead of
+ * landing on Home with a `null` goal. The cost of failing open is that a
+ * returning user who signs in on a *different* device than the one they last
+ * used sees onboarding once more — cosmetic and self-correcting (completing it
+ * sets the per-user done flag), whereas failing closed would permanently
+ * strand a new user with no goal.
+ */
+private fun resolveGoogleIsNewAccount(userIdCachedBefore: String?): Boolean {
+    val userIdNow = AuthRepository.session.value?.userId
+    return when {
+        userIdNow == null -> userIdCachedBefore == null
+        userIdCachedBefore == null -> true
+        else -> userIdNow != userIdCachedBefore
     }
 }
 
