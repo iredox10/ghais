@@ -40,11 +40,9 @@ import com.ghais.ui.screens.stats.StatsScreen
  * navigation targets; only the surface language changed: every accent hue,
  * flat grey card and gradient tile is replaced by alpha-white glass.
  *
- * The scroll now opens with an inline search panel ([HomeSearchSection]) for
- * reciters, surahs and listening history. The top-bar search well still
- * pushes the dedicated [SearchScreen] — that screen remains the only path
- * that resolves ayah references — and the panel's own "See all" hands off to
- * it, so Home has one search entry point with a deep link, not two rivals.
+ * Search lives in the top-bar well only, which pushes [SearchScreen] — the one
+ * place that resolves ayah references and keeps query history. The scroll
+ * itself opens at Continue listening.
  */
 object HomeScreen : Tab {
     override val options: TabOptions
@@ -77,28 +75,6 @@ object HomeScreen : Tab {
                         onStatsClick = { rootNavigator?.push(StatsScreen) }
                     )
                     Spacer(Modifier.height(20.dp))
-                }
-
-                // -------------------------------------------------------------
-                // Search — inline reciter / surah / history panel. Collapsed it
-                // is a list row whose clay well matches the top-bar search
-                // button; "See all" hands off to the dedicated search screen,
-                // which stays the only path that resolves ayah references.
-                // -------------------------------------------------------------
-                item {
-                    HomeSectionHeader(
-                        title = "Search",
-                        onSeeAll = { rootNavigator?.push(SearchScreen()) }
-                    )
-                    HomeSearchSection(
-                        onReciterClick = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) },
-                        onHistoryPlay = { entry ->
-                            resumeHistoryEntry(entry) { rootNavigator?.push(NowPlayingScreen()) }
-                        },
-                        onSeeAllHistory = { rootNavigator?.push(HistoryScreen) },
-                        onOpenFullSearch = { rootNavigator?.push(SearchScreen()) }
-                    )
-                    Spacer(Modifier.height(18.dp))
                 }
 
                 // -------------------------------------------------------------
