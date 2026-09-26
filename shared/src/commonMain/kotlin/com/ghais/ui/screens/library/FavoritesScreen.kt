@@ -180,7 +180,6 @@ object FavoritesScreen : Screen {
                                             text = if (favorites.isEmpty()) "0 saved"
                                             else "${favorites.size} saved"
                                         )
-                                        NoirStatChip(text = "Offline ready")
                                     }
 
                                     if (favorites.isNotEmpty()) {

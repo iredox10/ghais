@@ -269,7 +269,6 @@ object StatsScreen : Screen {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         NoirStatChip(text = "${favorites.size} Favorites")
                         NoirStatChip(text = "${followed.size} Following")
-                        NoirStatChip(text = "${downloaded.size} Downloads")
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                 }
