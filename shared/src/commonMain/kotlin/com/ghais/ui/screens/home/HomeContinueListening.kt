@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -34,7 +35,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.UserUsageRepository
+import com.ghais.data.repository.prettifySlug
 import com.ghais.data.seed.JumpBackInItem
+import com.ghais.domain.model.Surah
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.NoirCard
@@ -45,6 +48,7 @@ import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.screens.reciters.rememberCloudPhoto
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.util.bidiIsolate
 
 /**
  * Phase 4 — "Continue listening".
@@ -53,6 +57,12 @@ import com.ghais.ui.theme.GhaisShapes
  * meter + chromium Resume), the remainder becomes a rail of compact plates.
  * The live row is signalled by fill elevation, a brighter specular border and a
  * chromium disc — never by the old emerald accent or animated colour borders.
+ *
+ * Both plates carry the full surah identity (English name, Arabic name, ordinal,
+ * ayah count, revelation type) resolved from the entry's `surahId`, matching the
+ * surah line used by the reciter and memorization screens. A plate whose id is
+ * not in the catalog shows the title the history record itself stored and drops
+ * the unresolvable fragments rather than drawing a blank or invented one.
  */
 @Composable
 fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
@@ -124,14 +134,43 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
                         letterSpacing = 1.2.sp
                     )
                     Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = hero.title,
-                        color = GhaisNoir.TextPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = surahNameOf(hero),
+                            color = GhaisNoir.TextPrimary,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        val arabicName = arabicNameOf(hero)
+                        if (arabicName.isNotEmpty()) {
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = bidiIsolate(arabicName),
+                                color = GhaisNoir.TextSecondary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                // Bound the Arabic so it can never starve the
+                                // English name out of the row.
+                                modifier = Modifier.widthIn(max = 96.dp)
+                            )
+                        }
+                    }
+                    val heroMeta = surahMetaOf(hero)
+                    if (heroMeta.isNotEmpty()) {
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            text = heroMeta,
+                            color = GhaisNoir.TextTertiary,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                     Spacer(Modifier.height(3.dp))
                     Text(
                         text = hero.subtitle,
@@ -198,7 +237,7 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
     }
 }
 
-/** Compact rail plate: artwork, dual text, engraved progress, state disc. */
+/** Compact rail plate: artwork, surah identity, reciter line, engraved progress, state disc. */
 @Composable
 private fun NoirRecentPlate(
     item: JumpBackInItem,
@@ -250,13 +289,24 @@ private fun NoirRecentPlate(
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = item.title,
+                text = surahTitleOf(item),
                 color = GhaisNoir.TextPrimary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            val arabicLine = arabicAyahLineOf(item)
+            if (arabicLine.isNotEmpty()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = arabicLine,
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
             Spacer(Modifier.height(3.dp))
             Text(
                 text = item.subtitle,
@@ -296,11 +346,92 @@ private fun NoirRecentPlate(
 
 private fun progressOf(item: JumpBackInItem): Float = item.progress.coerceIn(0f, 1f)
 
-private fun monogramOf(item: JumpBackInItem): String =
-    item.title.firstOrNull()?.uppercase() ?: "Q"
+// ---------------------------------------------------------------------------
+// Surah / reciter identity
+//
+// [JumpBackInItem] (data/seed/GhaisAssets.kt) stores no Arabic name and no
+// ayah count — only a `surahId`. That is enough: the id indexes the full
+// 114-surah catalog, so the whole house surah line (`id. nameEn` /
+// `nameAr • n Ayahs • revelation`) is derivable at render time and was simply
+// never drawn. Every helper below therefore resolves through the catalog and
+// degrades to the identity the history record itself carries, never to blank.
+// ---------------------------------------------------------------------------
 
+/** The catalog surah for a history entry, or null when the id is not a surah. */
+private fun surahOf(item: JumpBackInItem): Surah? =
+    QuranDataRepository.getSurahById(item.surahId)
+
+/** Arabic surah name; empty when the catalog has no such surah. */
+private fun arabicNameOf(item: JumpBackInItem): String =
+    surahOf(item)?.nameAr?.trim().orEmpty()
+
+/**
+ * English surah name. Prefers the catalog (canonical, always present for a
+ * real surah) and otherwise keeps the title the history record stored. Never
+ * blank: with neither, it reports the raw id, matching the fallback the
+ * history writer itself uses.
+ */
+private fun surahNameOf(item: JumpBackInItem): String {
+    surahOf(item)?.nameEn?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
+    return item.title.trim().ifEmpty { "Surah ${item.surahId}" }
+}
+
+/** Ordinal-prefixed house title, e.g. "88. Al-Ghashiyah". */
+private fun surahTitleOf(item: JumpBackInItem): String {
+    val surah = surahOf(item)
+    return if (surah != null) "${surah.id}. ${surah.nameEn}" else surahNameOf(item)
+}
+
+/** "Surah 88 • 26 Ayahs • Meccan"; empty when the catalog has no such surah. */
+private fun surahMetaOf(item: JumpBackInItem): String {
+    val surah = surahOf(item) ?: return ""
+    return listOfNotNull(
+        "Surah ${surah.id}",
+        surah.ayahsCount.takeIf { it > 0 }?.let { "$it Ayahs" },
+        surah.revelationType.trim().takeIf { it.isNotEmpty() }
+    ).joinToString(" • ")
+}
+
+/**
+ * "الغاشية • 26 Ayahs" for the compact rail plate — the house surah line
+ * without the ordinal (the title above already carries it) and without the
+ * revelation type, which does not fit the plate width. Empty when unresolved,
+ * and the caller then omits the row instead of drawing an empty one.
+ */
+private fun arabicAyahLineOf(item: JumpBackInItem): String {
+    val surah = surahOf(item) ?: return ""
+    return listOfNotNull(
+        surah.nameAr.trim().takeIf { it.isNotEmpty() }?.let { bidiIsolate(it) },
+        surah.ayahsCount.takeIf { it > 0 }?.let { "$it Ayahs" }
+    ).joinToString(" • ")
+}
+
+/**
+ * Reciter name for a history entry.
+ *
+ * `getReciterBySlug` is deliberately lossy — an unknown slug resolves to
+ * Mishary Rashid Alafasy — so it must not be used for display identity. The
+ * alias-aware, null-on-miss `getBrowseReciterBySlug` reads the same
+ * cloud-merged catalog and reports a genuine miss, which then falls back to
+ * the entry's own slug rather than borrowing another human's name.
+ */
+private fun reciterNameOf(item: JumpBackInItem): String =
+    QuranDataRepository.getBrowseReciterBySlug(item.reciterSlug)
+        ?.nameEn?.trim()?.takeIf { it.isNotEmpty() }
+        ?: item.reciterSlug.trim().takeIf { it.isNotEmpty() }?.prettifySlug()
+        ?: "Unknown reciter"
+
+/** Surah monogram — the initial of the name the card actually shows. */
+private fun monogramOf(item: JumpBackInItem): String =
+    surahNameOf(item).firstOrNull { it.isLetter() }?.uppercase() ?: "?"
+
+/**
+ * Reciter monogram. "?" (not a borrowed "M" and not a fake "Q") when the
+ * reciter genuinely cannot be identified, so the well never asserts an
+ * identity the data does not support.
+ */
 private fun reciterMonogramOf(item: JumpBackInItem): String =
-    QuranDataRepository.getReciterBySlug(item.reciterSlug).nameEn.firstOrNull()?.uppercase() ?: "Q"
+    reciterNameOf(item).firstOrNull { it.isLetter() }?.uppercase() ?: "?"
 
 private fun isLive(item: JumpBackInItem, surahId: Int?, reciterSlug: String?): Boolean =
     surahId != null && reciterSlug != null &&
