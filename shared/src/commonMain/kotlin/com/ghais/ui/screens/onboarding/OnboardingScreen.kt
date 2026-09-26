@@ -5,7 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,8 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -60,14 +61,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
-import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.OnboardingStore
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.data.repository.RecitationSchedule
 import com.ghais.data.repository.SchedulesStore
-import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.domain.model.Reciter
 import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.GhostPillButton
@@ -77,6 +76,8 @@ import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSwitch
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
+import com.ghais.ui.screens.reciters.NoirReciterArtwork
+import com.ghais.ui.screens.reciters.resolveReciterPhoto
 import com.ghais.ui.theme.GhaisNoir
 import ghais.shared.generated.resources.Res
 import ghais.shared.generated.resources.ghais_mark
@@ -106,7 +107,17 @@ object OnboardingScreen : Screen {
         var reminderOn by remember { mutableStateOf(false) }
         var hour by remember { mutableStateOf(7) }
         var minute by remember { mutableStateOf(0) }
-        val reciters = rememberBrowseReciters().take(8)
+        val browseReciters = rememberBrowseReciters()
+        val reciters = remember(browseReciters) {
+            browseReciters
+                .sortedWith(
+                    compareBy<Reciter>(
+                        { if (resolveReciterPhoto(it.slug) != null) 0 else 1 },
+                        { it.nameEn }
+                    )
+                )
+                .take(16)
+        }
 
         fun goTo(page: Int) {
             scope.launch { pagerState.animateScrollToPage(page.coerceIn(0, LastPage)) }
@@ -179,8 +190,8 @@ object OnboardingScreen : Screen {
                             onPick = { slug ->
                                 FollowStore.clear()
                                 FollowStore.follow(slug)
-                                goTo(3)
-                            }
+                            },
+                            onContinue = { goTo(3) }
                         )
                         3 -> GoalReminderStep(
                             minutes = minutes,
@@ -405,11 +416,13 @@ private fun GoalCard(option: GoalOption, selected: Boolean, onClick: () -> Unit)
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ReciterStep(
     reciters: List<Reciter>,
     followed: Set<String>,
-    onPick: (String) -> Unit
+    onPick: (String) -> Unit,
+    onContinue: () -> Unit
 ) {
     StepScroll {
         Text(
@@ -423,68 +436,68 @@ private fun ReciterStep(
             fontSize = 14.sp
         )
         Spacer(modifier = Modifier.height(18.dp))
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            items(reciters, key = { it.catalogKey() }) { reciter ->
-                val photo = remember(reciter.slug) {
-                    resolveFollowedQari(reciter.slug)?.photoUrl
-                }
-                val selected = followed.contains(reciter.slug)
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .width(84.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .noirClickable { onPick(reciter.slug) }
-                        .padding(vertical = 4.dp)
-                ) {
-                    Box(
+        val selectedSlug = followed.firstOrNull()
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val gap = 8.dp
+            val avatarSize = ((maxWidth - gap * 3) / 4).coerceIn(48.dp, 64.dp)
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(gap),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                maxItemsInEachRow = 4
+            ) {
+                reciters.forEach { reciter ->
+                    val photo = remember(reciter.slug) { resolveReciterPhoto(reciter.slug) }
+                    val selected = followed.contains(reciter.slug)
+                    val ringWidth = if (selected) 3.dp else 1.dp
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .size(72.dp)
-                            .clip(CircleShape)
-                            .background(GhaisNoir.Fill2)
-                            .border(
-                                if (selected) 3.dp else 1.dp,
-                                if (selected) Color.White else GhaisNoir.BorderGhost,
-                                CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
+                            .weight(1f)
+                            .noirClickable { onPick(reciter.slug) }
+                            .padding(vertical = 4.dp)
                     ) {
-                        if (photo != null) {
-                            AsyncImage(
-                                model = photo,
-                                contentDescription = reciter.nameEn,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape)
+                        Box(
+                            modifier = Modifier.size(avatarSize),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            NoirReciterArtwork(
+                                photoUrl = photo,
+                                nameEn = reciter.nameEn,
+                                size = avatarSize - ringWidth * 2,
+                                shape = CircleShape,
+                                monogramSize = 22.sp,
+                                ring = false,
+                                slug = reciter.slug,
+                                grayscale = false,
+                                scrimAlpha = 0f
                             )
-                        } else {
-                            Text(
-                                text = reciter.nameEn.take(1).uppercase(),
-                                color = GhaisNoir.TextPrimary,
-                                fontSize = 26.sp,
-                                fontWeight = FontWeight.ExtraBold
+                            Box(
+                                modifier = Modifier
+                                    .size(avatarSize)
+                                    .clip(CircleShape)
+                                    .border(
+                                        ringWidth,
+                                        if (selected) Color.White else GhaisNoir.BorderGhost,
+                                        CircleShape
+                                    )
                             )
                         }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = reciter.nameEn,
+                            color = if (selected) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                            fontSize = 11.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = reciter.nameEn,
-                        color = if (selected) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                        fontSize = 12.sp,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
                 }
             }
         }
         Spacer(modifier = Modifier.height(18.dp))
-        val selectedSlug = followed.firstOrNull()
         if (selectedSlug != null) {
             val name = QuranDataRepository.getReciterBySlug(selectedSlug).nameEn
             NoirCard(modifier = Modifier.fillMaxWidth()) {
@@ -510,6 +523,10 @@ private fun ReciterStep(
                 color = GhaisNoir.TextTertiary,
                 fontSize = 13.sp
             )
+        }
+        if (selectedSlug != null) {
+            Spacer(modifier = Modifier.height(20.dp))
+            PrimaryButton(label = "Continue", onClick = onContinue)
         }
     }
 }
