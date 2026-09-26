@@ -430,6 +430,13 @@
           "type": "string",
           "size": 64,
           "required": false
+        },
+        {
+          "key": "track_json",
+          "type": "string",
+          "size": 16384,
+          "required": false,
+          "note": "Serialised TrackItem for the favourite, same declaration as history.track_json (which stores encodeToString(TrackItem) per history row). Added 2026-09-26: with no track_json the pull had to rebuild a playable TrackItem from the scalar columns, permanently losing textUthmani (the Arabic text the favourite row displays) and durationMs. Size matches history's 16384 on purpose - same TrackItem payload."
         }
       ],
       "indexes": [
@@ -539,7 +546,32 @@
           "key": "percent",
           "type": "float",
           "required": false,
-          "default": 0.0
+          "default": 0.0,
+          "note": "Kept because the app still writes it (progressPercentage = totalAyahsRead / 6236). Derivable from total_ayahs_read, but the push sends both and the pull falls back to it when total_ayahs_read is absent."
+        },
+        {
+          "key": "streak",
+          "type": "integer",
+          "required": false,
+          "note": "Consecutive-day streak (KhatmaPlan.streak). Added 2026-09-26: the pull used to FABRICATE streak 0 with startDateMs = lastProgressMs = now, so a 40-day streak became 0 on a new phone and KhatmaStore's newest-first planOrder (compareByDescending startDateMs) reshuffled."
+        },
+        {
+          "key": "total_ayahs_read",
+          "type": "integer",
+          "required": false,
+          "note": "Ayahs completed in this plan (KhatmaPlan.totalAyahsRead, 0..6236). The source of truth behind percent; also the direct restore value instead of the pull's round-trip through percent * 6236."
+        },
+        {
+          "key": "start_date_ms",
+          "type": "integer",
+          "required": false,
+          "note": "Epoch ms the plan was created (KhatmaPlan.startDateMs). Drives both daysRemaining (with last_progress_ms) and the newest-first plan ordering."
+        },
+        {
+          "key": "last_progress_ms",
+          "type": "integer",
+          "required": false,
+          "note": "Epoch ms of the last progress update (KhatmaPlan.lastProgressMs). Must be >= start_date_ms; daysRemaining = targetDays - (last_progress_ms - start_date_ms) / 86400000."
         }
       ],
       "indexes": [
@@ -647,6 +679,13 @@
           "required": false,
           "default": null,
           "note": "Per-device daily series {\"<epochDay>\":{\"<devId>\":seconds}}. Must stay >= the writer cap DAILY_JSON_MAX_CHARS = 8192 (SyncEngine.android.kt), which drops oldest days until the payload is under the cap; a smaller attribute size makes real writes fail with a non-unknown-attribute error. Was 4096 until 2026-09-25."
+        },
+        {
+          "key": "surah_plays",
+          "type": "string",
+          "size": 2048,
+          "required": false,
+          "note": "All-time per-surah play counts as a JSON object string, keys surahId 1..114 as STRINGS (JSON object keys always are), e.g. {\"1\":\"12\",\"18\":\"3\"} or {\"1\":12,\"18\":3}. Written by encodeSurahPlays (SyncEngine.android.kt) as {\"<surahId>\":<count>} with unquoted counts; decodeSurahPlays is lenient and also accepts quoted numbers, so both forms round-trip. The encoder's budget is plays.size * 12 + 2, i.e. at most ~1371 chars for all 114 surahs, so 2048 cannot be overflowed by a real write. All-time, so there is no per-device split: the pull maxes it per surah (same trade-off as daily_json). Added 2026-09-26; until provisioned the push shed this attribute via STATS_OPTIONAL_ATTRS and the per-surah chart never synced."
         }
       ],
       "indexes": [
@@ -959,6 +998,123 @@
           "attributes": [
             "user_id"
           ]
+        }
+      ]
+    },
+    {
+      "$id": "hifz_mastery",
+      "name": "Hifz Mastery",
+      "permissions": [
+        "read(\"users\")",
+        "create(\"users\")",
+        "update(\"users\")",
+        "delete(\"users\")"
+      ],
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "user_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "surah_id",
+          "type": "integer",
+          "required": true
+        },
+        {
+          "key": "ayah_no",
+          "type": "integer",
+          "required": true
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "size": 16,
+          "required": true
+        },
+        {
+          "key": "daily_goal_count",
+          "type": "integer",
+          "required": false,
+          "note": "Hifz per-ayah rows cannot carry the scalar counters. These four live on a single sentinel row (surah_id=0, ayah_no=0) so a restore keeps the user's goal and streak; without them importSnapshot would reset both on every sync pass."
+        },
+        {
+          "key": "streak_days",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "key": "today_reviewed_count",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "key": "last_review_day",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "user_surah_ayah_idx",
+          "type": "key",
+          "attributes": [
+            "user_id",
+            "surah_id",
+            "ayah_no"
+          ],
+          "note": "One row per ayah per user; the app resolves a single ayah's status with Query.equal on the triple. The scalar counters use the sentinel row surah_id=0, ayah_no=0, which this index also covers."
+        }
+      ]
+    },
+    {
+      "$id": "search_history",
+      "name": "Search Query History",
+      "permissions": [
+        "read(\"users\")",
+        "create(\"users\")",
+        "update(\"users\")",
+        "delete(\"users\")"
+      ],
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "user_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "query",
+          "type": "string",
+          "size": 128,
+          "required": true
+        },
+        {
+          "key": "ranked_at_ms",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "indexes": [
+        {
+          "key": "user_ranked_idx",
+          "type": "key",
+          "attributes": [
+            "user_id",
+            "ranked_at_ms"
+          ]
+        },
+        {
+          "key": "user_query_unique",
+          "type": "unique",
+          "attributes": [
+            "user_id",
+            "query"
+          ],
+          "note": "One document per distinct query; a repeat search updates ranked_at_ms instead of appending a duplicate."
         }
       ]
     }
