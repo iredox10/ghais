@@ -37,7 +37,6 @@ import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.FastForward
@@ -849,15 +848,6 @@ class NowPlayingScreen : Screen {
                         tint = if (volume > 0f) GhaisNoir.TextTertiary else GhaisNoir.TextDisabled,
                         onClick = { poke(); showVolume = !showVolume }
                     )
-                    if (isAyahMode) {
-                        NoirUtilityWell(
-                            icon = Icons.AutoMirrored.Filled.MenuBook,
-                            contentDescription = "Ayah Mode",
-                            active = true,
-                            tint = GhaisNoir.TextPrimary,
-                            onClick = { poke(); AudioEngine.toggleAyahMode() }
-                        )
-                    }
                     NoirUtilityWell(
                         icon = Icons.Filled.QueueMusic,
                         contentDescription = "Queue",
