@@ -32,7 +32,11 @@ data class CustomRoutine(
  *
  * Mirrors [FavoritesStore]/[FollowStore]/[SchedulesStore] persistence approach
  * (multiplatform Settings + JSON-encoded list + StateFlow).
- * The exposed list is newest first.
+ * The exposed list is newest first: [create] prepends, and the bulk entry
+ * points ([restoreAllJson], [mergeJson]) re-sort the whole list with
+ * [routineOrder]. Single-item mutators ([update], [setPublic], [delete]) keep
+ * the incoming item's slot, so the ordering is "newest first by
+ * `updatedAtMs`" only as good as the last bulk pass or create that ran.
  */
 object CustomRoutinesStore {
     private const val KEY_ROUTINES = "ghais_custom_routines"
@@ -122,29 +126,101 @@ object CustomRoutinesStore {
      * device) — existing local routines are never clobbered. Malformed or
      * blank entries are skipped per-item; duplicate ids collapse to the first
      * occurrence. Returns the number of routines adopted.
+     *
+     * The decoded `id` is preserved verbatim: the routine is added as decoded,
+     * never re-minted through [create]. That is what keeps the local set
+     * comparable to the cloud `routine_id` attributes the paired push prunes
+     * against.
+     *
+     * The empty-store gate is why this is NOT the pull path for a
+     * partially-populated store; use [mergeJson] for that.
      */
     fun restoreAllJson(rawJsons: List<String>): Int {
         if (_routines.value.isNotEmpty()) return 0
         val seenIds = LinkedHashSet<String>()
         val restored = mutableListOf<CustomRoutine>()
         for (raw in rawJsons) {
-            if (raw.isBlank()) continue
-            val routine = try {
-                json.decodeFromString<CustomRoutine>(raw)
-            } catch (_: Exception) {
-                continue
-            }
-            if (routine.id.isBlank() || !seenIds.add(routine.id)) continue
+            val routine = decodeRoutine(raw) ?: continue
+            if (!seenIds.add(routine.id)) continue
             restored.add(routine)
         }
         if (restored.isEmpty()) return 0
         // Newest-first, matching the store's exposed ordering.
-        _routines.value = restored.sortedWith(
-            compareByDescending<CustomRoutine> { it.updatedAtMs }.thenBy { it.id }
-        )
+        _routines.value = restored.sortedWith(routineOrder())
         save()
         return restored.size
     }
+
+    /**
+     * Merge-restores routines from cloud backup JSONs (the pull half of the
+     * `routine_backups` cloud collection sync; called by `SyncEngine`).
+     *
+     * MERGE, never replace, and — unlike [restoreAllJson] — never gated on the
+     * local list being empty. That gate is the reason this function exists:
+     * `SyncEngine.pushRoutineBackups` prunes every cloud backup whose
+     * `routine_id` is absent from the local set, so a cloud routine this device
+     * never adopts leaves a permanently unmatched id, which quarantines that
+     * prune forever and keeps backups of routines deleted on this device
+     * stranded on the cloud. Merging on every pass closes the set.
+     *
+     * - A routine already present locally wins on [CustomRoutine.id] match:
+     *   local is the live truth for something the user may have just edited,
+     *   and leaving it alone is also what makes the paired push's prune a
+     *   no-op for that id.
+     * - Incoming routines the local set does not have are inserted with their
+     *   `id` preserved verbatim — not re-minted through [create]. A re-minted
+     *   id would read as a brand-new local routine, so the push would upload a
+     *   second doc and prune the original it came from.
+     * - Blank ids and duplicate ids within one payload are skipped per-item,
+     *   and an empty payload is a no-op, so the call is idempotent: a second
+     *   pass with the same payload inserts nothing and returns 0.
+     *
+     * Decoding and ordering go through the same helpers [restoreAllJson] uses,
+     * so a merged routine is indistinguishable from a locally created one.
+     * Returns the number of routines actually inserted (0 = nothing changed),
+     * which the sync layer logs and reads as "the cloud set is now fully
+     * reconciled, pruning is safe".
+     */
+    fun mergeJson(rawJsons: List<String>): Int {
+        if (rawJsons.isEmpty()) return 0
+        val current = _routines.value
+        val localIds = current.mapTo(mutableSetOf()) { it.id }
+        val additions = LinkedHashMap<String, CustomRoutine>()
+        for (raw in rawJsons) {
+            val routine = decodeRoutine(raw) ?: continue
+            if (routine.id in localIds) continue
+            // Duplicate ids inside one payload collapse to the first.
+            if (additions.containsKey(routine.id)) continue
+            additions[routine.id] = routine
+        }
+        if (additions.isEmpty()) return 0
+        // Newest-first, matching the store's exposed ordering.
+        _routines.value = (current + additions.values).sortedWith(routineOrder())
+        save()
+        return additions.size
+    }
+
+    /**
+     * Decodes one backup payload, or null when the payload is blank or
+     * malformed. The single decode path for both bulk entry points, so a merged
+     * routine decodes exactly like a restored one.
+     */
+    private fun decodeRoutine(raw: String): CustomRoutine? {
+        if (raw.isBlank()) return null
+        return try {
+            val routine = json.decodeFromString<CustomRoutine>(raw)
+            if (routine.id.isBlank()) null else routine
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    // Newest-first, with the id as a stable tiebreak so two routines sharing an
+    // `updatedAtMs` (including the 0L default on older payloads) cannot swap
+    // places between passes — that would make an otherwise-idempotent merge
+    // churn the list.
+    private fun routineOrder(): Comparator<CustomRoutine> =
+        compareByDescending<CustomRoutine> { it.updatedAtMs }.thenBy { it.id }
 
     private fun load() {
         try {
