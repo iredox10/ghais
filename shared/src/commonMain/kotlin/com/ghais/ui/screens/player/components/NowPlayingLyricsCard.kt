@@ -59,7 +59,8 @@ import com.ghais.data.repository.AyahVerse
 import com.ghais.domain.model.TrackItem
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.theme.GhaisNoir
-import com.ghais.ui.util.appendGluedRosette
+import com.ghais.ui.util.appendAyahMark
+import com.ghais.ui.util.ayahMarkContent
 import com.ghais.ui.theme.GhaisTypography
 
 /**
@@ -301,7 +302,7 @@ fun NowPlayingLyricsCard(
                                         Text(
                                             text = buildAnnotatedString {
                                                 append(activeArabic)
-                                                appendGluedRosette(displayAyahNo)
+                                                appendAyahMark(displayAyahNo)
                                             },
                                             style = GhaisTypography.quranScript,
                                             fontSize = 25.sp,
@@ -311,6 +312,7 @@ fun NowPlayingLyricsCard(
                                             // above, End resolves to the LEFT edge.
                                             textAlign = TextAlign.Start,
                                             lineHeight = 50.sp,
+                                            inlineContent = ayahMarkContent(ringSize = 19.sp, digitSize = 9.sp),
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }

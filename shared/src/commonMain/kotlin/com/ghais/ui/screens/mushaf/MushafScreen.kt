@@ -44,7 +44,8 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisTypography
-import com.ghais.ui.util.appendGluedRosette
+import com.ghais.ui.util.appendAyahMark
+import com.ghais.ui.util.ayahMarkContent
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -936,7 +937,7 @@ private fun AyahBlock(
                     }
                 }
 
-                appendGluedRosette(ayah.ayahNumber)
+                appendAyahMark(ayah.ayahNumber)
             }
 
             val showBasmalah = ayah.ayahNumber == 1 && QuranAyahRepository.hasBasmalahHeader(surahId)
@@ -965,6 +966,10 @@ private fun AyahBlock(
                     // resolves to the LEFT edge.
                     textAlign = TextAlign.Start,
                     lineHeight = (arabicFontSize * GhaisTypography.QURAN_LINE_HEIGHT_RATIO).sp,
+                    inlineContent = ayahMarkContent(
+                        ringSize = (arabicFontSize * 0.75f).sp,
+                        digitSize = (arabicFontSize * 0.35f).sp,
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -1229,7 +1234,7 @@ private fun MushafPageViewCard(
                         }
                     }
 
-                    appendGluedRosette(ayah.ayahNumber)
+                    appendAyahMark(ayah.ayahNumber)
                 }
             }
 
@@ -1263,6 +1268,10 @@ private fun MushafPageViewCard(
                     // Start, not End: inside the Rtl provider above, End
                     // resolves to the LEFT edge.
                     textAlign = TextAlign.Start,
+                    inlineContent = ayahMarkContent(
+                        ringSize = ((arabicFontSize - 2) * 0.75f).sp,
+                        digitSize = ((arabicFontSize - 2) * 0.35f).sp,
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .noirClickable(onClick = {
@@ -1326,7 +1335,7 @@ private fun TafsirDialog(
                         if (ayah.tajweedPart != null) {
                             append(ayah.tajweedPart)
                         }
-                        appendGluedRosette(ayah.ayahNumber)
+                        appendAyahMark(ayah.ayahNumber)
                     },
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Normal,
@@ -1336,6 +1345,7 @@ private fun TafsirDialog(
                     // already the right edge here — leave it alone.
                     textAlign = TextAlign.End,
                     lineHeight = 36.sp,
+                    inlineContent = ayahMarkContent(ringSize = 14.sp, digitSize = 6.5.sp),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
                 )
                 Spacer(modifier = Modifier.height(10.dp))

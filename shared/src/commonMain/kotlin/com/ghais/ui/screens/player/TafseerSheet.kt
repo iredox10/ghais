@@ -74,7 +74,8 @@ import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
-import com.ghais.ui.util.appendGluedRosette
+import com.ghais.ui.util.appendAyahMark
+import com.ghais.ui.util.ayahMarkContent
 import com.ghais.ui.util.toArabicDigits
 import kotlinx.coroutines.launch
 import kotlin.math.PI
@@ -435,7 +436,7 @@ fun TafseerSheet(
                                 Text(
                                     text = buildAnnotatedString {
                                         append(entry.arabicText)
-                                        appendGluedRosette(entry.ayahNo)
+                                        appendAyahMark(entry.ayahNo)
                                     },
                                     style = GhaisTypography.quranScript,
                                     color = GhaisNoir.TextPrimary,
@@ -443,6 +444,7 @@ fun TafseerSheet(
                                     lineHeight = 48.sp,
                                     textAlign = TextAlign.Right,
                                     fontWeight = FontWeight.Normal,
+                                    inlineContent = ayahMarkContent(ringSize = 18.sp, digitSize = 8.sp),
                                     modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
                                 )
                             } else {

@@ -42,7 +42,8 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
 import androidx.compose.ui.text.buildAnnotatedString
-import com.ghais.ui.util.appendGluedRosette
+import com.ghais.ui.util.appendAyahMark
+import com.ghais.ui.util.ayahMarkContent
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -121,14 +122,15 @@ fun AyahRow(
                         Text(
                             text = buildAnnotatedString {
                                 append(ayah.textUthmani)
-                                appendGluedRosette(ayah.ayahNo)
+                                appendAyahMark(ayah.ayahNo)
                             },
                             color = GhaisNoir.TextPrimary,
                             fontSize = 22.sp,
                             lineHeight = 44.sp,
                             textAlign = TextAlign.Right,
                             fontWeight = FontWeight.Normal,
-                            style = GhaisTypography.quranScript
+                            style = GhaisTypography.quranScript,
+                            inlineContent = ayahMarkContent(ringSize = 17.sp, digitSize = 8.sp)
                         )
                     }
 
