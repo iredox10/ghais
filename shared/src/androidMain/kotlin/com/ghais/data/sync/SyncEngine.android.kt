@@ -7,6 +7,7 @@ import com.ghais.data.auth.PersistentCookieJar
 import com.ghais.data.repository.Broadcast
 import com.ghais.data.repository.BroadcastRepository
 import com.ghais.data.repository.CustomRoutinesStore
+import com.ghais.data.repository.DevotionalRepository
 import com.ghais.data.repository.EditorialPlaylist
 import com.ghais.data.repository.EditorialPlaylistItem
 import com.ghais.data.repository.EditorialRepository
@@ -22,6 +23,8 @@ import com.ghais.data.repository.SchedulesStore
 import com.ghais.data.repository.SearchHistoryStore
 import com.ghais.domain.model.Reciter
 import com.ghais.data.repository.UserUsageRepository
+import com.ghais.domain.model.DEVOTIONAL_TRACK_SLUG
+import com.ghais.domain.model.DevotionKind
 import com.ghais.domain.model.KhatmaPlan
 import com.ghais.data.repository.StatsSnapshot
 import com.ghais.ui.screens.reciters.remotePhotoFetcher
@@ -1407,6 +1410,13 @@ actual object SyncEngine {
      * it also carries `ayah_no`. Names/duration resolve via
      * [QuranDataRepository.getSurahById] + [Reciter.getAyahAudioUrl] /
      * [Reciter.getFullSurahUrl] (duration stays unknown/0 until streaming).
+     *
+     * A devotional snapshot (`reciter_slug = "__devotional"`,
+     * `surah_id = 0`) takes its own branch below: neither the reciter catalog
+     * nor the surah table has a row for it, so without that branch the pull
+     * answered "unknown reciter", returned `true` on EVERY pass and left
+     * [pushPlayback] permanently gated — a devotional listen on any other
+     * device would stop this one from ever uploading its own position again.
      */
     private suspend fun pullPlaybackIfEmpty(db: Databases, userId: String): Boolean {
         if (AudioEngine.currentTrack.value != null) return false
@@ -1425,6 +1435,28 @@ actual object SyncEngine {
         val slug = queued?.slug ?: refParts?.first ?: return true
         val surahId = queued?.surahId ?: refParts?.second ?: return true
         val ayahNo = queued?.ayahNo ?: 0
+        if (isDevotionalSlug(slug)) {
+            // `audio_url` is the one per-item field a devotional snapshot
+            // carries, and it names the exact catalogue row (a multi-ayah
+            // ruqiyah is one row per ayah), so the session is restored from
+            // the bundled catalogue. A devotional with no audio at all (every
+            // dua today) has a blank URL and no row to restore — that keeps the
+            // cloud snapshot, the same conservative answer as an unknown
+            // reciter, and never overwrites another device's resume point.
+            val devotional = devotionalPlaybackTrack(queued?.audioUrl.orEmpty())
+            if (devotional == null) {
+                Log.w(TAG, "playback pull: devotional snapshot has no resolvable audio; keeping cloud snapshot.")
+                return true
+            }
+            Log.i(
+                TAG,
+                "playback pull: restoring devotional '${devotional.surahNameEn}' pos=${positionMs}ms" +
+                    (if (updatedAt != null) " updatedAt=$updatedAt" else "") +
+                    " — preloading paused (no autoplay)."
+            )
+            AudioEngine.prepareTrack(devotional, positionMs)
+            return true
+        }
         val reciter = findReciterOrNull(slug)
         if (reciter == null) {
             Log.w(TAG, "playback pull: unknown reciter slug '$slug'; keeping cloud snapshot.")
@@ -2112,8 +2144,9 @@ actual object SyncEngine {
     // `user_id,played_at_ms`). `track_json = Json.encodeToString(TrackItem)`
     // ([TrackItem] is `@Serializable` and carries no position, so the live
     // `positionMs` travels as top-level `position_ms`; rebuilt from the local
-    // [JumpBackInItem] via reciter/surah lookups so the JSON carries real
-    // display names + audio URL).
+    // [JumpBackInItem] via reciter/surah lookups — or, for a devotional, from
+    // the bundled devotional catalogue — so the JSON carries real display names
+    // + audio URL).
     //
     // Doc ids are stable per ROW, not per listen: `recordProgress` keeps at most
     // one entry per `(surahId, reciterSlug)` and stamps it once per session, so
@@ -2143,16 +2176,24 @@ actual object SyncEngine {
     // flip-flops), never data loss, and it resolves as soon as every device is
     // on the new build.
     //
-    // Prune safety (asked explicitly, so stated explicitly): the prune can no
-    // longer delete "another device's live doc" for a row this device holds,
-    // because there is only ONE doc per row now and this device's copy of it is
-    // in `localIds`. The blast radius is unchanged from the old scheme: a doc
-    // whose `(reciter, surah)` is absent from this device's local top-15 is
-    // still deleted, which is the pre-existing last-writer-wins-the-collection
-    // semantics shared by likes/follows/khatma (and the reason the merge-pull
-    // above exists — the union guarantees those 15 rows are the 15 the user
-    // actually has, not a stale subset). The `unresolvedSurahs` quarantine still
-    // covers rows whose slug we cannot resolve, legacy-id rows included.
+    // Prune safety (asked explicitly, so stated explicitly): the prune may only
+    // delete a doc this device can PROVE it no longer holds. For a real track
+    // that is the row identity, because there is only ONE doc per row now and
+    // this device's copy of it is in `localIds`. The blast radius is unchanged
+    // from the old scheme: a doc whose `(reciter, surah)` is absent from this
+    // device's local top-15 is still deleted, which is the pre-existing
+    // last-writer-wins-the-collection semantics shared by likes/follows/khatma
+    // (and the reason the merge-pull above exists — the union guarantees those
+    // 15 rows are the 15 the user actually has, not a stale subset). The
+    // `unresolvedSurahs` quarantine still covers rows whose slug we cannot
+    // resolve, legacy-id rows included.
+    //
+    // Devotional rows (`__devotional`, `surahId = 0`) get their OWN doc per
+    // entry, title-scoped, so the same proof holds for them: the id is a pure
+    // function of (userId, title), which means a row this device holds
+    // registers exactly the doc it owns even when the catalogue cannot rebuild
+    // its payload, and no `surahId = 0` blanket is needed. See the devotional
+    // row identity block below [buildHistoryTrack] for the full argument.
 
     /**
      * Pulls the cloud `history` docs (ordered by `played_at_ms` desc) and
@@ -2164,10 +2205,12 @@ actual object SyncEngine {
      * which converges the cloud to the exact local set, then deleted it.
      *
      * Merge semantics (local wins, cloud only ever adds):
-     * - Identity is the row `(reciterSlug, surahId)`, which is exactly what
-     *   `UserUsageRepository` keys on, and exactly what the new doc id hashes.
-     *   `restoreHistory` itself keeps the local row for a key it already holds
-     *   and appends the rest, so it can never roll local data back.
+     * - Identity is the row `(reciterSlug, surahId)` — plus the item title for a
+     *   devotional, which has neither a reciter nor a surah (see
+     *   [historyRowKey]) — which is exactly what `UserUsageRepository` keys on,
+     *   and exactly what the doc id hashes. `restoreHistory` itself keeps the
+     *   local row for a key it already holds and appends the rest, so it can
+     *   never roll local data back.
      * - Cloud rows are matched against local rows through [historyRowKey], which
      *   resolves the slug to its canonical catalog spelling first. Without
      *   that, a local row saved as `"mishary"` and a cloud row written as
@@ -2204,12 +2247,14 @@ actual object SyncEngine {
         if (items.isEmpty()) return false // cloud snapshot itself is empty; let push converge
         val ordered = items.sortedByDescending { it.second }
         val localBefore = UserUsageRepository.history.value
-        val localKeys = localBefore.mapTo(mutableSetOf()) { historyRowKey(it.reciterSlug, it.surahId) }
+        val localKeys = localBefore.mapTo(mutableSetOf()) {
+            historyRowKey(it.reciterSlug, it.surahId, it.title)
+        }
         // `restoreHistory` sorts by playedAt desc and caps at HISTORY_CAP, so
         // newest-first order is preserved and the newest cloud rows are the
         // ones that survive the cap.
         val fresh = ordered.filter { (track, _, _) ->
-            localKeys.add(historyRowKey(track.reciterSlug, track.surahId))
+            localKeys.add(historyRowKey(track.reciterSlug, track.surahId, track.surahNameEn))
         }
         if (fresh.isEmpty()) {
             Log.i(
@@ -2235,8 +2280,16 @@ actual object SyncEngine {
      * `"mishary"` (a pre-catalog alias, and the shape a local row can still
      * carry) and `"alafasy"` (what the pusher writes, from [Reciter.slug])
      * compare equal, so one surah never occupies two rows.
+     *
+     * A devotional row (the [DEVOTIONAL_TRACK_SLUG] sentinel) has no reciter to
+     * canonicalise and no surah to pair with one — and the pair is identical
+     * for every one of the 117 catalogue entries, so this key used to collapse
+     * the whole devotional collection into one row. It is now the row's
+     * title-scoped identity, the exact value [historyDocId] hashes, so the
+     * merge and the doc id agree and one devotional is one row.
      */
-    private fun historyRowKey(reciterSlug: String, surahId: Int): String {
+    private fun historyRowKey(reciterSlug: String, surahId: Int, title: String): String {
+        if (isDevotionalSlug(reciterSlug)) return devotionalIdentity(title)
         val canonical = try {
             findReciterOrNull(reciterSlug)?.slug
         } catch (_: Exception) {
@@ -2268,7 +2321,9 @@ actual object SyncEngine {
         // such a surah is quarantined: we still register the best-effort id we
         // CAN compute, and every doc in that surah is exempt from the prune.
         // Without this, one stale slug on one device silently deletes that
-        // surah's history on every other device.
+        // surah's history on every other device. A devotional row is exempt
+        // from the quarantine itself — its id is title-scoped, so it needs no
+        // surah-wide shield (see the branch below).
         val unresolvedSurahs = mutableSetOf<Int>()
         local.forEachIndexed { index, item ->
             // Zero-timestamp entries are in-session items not yet reloaded from
@@ -2278,18 +2333,32 @@ actual object SyncEngine {
                 ?: (now - index)
             val track = buildHistoryTrack(item)
             if (track == null) {
-                unresolvedSurahs += item.surahId
+                // Quarantine the whole surah ONLY when the row's real identity
+                // is unrecoverable, i.e. when the id the writing device hashed
+                // cannot be recomputed here because its slug is unknown. A
+                // devotional needs no such exemption: its id is a function of
+                // the row's title alone, so the one id this row can own is
+                // registered below and every OTHER devotional doc stays
+                // correctly prunable — instead of a blanket `surahId = 0`
+                // shielding all of them for as long as one unrecognised
+                // devotional title sits in the list.
+                val devotionalRow = isDevotionalSlug(item.reciterSlug)
+                if (!devotionalRow) unresolvedSurahs += item.surahId
                 // Best-effort protection in case the writing device used the
-                // same raw slug (already-known reciter, blank audio URL).
-                localIds += historyDocId(userId, item.reciterSlug, item.surahId)
+                // same raw slug (already-known reciter, blank audio URL). Exact
+                // for a devotional row, whose id carries no reciter to
+                // canonicalise.
+                localIds += historyDocId(userId, item.reciterSlug, item.surahId, item.title)
                 Log.w(
                     TAG,
                     "history push: skipping unresolvable entry " +
-                        "'${item.reciterSlug}/${item.surahId}' (surah excluded from prune)."
+                        "'${item.reciterSlug}/${item.surahId}' (${
+                            if (devotionalRow) "devotional identity registered" else "surah excluded from prune"
+                        })."
                 )
                 return@forEachIndexed
             }
-            val docId = historyDocId(userId, track.reciterSlug, track.surahId)
+            val docId = historyDocId(userId, track.reciterSlug, track.surahId, track.surahNameEn)
             // Registered BEFORE any skip below: a row this device holds must
             // never be pruned, whether or not we ended up writing it.
             localIds.add(docId)
@@ -2371,8 +2440,27 @@ actual object SyncEngine {
      * null when the slug/surah is unknown (caller skips the entry). History
      * entries are per-surah (no ayah granularity), so the URL is always the
      * full-surah stream and names resolve via [QuranDataRepository].
+     *
+     * A devotional row (the [DEVOTIONAL_TRACK_SLUG] sentinel) misses BOTH
+     * lookups — the sentinel is not a catalog reciter and `surahId = 0` is not
+     * a surah — so it is rebuilt from the bundled devotional catalogue instead
+     * (see [devotionalHistoryTrack]). Before that branch existed the entry was
+     * skipped on every pass, which is how a devotional row managed to be
+     * unpushable, unmergeable, and (through the `unresolvedSurahs` quarantine it
+     * fed) a permanent shield around every devotional doc in the collection.
      */
     private fun buildHistoryTrack(item: JumpBackInItem): TrackItem? {
+        if (isDevotionalSlug(item.reciterSlug)) {
+            val devotional = devotionalHistoryTrack(item.title) ?: return null
+            // The row's own length wins when it has one: that value came from
+            // the engine, and `restoreHistory` needs a real duration to cap the
+            // saved position. Same rule the surah branch below applies.
+            return if (item.durationMs > 0L) {
+                devotional.copy(durationMs = item.durationMs)
+            } else {
+                devotional
+            }
+        }
         val reciter = findReciterOrNull(item.reciterSlug) ?: return null
         val surah = runCatching { QuranDataRepository.getSurahById(item.surahId) }.getOrNull()
             ?: return null
@@ -2389,6 +2477,135 @@ actual object SyncEngine {
             durationMs = item.durationMs,
         )
     }
+
+    // ------------------------------------------------ devotional row identity
+    //
+    // A devotional (dua / ruqiyah) rides the ordinary history machinery with
+    // `reciterSlug = DEVOTIONAL_TRACK_SLUG` and `surahId = 0` (see
+    // `DevotionalItem.asTrackItem`). Two consequences, and both are why this
+    // block exists:
+    //
+    // 1. IDENTITY. The sentinel is not a reciter and 0 is not a surah, so that
+    //    pair is shared by EVERY one of the 117 catalogue entries. Both
+    //    [historyRowKey] and [historyDocId] therefore add the row's TITLE — the
+    //    only per-item field a devotional carries, and exactly what
+    //    `UserUsageRepository.historyIdentity` dedupes the local list on, so
+    //    one row is one doc on every device that owns the same row.
+    // 2. PAYLOAD. A history row is a `JumpBackInItem` — title, subtitle,
+    //    progress, cover, positions — and carries NO audio URL and no Arabic
+    //    body. Both are rebuilt from the bundled catalogue, which is a
+    //    compile-time constant with no cloud layer and no fetch
+    //    ([DevotionalRepository]), so a devotional row round-trips into a real
+    //    playable [TrackItem]: the doc's `track_json` holds the real everyayah
+    //    URL and the passage, and lands far inside the 16384-char column.
+    //    A title this build's catalogue no longer carries is the single case
+    //    that cannot be rebuilt — and there the doc id is still provable (it is
+    //    a function of the title alone), so [pushHistory] registers it
+    //    explicitly instead of quarantining.
+    //
+    // Accepted collision, unchanged from the store's own dedupe: 11 catalogue
+    // entries share a title with another (4x "Al-Ikhlas", 3x "An-Naas",
+    // 3x "Al-Falaq", …), so those still collapse to one row and one doc, newest
+    // wins. Closing that needs a devotional id on the row itself — see the
+    // report; it is a `JumpBackInItem` field this file does not own.
+
+    private val TITLE_WHITESPACE_RUN = Regex("\\s+")
+
+    /**
+     * True for the one slug that means "devotional", not a reciter. Branches on
+     * the SLUG, never on `surahId == 0`, for the reason `Devotional.kt` gives:
+     * a genuine track can also arrive with an unresolvable surah id.
+     */
+    private fun isDevotionalSlug(slug: String): Boolean =
+        slug.trim() == DEVOTIONAL_TRACK_SLUG
+
+    /**
+     * The devotional title key: trimmed, lowercased, whitespace runs collapsed
+     * to one space — the exact normalisation
+     * `UserUsageRepository.historyIdentity` applies, so both sides produce the
+     * same string for the same row.
+     */
+    private fun devotionalTitleKey(title: String): String =
+        title.trim().lowercase().replace(TITLE_WHITESPACE_RUN, " ")
+
+    /**
+     * Byte-for-byte the devotional branch of `UserUsageRepository.historyIdentity`
+     * (`"dev::__devotional::<normalised title>"`), which is private to that
+     * file. Mirrored, not shared, and deliberately so: the cloud doc id and the
+     * local dedupe key must be the same STRING for the same row, so a kind
+     * prefix or a devotional id added on one side and not the other would
+     * silently split every row in two.
+     */
+    private fun devotionalIdentity(title: String): String =
+        "dev::$DEVOTIONAL_TRACK_SLUG::${devotionalTitleKey(title)}"
+
+    /**
+     * Both devotional catalogues as one queue list, in [DevotionKind] order. A
+     * compile-time constant, so it and the two indexes below are built once per
+     * process and cost nothing per pass.
+     */
+    private val devotionalTracks: List<TrackItem> by lazy {
+        DevotionKind.entries.flatMap { DevotionalRepository.playableTracks(it) }
+    }
+
+    /**
+     * Normalised title → the queue row a fresh listen of that entry starts on.
+     *
+     * `playableTracks` expands a multi-ayah ruqiyah passage into one row per
+     * ayah, all sharing the entry's title, so the index keeps the FIRST such
+     * row: a resume starts at the passage's opening ayah, which is the only
+     * position the row itself records (it does not carry an ayah).
+     *
+     * First-wins per title, with one exception: an AUDIBLE row always displaces
+     * a silent one. A row with a blank audio URL can never become
+     * `AudioEngine.currentTrack` ([com.ghais.ui.screens.devotional.DevotionPlayerScreen]
+     * refuses to queue one), so a history row carrying that title can only have
+     * been written from the audible variant — which is what makes "Al-Ikhlas"
+     * (three dua twins plus the ruqiyah) resolve to a recitable row.
+     */
+    private val devotionalTrackByTitle: Map<String, TrackItem> by lazy {
+        val out = LinkedHashMap<String, TrackItem>()
+        for (track in devotionalTracks) {
+            val key = devotionalTitleKey(track.surahNameEn)
+            val held = out[key]
+            if (held == null || (held.audioUrl.isBlank() && track.audioUrl.isNotBlank())) {
+                out[key] = track
+            }
+        }
+        out
+    }
+
+    /**
+     * Audio URL → the exact queue row that plays it. A multi-ayah ruqiyah entry
+     * has one URL per ayah, so this is also what identifies WHICH ayah a saved
+     * `playback_state` position belongs to.
+     */
+    private val devotionalTrackByUrl: Map<String, TrackItem> by lazy {
+        val out = HashMap<String, TrackItem>()
+        for (track in devotionalTracks) {
+            if (track.audioUrl.isNotBlank()) out[track.audioUrl] = track
+        }
+        out
+    }
+
+    /**
+     * The queue row a devotional history row with this title was written from,
+     * or null when this build's catalogue no longer carries the title (dropped
+     * or retitled item). The returned row is the catalogue's own — so the doc
+     * carries the same URL and passage the engine is playing.
+     */
+    private fun devotionalHistoryTrack(title: String): TrackItem? =
+        devotionalTrackByTitle[devotionalTitleKey(title)]
+
+    /**
+     * The queue row a devotional `playback_state` snapshot is on, resolved from
+     * the `audio_url` the pusher wrote — the one per-item field that document
+     * carries, since `current_ref` degenerates to `"__devotional/0"` and
+     * `parseCurrentRef` rejects a non-positive surah. Null when the URL is
+     * blank (a dua today) or names nothing in the catalogue.
+     */
+    private fun devotionalPlaybackTrack(audioUrl: String): TrackItem? =
+        audioUrl.trim().takeIf { it.isNotEmpty() }?.let { devotionalTrackByUrl[it] }
 
     /**
      * 404-safe history list for [userId], ordered by `played_at_ms` desc and
@@ -2421,7 +2638,7 @@ actual object SyncEngine {
     }
 
     /**
-     * History doc id: `"h-" + sha256("<userId>|<slug>|<surahId>")[0..24)` (26
+     * History doc id: `"h-" + sha256("<userId>|<row identity>")[0..24)` (26
      * chars) — one document per ROW, i.e. per (user, reciter, surah), which is
      * the unit `recordProgress` maintains and the unit the user sees.
      *
@@ -2432,11 +2649,37 @@ actual object SyncEngine {
      * the second user to play a surah collide with the first (409 on create,
      * 401/403 on the update fallback) and fail the whole collection block.
      *
+     * A devotional row ([DEVOTIONAL_TRACK_SLUG], `surahId = 0`) has no such
+     * pair to hash: `("<userId>|__devotional|0")` is the SAME string for all
+     * 117 catalogue entries, so every devotional a user listened to mapped to
+     * one document — the newest push overwrote the rest and the prune counted
+     * them as a single row. The row's title joins the hash for exactly those
+     * rows, via [devotionalIdentity], the same value `UserUsageRepository`
+     * dedupes the local list on, so the doc id and the local row can never
+     * disagree about which row is which. A real track's hashed input is
+     * UNCHANGED, so no existing surah history doc is orphaned by this.
+     *
+     * `title` has no default on purpose: every call site already has the row's
+     * title, and a default would let a future one omit it and silently collapse
+     * the devotional rows again.
+     *
      * See the history section header for the migration story (old
      * timestamp-keyed docs are retired by the prune in the same pass).
      */
-    private fun historyDocId(userId: String, slug: String, surahId: Int): String =
-        "h-${shortHash("$userId|${slug.trim().lowercase()}|$surahId")}"
+    private fun historyDocId(
+        userId: String,
+        slug: String,
+        surahId: Int,
+        title: String,
+    ): String {
+        val cleanSlug = slug.trim().lowercase()
+        val identity = if (cleanSlug == DEVOTIONAL_TRACK_SLUG) {
+            devotionalIdentity(title)
+        } else {
+            "$cleanSlug|$surahId"
+        }
+        return "h-${shortHash("$userId|$identity")}"
+    }
 
     // --------------------------------------------------------------- schedules
     //

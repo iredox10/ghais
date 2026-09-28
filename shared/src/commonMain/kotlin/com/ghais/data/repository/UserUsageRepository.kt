@@ -3,7 +3,9 @@ package com.ghais.data.repository
 import com.ghais.data.seed.JumpBackInItem
 import com.ghais.data.seed.QuranData
 import com.ghais.data.seed.GhaisAssets
+import com.ghais.domain.model.DEVOTIONAL_TRACK_SLUG
 import com.ghais.domain.model.TrackItem
+import com.ghais.domain.model.UNKNOWN_DURATION_MS
 import com.ghais.player.AudioEngine
 import com.russhwolf.settings.Settings
 import kotlinx.coroutines.CoroutineScope
@@ -368,7 +370,9 @@ object UserUsageRepository {
      * second merges both sides in one pass.
      *
      * Merge policy, per field:
-     * - **history** — union by `(surahId, reciterSlug)`, newer
+     * - **history** — union by [historyIdentity] (`surahId` + `reciterSlug`,
+     *   plus the item title for a devotional, which has neither a surah nor a
+     *   reciter), newer
      *   `lastPlayedTimestampMs` wins the slot, re-sorted most-recent-first and
      *   capped at [HISTORY_CAP]. Nothing local is ever dropped: a key already
      *   present survives unless the snapshot has a strictly newer timestamp.
@@ -412,15 +416,15 @@ object UserUsageRepository {
             val today = currentEpochDay()
             var wroteSomething = false
 
-            // --- history: union, newest timestamp per (surah, reciter) wins.
+            // --- history: union, newest timestamp per identity wins.
             val incomingHistory = pre.history
-                .filter { it.surahId in 1..114 }
+                .filter { it.surahId in 1..114 || it.isDevotional() }
                 .map { it.copy(lastPlayedTimestampMs = it.lastPlayedTimestampMs.takeIf { t -> t > 0L } ?: currentTimeMs()) }
             if (incomingHistory.isNotEmpty()) {
                 _history.update { current ->
-                    val byKey = mutableMapOf<Pair<Int, String>, JumpBackInItem>()
+                    val byKey = mutableMapOf<String, JumpBackInItem>()
                     (incomingHistory + current).forEach { item ->
-                        val key = item.surahId to item.reciterSlug
+                        val key = historyIdentityOf(item)
                         val prev = byKey[key]
                         byKey[key] =
                             if (prev == null || item.lastPlayedTimestampMs >= prev.lastPlayedTimestampMs) item else prev
@@ -673,8 +677,29 @@ object UserUsageRepository {
         // genuine 0 unique reciters/surahs. Seeding placeholder identities
         // ("mishary"/"18") made every brand-new user look like they had
         // listened to one reciter and one surah on the Stats screen.
-        val uniqueReciters = getStoredSet(KEY_UNIQUE_RECITERS)
-        val uniqueSurahs = getStoredSet(KEY_UNIQUE_SURAHS)
+        //
+        // Repair pass for installs that recorded a devotional BEFORE this file
+        // learned about them: such a play wrote the non-surah id "0" into the
+        // surah set and the [DEVOTIONAL_TRACK_SLUG] sentinel into the reciter
+        // set, so those devices report a surah and a reciter nobody played.
+        // Only those two non-identities are dropped. Real slugs/ids are kept,
+        // and the `restored-*` placeholders (not numbers, so they never parse)
+        // survive so [restoreStats]'s padding guarantee still holds.
+        // `filterNot`/`filter` return a List, but both helpers speak Set — the
+        // stored shape is a set (a slug/id is recorded once) and the size guard
+        // below is a "did this pass drop anything" test, which only means that
+        // on a Set. Re-collecting is free (the source is already distinct, so
+        // nothing new can be folded away) and keeps the counts honest.
+        val storedReciters = getStoredSet(KEY_UNIQUE_RECITERS)
+        val uniqueReciters = storedReciters.filterNot { isDevotionalSlug(it) }.toSet()
+        if (uniqueReciters.size != storedReciters.size) {
+            saveStoredSet(KEY_UNIQUE_RECITERS, uniqueReciters)
+        }
+        val storedSurahs = getStoredSet(KEY_UNIQUE_SURAHS)
+        val uniqueSurahs = storedSurahs.filter { id -> id.toIntOrNull()?.let { it in 1..114 } ?: true }.toSet()
+        if (uniqueSurahs.size != storedSurahs.size) {
+            saveStoredSet(KEY_UNIQUE_SURAHS, uniqueSurahs)
+        }
 
         // Day rollover keeps buckets: only secondsToday/minutesToday resets above.
         // Buckets accumulate indefinitely (capped) so range queries stay intact.
@@ -835,6 +860,133 @@ object UserUsageRepository {
         }
     }
 
+    // ------------------------------------------------------------- devotional
+    //
+    // A devotional track (dua / ruqiyah) rides the ordinary [TrackItem] with
+    // `surahId = 0`, `ayahNo = 0` and [DEVOTIONAL_TRACK_SLUG] as its reciter
+    // slug (see `DevotionalItem.asTrackItem`). Every branch below keys off the
+    // SLUG, never off `surahId == 0`, because a genuine track can also arrive
+    // with an unresolvable surah id and must keep its normal treatment.
+
+    /** True for the one reciter slug that means "devotional", not a reciter. */
+    private fun isDevotionalSlug(reciterSlug: String): Boolean =
+        reciterSlug == DEVOTIONAL_TRACK_SLUG
+
+    private fun TrackItem.isDevotional(): Boolean = isDevotionalSlug(reciterSlug)
+
+    private fun JumpBackInItem.isDevotional(): Boolean = isDevotionalSlug(reciterSlug)
+
+    private val WHITESPACE_RUN = Regex("\\s+")
+
+    /**
+     * Stable identity of ONE listening-history row — the dedupe key used by
+     * [recordProgress], [restoreHistory] and [adoptPreAuthUsage], and the
+     * listen-session key stamped once per session.
+     *
+     * A real track is keyed on `surahId::reciterSlug`, exactly as before, so
+     * the local list keeps agreeing with the sync layer (which keys its history
+     * docs on the same canonical slug + surah id).
+     *
+     * A devotional track has NEITHER a surah NOR a reciter: every devotional in
+     * the catalogue shares `(0, "__devotional")`, so that pair collapsed a
+     * 100+ item collection into a single "Continue listening" row.
+     * [JumpBackInItem] carries no devotional id (its fields are title,
+     * subtitle, progress, coverUrl, surahId, reciterSlug, positionMs,
+     * durationMs, lastPlayedTimestampMs — `GhaisAssets`, which this file must
+     * not edit), and a devotional [TrackItem] carries only the item TITLE as a
+     * per-item field: `surahNameEn`. `textUthmani` is the Arabic body, not an
+     * identity, and the `audioUrl` that would encode the ayah span is not
+     * stored on a history row at all. The title is therefore the only
+     * per-item signal available, and it is the difference between ONE
+     * devotional row and 106 (the 117 seed items carry 106 distinct titles).
+     *
+     * Accepted collision: several ruqiyah entries quote the same surah
+     * ("Al-Ikhlas" x4, "An-Naas" x3, "Al-Falaq" x3, …), so those still share a
+     * row — the newest wins. That is strictly better than today's total
+     * collapse of every dua and every ruqiyah into one row, and it is closed
+     * at the source by giving [JumpBackInItem] an `itemId` (see the report);
+     * a retitled item also orphans its old row, which is harmless because the
+     * list is capped at [HISTORY_CAP] anyway.
+     */
+    private fun historyIdentity(surahId: Int, reciterSlug: String, title: String): String {
+        if (isDevotionalSlug(reciterSlug)) {
+            return "dev::$reciterSlug::${title.trim().lowercase().replace(WHITESPACE_RUN, " ")}"
+        }
+        return "$surahId::$reciterSlug"
+    }
+
+    private fun historyIdentityOf(track: TrackItem): String =
+        historyIdentity(track.surahId, track.reciterSlug, track.surahNameEn)
+
+    private fun historyIdentityOf(item: JumpBackInItem): String =
+        historyIdentity(item.surahId, item.reciterSlug, item.title)
+
+    /**
+     * Length used for this tick's progress math.
+     *
+     * The bridge's real value always wins. Below that:
+     * - a devotional track stays [UNKNOWN_DURATION_MS] (0) unless it declared
+     *   its own length. The old fallback looked the length up from
+     *   `QuranDataRepository.getSurahById(0)` — a guaranteed miss — so the
+     *   `?: 50` default handed EVERY devotional a fabricated 750 000 ms
+     *   (12.5 min) length, and a 60-second dua sat at ~0.008 progress forever
+     *   while the history row was still rewritten ~4x/second. Unknown is the
+     *   honest answer, and `AudioEngine.durationMs` supplies the real length as
+     *   soon as the bridge reports one.
+     * - a real track keeps the existing ayah-count estimate.
+     */
+    private fun resolveDurationMs(track: TrackItem): Long {
+        AudioEngine.durationMs.value.takeIf { it > 0L }?.let { return it }
+        if (track.isDevotional()) {
+            return track.durationMs.coerceAtLeast(0L)
+        }
+        return (QuranDataRepository.getSurahById(track.surahId)?.ayahsCount ?: 50) * 15_000L
+    }
+
+    /** Progress in 0..1, or 0 when the length is unknown — never a guess. */
+    private fun progressFraction(positionMs: Long, durationMs: Long): Float =
+        if (durationMs > 0L) {
+            (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+
+    /**
+     * Builds the history row for [track] at the given position.
+     *
+     * Shared by [recordProgress] (local play) and [restoreHistory] (cloud
+     * restore) so a devotional row is written identically on both paths.
+     *
+     * Cover art: a devotional gets NO cover. There is no surah whose artwork
+     * applies to a supplication, and the surah-keyed [getCoverForSurah] would
+     * otherwise hand a dua a random curated surah image (Al-Baqarah's artwork
+     * on "Sayyid al-Istighfar"). A blank URL is the honest answer: it renders
+     * as the monogram well, because `realImageUrlOrNull` treats a blank URL as
+     * "no image". A devotional-specific asset would be better still, but it
+     * belongs in `GhaisAssets` — inventing a URL here would be fabrication.
+     */
+    private fun historyRow(
+        track: TrackItem,
+        positionMs: Long,
+        durationMs: Long,
+        playedAtMs: Long
+    ): JumpBackInItem {
+        val devotional = track.isDevotional()
+        val title = track.surahNameEn.ifEmpty { if (devotional) "Devotional" else "Surah ${track.surahId}" }
+        val reciter = track.reciterName.ifEmpty { if (devotional) "Devotional" else "Mishary" }
+        return JumpBackInItem(
+            title = title,
+            subtitle = "$reciter • ${formatRemainingTime(positionMs, durationMs)}",
+            progress = progressFraction(positionMs, durationMs),
+            coverUrl = if (devotional) "" else getCoverForSurah(track.surahId),
+            surahId = track.surahId,
+            reciterSlug = track.reciterSlug,
+            positionMs = positionMs,
+            durationMs = durationMs,
+            lastPlayedTimestampMs = playedAtMs
+        )
+    }
+
     private fun observeAudioEngine() {
         scope.launch {
             AudioEngine.isPlaying.collect { isPlaying ->
@@ -856,8 +1008,7 @@ object UserUsageRepository {
         scope.launch {
             AudioEngine.currentPositionMs.collect { pos ->
                 val track = AudioEngine.currentTrack.value ?: return@collect
-                val duration = AudioEngine.durationMs.value.takeIf { it > 0L }
-                    ?: (QuranDataRepository.getSurahById(track.surahId)?.ayahsCount ?: 50) * 15_000L
+                val duration = resolveDurationMs(track)
 
                 recordProgress(track, pos, duration)
 
@@ -878,8 +1029,9 @@ object UserUsageRepository {
      * Folds the latest playback position of [track] into [history] as the
      * most-recent entry, then persists on the usual 5s throttle.
      *
-     * One entry per `(surahId, reciterSlug)`: the previous entry for the same
-     * pair is dropped and the fresh one is placed at index 0, so the
+     * One entry per [historyIdentity] (`surahId` + `reciterSlug`, plus the item
+     * title for a devotional — see there): the previous entry for the same
+     * identity is dropped and the fresh one is placed at index 0, so the
      * most-recent-first order comes from LIST POSITION, not from the
      * timestamp.
      *
@@ -896,37 +1048,34 @@ object UserUsageRepository {
      */
     private fun recordProgress(track: TrackItem, positionMs: Long, durationMs: Long) {
         val now = currentTimeMs()
-        val progress = if (durationMs > 0L) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
-        val formattedRemaining = formatRemainingTime(positionMs, durationMs)
-        val cover = getCoverForSurah(track.surahId)
 
-        // New (surah, reciter) pair => new listen session => stamp once.
-        val sessionKey = "${track.surahId}::${track.reciterSlug}"
+        // New history identity => new listen session => stamp once. For a
+        // devotional this includes the item title, so switching between two
+        // duas stamps each one separately instead of sharing one session.
+        val sessionKey = historyIdentityOf(track)
         if (sessionKey != progressSessionKey) {
             progressSessionKey = sessionKey
             progressSessionStampMs = now
         }
         val playedAtMs = if (progressSessionStampMs > 0L) progressSessionStampMs else now
 
-        val updatedItem = JumpBackInItem(
-            title = track.surahNameEn.ifEmpty { "Surah ${track.surahId}" },
-            subtitle = "${track.reciterName.ifEmpty { "Mishary" }} • $formattedRemaining",
-            progress = progress,
-            coverUrl = cover,
-            surahId = track.surahId,
-            reciterSlug = track.reciterSlug,
-            positionMs = positionMs,
-            durationMs = durationMs,
-            lastPlayedTimestampMs = playedAtMs
-        )
+        val updatedItem = historyRow(track, positionMs, durationMs, playedAtMs)
 
         _history.update { currentList ->
-            val filtered = currentList.filterNot { it.surahId == track.surahId && it.reciterSlug == track.reciterSlug }
+            val filtered = currentList.filterNot { historyIdentityOf(it) == sessionKey }
             // Most-recent-first: newest at index 0.
             (listOf(updatedItem) + filtered).take(HISTORY_CAP)
         }
 
-        recordUniqueItem(track.reciterSlug, track.surahId)
+        // Devotional tracks contribute to NEITHER identity set: their surah id
+        // is 0 (not a surah, would inflate "unique surahs") and their reciter
+        // slug is the `__devotional` sentinel (not a reciter, would inflate
+        // "reciters listened" by one for a user who only ever played duas).
+        // Both are documented on [UserListeningStats] as counts of REAL
+        // identities — a placeholder is exactly what those docs forbid.
+        if (!track.isDevotional()) {
+            recordUniqueItem(track.reciterSlug, track.surahId)
+        }
 
         val saveNow = currentTimeMs()
         if (saveNow - lastSavedTimestampMs > 5000L) {
@@ -1048,6 +1197,9 @@ object UserUsageRepository {
     private fun maybeCountSurahPlay(track: TrackItem, positionMs: Long, durationMs: Long) {
         try {
             val surahId = track.surahId
+            // A devotional track (surahId = 0) can therefore never reach
+            // [recordSurahPlay] — the per-surah chart stays Quran-only, and
+            // `surahPlays` keeps its documented 1..114 key range.
             if (surahId <= 0 || positionMs < 0L) return
             val key = "${surahId}::${track.reciterSlug}"
             if (key != playCountTrackKey) {
@@ -1068,11 +1220,7 @@ object UserUsageRepository {
                 if (track.ayahNo < totalAyahs) return
             }
 
-            val progress = if (durationMs > 0L) {
-                (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
-            } else {
-                0f
-            }
+            val progress = progressFraction(positionMs, durationMs)
             if (positionMs >= 30_000L || progress >= 0.95f) {
                 playCountCounted = true
                 recordSurahPlay(surahId)
@@ -1118,7 +1266,19 @@ object UserUsageRepository {
 
     private fun formatRemainingTime(positionMs: Long, durationMs: Long): String {
         if (positionMs <= 0L) return "Not started"
-        if (durationMs > 0L && positionMs >= durationMs * 0.98f) return "Completed"
+
+        // Unknown length (a devotional track before the bridge reports one):
+        // report what has elapsed. Deriving "0s left" from a total that does
+        // not exist is the same fabrication as the invented duration.
+        if (durationMs <= 0L) {
+            val elapsedSeconds = positionMs / 1000L
+            val mins = elapsedSeconds / 60L
+            val secs = elapsedSeconds % 60L
+            val clock = if (mins == 0L) "${secs}s" else "${mins}:${secs.toString().padStart(2, '0')}"
+            return "$clock in"
+        }
+
+        if (positionMs >= durationMs * 0.98f) return "Completed"
 
         val remainingMs = (durationMs - positionMs).coerceAtLeast(0L)
         val remainingSeconds = remainingMs / 1000L
@@ -1142,41 +1302,37 @@ object UserUsageRepository {
      * [JumpBackInItem.lastPlayedTimestampMs] (persisted as-is; see
      * [toPersistedHistoryItem]) instead of being re-stamped with "now".
      * Capped at [HISTORY_CAP] like [recordProgress], and merges without duplicating
-     * identical entries (same `surahId` + `reciterSlug` keeps the most recent
+     * identical entries (same [historyIdentity] — `surahId` + `reciterSlug`,
+     * plus the item title for a devotional — keeps the most recent
      * occurrence). Persists via [saveHistoryToDisk]. The cloud `position_ms`
      * is adopted (capped strictly below `durationMs` so resume never starts
      * at/past the end); entries without one resume from the start
      * (`positionMs = 0`, "Not started" subtitle).
+     *
+     * Devotional entries ARE restored: they carry `surahId = 0`, so the old
+     * `surahId <= 0` guard silently dropped every devotional from a cloud
+     * history. They are kept only when the track still identifies as
+     * devotional, so a genuine unresolvable surah id is still rejected.
      */
     fun restoreHistory(items: List<Triple<TrackItem, Long, Long>>) {
         if (items.isEmpty()) return
-        val seen = mutableSetOf<Pair<Int, String>>()
+        val seen = mutableSetOf<String>()
         val restored = items.sortedByDescending { it.second }.mapNotNull { (track, playedAt, positionMs) ->
-            if (track.surahId <= 0 || playedAt <= 0L) return@mapNotNull null
-            if (!seen.add(track.surahId to track.reciterSlug)) return@mapNotNull null
+            if (playedAt <= 0L) return@mapNotNull null
+            if (track.surahId <= 0 && !track.isDevotional()) return@mapNotNull null
+            if (!seen.add(historyIdentityOf(track))) return@mapNotNull null
             val duration = track.durationMs.coerceAtLeast(0L)
             val safePos = if (duration > 0L) {
                 positionMs.coerceIn(0L, (duration - 1L).coerceAtLeast(0L))
             } else {
                 positionMs.coerceAtLeast(0L)
             }
-            val progress = if (duration > 0L) (safePos.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
-            JumpBackInItem(
-                title = track.surahNameEn.ifEmpty { "Surah ${track.surahId}" },
-                subtitle = "${track.reciterName.ifEmpty { "Mishary" }} • ${formatRemainingTime(safePos, duration)}",
-                progress = progress,
-                coverUrl = getCoverForSurah(track.surahId),
-                surahId = track.surahId,
-                reciterSlug = track.reciterSlug,
-                positionMs = safePos,
-                durationMs = duration,
-                lastPlayedTimestampMs = playedAt
-            )
+            historyRow(track, safePos, duration, playedAt)
         }.take(HISTORY_CAP)
         if (restored.isEmpty()) return
         _history.update { current ->
-            val keys = current.map { it.surahId to it.reciterSlug }.toMutableSet()
-            val fresh = restored.filter { keys.add(it.surahId to it.reciterSlug) }
+            val keys = current.map { historyIdentityOf(it) }.toMutableSet()
+            val fresh = restored.filter { keys.add(historyIdentityOf(it)) }
             (current + fresh).take(HISTORY_CAP)
         }
         saveHistoryToDisk()
