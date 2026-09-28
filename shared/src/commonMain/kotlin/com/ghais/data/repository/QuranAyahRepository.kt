@@ -68,6 +68,19 @@ object QuranAyahRepository {
         return (v in 0x064B..0x065F) || v == 0x0670 || (v in 0x06D6..0x06ED)
     }
 
+    /**
+     * Alef wasla (U+0671) and plain alef are the same letter for a prefix test.
+     *
+     * The Uthmani edition spells the basmalah `بِسْمِ ٱللَّهِ …` — wasla alef on
+     * the elided `ال` of every word after `بسم` — while the haystack keeps its
+     * own wasla alef. Comparing the two literally can therefore never match, and
+     * a surah whose first ayah the edition opens with a basmalah (103, 112)
+     * would keep it and recite it a second time on top of the ayah audio. The
+     * mapping is 1:1, so the caller's index arithmetic is unaffected.
+     */
+    private fun normalizeAlef(c: Char): Char =
+        if (c.code == 0x0671) 'ا' else c
+
     fun stripBasmalahPrefix(surahId: Int, ayahNo: Int, text: String): String {
         if (surahId == 1 || surahId == 9 || ayahNo != 1) return text
         val stripped = StringBuilder()
@@ -75,7 +88,7 @@ object QuranAyahRepository {
         for (i in text.indices) {
             val c = text[i]
             if (isTashkeel(c)) continue
-            stripped.append(c)
+            stripped.append(normalizeAlef(c))
             origIndices.add(i)
         }
         val bare = "بسم الله الرحمن الرحيم"
@@ -88,7 +101,11 @@ object QuranAyahRepository {
                 if (cutOriginal >= text.length) return text
                 val rest = text.substring(cutOriginal).trimStart()
                 if (rest.isEmpty()) return text
-                return rest
+                // The cut lands right after the basmalah's last letter, so the
+                // vowel that followed it in the joined string is now leading and
+                // orphaned — a mark floating at the start of the verse. Drop any
+                // leading tashkeel (and the space before it) before returning.
+                return rest.trimStart { it.isWhitespace() || isTashkeel(it) }
             }
         }
         return text

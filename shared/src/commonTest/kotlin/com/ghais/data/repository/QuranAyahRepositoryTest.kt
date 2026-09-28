@@ -182,4 +182,28 @@ class QuranAyahRepositoryTest {
         // Prefetch smoke test (fire-and-forget, must not throw).
         QuranAyahRepository.prefetchSurah(112)
     }
+
+    /**
+     * The Uthmani spelling of the basmalah uses alef wasla (U+0671) on every
+     * elided `ال`, which is the exact text the API returns for a surah like
+     * 112 whose first ayah it opens with a basmalah. Compared literally against
+     * `bare` it never matches, so the prefix survived and the player recited it
+     * a second time on top of the ayah audio. Regression test for that.
+     */
+    @Test
+    fun testStripBasmalahHandlesAlefWasla() {
+        val uthmani = "\u0628\u0650\u0633\u0652\u0645\u0650 \u0671\u0644\u0652\u0644\u0651\u064e\u0647\u0650 " +
+            "\u0671\u0644\u0652\u0631\u0651\u064e\u062d\u0652\u0645\u064e\u0646\u0650\u0650 " +
+            "\u0671\u0644\u0652\u0631\u0651\u064e\u062d\u0650\u064a\u0652\u0645\u0650 \u0642\u064f\u0644\u0652"
+        val stripped = QuranAyahRepository.stripBasmalahPrefix(112, 1, uthmani)
+        assertFalse(stripped.contains("\u0628\u0650\u0633\u0652\u0645\u0650"), "basmalah survived: $stripped")
+        assertTrue(stripped.trimStart().startsWith("\u0642\u064f\u0644\u0652"), "verse text lost: $stripped")
+    }
+
+    /** Wasla normalisation must not turn a non-basmalah opening into a match. */
+    @Test
+    fun testStripBasmalahLeavesUnrelatedOpeningsAlone() {
+        val alifLamp = "\u0627\u0644\u0652\u0645\u0652"
+        assertEquals(alifLamp, QuranAyahRepository.stripBasmalahPrefix(2, 1, alifLamp))
+    }
 }
