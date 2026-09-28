@@ -54,14 +54,36 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ghais.player.AudioEngine
+import com.ghais.ui.screens.devotional.DevotionPlayerScreen
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.reciters.rememberCloudPhoto
 import com.ghais.ui.screens.reciters.resolveReciterPhoto
 import com.ghais.ui.theme.GhaisColors
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
+
+/**
+ * Is this the top of a full-screen player surface?
+ *
+ * One predicate, not a per-type `is` chain at every call site, because two
+ * separate decisions depend on the same answer: the MiniPlayer's single-flight
+ * open guard (never stack a second full-screen player over an open one) and
+ * App.kt's ScreenTransition branch (a full-screen player animates its own exit,
+ * so the stack must not animate on top of it).
+ *
+ * It is deliberately type-based rather than a marker interface: `Screen` is
+ * Voyager's, the two player screens are owned elsewhere, and an `is`-list here
+ * is one line to extend when the next player lands instead of a new interface
+ * plus two edits in files that do not own the screen. Per-instance `key`
+ * overrides are unaffected — those are what keep a *stacked duplicate* from
+ * aliasing one SaveableState slot, and this predicate is what stops the stack
+ * from ever being built.
+ */
+internal fun isFullScreenPlayer(screen: Screen?): Boolean =
+    screen is NowPlayingScreen || screen is DevotionPlayerScreen
 
 /**
  * Modern Black & White + Trending Purple Glassmorphic Mini Player
@@ -92,8 +114,12 @@ fun MiniPlayer(
     // Single-flight open: tap + swipe-up race each other (clickable vs drag
     // threshold), and a stacked duplicate shares Voyager's class-name key and
     // renders blank when revealed. Never stack two players.
+    //
+    // ANY full-screen player, not just the Quran one: the devotional reader
+    // (DevotionPlayerScreen) is a player surface too, so tapping the bar while
+    // it is open would otherwise push a second full-screen player on top of it.
     fun openPlayerOnce() {
-        if (navigator?.lastItem is NowPlayingScreen) return
+        if (isFullScreenPlayer(navigator?.lastItem)) return
         if (onOpenNowPlaying != null) {
             onOpenNowPlaying()
         } else {

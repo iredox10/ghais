@@ -38,6 +38,7 @@ import com.ghais.data.repository.OnboardingStore
 import com.ghais.data.sync.SyncTriggers
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.MiniPlayer
+import com.ghais.ui.components.isFullScreenPlayer
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.navigation.MainScreen
 import com.ghais.ui.screens.auth.AuthScreen
@@ -103,17 +104,26 @@ fun App() {
         } else {
             Navigator(MainScreen) { navigator ->
             val currentTrack by AudioEngine.currentTrack.collectAsState()
-            val isNowPlaying = navigator.lastItem is NowPlayingScreen
-            val isPushedScreen = navigator.lastItem !is MainScreen && !isNowPlaying
+            // Any full-screen player, not just the Quran one: the devotional
+            // reader animates its own exit exactly like NowPlayingScreen, so it
+            // needs the same layering (below) and the same transition branch.
+            val isFullPlayerOpen = isFullScreenPlayer(navigator.lastItem)
+            // Deliberately NOT widened with isFullPlayerOpen: the devotional
+            // reader is laid out as a pushed screen and reserves
+            // MINI_PLAYER_CLEARANCE for this bar (DevotionPlayerScreen.kt:90-100),
+            // so it keeps being treated as one. Only the Quran player is opaque
+            // enough to hide it.
+            val isPushedScreen = navigator.lastItem !is MainScreen &&
+                navigator.lastItem !is NowPlayingScreen
 
-            // Keep ScreenTransition layered above the overlay MiniPlayer while NowPlaying is active or animating out
-            var isNowPlayingTransitioning by remember { mutableStateOf(false) }
+            // Keep ScreenTransition layered above the overlay MiniPlayer while any full-screen player is active or animating out
+            var isFullPlayerTransitioning by remember { mutableStateOf(false) }
             LaunchedEffect(navigator.lastItem) {
-                if (navigator.lastItem is NowPlayingScreen) {
-                    isNowPlayingTransitioning = true
-                } else if (isNowPlayingTransitioning) {
+                if (isFullScreenPlayer(navigator.lastItem)) {
+                    isFullPlayerTransitioning = true
+                } else if (isFullPlayerTransitioning) {
                     delay(380L)
-                    isNowPlayingTransitioning = false
+                    isFullPlayerTransitioning = false
                 }
             }
 
@@ -123,22 +133,24 @@ fun App() {
                         navigator = navigator,
                         modifier = Modifier
                             .fillMaxSize()
-                            .zIndex(if (isNowPlaying || isNowPlayingTransitioning) 2f else 0f),
+                            .zIndex(if (isFullPlayerOpen || isFullPlayerTransitioning) 2f else 0f),
                         transition = {
-                            val isTargetNowPlaying = targetState is NowPlayingScreen
-                            val isInitialNowPlaying = initialState is NowPlayingScreen
+                            val isTargetPlayer = isFullScreenPlayer(targetState)
+                            val isInitialPlayer = isFullScreenPlayer(initialState)
 
                             when {
-                                isTargetNowPlaying -> {
+                                isTargetPlayer -> {
                                     slideInVertically(
                                         initialOffsetY = { it },
                                         animationSpec = tween(350, easing = FastOutSlowInEasing)
                                     ) togetherWith fadeOut(animationSpec = tween(200))
                                 }
-                                isInitialNowPlaying -> {
+                                isInitialPlayer -> {
                                     // The player animates its own exit (see
-                                    // NowPlayingScreen.animateOutAndDismiss) and
-                                    // the screen underneath is opaque, so the
+                                    // NowPlayingScreen.animateOutAndDismiss and
+                                    // DevotionPlayerScreen.animateOutAndDismiss —
+                                    // the devotional reader copied that invariant)
+                                    // and the screen underneath is opaque, so the
                                     // stack must not animate on top of it: the
                                     // incoming screen is drawn from frame one
                                     // (EnterTransition.None) and the player is
