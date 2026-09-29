@@ -247,13 +247,21 @@ class NowPlayingScreen : Screen {
             }
         }
 
-        // Cinematic idle fade — mirrors Media3's controllerShowTimeoutMs:
-        // 10s without interaction melts all chrome except video + transport.
-        // Any tap/drag/scrub pokes the timer; sheets, scrubbing and the
-        // volume panel suspend hiding while the user is active.
+        // Cinematic idle fade — mirrors Media3's controllerShowTimeoutMs: 10s
+        // without interaction melts every chrome block; the ambient video, the
+        // ayah card and the dismiss handle are the only things that stay.
+        //
+        // Three different things end the clock, deliberately not one:
+        // pressing any chrome control pokes the timer; a canvas tap does NOT
+        // poke, it flips the chrome (that is the whole point of the gesture),
+        // and a drag does NOT poke, because a drag is a dismissal and a
+        // dismissal that re-shows the chrome it is dismissing fights the
+        // finger. Sheets, the inline volume panel, a held finger and an
+        // in-flight scrub suspend hiding while the user is mid-interaction.
         var controlsVisible by remember { mutableStateOf(true) }
         var idleTick by remember { mutableStateOf(0) }
         var isScrubbing by remember { mutableStateOf(false) }
+        var isPointerDown by remember { mutableStateOf(false) }
         var scrubFraction by remember { mutableStateOf(0f) }
         val poke: () -> Unit = { idleTick++; controlsVisible = true }
         val uiBusy = showSleepTimer || showQueue || showAmbient || showVolume || showTafseer || isScrubbing || isAyahMode
@@ -263,6 +271,18 @@ class NowPlayingScreen : Screen {
                 controlsVisible = false
             }
         }
+        // A single canvas tap flips the chrome. The uiBusy guard IS the rule:
+        // while a sheet, the volume panel, a held finger or a scrub is live the
+        // tap belongs to that surface and must not strip the chrome out from
+        // under it. Showing also restarts the 10s clock for free —
+        // controlsVisible is a key of the fade effect above, so the flip
+        // re-enters it. Hiding needs no bookkeeping: the effect re-enters, the
+        // guard fails, nothing runs.
+        val toggleChrome: () -> Unit = {
+            if (!uiBusy) controlsVisible = !controlsVisible
+        }
+        val toggleChromeState = rememberUpdatedState(toggleChrome)
+
         val mixer = remember { AmbientMixer }
         val ambientChannels by mixer.channels.collectAsState()
         val ambientVolume by mixer.masterAmbientVolume.collectAsState()
@@ -308,10 +328,21 @@ class NowPlayingScreen : Screen {
             modifier = Modifier
                 .fillMaxSize()
                 .onSizeChanged { screenHeightPx = it.height.toFloat() }
-                .pointerInput(controlsVisible, uiBusy) {
+                // Stable key (Unit) + a live handler reference, so the
+                // detector's coroutine lives as long as the screen and the
+                // handler never goes stale. The real win is dropping
+                // onDoubleTap: detectTapGestures holds a single tap for the
+                // double-tap timeout, so the old pairing made every toggle feel
+                // laggy. rememberUpdatedState keeps the closure reading current
+                // state without re-keying the pointer input on every flip.
+                .pointerInput(Unit) {
                     detectTapGestures(
-                        onTap = { poke() },
-                        onDoubleTap = { if (controlsVisible && !uiBusy) controlsVisible = false }
+                        onPress = {
+                            isPointerDown = true
+                            tryAwaitRelease()
+                            isPointerDown = false
+                        },
+                        onTap = { toggleChromeState.value() }
                     )
                 }
                 .pointerInput(Unit) {
@@ -332,7 +363,19 @@ class NowPlayingScreen : Screen {
                         dismissJob?.cancel()
                         isDismissing = false
                         isDragging = true
-                        poke()
+                        // No poke() here: this gesture is a dismissal, and
+                        // force-showing the chrome at the start of a swipe meant
+                        // every drag-swipe threw the full control stack back on
+                        // screen — including when it was about to push the whole
+                        // player off-screen. The chrome is whatever the user last
+                        // left it at; this gesture only changes what is on screen
+                        // above it.
+                        //
+                        // isPointerDown is deliberately NOT set here either. The
+                        // tap detector above brackets the whole gesture with
+                        // onPress/tryAwaitRelease, and this block returns early
+                        // on the no-slop path, so a second owner would leak the
+                        // flag true and pin the chrome open forever.
                         var pointerId = slopChange.id
                         var lastY = slopChange.position.y
                         val maxOffsetY =
@@ -654,7 +697,18 @@ class NowPlayingScreen : Screen {
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Core transport never fades: prev / play / next only.
+                // Core transport melts with the rest of the chrome. It used to
+                // be the one block that stayed, because a player with no way to
+                // pause looked broken — but a canvas tap can no longer mean
+                // "show me the transport" on its own, and a permanently visible
+                // transport is a permanent 68dp column of chrome sitting between
+                // the verse and the bottom of the screen. The tap gives it back
+                // in one gesture, so there is nothing left to guard.
+                AnimatedVisibility(
+                    visible = controlsVisible,
+                    enter = fadeIn(tween(350)) + slideInVertically(tween(350)) { it / 2 },
+                    exit = fadeOut(tween(350)) + slideOutVertically(tween(350)) { it / 2 }
+                ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
@@ -682,6 +736,7 @@ class NowPlayingScreen : Screen {
                         onClick = { poke(); AudioEngine.next() },
                         iconSize = 26.dp
                     )
+                }
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -824,7 +879,7 @@ class NowPlayingScreen : Screen {
                 Spacer(modifier = Modifier.height(22.dp))
 
                 // Overflow: speed, volume (expandable), ayah mode, queue, sleep, repeat.
-                // Melts away with the idle fade — core transport above never does.
+                // Melts away with the idle fade, same as the transport above it.
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(
                         8.dp,
