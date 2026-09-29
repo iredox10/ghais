@@ -498,7 +498,19 @@ class NowPlayingScreen : Screen {
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Video-first: clear the middle so the ambient video breathes.
-                Spacer(modifier = Modifier.weight(if (isAyahMode) 0.35f else 1f))
+                // In ayah mode the verse is the hero, not the video, so the gap
+                // drops to 0.10. The card's own weight(1f) then takes 1/1.10 =
+                // 91% of the leftover against 1/1.35 = 74% before — roughly
+                // 60-70dp more card on a typical phone. It is not 0: the card
+                // must never sit flush under the dismiss handle, and the sliver
+                // of ambient video above it is what tells the user the video is
+                // still there.
+                //
+                // Surah mode is untouched at 1f. The card's AnimatedVisibility is
+                // still a weight(1f) measurable while it is collapsed, so the two
+                // weights stay in the same 1:1 ratio in both modes and the video
+                // gap is exactly what it has always been.
+                Spacer(modifier = Modifier.weight(if (isAyahMode) 0.10f else 1f))
 
                 // Synchronized Ayah Lyrics card — animated when Ayah mode is active.
                 AnimatedVisibility(
