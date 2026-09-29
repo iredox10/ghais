@@ -37,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.player.AudioEngine
@@ -71,7 +72,11 @@ import com.ghais.ui.theme.GhaisTypography
  * - Header: single slim row — X ghost well + "AYAH {ayahNo}" text +
  *   sync dot + Surah name. No pills, no chevrons (transport covers prev/next).
  * - Verse: prominent Arabic Uthmani in quranScript (25.sp, RTL,
- *   2.0x line height) + enclosed rosette, translation secondary (14.5.sp).
+ *   QURAN_LINE_HEIGHT_RATIO line height) + enclosed rosette, translation
+ *   secondary (14.5.sp). The verse is the card's only vertically-flexible
+ *   child and always claims the full allocation the parent hands down, so long
+ *   ayat read without the card reflowing. Scroll is keyed per verse, so each
+ *   ayah opens at the top.
  *   No transliteration, no tools row (loop/tafseer/learning/download live in
  *   their own screens), no NEXT preview, no Record & Compare.
  * - Range-loop and recitation-gap banners render only while active.
@@ -99,6 +104,19 @@ fun NowPlayingLyricsCard(
         ?: 1
 
     val surahId = currentTrack?.surahId ?: currentAyahVerse?.surahId ?: 1
+
+    // Scroll offset is per-verse state, not card state. Unkeyed, the ScrollState
+    // outlives the ayah and a long verse scrolled to its end leaves the next,
+    // short one showing a blank viewport — the stale offset is only clamped back
+    // when the new content is still taller than the box.
+    //
+    // `key(...)` around the call, not a key inside `remember(...)`: the block
+    // passed to `remember` is a plain calculation, not a composable lambda, so a
+    // `rememberScrollState()` inside it has no composable context to run in and
+    // fails to compile (COMPOSABLE_INVOCATION). `key` re-composes that call site
+    // per verse, which is exactly the reset we want: once per (surah, ayah) and
+    // never on ordinary recomposition, so the user keeps their place while
+    // isPlaying flips, the gap countdown ticks, or the sync dot re-tints.
 
     val surahName = currentTrack?.surahNameEn?.takeIf { it.isNotBlank() }
         ?: currentAyahVerse?.surahId?.let { "Surah $it" }
@@ -247,22 +265,40 @@ fun NowPlayingLyricsCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // Divider sandwich — 6dp gutters, not 12dp. This is the only
+            // unconditional chrome standing between the header and the verse, so
+            // every dp here is a dp the verse does not get. The header row and
+            // the banners already carry their own internal spacing, so a 12dp
+            // gutter was paying for the same separation twice; 6dp is still 6x
+            // the 1dp hairline and reads as a clean section break while handing
+            // ~12dp back to the verse (about a third of a 35sp line).
+            Spacer(modifier = Modifier.height(6.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)
                     .background(GhaisNoir.BorderGhost)
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Active verse — transparent, prominent. No inset, no indicator bar.
             // Arabic Uthmani in quranScript (25.sp, RTL) + enclosed rosette, 2.0x line height.
             // Basmalah header renders as a centered line above ayah 1 (except surahs 1 & 9).
+            // fill = true: the verse is the only vertically-flexible child, so it takes
+            // the whole allocation instead of min(content, allocation). That makes the
+            // viewport deterministic — it stops changing height every time the ayah
+            // changes length, which is what made the card visibly jump mid-playback —
+            // and it guarantees the viewport is the tallest the parent allows rather
+            // than the shortest the text happens to need. Anything still taller than
+            // the box keeps scrolling, so no line is stranded out of reach.
+            //
+            // key() so each verse starts at the top (see the note above); the scroll
+            // state itself is created inside, where a composable context exists.
+            key(surahId, displayAyahNo) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f, fill = false)
+                    .weight(1f, fill = true)
                     .verticalScroll(rememberScrollState())
             ) {
                     val showBasmalahHeader =
@@ -298,6 +334,14 @@ fun NowPlayingLyricsCard(
                                     // with the enclosed end-of-ayah rosette glued to the
                                     // last word (inline content). Normal weight:
                                     // synthetic bold perturbs mark shaping on dense stacks.
+                                    // 25.sp stays and is not raised. With lineHeight pinned
+                                    // to a multiple of fontSize, scaling the font up costs
+                                    // visible words twice over: a bigger word covers more
+                                    // area, so fewer fit per line, while each line also eats
+                                    // a larger slice of the fixed-height viewport. Visible-word
+                                    // count therefore falls as fontSize rises, and that is the
+                                    // one thing this change cannot give back. Reclaimed height
+                                    // is spent on density, not scale — mushaf look intact.
                                     if (activeArabic.isNotBlank()) {
                                         Text(
                                             text = buildAnnotatedString {
@@ -311,7 +355,20 @@ fun NowPlayingLyricsCard(
                                             // Start, not End: inside the Rtl provider
                                             // above, End resolves to the LEFT edge.
                                             textAlign = TextAlign.Start,
-                                            lineHeight = 50.sp,
+                                            // QURAN_LINE_HEIGHT_RATIO (2.0x), not a
+                                            // hand-picked number. QCF Hafs' own designed
+                                            // line box is 1.758 em (hhea ascender 2400 /
+                                            // descender -1200 at upem 2048) — that headroom
+                                            // is what the calligrapher reserved for stacked
+                                            // tashkeel, so anything under it collides the
+                                            // marks of one line with the glyphs of the next.
+                                            // This surface was briefly tightened to 1.4x
+                                            // to buy lines; it looked denser and rendered
+                                            // the marks wrong, which is a far worse trade
+                                            // than scrolling a long ayah. The height comes
+                                            // from the parent's allocation and from the
+                                            // chrome toggle instead — see NowPlayingScreen.
+                                            lineHeight = (25 * GhaisTypography.QURAN_LINE_HEIGHT_RATIO).sp,
                                             inlineContent = ayahMarkContent(ringSize = 19.sp, digitSize = 9.sp),
                                             modifier = Modifier.fillMaxWidth()
                                         )
@@ -332,6 +389,7 @@ fun NowPlayingLyricsCard(
                             )
                         }
                     }
+            }
             }
 
             // NEXT preview removed — [upcomingAyahVerse]/[onNextAyah] kept in signature
