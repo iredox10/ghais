@@ -58,6 +58,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,6 +66,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -335,6 +341,25 @@ class NowPlayingScreen : Screen {
                 // double-tap timeout, so the old pairing made every toggle feel
                 // laggy. rememberUpdatedState keeps the closure reading current
                 // state without re-keying the pointer input on every flip.
+                // The chrome toggle, mirrored for assistive tech. TalkBack cannot
+                // perform a raw canvas tap, and once the chrome melts the
+                // play/pause/next row leaves the composition with it — so a
+                // screen-reader user would lose the only pause control on this
+                // screen, permanently, with no node left to focus and no way to
+                // summon it. A custom action (not an onClick) is deliberate: it
+                // describes the gesture without turning the whole screen into one
+                // giant click target that would swallow every child's touch.
+                .semantics {
+                    stateDescription = if (controlsVisible) "Player controls shown" else "Player controls hidden"
+                    customActions = listOf(
+                        CustomAccessibilityAction(
+                            if (controlsVisible) "Hide player controls" else "Show player controls"
+                        ) {
+                            toggleChromeState.value()
+                            true
+                        }
+                    )
+                }
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
@@ -494,11 +519,23 @@ class NowPlayingScreen : Screen {
 
                 // Top pill bar handle — melts away with the idle fade.
                 // Grows + highlights while dragging for tactile feedback.
+                // Top pill bar handle. This one block is NOT gated on
+                // controlsVisible, only faded: it is the only always-there way
+                // to dismiss the player that needs neither a swipe nor the back
+                // gesture, and the verse now owns ~90% of the screen as a
+                // vertical scroll, so a swipe that starts on the ayah scrolls
+                // the ayah instead. Fading the handle out of existence would
+                // have left the screen dismissible only by back button.
                 AnimatedVisibility(
-                    visible = controlsVisible,
-                    enter = fadeIn(tween(350)) + slideInVertically(tween(350)) { -it },
-                    exit = fadeOut(tween(350)) + slideOutVertically(tween(350)) { -it }
+                    visible = true,
+                    enter = fadeIn(tween(350)),
+                    exit = fadeOut(tween(350))
                 ) {
+                    val handleAlpha by animateFloatAsState(
+                        targetValue = if (controlsVisible) 1f else 0.35f,
+                        animationSpec = tween(350),
+                        label = "handleAlpha"
+                    )
                     val handleWidth by animateDpAsState(
                         targetValue = if (isDragging) 72.dp else 48.dp,
                         animationSpec = spring(
@@ -521,6 +558,7 @@ class NowPlayingScreen : Screen {
                             modifier = Modifier
                                 .size(width = 64.dp, height = 36.dp)
                                 .clip(RoundedCornerShape(18.dp))
+                                .graphicsLayer { alpha = handleAlpha }
                                 .clickable { animateOutAndDismiss() },
                             contentAlignment = Alignment.Center
                         ) {
