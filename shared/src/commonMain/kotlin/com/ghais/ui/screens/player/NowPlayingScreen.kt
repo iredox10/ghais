@@ -270,41 +270,45 @@ class NowPlayingScreen : Screen {
         var isPointerDown by remember { mutableStateOf(false) }
         var scrubFraction by remember { mutableStateOf(0f) }
         val poke: () -> Unit = { idleTick++; controlsVisible = true }
-        // A live surface or a live finger. The four ModalBottomSheet popups are
-        // composed inside the player but render in their own window, so their
-        // taps never reach here; showVolume is inline inside the
+        // A live SURFACE: something else already owns the current touch, so a
+        // canvas tap is not ours to interpret. The four ModalBottomSheet popups
+        // are composed inside the player but render in their own window, so
+        // their taps never even reach here; showVolume is inline inside the
         // controlsVisible block, so its padding does.
         //
-        // isPointerDown is the term that was missing: while isAyahMode sat in
-        // this set the timer never fired, so a press held for 10s straight —
-        // the play button, a drag-to-dismiss, a thumb resting on the verse —
-        // had the chrome melt out from under it, and a button that unmounts
-        // before the finger lifts never delivers its click. A finger down is
-        // activity, exactly like a sheet being open.
-        //
-        // isAyahMode is deliberately NOT here. It is a steady-state mode, not
-        // an activity, so including it pinned uiBusy true for the whole
+        // isAyahMode is deliberately NOT in here. It is a steady-state mode, not
+        // an activity, so including it pinned the busy set true for the whole
         // session: the fade could never run and the canvas tap could never
         // hide anything, in the one mode whose entire purpose is reading a
-        // long ayah. uiBusy means "a surface or a finger is live", never "a
-        // mode is selected".
-        val uiBusy = showSleepTimer || showQueue || showAmbient || showVolume || showTafseer ||
-            isScrubbing || isPointerDown
+        // long ayah. A set like this means "a surface is open", never "a mode
+        // is selected".
+        val surfaceBusy = showSleepTimer || showQueue || showAmbient || showVolume || showTafseer ||
+            isScrubbing
+        // The idle timer additionally waits for the finger to lift. Without it
+        // a press held 10s straight — the play button, a drag-to-dismiss, a
+        // thumb resting on the verse — had the chrome melt out from under it,
+        // and a button that unmounts before the finger lifts never delivers
+        // its click. This term is for the TIMER only; see toggleChrome.
+        val uiBusy = surfaceBusy || isPointerDown
         androidx.compose.runtime.LaunchedEffect(controlsVisible, idleTick, uiBusy) {
             if (controlsVisible && !uiBusy) {
                 kotlinx.coroutines.delay(10_000L)
                 controlsVisible = false
             }
         }
-        // A single canvas tap flips the chrome. The uiBusy guard IS the rule:
-        // while a sheet, the volume panel, a held finger or a scrub is live the
-        // tap belongs to that surface and must not strip the chrome out from
-        // under it. Showing also restarts the 10s clock for free —
-        // controlsVisible is a key of the fade effect above, so the flip
-        // re-enters it. Hiding needs no bookkeeping: the effect re-enters, the
-        // guard fails, nothing runs.
+        // A single canvas tap flips the chrome. The guard is surfaceBusy, NOT
+        // uiBusy, and the difference is the whole feature: detectTapGestures
+        // delivers onTap before the onPress coroutine resumes from
+        // tryAwaitRelease, so isPointerDown is still true at the moment the tap
+        // lands. Gating the toggle on it made every single tap a no-op.
+        // A finger down is not a competing surface — it is this tap's own
+        // author, and the timer, not the toggle, is what must wait for it.
+        //
+        // Showing also restarts the 10s clock for free: controlsVisible is a key
+        // of the fade effect above, so the flip re-enters it. Hiding needs no
+        // bookkeeping — the effect re-enters, the guard fails, nothing runs.
         val toggleChrome: () -> Unit = {
-            if (!uiBusy) controlsVisible = !controlsVisible
+            if (!surfaceBusy) controlsVisible = !controlsVisible
         }
         val toggleChromeState = rememberUpdatedState(toggleChrome)
 
