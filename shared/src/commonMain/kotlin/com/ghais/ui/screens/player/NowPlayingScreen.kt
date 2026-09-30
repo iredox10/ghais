@@ -270,7 +270,26 @@ class NowPlayingScreen : Screen {
         var isPointerDown by remember { mutableStateOf(false) }
         var scrubFraction by remember { mutableStateOf(0f) }
         val poke: () -> Unit = { idleTick++; controlsVisible = true }
-        val uiBusy = showSleepTimer || showQueue || showAmbient || showVolume || showTafseer || isScrubbing || isAyahMode
+        // A live surface or a live finger. The four ModalBottomSheet popups are
+        // composed inside the player but render in their own window, so their
+        // taps never reach here; showVolume is inline inside the
+        // controlsVisible block, so its padding does.
+        //
+        // isPointerDown is the term that was missing: while isAyahMode sat in
+        // this set the timer never fired, so a press held for 10s straight —
+        // the play button, a drag-to-dismiss, a thumb resting on the verse —
+        // had the chrome melt out from under it, and a button that unmounts
+        // before the finger lifts never delivers its click. A finger down is
+        // activity, exactly like a sheet being open.
+        //
+        // isAyahMode is deliberately NOT here. It is a steady-state mode, not
+        // an activity, so including it pinned uiBusy true for the whole
+        // session: the fade could never run and the canvas tap could never
+        // hide anything, in the one mode whose entire purpose is reading a
+        // long ayah. uiBusy means "a surface or a finger is live", never "a
+        // mode is selected".
+        val uiBusy = showSleepTimer || showQueue || showAmbient || showVolume || showTafseer ||
+            isScrubbing || isPointerDown
         androidx.compose.runtime.LaunchedEffect(controlsVisible, idleTick, uiBusy) {
             if (controlsVisible && !uiBusy) {
                 kotlinx.coroutines.delay(10_000L)
