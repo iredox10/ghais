@@ -802,6 +802,32 @@ class NowPlayingScreen : Screen {
 
                 Spacer(modifier = Modifier.height(14.dp))
 
+                // Hifz loop (ayah mode only) melts with the rest of the chrome.
+                AnimatedVisibility(
+                    visible = controlsVisible && isAyahMode,
+                    enter = fadeIn(tween(350)) + slideInVertically(tween(350)) { it / 2 },
+                    exit = fadeOut(tween(350)) + slideOutVertically(tween(350)) { it / 2 }
+                ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    val hifzTrack = track
+                    if (hifzTrack != null) {
+                        HifzLoopRow(
+                            surahId = hifzTrack.surahId,
+                            currentAyah = hifzTrack.ayahNo.coerceAtLeast(1),
+                            ayahsCount = QuranDataRepository.getSurahById(hifzTrack.surahId)?.ayahsCount ?: 0,
+                            onInteract = poke
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        HifzReciterLockChip(
+                            currentSlug = hifzTrack.reciterSlug,
+                            onInteract = poke
+                        )
+                    }
+                }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
                 // Progress, times + overflow melt away with the idle fade.
                 AnimatedVisibility(
                     visible = controlsVisible,
@@ -1090,7 +1116,7 @@ private fun NoirUtilityWell(
     }
 }
 
-private val PlayerSpeeds = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 0.75f)
+private val PlayerSpeeds = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 0.75f, 0.5f)
 
 private fun formatMs(ms: Long): String {
     val s = (ms.coerceAtLeast(0L) / 1000).toInt()
