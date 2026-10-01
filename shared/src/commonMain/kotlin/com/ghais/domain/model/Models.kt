@@ -322,6 +322,8 @@ data class HifzRange(
     val startAyah: Int,
     val endAyah: Int,
     val targetLoops: Int = 1,
-    val currentLoop: Int = 1
+    val currentLoop: Int = 1,
+    val repeatPerAyah: Int = 1,
+    val pauseBetweenMs: Long = 0L
 )
 

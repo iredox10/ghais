@@ -30,6 +30,93 @@ import kotlinx.coroutines.launch
  * Duration 0 == unknown until the stream reports it (see Models.kt).
  */
 
+// --- Hifz loop engine: pure range/loop/gap decision helpers (Phase 1.1) ---
+//
+// Top-level + internal so commonTest can exercise the loop decision without
+// booting the [AudioEngine] singleton (its init touches PlayerBridge, which
+// needs a platform player). [AudioEngine] delegates to these; behaviour with
+// defaults (repeatPerAyah=1, pauseBetweenMs=0L) is identical to the pre-1.1
+// advance/loop/complete flow.
+
+/** Upper bound for per-ayah repeats (mirrors the HifzLoopControls stepper). */
+internal const val HIFZ_MAX_REPEAT_PER_AYAH: Int = 50
+
+/** Upper bound for the inter-repeat pause (30s, mirrors the UI stepper). */
+internal const val HIFZ_MAX_PAUSE_BETWEEN_MS: Long = 30_000L
+
+internal fun clampRepeatPerAyah(value: Int): Int = value.coerceIn(1, HIFZ_MAX_REPEAT_PER_AYAH)
+
+internal fun clampPauseBetweenMs(value: Long): Long = value.coerceIn(0L, HIFZ_MAX_PAUSE_BETWEEN_MS)
+
+/**
+ * Builds a normalized [HifzRange]: swaps inverted bounds, restarts at loop 1,
+ * clamps [repeatPerAyah] to 1..50 and [pauseBetweenMs] to 0..30_000ms.
+ */
+internal fun buildHifzRange(
+    surahId: Int,
+    startAyah: Int,
+    endAyah: Int,
+    targetLoops: Int = 1,
+    repeatPerAyah: Int = 1,
+    pauseBetweenMs: Long = 0L
+): HifzRange = HifzRange(
+    surahId = surahId,
+    startAyah = minOf(startAyah, endAyah).coerceAtLeast(1),
+    endAyah = maxOf(startAyah, endAyah).coerceAtLeast(1),
+    targetLoops = targetLoops,
+    currentLoop = 1,
+    repeatPerAyah = clampRepeatPerAyah(repeatPerAyah),
+    pauseBetweenMs = clampPauseBetweenMs(pauseBetweenMs)
+)
+
+/**
+ * Next step of the hifz loop when an ayah completes. [currentRepetition] is
+ * the 1-based count of completed plays of [currentAyah] in this visit
+ * (mirrors `currentAyahRepetition`: first play completes rep 1).
+ */
+internal sealed interface HifzTransition {
+    /** Replay the same ayah; [repetition] is the new 1-based rep count. */
+    data class ReplayAyah(val surahId: Int, val ayahNo: Int, val repetition: Int) : HifzTransition
+
+    /** Reps done: advance to the next ayah in the range. */
+    data class AdvanceAyah(val surahId: Int, val ayahNo: Int) : HifzTransition
+
+    /** Range end reached with loops left: restart at [startAyah]. */
+    data class RestartRange(val surahId: Int, val startAyah: Int, val nextLoop: Int) : HifzTransition
+
+    /** Range end reached and loops exhausted: stop. */
+    data object CompleteRange : HifzTransition
+
+    /** No active range for this surah: use the standard (non-range) logic. */
+    data object FallThrough : HifzTransition
+}
+
+internal fun decideHifzTransition(
+    range: HifzRange?,
+    surahId: Int,
+    currentAyah: Int,
+    currentRepetition: Int
+): HifzTransition {
+    if (range == null || range.surahId != surahId) return HifzTransition.FallThrough
+    if (currentRepetition < range.repeatPerAyah) {
+        return HifzTransition.ReplayAyah(surahId, currentAyah, currentRepetition + 1)
+    }
+    if (currentAyah < range.endAyah) {
+        return HifzTransition.AdvanceAyah(surahId, (currentAyah + 1).coerceAtLeast(range.startAyah))
+    }
+    if (range.targetLoops == -1 || range.currentLoop < range.targetLoops) {
+        return HifzTransition.RestartRange(surahId, range.startAyah, range.currentLoop + 1)
+    }
+    return HifzTransition.CompleteRange
+}
+
+/**
+ * Countdown-seconds display for an inter-repeat pause: ceil(ms / 1000),
+ * 0 when there is no pause.
+ */
+internal fun hifzPauseCountdownSeconds(pauseBetweenMs: Long): Int =
+    if (pauseBetweenMs <= 0L) 0 else ((pauseBetweenMs + 999L) / 1000L).toInt().coerceAtLeast(1)
+
 object AudioEngine {
     private val queueManager: QueueManager = QueueManager()
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -476,6 +563,55 @@ object AudioEngine {
         }
     }
 
+    /**
+     * Phase 1.1 inter-repeat pause: [pauseBetweenMs] of silence between hifz
+     * loop steps (same-ayah replays, advances, restarts). Reuses the gap
+     * mechanism ([gapJob]/[pendingGapAction]/[cancelGap]) so the pause shows
+     * in [isRecitationGapActive]/[recitationGapCountdown] and stays skippable
+     * via [skipRecitationGap]. Zero pause falls back to [executeWithRecitationGap]
+     * so the recitation-gap setting still applies.
+     */
+    private fun executeWithHifzPause(
+        pauseBetweenMs: Long,
+        lastAyahDurationMs: Long,
+        action: () -> Unit
+    ) {
+        if (pauseBetweenMs <= 0L) {
+            executeWithRecitationGap(lastAyahDurationMs, action)
+            return
+        }
+        cancelGap()
+        if (!_isPlaying.value) {
+            action()
+            return
+        }
+        pendingGapAction = action
+        _isRecitationGapActive.value = true
+        _recitationGapCountdown.value = hifzPauseCountdownSeconds(pauseBetweenMs)
+
+        gapJob = scope.launch {
+            var remainingMs = clampPauseBetweenMs(pauseBetweenMs)
+            while (remainingMs > 0L) {
+                _recitationGapCountdown.value = hifzPauseCountdownSeconds(remainingMs)
+                if (!_isPlaying.value) {
+                    delay(200L)
+                    continue
+                }
+                val step = minOf(200L, remainingMs)
+                delay(step)
+                remainingMs -= step
+            }
+            _recitationGapCountdown.value = 0
+            _isRecitationGapActive.value = false
+
+            if (_isPlaying.value) {
+                val pending = pendingGapAction
+                pendingGapAction = null
+                pending?.invoke()
+            }
+        }
+    }
+
     // --- Public Hifz Control APIs ---
     fun setAyahRepetitionTarget(target: Int) {
         _ayahRepetitionTarget.value = when {
@@ -500,14 +636,29 @@ object AudioEngine {
     }
 
     fun setHifzRange(surahId: Int, startAyah: Int, endAyah: Int, targetLoops: Int = 1) {
-        val start = minOf(startAyah, endAyah).coerceAtLeast(1)
-        val end = maxOf(startAyah, endAyah).coerceAtLeast(1)
-        _hifzRange.value = HifzRange(
+        setHifzRange(surahId, startAyah, endAyah, targetLoops, 1, 0L)
+    }
+
+    /**
+     * Phase 1.1: per-ayah repeat count ([repeatPerAyah], clamped 1..50) plus
+     * inter-repeat pause ([pauseBetweenMs], clamped 0..30_000ms). Rep/loop
+     * progress is observable via [hifzRange] and [currentAyahRepetition].
+     */
+    fun setHifzRange(
+        surahId: Int,
+        startAyah: Int,
+        endAyah: Int,
+        targetLoops: Int,
+        repeatPerAyah: Int,
+        pauseBetweenMs: Long
+    ) {
+        _hifzRange.value = buildHifzRange(
             surahId = surahId,
-            startAyah = start,
-            endAyah = end,
+            startAyah = startAyah,
+            endAyah = endAyah,
             targetLoops = targetLoops,
-            currentLoop = 1
+            repeatPerAyah = repeatPerAyah,
+            pauseBetweenMs = pauseBetweenMs
         )
         _currentAyahRepetition.value = 1
         cancelGap()
@@ -1069,7 +1220,49 @@ object AudioEngine {
         val reciterSlug = current.reciterSlug
         val lastDurationMs = effectiveDuration()
 
-        // 1. Ayah Repetition Logic (N-times)
+        // 1. Bounded Range Loop Mode (per-ayah repeats + inter-repeat pause).
+        // While a range is active for this surah its repeatPerAyah governs the
+        // current ayah; _currentAyahRepetition tracks the completed rep count.
+        // The global ayah-repetition target below only applies outside ranges.
+        val range = _hifzRange.value
+        if (range != null && range.surahId == surahId) {
+            when (val step = decideHifzTransition(range, surahId, currentAyah, _currentAyahRepetition.value)) {
+                is HifzTransition.ReplayAyah -> {
+                    _currentAyahRepetition.value = step.repetition
+                    executeWithHifzPause(range.pauseBetweenMs, lastDurationMs) {
+                        playAyahInternal(surahId, currentAyah, reciterSlug)
+                    }
+                    return
+                }
+                is HifzTransition.AdvanceAyah -> {
+                    _currentAyahRepetition.value = 1
+                    executeWithHifzPause(range.pauseBetweenMs, lastDurationMs) {
+                        playAyahInternal(step.surahId, step.ayahNo, reciterSlug)
+                    }
+                    return
+                }
+                is HifzTransition.RestartRange -> {
+                    _hifzRange.value = range.copy(currentLoop = step.nextLoop)
+                    _currentAyahRepetition.value = 1
+                    executeWithHifzPause(range.pauseBetweenMs, lastDurationMs) {
+                        playAyahInternal(step.surahId, step.startAyah, reciterSlug)
+                    }
+                    return
+                }
+                is HifzTransition.CompleteRange -> {
+                    executeWithHifzPause(range.pauseBetweenMs, lastDurationMs) {
+                        SleepTimer.onQueueEnded()
+                        stopPlayback()
+                    }
+                    return
+                }
+                HifzTransition.FallThrough -> {
+                    // Unreachable under the guard above; fall through to standard logic.
+                }
+            }
+        }
+
+        // 2. Ayah Repetition Logic (N-times, non-range playback)
         val repTarget = _ayahRepetitionTarget.value
         val shouldRepeatAyah = (repTarget == -1) || (_currentAyahRepetition.value < repTarget)
 
@@ -1083,32 +1276,6 @@ object AudioEngine {
 
         // Ayah repetition target reached -> reset counter to 1 and proceed
         _currentAyahRepetition.value = 1
-
-        // 2. Bounded Range Loop Mode
-        val range = _hifzRange.value
-        if (range != null && range.surahId == surahId) {
-            if (currentAyah < range.endAyah) {
-                val nextAyah = (currentAyah + 1).coerceAtLeast(range.startAyah)
-                executeWithRecitationGap(lastDurationMs) {
-                    playAyahInternal(surahId, nextAyah, reciterSlug)
-                }
-            } else {
-                // At or beyond range endAyah
-                val canLoopRange = (range.targetLoops == -1) || (range.currentLoop < range.targetLoops)
-                if (canLoopRange) {
-                    _hifzRange.value = range.copy(currentLoop = range.currentLoop + 1)
-                    executeWithRecitationGap(lastDurationMs) {
-                        playAyahInternal(surahId, range.startAyah, reciterSlug)
-                    }
-                } else {
-                    executeWithRecitationGap(lastDurationMs) {
-                        SleepTimer.onQueueEnded()
-                        stopPlayback()
-                    }
-                }
-            }
-            return
-        }
 
         // 3. Standard Queue / RepeatMode Logic (No HifzRange active)
         when (queueManager.repeatMode) {
