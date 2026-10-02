@@ -38,59 +38,140 @@ actual object PlayerBridge {
     private var pendingArtworkUri: String? = null
 
     /**
-     * Spotify-style resume-on-focus-gain: ExoPlayer auto-resumes transient
-     * focus loss itself, but a PERMANENT loss (WhatsApp status takes
-     * AUDIOFOCUS_GAIN) drops playWhenReady with no auto-resume. Remember the
-     * interruption and resume when focus returns — but only if the user
-     * still intends playback (AudioEngine.isPlaying) and didn't pause
-     * mid-interruption.
+     * Telegram-style single-owner audio focus (mirrors
+     * MediaController.onAudioFocusChange): ExoPlayer's internal focus
+     * handling is DISABLED in every builder (handleAudioFocus=false) so
+     * exactly one listener owns pause/resume/duck. A WhatsApp status or
+     * voice note takes transient focus -> we get LOSS_TRANSIENT -> pause +
+     * remember, then auto-resume on GAIN. A permanent LOSS (another music
+     * app) pauses and stays paused until the user presses play. Ducking
+     * lowers to 0.2 and keeps playing, like Telegram's VOLUME_DUCK.
+     *
+     * Focus-driven pauses flow through AudioEngine (UI stays honest) but
+     * are marked via [focusPausedByUs] so the service mirror and the
+     * playWhenReady callback never mistake them for user pauses — that
+     * double-pause is what used to kill every auto-resume.
      */
     @Volatile
     private var resumeOnFocusGain = false
 
+    @Volatile
+    private var focusPausedByUs = false
+
+    @Volatile
+    private var ducked = false
+
+    @Volatile
+    private var hasFocus = false
+
+    private var baseVolume = 1f
+    private var audioFocusRequest: android.media.AudioFocusRequest? = null
+
+    /** True while the current pause was initiated by a focus loss. */
+    fun isFocusPausedByUs(): Boolean = focusPausedByUs
+
+    private fun audioManagerOf(): android.media.AudioManager? = try {
+        appContext?.applicationContext
+            ?.getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+    } catch (_: Exception) {
+        null
+    }
+
     private val audioFocusListener = android.media.AudioManager.OnAudioFocusChangeListener { change ->
         when (change) {
-            android.media.AudioManager.AUDIOFOCUS_LOSS,
+            android.media.AudioManager.AUDIOFOCUS_LOSS -> {
+                ducked = false
+                applyVolume()
+                val wasPlaying = AudioEngine.isPlaying.value
+                AudioEngine.pause()
+                focusPausedByUs = wasPlaying
+                resumeOnFocusGain = false
+            }
             android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                if (AudioEngine.isPlaying.value) resumeOnFocusGain = true
+                ducked = false
+                applyVolume()
+                val wasPlaying = AudioEngine.isPlaying.value
+                AudioEngine.pause()
+                focusPausedByUs = wasPlaying
+                resumeOnFocusGain = wasPlaying
+            }
+            android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                if (AudioEngine.isPlaying.value) {
+                    ducked = true
+                    applyVolume()
+                }
             }
             android.media.AudioManager.AUDIOFOCUS_GAIN -> {
-                if (resumeOnFocusGain) {
+                ducked = false
+                applyVolume()
+                if (resumeOnFocusGain && focusPausedByUs) {
                     resumeOnFocusGain = false
-                    val p = exoPlayer
-                    if (AudioEngine.isPlaying.value && p != null && !p.isPlaying) {
-                        try { p.play() } catch (_: Exception) { }
+                    focusPausedByUs = false
+                    try {
+                        AudioEngine.resume()
+                    } catch (_: Exception) {
                     }
+                } else {
+                    focusPausedByUs = false
                 }
             }
         }
     }
 
-    private fun ensureFocusListener(context: android.content.Context) {
-        try {
-            val am = context.applicationContext
-                .getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
-                ?: return
+    private fun requestFocus(): Boolean {
+        val am = audioManagerOf() ?: return false
+        return try {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                val req = android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
-                    .setAudioAttributes(
-                        android.media.AudioAttributes.Builder()
-                            .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
-                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
-                            .build()
-                    )
-                    .setOnAudioFocusChangeListener(audioFocusListener)
-                    .build()
-                am.requestAudioFocus(req)
+                var req = audioFocusRequest
+                if (req == null) {
+                    req = android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
+                        .setAudioAttributes(
+                            android.media.AudioAttributes.Builder()
+                                .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                                .build()
+                        )
+                        .setOnAudioFocusChangeListener(audioFocusListener)
+                        .build()
+                    audioFocusRequest = req
+                }
+                hasFocus = am.requestAudioFocus(req) ==
+                    android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+                hasFocus
             } else {
                 @Suppress("DEPRECATION")
-                am.requestAudioFocus(
+                hasFocus = am.requestAudioFocus(
                     audioFocusListener,
                     android.media.AudioManager.STREAM_MUSIC,
                     android.media.AudioManager.AUDIOFOCUS_GAIN,
-                )
+                ) == android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+                hasFocus
             }
-        } catch (_: Exception) { }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun abandonFocus() {
+        try {
+            val am = audioManagerOf() ?: return
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                audioFocusRequest?.let { am.abandonAudioFocusRequest(it) }
+            } else {
+                @Suppress("DEPRECATION")
+                am.abandonAudioFocus(audioFocusListener)
+            }
+        } catch (_: Exception) {
+        }
+        hasFocus = false
+    }
+
+    private fun applyVolume() {
+        try {
+            val factor = if (ducked) 0.2f else 1f
+            exoPlayer?.volume = (baseVolume * factor).coerceIn(0f, 1f)
+        } catch (_: Exception) {
+        }
     }
 
     private val listener = object : androidx.media3.common.Player.Listener {
@@ -122,10 +203,14 @@ actual object PlayerBridge {
         ) {
             // User/app pause (anything but a focus loss) cancels a pending
             // focus resume — e.g. pausing mid-interruption must stay paused.
+            // Our own focus handler sets its flags AFTER calling
+            // AudioEngine.pause(), so this never clobbers a fresh
+            // focus-driven pause.
             if (!playWhenReady &&
                 reason != androidx.media3.common.Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS
             ) {
                 resumeOnFocusGain = false
+                focusPausedByUs = false
             }
         }
     }
@@ -139,14 +224,15 @@ actual object PlayerBridge {
                         .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_SPEECH)
                         .setUsage(androidx.media3.common.C.USAGE_MEDIA)
                         .build(),
-                    true,
+                    // Focus is owned SOLELY by audioFocusListener above
+                    // (Telegram-style); ExoPlayer must not self-pause.
+                    false,
                 )
                 .setHandleAudioBecomingNoisy(true)
                 .setWakeMode(androidx.media3.common.C.WAKE_MODE_NETWORK)
                 .build()
             p.addListener(listener)
             exoPlayer = p
-            ensureFocusListener(context)
             startPolling()
         }
         return p
@@ -286,6 +372,7 @@ actual object PlayerBridge {
         if (!title.isNullOrBlank()) pendingTitle = title
         if (!artist.isNullOrBlank()) pendingArtist = artist
         try { onPlayRequested?.invoke() } catch (_: Exception) { }
+        try { requestFocus() } catch (_: Exception) { }
         val p = exoPlayer ?: appContext?.let { player(it) } ?: run {
             _errorMessage.value = "Player not initialised — call PlayerBridge.init(context) from MainActivity"
             return
@@ -373,11 +460,15 @@ actual object PlayerBridge {
     }
 
     actual fun pause() {
+        // Explicit pause wins over any pending focus resume.
+        resumeOnFocusGain = false
+        focusPausedByUs = false
         try { exoPlayer?.pause() } catch (_: Exception) { }
     }
 
     actual fun resume() {
         try { onPlayRequested?.invoke() } catch (_: Exception) { }
+        try { requestFocus() } catch (_: Exception) { }
         try { exoPlayer?.play() } catch (e: Exception) {
             _errorMessage.value = e.message
         }
@@ -385,6 +476,9 @@ actual object PlayerBridge {
 
     actual fun stop() {
         resumeOnFocusGain = false
+        focusPausedByUs = false
+        ducked = false
+        try { abandonFocus() } catch (_: Exception) { }
         try {
             exoPlayer?.stop()
             exoPlayer?.clearMediaItems()
@@ -402,7 +496,8 @@ actual object PlayerBridge {
     }
 
     actual fun setVolume(volume: Float) {
-        try { exoPlayer?.volume = volume.coerceIn(0f, 1f) } catch (_: Exception) { }
+        baseVolume = volume.coerceIn(0f, 1f)
+        applyVolume()
     }
 
     actual fun setOnTrackEndListener(listener: (() -> Unit)?) {
