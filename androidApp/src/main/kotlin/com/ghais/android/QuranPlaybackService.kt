@@ -145,6 +145,12 @@ class QuranPlaybackService : MediaSessionService() {
             if (isPlaying && !AudioEngine.isPlaying.value) {
                 AudioEngine.resume()
             } else if (!isPlaying && AudioEngine.isPlaying.value) {
+                // Focus-driven pauses belong to PlayerBridge's Telegram-style
+                // focus owner (it already paused AudioEngine itself);
+                // mirroring them here issued a second USER_REQUEST pause that
+                // cancelled every auto-resume. Skip those, mirror the rest
+                // (e.g. headset-unplug noisy pauses).
+                if (PlayerBridge.isFocusPausedByUs()) return
                 val state = player?.playbackState
                 if (state != Player.STATE_BUFFERING) {
                     AudioEngine.pause()
@@ -185,7 +191,9 @@ class QuranPlaybackService : MediaSessionService() {
                         .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
                         .setUsage(C.USAGE_MEDIA)
                         .build(),
-                    true,
+                    // Single focus owner: PlayerBridge.audioFocusListener.
+                    // ExoPlayer must not self-pause (see sessionListener).
+                    false,
                 )
                 .setHandleAudioBecomingNoisy(true)
                 .setWakeMode(C.WAKE_MODE_NETWORK)
@@ -283,6 +291,28 @@ class QuranPlaybackService : MediaSessionService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
         mediaSession
+
+    /**
+     * Telegram-style persistence: a paused player keeps its shade + lock
+     * controls (Play one tap away) instead of being cancelled out from
+     * under the user. When paused with a loaded playlist we post the
+     * notification DETACHED (not foreground) rather than letting Media3
+     * drop it; only a real stop (empty playlist) follows the default path
+     * so the shade can actually go away. Playing always takes the
+     * foreground path so background playback survives.
+     */
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        val keepPosted = try {
+            !session.player.isPlaying && session.player.mediaItemCount > 0
+        } catch (_: Exception) {
+            false
+        }
+        if (keepPosted) {
+            super.onUpdateNotification(session, false)
+        } else {
+            super.onUpdateNotification(session, startInForegroundRequired)
+        }
+    }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         // Keep audio alive when swiped away; stop via notification or in-app.
