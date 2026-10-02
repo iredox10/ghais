@@ -218,7 +218,7 @@ object MyRoutinesScreen : Screen {
             "• $surahName — $reciterName"
         }
         return buildString {
-            append("My '${routine.title}' routine on Ghais:\n")
+            append("My '${routine.title}' routine on Ghaith:\n")
             lines.forEach { append(it).append("\n") }
             append("Listen with me!")
         }

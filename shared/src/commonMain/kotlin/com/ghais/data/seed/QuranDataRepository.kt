@@ -423,7 +423,7 @@ object QuranDataRepository {
             tag = "Tartil",
             subtitle = "Calm, slow tempo recitation",
             description = "Carefully calibrated, slow-tempo Tartil recitations designed to cultivate a state of stillness, flow, and deep intellectual focus during reading, study, and contemplation.",
-            curator = "Ghais Editorial",
+            curator = "Ghaith Editorial",
             totalDuration = "52 mins",
             coverUrl = GhaisAssets.CuratedForPeace[0].coverUrl,
             tracks = listOf(
@@ -441,7 +441,7 @@ object QuranDataRepository {
             tag = "Emotional",
             subtitle = "Comforting verses of mercy",
             description = "Verses highlighting Allah's boundless mercy, forgiveness, and unconditional love, recited by masters of emotional expression to bring comfort to weary hearts.",
-            curator = "Ghais Peace Team",
+            curator = "Ghaith Peace Team",
             totalDuration = "48 mins",
             coverUrl = GhaisAssets.CuratedForPeace[1].coverUrl,
             tracks = listOf(
@@ -478,7 +478,7 @@ object QuranDataRepository {
             tag = "Sleep",
             subtitle = "Gentle sleep timer mix",
             description = "Soft, tranquil recitations curated specifically to ease your mind into peaceful slumber under the protection of the Word of Allah.",
-            curator = "Ghais Editorial",
+            curator = "Ghaith Editorial",
             totalDuration = "42 mins",
             coverUrl = GhaisAssets.CuratedForPeace[3].coverUrl,
             tracks = listOf(
@@ -532,7 +532,7 @@ object QuranDataRepository {
             tag = "Healing",
             subtitle = "Solace for distressed minds",
             description = "A therapeutic selection of soothing verses reminding us that with every hardship comes ease, alleviating grief, anxiety, and distress.",
-            curator = "Ghais Wellness",
+            curator = "Ghaith Wellness",
             totalDuration = "46 mins",
             coverUrl = GhaisAssets.JumpBackInItems[0].coverUrl,
             tracks = listOf(
@@ -570,7 +570,7 @@ object QuranDataRepository {
             tag = "Healing",
             subtitle = "Sacred verses of spiritual restoration",
             description = "Selected healing Surahs and ruqyah recitations bringing comfort, tranquility, and divine shifa to the soul and physical body.",
-            curator = "Ghais Wellness",
+            curator = "Ghaith Wellness",
             totalDuration = "36 mins",
             coverUrl = GhaisAssets.LibraryTahajjudCover,
             tracks = listOf(
@@ -628,7 +628,7 @@ object QuranDataRepository {
             tag = "Healing",
             subtitle = "Ash-Sharh & Ad-Duha for weary souls",
             description = "A therapeutic selection of soothing verses reminding us that with every hardship comes ease, alleviating grief, anxiety, and distress.",
-            curator = "Ghais Wellness",
+            curator = "Ghaith Wellness",
             totalDuration = "32 mins",
             coverUrl = GhaisAssets.JumpBackInItems[0].coverUrl,
             tracks = listOf(
@@ -646,7 +646,7 @@ object QuranDataRepository {
             tag = "Morning",
             subtitle = "Surah Ar-Rahman & Al-Waqi'ah recitations",
             description = "Uplifting dawn recitations celebrating Allah's creation, boundless blessings, and opening the gates of sustenance and barakah.",
-            curator = "Ghais Editorial",
+            curator = "Ghaith Editorial",
             totalDuration = "40 mins",
             coverUrl = GhaisAssets.LibraryMorningCover,
             tracks = listOf(
@@ -664,7 +664,7 @@ object QuranDataRepository {
             tag = "Peace",
             subtitle = "Soft acoustic ambiance with Surat Maryam",
             description = "Gentle, heart-settling recitations echoing the tranquility of Paradise, perfect for peaceful evening contemplation and relaxation.",
-            curator = "Ghais Peace Team",
+            curator = "Ghaith Peace Team",
             totalDuration = "46 mins",
             coverUrl = GhaisAssets.CuratedForPeace[1].coverUrl,
             tracks = listOf(

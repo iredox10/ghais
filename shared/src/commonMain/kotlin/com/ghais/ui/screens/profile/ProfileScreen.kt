@@ -227,7 +227,7 @@ object ProfileScreen : Tab {
                         com.ghais.ui.screens.profile.NoirSettingsRow(
                             icon = Icons.Filled.Notifications,
                             title = "Broadcasts",
-                            subtitle = if (unreadBroadcasts > 0) "$unreadBroadcasts unread announcement(s)" else "Announcements from Ghais",
+                            subtitle = if (unreadBroadcasts > 0) "$unreadBroadcasts unread announcement(s)" else "Announcements from Ghaith",
                             onClick = { rootNavigator?.push(BroadcastsScreen) }
                         )
                     }

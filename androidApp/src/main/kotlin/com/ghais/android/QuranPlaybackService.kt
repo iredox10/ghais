@@ -82,7 +82,7 @@ class QuranPlaybackService : MediaSessionService() {
 
         fun displayTitle(surahNameEn: String, ayahNo: Int = 0, isFullSurah: Boolean = true): String {
             val name = surahNameEn.trim()
-            if (name.isBlank()) return "Ghais"
+            if (name.isBlank()) return "Ghaith"
             // Must match AudioEngine.trackDisplayTitle exactly: updateMetadata()
             // early-returns on equal titles, and any replaceMediaItem call made
             // while buffering resets the timeline (wipes resume seeks).
@@ -168,14 +168,14 @@ class QuranPlaybackService : MediaSessionService() {
         // Artwork for artworkUri comes from the session BitmapLoader.
         val notificationProvider = try {
             QuranNotificationProvider(this, PLACEHOLDER_NOTIFICATION_ID, CHANNEL_ID)
-                .apply { setSmallIcon(R.drawable.ic_notification) }
+                .apply { setSmallIcon(R.drawable.ghaith_mark) }
         } catch (_: Exception) {
             androidx.media3.session.DefaultMediaNotificationProvider.Builder(this)
                 .setChannelId(CHANNEL_ID)
                 .setNotificationId(PLACEHOLDER_NOTIFICATION_ID)
                 .build()
                 .apply {
-                    setSmallIcon(R.drawable.ic_notification)
+                    setSmallIcon(R.drawable.ghaith_mark)
                 }
         }
         setMediaNotificationProvider(notificationProvider)
@@ -307,11 +307,17 @@ class QuranPlaybackService : MediaSessionService() {
         } catch (_: Exception) {
             false
         }
-        if (keepPosted) {
-            super.onUpdateNotification(session, false)
-        } else {
-            super.onUpdateNotification(session, startInForegroundRequired)
-        }
+        // Both super calls can throw from the framework side
+        // (ForegroundServiceDidNotStartInTime, SecurityException on stale
+        // foreground state); an uncaught throw here kills the service and
+        // takes the shade with it, so guard like every other call site.
+        try {
+            if (keepPosted) {
+                super.onUpdateNotification(session, false)
+            } else {
+                super.onUpdateNotification(session, startInForegroundRequired)
+            }
+        } catch (_: Exception) { }
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -441,7 +447,7 @@ class QuranPlaybackService : MediaSessionService() {
             }
             AudioEngine.resume()
             val title = displayTitle(track.surahNameEn, track.ayahNo, track.isFullSurah)
-            val artist = track.reciterName.ifBlank { "Ghais" }
+            val artist = track.reciterName.ifBlank { "Ghaith" }
             val item = MediaItem.Builder()
                 .setMediaId(track.audioUrl)
                 .setUri(track.audioUrl)
@@ -463,7 +469,7 @@ class QuranPlaybackService : MediaSessionService() {
             AudioEngine.currentTrack.collect { track ->
                 if (track == null) return@collect
                 val title = displayTitle(track.surahNameEn, track.ayahNo, track.isFullSurah)
-                val artist = track.reciterName.ifBlank { "Ghais" }
+                val artist = track.reciterName.ifBlank { "Ghaith" }
                 PlayerBridge.updateMetadata(
                     title,
                     artist,
@@ -611,7 +617,7 @@ class QuranPlaybackService : MediaSessionService() {
     }
 
     /**
-     * Points the current item artwork at the ambient frame (or the ghais_logo
+     * Points the current item artwork at the ambient frame (or the ghaith_logo
      * fallback). Mirrors PlayerBridge.updateMetadata's safe rule: never
      * replaces the item while playing — position/timeline is preserved, and
      * art lands on the next safe window instead.
@@ -639,7 +645,7 @@ class QuranPlaybackService : MediaSessionService() {
 
     private fun fallbackArtworkUri(): Uri {
         return try {
-            Uri.parse("android.resource://$packageName/${R.drawable.ghais_logo}")
+            Uri.parse("android.resource://$packageName/${R.drawable.ghaith_art}")
         } catch (_: Exception) {
             Uri.EMPTY
         }
@@ -655,13 +661,13 @@ class QuranPlaybackService : MediaSessionService() {
             val nm = getSystemService(NotificationManager::class.java)
             if (nm != null && nm.activeNotifications.any { it.id == PLACEHOLDER_NOTIFICATION_ID }) return
             val track = AudioEngine.currentTrack.value
-            val initialTitle = track?.let { displayTitle(it.surahNameEn, it.ayahNo, it.isFullSurah) } ?: "Ghais"
+            val initialTitle = track?.let { displayTitle(it.surahNameEn, it.ayahNo, it.isFullSurah) } ?: "Ghaith"
             val initialSubtitle = track?.reciterName?.takeIf { it.isNotBlank() } ?: "Preparing recitation…"
             val placeholder = android.app.Notification.Builder(this, CHANNEL_ID)
                 .setContentTitle(initialTitle)
                 .setContentText(initialSubtitle)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setLargeIcon(android.graphics.BitmapFactory.decodeResource(resources, R.drawable.ghais_logo))
+                .setSmallIcon(R.drawable.ghaith_mark)
+                .setLargeIcon(android.graphics.BitmapFactory.decodeResource(resources, R.drawable.ghaith_art))
                 .setOngoing(true)
                 .build()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -725,16 +731,16 @@ private class QuranNotificationProvider(
                 ""
             }
             when {
-                suffix.isBlank() && base.isBlank() -> "Ghais"
+                suffix.isBlank() && base.isBlank() -> "Ghaith"
                 suffix.isBlank() -> base
                 base.isBlank() -> suffix
                 else -> "$base • $suffix"
             }
         } catch (_: Exception) {
             try {
-                super.getNotificationContentText(metadata) ?: "Ghais"
+                super.getNotificationContentText(metadata) ?: "Ghaith"
             } catch (_: Exception) {
-                "Ghais"
+                "Ghaith"
             }
         }
     }
@@ -745,8 +751,8 @@ private class QuranNotificationProvider(
  * androidApp has no Coil dependency (coil3 lives in shared androidMain and is
  * not transitively visible), so artwork is decoded via
  * ContentResolver.openInputStream — handles file://, content:// and the
- * android.resource:// ghais_logo fallback alike. Never throws: every failure
- * falls back to the ghais_logo bitmap, then a 1×1 placeholder.
+ * android.resource:// ghaith_logo fallback alike. Never throws: every failure
+ * falls back to the ghaith_logo bitmap, then a 1×1 placeholder.
  */
 private class ShadeBitmapLoader(
     appContext: android.content.Context,
@@ -799,7 +805,7 @@ private class ShadeBitmapLoader(
 
     private fun fallbackBitmap(): Bitmap {
         try {
-            val bitmap = BitmapFactory.decodeResource(resources, com.ghais.android.R.drawable.ghais_logo)
+            val bitmap = BitmapFactory.decodeResource(resources, com.ghais.android.R.drawable.ghaith_art)
             if (bitmap != null) return bitmap
         } catch (_: Exception) { }
         return try {

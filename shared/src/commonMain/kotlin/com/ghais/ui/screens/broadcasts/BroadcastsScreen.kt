@@ -157,7 +157,7 @@ object BroadcastsScreen : Screen {
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "New broadcasts from Ghais will appear here.",
+                                text = "New broadcasts from Ghaith will appear here.",
                                 color = GhaisNoir.TextSecondary,
                                 fontSize = 12.5.sp,
                                 textAlign = TextAlign.Center

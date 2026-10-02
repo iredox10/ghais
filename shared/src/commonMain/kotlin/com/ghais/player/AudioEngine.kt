@@ -1348,7 +1348,7 @@ object AudioEngine {
 
     fun trackDisplayTitle(track: TrackItem): String {
         val name = track.surahNameEn.trim()
-        if (name.isBlank()) return "Ghais"
+        if (name.isBlank()) return "Ghaith"
         return if (track.ayahNo <= 0 || track.isFullSurah) {
             name
         } else {

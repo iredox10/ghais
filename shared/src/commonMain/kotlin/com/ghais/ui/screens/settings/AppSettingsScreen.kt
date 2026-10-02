@@ -181,19 +181,19 @@ object AppSettingsScreen : Screen {
                         NoirListRow(
                             icon = Icons.Filled.Info,
                             title = "Version",
-                            subtitle = "Ghais 1.0",
+                            subtitle = "Ghaith 1.0",
                             chevron = false
                         )
                         NoirListRow(
                             icon = Icons.Filled.Star,
-                            title = "Rate Ghais",
+                            title = "Rate Ghaith",
                             subtitle = "Not wired yet",
                             // No-op: store listing / review flow not wired.
                             onClick = { }
                         )
                         NoirListRow(
                             icon = Icons.Filled.Share,
-                            title = "Share Ghais",
+                            title = "Share Ghaith",
                             subtitle = "Not wired yet",
                             // No-op: share sheet not wired.
                             onClick = { }

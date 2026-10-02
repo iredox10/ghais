@@ -383,7 +383,7 @@ private fun CuratedNoirHeroPlate(
                     )
                     Spacer(modifier = Modifier.height(3.dp))
                     Text(
-                        text = "Curated by ${playlist.curator.ifEmpty { "Ghais" }} • ${playlist.totalDuration.ifEmpty { "42 mins" }}",
+                        text = "Curated by ${playlist.curator.ifEmpty { "Ghaith" }} • ${playlist.totalDuration.ifEmpty { "42 mins" }}",
                         color = GhaisNoir.TextSecondary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Normal,

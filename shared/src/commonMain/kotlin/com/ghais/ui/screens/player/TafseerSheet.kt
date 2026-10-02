@@ -271,7 +271,7 @@ fun TafseerSheet(
                                 appendLine("— ${selectedSource.title}:")
                                 appendLine(activeText)
                                 appendLine()
-                                append("Shared via Ghais")
+                                append("Shared via Ghaith")
                             }
                             ShareSheet.shareText(
                                 title = "Tafseer ${entry.surahNameEn} ${entry.ayahNo}",
@@ -696,7 +696,7 @@ fun TafseerSheet(
 
             // Subdued Reference Footnote
             Text(
-                text = "Tafseer text curated and verified for contemplative listening in Ghais Noir. Touch anywhere outside to dismiss.",
+                text = "Tafseer text curated and verified for contemplative listening in Ghaith Noir. Touch anywhere outside to dismiss.",
                 color = GhaisNoir.TextDisabled,
                 fontSize = 11.sp,
                 textAlign = TextAlign.Center,
