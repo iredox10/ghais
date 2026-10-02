@@ -357,3 +357,42 @@ private fun HifzStepButton(
         )
     }
 }
+
+/**
+ * The single switch for the whole loop-settings card. Always mounted while
+ * the chrome is up (it is the way back when the card is collapsed), so it
+ * lives OUTSIDE the card's own visibility gate. Chevron shows the state:
+ * "Loop settings ⌄" collapsed, "Loop settings ⌃" expanded.
+ */
+@Composable
+fun HifzSettingsToggle(
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(GhaisNoir.Fill1)
+            .border(1.dp, GhaisNoir.BorderGhost, RoundedCornerShape(10.dp))
+            .noirClickable(onToggle)
+            .padding(vertical = 9.dp)
+    ) {
+        Text(
+            text = "Loop settings",
+            color = GhaisNoir.TextSecondary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = if (expanded) "▴" else "▾",
+            color = GhaisNoir.TextTertiary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}

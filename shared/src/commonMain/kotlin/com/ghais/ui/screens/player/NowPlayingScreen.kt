@@ -811,6 +811,17 @@ class NowPlayingScreen : Screen {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     val hifzTrack = track
                     if (hifzTrack != null) {
+                        val loopSettingsOpen by com.ghais.data.repository.HifzUiPrefs.showLoopSettings.collectAsState()
+                        HifzSettingsToggle(
+                            expanded = loopSettingsOpen,
+                            onToggle = {
+                                poke()
+                                com.ghais.data.repository.HifzUiPrefs.setShowLoopSettings(!loopSettingsOpen)
+                            }
+                        )
+                        androidx.compose.animation.AnimatedVisibility(visible = loopSettingsOpen) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                        Spacer(modifier = Modifier.height(8.dp))
                         HifzLoopRow(
                             surahId = hifzTrack.surahId,
                             currentAyah = hifzTrack.ayahNo.coerceAtLeast(1),
@@ -822,6 +833,8 @@ class NowPlayingScreen : Screen {
                             currentSlug = hifzTrack.reciterSlug,
                             onInteract = poke
                         )
+                        }
+                        }
                     }
                 }
                 }
