@@ -1,6 +1,5 @@
 package com.ghais.ui.screens.splash
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -12,10 +11,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
-import org.jetbrains.compose.resources.painterResource
-import ghais.shared.generated.resources.Res
-import ghais.shared.generated.resources.ghais_mark
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -39,15 +34,13 @@ object SplashScreen : Screen {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Image(
-                    painter = painterResource(Res.drawable.ghais_mark),
-                    contentDescription = "Ghais",
-                    contentScale = ContentScale.Fit,
+                com.ghais.ui.components.GhaithLogo(
                     modifier = Modifier.size(64.dp),
+                    animated = true,
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = "Ghais",
+                    text = "Ghaith",
                     fontSize = 30.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = GhaisNoir.TextPrimary,

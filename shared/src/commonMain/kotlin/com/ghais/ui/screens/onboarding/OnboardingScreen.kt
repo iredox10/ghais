@@ -1,6 +1,5 @@
 package com.ghais.ui.screens.onboarding
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -54,7 +53,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -79,10 +77,7 @@ import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.screens.reciters.NoirReciterArtwork
 import com.ghais.ui.screens.reciters.resolveReciterPhoto
 import com.ghais.ui.theme.GhaisNoir
-import ghais.shared.generated.resources.Res
-import ghais.shared.generated.resources.ghais_mark
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.painterResource
 import com.ghais.ui.theme.GhaisTypography
 
 private const val PageCount = 5
@@ -298,11 +293,9 @@ private fun WelcomeStep(onNext: () -> Unit) {
                 .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(28.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Image(
-                painter = painterResource(Res.drawable.ghais_mark),
-                contentDescription = "Ghais",
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(64.dp)
+            com.ghais.ui.components.GhaithLogo(
+                modifier = Modifier.size(64.dp),
+                animated = true,
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
