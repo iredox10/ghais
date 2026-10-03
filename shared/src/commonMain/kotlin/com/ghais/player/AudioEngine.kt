@@ -10,6 +10,7 @@ import com.ghais.domain.model.TrackItem
 import com.ghais.domain.model.UNKNOWN_DURATION_MS
 import com.ghais.domain.model.isFullSurah
 import com.ghais.domain.model.resolvedDurationMs
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -121,6 +122,11 @@ object AudioEngine {
     private val queueManager: QueueManager = QueueManager()
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
+    // Swallows unexpected background failures so one bad emission/timer tick
+    // can never kill its collector — or close the app with it. Success-path
+    // behaviour is unchanged; only otherwise-fatal throws are absorbed.
+    private val engineExceptionHandler = CoroutineExceptionHandler { _, _ -> }
+
     private val _playbackState = MutableStateFlow(PlaybackState())
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
@@ -190,8 +196,9 @@ object AudioEngine {
 
     init {
         PlayerBridge.setOnTrackEndListener { onBridgeTrackEnd() }
-        scope.launch {
+        scope.launch(engineExceptionHandler) {
             PlayerBridge.positionMs.collect { pos ->
+                try {
                 val pending = pendingSeekMs
                 if (pending > 0L && PlayerBridge.durationMs.value > 0L) {
                     if (pos >= pending - 3_000L) {
@@ -206,30 +213,39 @@ object AudioEngine {
                         pendingSeekMs = 0L
                     }
                 }
-                _currentPositionMs.value = pos
-                val duration = effectiveDuration()
+                // Bridge may briefly report a negative position on item swaps;
+                // clamp before it reaches position/progress observers.
+                val safePos = pos.coerceAtLeast(0L)
+                _currentPositionMs.value = safePos
+                val duration = effectiveDuration().coerceAtLeast(0L)
                 _progress.value = if (duration > 0L) {
-                    (pos.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                    (safePos.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
                 } else 0f
                 _playbackState.update { state ->
-                    state.copy(currentTrackInfo = state.currentTrackInfo.copy(progressMs = pos))
+                    state.copy(currentTrackInfo = state.currentTrackInfo.copy(progressMs = safePos))
+                }
+                } catch (_: Exception) {
                 }
             }
         }
-        scope.launch {
+        scope.launch(engineExceptionHandler) {
             PlayerBridge.durationMs.collect { bridgeDuration ->
+                try {
                 val track = _currentTrack.value ?: return@collect
-                val merged = mergeDuration(track.durationMs, bridgeDuration)
+                val merged = mergeDuration(track.durationMs, bridgeDuration).coerceAtLeast(0L)
                 if (merged != _durationMs.value) {
                     _durationMs.value = merged
                     _playbackState.update { state ->
                         state.copy(currentTrackInfo = state.currentTrackInfo.copy(durationMs = merged))
                     }
                 }
+                } catch (_: Exception) {
+                }
             }
         }
-        scope.launch {
+        scope.launch(engineExceptionHandler) {
             PlayerBridge.isBuffering.collect { buffering ->
+                try {
                 val state = _playbackState.value
                 if (state.currentTrackInfo.track == null) return@collect
                 if (state.status == PlaybackStatus.ERROR) return@collect
@@ -239,10 +255,13 @@ object AudioEngine {
                     else -> PlaybackStatus.PAUSED
                 }
                 if (target != state.status) _playbackState.update { it.copy(status = target) }
+                } catch (_: Exception) {
+                }
             }
         }
-        scope.launch {
+        scope.launch(engineExceptionHandler) {
             PlayerBridge.errorMessage.collect { error ->
+                try {
                 if (error != null && _currentTrack.value != null) {
                     _isPlaying.value = false
                     _playbackState.update { state ->
@@ -291,6 +310,8 @@ object AudioEngine {
                     consecutiveErrors = 0
                     _engineError.value = null
                 }
+                } catch (_: Exception) {
+                }
             }
         }
         SleepTimer.onStopPlayer = { pause() }
@@ -333,7 +354,7 @@ object AudioEngine {
             clear()
             return
         }
-        val targetTrack = tracks.getOrNull(startIndex) ?: tracks.first()
+        val targetTrack = tracks.getOrNull(startIndex) ?: tracks.firstOrNull() ?: return
         val isAyahList = targetTrack.ayahNo > 0 && !targetTrack.isFullSurah
 
         if (isAyahList) {
@@ -452,7 +473,7 @@ object AudioEngine {
                 val reciterSlug = current.reciterSlug
                 val totalAyahs = getAyahCountForSurah(surahId)
                 val progressFraction = _progress.value
-                val targetAyah = ((progressFraction * totalAyahs).toInt() + 1).coerceIn(1, totalAyahs)
+                val targetAyah = ((progressFraction * totalAyahs).toInt() + 1).coerceIn(1, totalAyahs.coerceAtLeast(1))
                 playAyah(surahId, targetAyah, reciterSlug)
             }
         } else {
@@ -541,7 +562,7 @@ object AudioEngine {
         _isRecitationGapActive.value = true
         _recitationGapCountdown.value = gapDuration
 
-        gapJob = scope.launch {
+        gapJob = scope.launch(engineExceptionHandler) {
             var remaining = gapDuration
             while (remaining > 0) {
                 _recitationGapCountdown.value = remaining
@@ -558,7 +579,7 @@ object AudioEngine {
             if (_isPlaying.value) {
                 val pending = pendingGapAction
                 pendingGapAction = null
-                pending?.invoke()
+                try { pending?.invoke() } catch (_: Exception) { }
             }
         }
     }
@@ -589,7 +610,7 @@ object AudioEngine {
         _isRecitationGapActive.value = true
         _recitationGapCountdown.value = hifzPauseCountdownSeconds(pauseBetweenMs)
 
-        gapJob = scope.launch {
+        gapJob = scope.launch(engineExceptionHandler) {
             var remainingMs = clampPauseBetweenMs(pauseBetweenMs)
             while (remainingMs > 0L) {
                 _recitationGapCountdown.value = hifzPauseCountdownSeconds(remainingMs)
@@ -607,7 +628,7 @@ object AudioEngine {
             if (_isPlaying.value) {
                 val pending = pendingGapAction
                 pendingGapAction = null
-                pending?.invoke()
+                try { pending?.invoke() } catch (_: Exception) { }
             }
         }
     }
@@ -676,7 +697,7 @@ object AudioEngine {
         if (_isRecitationGapActive.value) {
             val pending = pendingGapAction
             cancelGap()
-            pending?.invoke()
+            try { pending?.invoke() } catch (_: Exception) { }
         }
     }
 
@@ -697,6 +718,7 @@ object AudioEngine {
         reciterSlug: String? = null,
         startPositionMs: Long = 0L
     ) {
+        try {
         val targetSlug = reciterSlug ?: _currentTrack.value?.reciterSlug ?: queueManager.currentTrack?.reciterSlug ?: "mishary"
         val reciter = QuranDataRepository.getReciterBySlug(targetSlug)
         val totalAyahs = getAyahCountForSurah(surahId)
@@ -731,6 +753,20 @@ object AudioEngine {
         pendingSeekMs = startPositionMs.coerceAtLeast(0L)
         pendingSeekTries = if (pendingSeekMs > 0L) 40 else 0
         startPlayback(ayahTrack)
+        } catch (_: Exception) {
+            // Repository/bridge failure mid-navigation must surface as a
+            // friendly engine error, never as a crash on the caller thread.
+            pendingSeekMs = 0L
+            pendingSeekTries = 0
+            _isPlaying.value = false
+            _engineError.value = "Couldn't play this recitation"
+            _playbackState.update { state ->
+                state.copy(
+                    status = PlaybackStatus.ERROR,
+                    currentTrackInfo = state.currentTrackInfo.copy(isPlaying = false)
+                )
+            }
+        }
     }
 
     private fun TrackItem.toSurahTrack(): TrackItem {
@@ -825,7 +861,7 @@ object AudioEngine {
         _queue.value = queueManager.queue
         _currentIndex.value = queueManager.currentIndex
         if (wasEmpty && _currentTrack.value == null && _playbackState.value.status == PlaybackStatus.IDLE) {
-            val firstSurah = queueManager.currentTrack ?: surahTracks.first()
+            val firstSurah = queueManager.currentTrack ?: surahTracks.firstOrNull() ?: return
             if (_isAyahMode.value) {
                 playAyah(firstSurah.surahId, 1, firstSurah.reciterSlug)
             } else {
@@ -1121,6 +1157,7 @@ object AudioEngine {
     }
 
     private fun startPlayback(track: TrackItem) {
+        try {
         progressJob?.cancel()
         _currentTrack.value = track
         _currentIndex.value = queueManager.currentIndex
@@ -1166,6 +1203,18 @@ object AudioEngine {
         // as a backstop for mid-play item replacements.
         val resumeAt = pendingSeekMs.also { pendingSeekMs = 0L; pendingSeekTries = 0 }
         PlayerBridge.play(playbackUri, resumeAt)
+        } catch (_: Exception) {
+            // Bridge/URI failure must surface as a friendly engine error,
+            // never as a crash on the caller thread.
+            _isPlaying.value = false
+            _engineError.value = "Couldn't play this recitation"
+            _playbackState.update { state ->
+                state.copy(
+                    status = PlaybackStatus.ERROR,
+                    currentTrackInfo = state.currentTrackInfo.copy(isPlaying = false)
+                )
+            }
+        }
     }
 
     private fun stopPlayback() {

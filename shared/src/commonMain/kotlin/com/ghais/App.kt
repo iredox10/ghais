@@ -46,6 +46,7 @@ import com.ghais.ui.screens.onboarding.OnboardingScreen
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.splash.SplashScreen
 import com.ghais.ui.theme.GhaisTheme
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
 @Composable
@@ -57,8 +58,24 @@ fun App() {
         val doneForUser by OnboardingStore.isDoneForCurrentUser.collectAsState()
         var forceOnboarding by remember { mutableStateOf(false) }
         val signedInUserId = session?.userId ?: cachedSession?.userId
-        LaunchedEffect(Unit) { AuthRepository.refreshSession() }
-        LaunchedEffect(Unit) { SyncTriggers.start(this) }
+        // Every launch effect below runs network / disk work on first
+        // composition: an uncaught throw here kills the process with no
+        // visible error (app "closes by itself"), so each body guards itself.
+        // Cancellation is always rethrown to keep structured concurrency.
+        LaunchedEffect(Unit) {
+            try {
+                AuthRepository.refreshSession()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+        LaunchedEffect(Unit) {
+            try {
+                SyncTriggers.start(this)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
         // OnboardingScreen exposes plain Screen.Content() with no onFinish/onComplete
         // callback (completion lands in OnboardingStore internally); clearing the
         // replay latch is therefore observed via doneForUser.

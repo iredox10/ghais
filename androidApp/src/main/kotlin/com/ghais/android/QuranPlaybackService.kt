@@ -161,7 +161,7 @@ class QuranPlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
+        try { createNotificationChannel() } catch (_: Exception) { }
         // Musicolet-style shade: provider subclass that appends the live
         // subtitle (sleep countdown • speed) without touching the timeline.
         // Same channel/id as before (1001 replaces the placeholder FGS).
@@ -178,7 +178,7 @@ class QuranPlaybackService : MediaSessionService() {
                     setSmallIcon(R.drawable.ghaith_mark)
                 }
         }
-        setMediaNotificationProvider(notificationProvider)
+        try { setMediaNotificationProvider(notificationProvider) } catch (_: Exception) { }
         val existing = PlayerBridge.playerOrNull()
         val exo: ExoPlayer = if (existing != null) {
             ownsPlayer = false
@@ -250,19 +250,19 @@ class QuranPlaybackService : MediaSessionService() {
             }
 
             override fun seekToNext() {
-                AudioEngine.next()
+                try { AudioEngine.next() } catch (_: Exception) { }
             }
 
             override fun seekToNextMediaItem() {
-                AudioEngine.next()
+                try { AudioEngine.next() } catch (_: Exception) { }
             }
 
             override fun seekToPrevious() {
-                AudioEngine.previous()
+                try { AudioEngine.previous() } catch (_: Exception) { }
             }
 
             override fun seekToPreviousMediaItem() {
-                AudioEngine.previous()
+                try { AudioEngine.previous() } catch (_: Exception) { }
             }
         }
 
@@ -278,15 +278,15 @@ class QuranPlaybackService : MediaSessionService() {
                 .build()
         }
         mediaSession = session
-        addSession(session)
+        try { addSession(session) } catch (_: Exception) { }
         // Publish favorite/repeat custom-layout buttons for the shade.
         try { refreshShadeButtons() } catch (_: Exception) { }
 
         // Guarantee FGS promotion within the 10s rule even if the Media3
         // notification update is delayed (blank metadata, slow network).
         // Media3 replaces this placeholder with the real media notification.
-        startForegroundWithPlaceholder()
-        observeEngine()
+        try { startForegroundWithPlaceholder() } catch (_: Exception) { }
+        try { observeEngine() } catch (_: Exception) { }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
@@ -327,39 +327,59 @@ class QuranPlaybackService : MediaSessionService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Idle explicit start (e.g. legacy warm-start): no media -> no notification
         // within 10s -> system kills the app. Stop immediately instead.
-        if (intent?.action == null && AudioEngine.currentTrack.value == null) {
-            val p = player ?: PlayerBridge.playerOrNull()
-            if (p == null || !p.isPlaying) {
-                stopSelf(startId)
-                return super.onStartCommand(intent, flags, startId)
+        try {
+            if (intent?.action == null && try { AudioEngine.currentTrack.value } catch (_: Exception) { null } == null) {
+                val p = try { player ?: PlayerBridge.playerOrNull() } catch (_: Exception) { null }
+                val playing = try { p?.isPlaying } catch (_: Exception) { false } ?: false
+                if (p == null || !playing) {
+                    try { stopSelf(startId) } catch (_: Exception) { }
+                    return try {
+                        super.onStartCommand(intent, flags, startId)
+                    } catch (_: Exception) {
+                        START_NOT_STICKY
+                    }
+                }
             }
+        } catch (_: Exception) { }
+        // Re-assert foreground on EVERY start (any action): every
+        // startForegroundService() call restarts the 10s
+        // ForegroundServiceDidNotStartInTime clock, and onStartCommand may
+        // arrive with PAUSE/NEXT/SEEK too (media buttons, shade taps on a
+        // detached service). Safe for all actions because an already-posted
+        // rich notification is re-asserted as-is, never replaced.
+        // If the service outlived its notification (playback stopped ->
+        // Media3 dismissed it), this posts the placeholder synchronously;
+        // Media3 replaces it with the real media notification once playing.
+        try { startForegroundWithPlaceholder() } catch (_: Exception) { }
+        try {
+            when (intent?.action) {
+                ACTION_TOGGLE -> AudioEngine.togglePlayPause()
+                ACTION_PLAY -> AudioEngine.resume()
+                ACTION_PAUSE -> AudioEngine.pause()
+                ACTION_NEXT -> AudioEngine.next()
+                ACTION_PREV -> AudioEngine.previous()
+                ACTION_SEEK_FORWARD ->
+                    AudioEngine.seekTo(
+                        try { AudioEngine.currentPositionMs.value } catch (_: Exception) { 0L } + SEEK_STEP_MS,
+                    )
+                ACTION_SEEK_BACK ->
+                    AudioEngine.seekTo(
+                        (
+                            try { AudioEngine.currentPositionMs.value } catch (_: Exception) { 0L } -
+                                SEEK_STEP_MS
+                            ).coerceAtLeast(0L),
+                    )
+            }
+        } catch (_: Exception) { }
+        return try {
+            super.onStartCommand(intent, flags, startId)
+        } catch (_: Exception) {
+            START_STICKY
         }
-        // Re-assert foreground on every playback start. If the service
-        // outlived its notification (playback stopped -> Media3 dismissed
-        // it), a fresh startForegroundService() restarts the 10s
-        // ForegroundServiceDidNotStartInTime clock with no notification
-        // posted yet — slow buffering then kills the app. Posting the
-        // placeholder synchronously here resets that clock; Media3 replaces
-        // it with the real media notification once playback starts.
-        if (intent?.action == null || intent.action == ACTION_PLAY || intent.action == ACTION_TOGGLE) {
-            startForegroundWithPlaceholder()
-        }
-        when (intent?.action) {
-            ACTION_TOGGLE -> AudioEngine.togglePlayPause()
-            ACTION_PLAY -> AudioEngine.resume()
-            ACTION_PAUSE -> AudioEngine.pause()
-            ACTION_NEXT -> AudioEngine.next()
-            ACTION_PREV -> AudioEngine.previous()
-            ACTION_SEEK_FORWARD ->
-                AudioEngine.seekTo(AudioEngine.currentPositionMs.value + SEEK_STEP_MS)
-            ACTION_SEEK_BACK ->
-                AudioEngine.seekTo((AudioEngine.currentPositionMs.value - SEEK_STEP_MS).coerceAtLeast(0L))
-        }
-        return super.onStartCommand(intent, flags, startId)
     }
 
     override fun onDestroy() {
-        serviceScope.cancel()
+        try { serviceScope.cancel() } catch (_: Exception) { }
         mediaSession?.let {
             try { removeSession(it) } catch (_: Exception) { }
             try { it.player.removeListener(sessionListener) } catch (_: Exception) { }
@@ -369,12 +389,12 @@ class QuranPlaybackService : MediaSessionService() {
         if (ownsPlayer) {
             val released = player
             try { released?.release() } catch (_: Exception) { }
-            PlayerBridge.onPlayerReleased(released)
+            try { PlayerBridge.onPlayerReleased(released) } catch (_: Exception) { }
         } else {
             try { player?.removeListener(sessionListener) } catch (_: Exception) { }
         }
         player = null
-        super.onDestroy()
+        try { super.onDestroy() } catch (_: Exception) { }
     }
 
     private inner class QuranSessionCallback : MediaSession.Callback {
@@ -390,8 +410,7 @@ class QuranPlaybackService : MediaSessionService() {
             } catch (_: Exception) {
                 MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS
             }
-            return MediaSession.ConnectionResult.accept(
-                sessionCommands,
+            val playerCommands = try {
                 MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
                     .add(Player.COMMAND_SEEK_TO_NEXT)
                     .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
@@ -399,7 +418,17 @@ class QuranPlaybackService : MediaSessionService() {
                     .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
                     .add(Player.COMMAND_SEEK_BACK)
                     .add(Player.COMMAND_SEEK_FORWARD)
-                    .build(),
+                    .build()
+            } catch (_: Exception) {
+                try {
+                    MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
+                } catch (_: Exception) {
+                    return MediaSession.ConnectionResult.accept(sessionCommands, Player.Commands.EMPTY)
+                }
+            }
+            return MediaSession.ConnectionResult.accept(
+                sessionCommands,
+                playerCommands,
             )
         }
 
@@ -439,68 +468,92 @@ class QuranPlaybackService : MediaSessionService() {
             mediaSession: MediaSession,
             controller: MediaSession.ControllerInfo,
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-            val track = AudioEngine.currentTrack.value
-            if (track == null || track.audioUrl.isBlank()) {
-                return Futures.immediateFuture(
+            return try {
+                val track = try { AudioEngine.currentTrack.value } catch (_: Exception) { null }
+                if (track == null || try { track.audioUrl.isBlank() } catch (_: Exception) { true }) {
+                    return Futures.immediateFuture(
+                        MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L),
+                    )
+                }
+                try { AudioEngine.resume() } catch (_: Exception) { }
+                val title = try {
+                    displayTitle(track.surahNameEn, track.ayahNo, track.isFullSurah)
+                } catch (_: Exception) {
+                    "Ghaith"
+                }
+                val artist = try { track.reciterName.ifBlank { "Ghaith" } } catch (_: Exception) { "Ghaith" }
+                val item = MediaItem.Builder()
+                    .setMediaId(track.audioUrl)
+                    .setUri(track.audioUrl)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(title)
+                            .setArtist(artist)
+                            .build(),
+                    )
+                    .build()
+                Futures.immediateFuture(
+                    MediaSession.MediaItemsWithStartPosition(listOf(item), 0, 0L),
+                )
+            } catch (_: Exception) {
+                Futures.immediateFuture(
                     MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L),
                 )
             }
-            AudioEngine.resume()
-            val title = displayTitle(track.surahNameEn, track.ayahNo, track.isFullSurah)
-            val artist = track.reciterName.ifBlank { "Ghaith" }
-            val item = MediaItem.Builder()
-                .setMediaId(track.audioUrl)
-                .setUri(track.audioUrl)
-                .setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle(title)
-                        .setArtist(artist)
-                        .build(),
-                )
-                .build()
-            return Futures.immediateFuture(
-                MediaSession.MediaItemsWithStartPosition(listOf(item), 0, 0L),
-            )
         }
     }
 
     private fun observeEngine() {
         serviceScope.launch {
-            AudioEngine.currentTrack.collect { track ->
-                if (track == null) return@collect
-                val title = displayTitle(track.surahNameEn, track.ayahNo, track.isFullSurah)
-                val artist = track.reciterName.ifBlank { "Ghaith" }
-                PlayerBridge.updateMetadata(
-                    title,
-                    artist,
-                )
-                try {
-                    applyArtworkToSession(try { AmbientVideoArt.artworkUri.value } catch (_: Exception) { null })
-                } catch (_: Exception) { }
-                player?.let { p ->
+            try {
+                AudioEngine.currentTrack.collect { track ->
                     try {
-                        p.playlistMetadata = MediaMetadata.Builder()
-                            .setTitle(title)
-                            .setArtist(artist)
-                            .build()
+                        if (track == null) return@collect
+                        val title = try {
+                            displayTitle(track.surahNameEn, track.ayahNo, track.isFullSurah)
+                        } catch (_: Exception) {
+                            "Ghaith"
+                        }
+                        val artist = try { track.reciterName.ifBlank { "Ghaith" } } catch (_: Exception) { "Ghaith" }
+                        try {
+                            PlayerBridge.updateMetadata(
+                                title,
+                                artist,
+                            )
+                        } catch (_: Exception) { }
+                        try {
+                            applyArtworkToSession(try { AmbientVideoArt.artworkUri.value } catch (_: Exception) { null })
+                        } catch (_: Exception) { }
+                        player?.let { p ->
+                            try {
+                                p.playlistMetadata = MediaMetadata.Builder()
+                                    .setTitle(title)
+                                    .setArtist(artist)
+                                    .build()
+                            } catch (_: Exception) { }
+                        }
+                        try { refreshShadeButtons() } catch (_: Exception) { }
+                        mediaSession?.let { session ->
+                            try { onUpdateNotification(session, false) } catch (_: Exception) { }
+                        }
                     } catch (_: Exception) { }
                 }
-                try { refreshShadeButtons() } catch (_: Exception) { }
-                mediaSession?.let { session ->
-                    try { onUpdateNotification(session, false) } catch (_: Exception) { }
-                }
-            }
+            } catch (_: Exception) { }
         }
         // Live subtitle: speed changes refresh the shade text.
         serviceScope.launch {
             try {
-                AudioEngine.playbackSpeed.collect { refreshNotificationIfLiveChanged() }
+                AudioEngine.playbackSpeed.collect {
+                    try { refreshNotificationIfLiveChanged() } catch (_: Exception) { }
+                }
             } catch (_: Exception) { }
         }
         // Live subtitle: sleep countdown ticks refresh the shade text.
         serviceScope.launch {
             try {
-                SleepTimer.state.collect { refreshNotificationIfLiveChanged() }
+                SleepTimer.state.collect {
+                    try { refreshNotificationIfLiveChanged() } catch (_: Exception) { }
+                }
             } catch (_: Exception) { }
         }
         // Heart button follows in-app favorite changes.
@@ -657,9 +710,25 @@ class QuranPlaybackService : MediaSessionService() {
             // track transitions this runs again while the full player (same
             // id) is already up — reposting the bare placeholder here is
             // what left users with the text-only card while playing.
-            // Post only when absent (fresh start = 10s-rule protection).
+            // Instead re-assert foreground with the notification ALREADY on
+            // screen: startForegroundService() restarts the 10s FGS clock on
+            // every call, so we must call startForeground() again even when
+            // nothing needs to change — skipping it here is what threw
+            // ForegroundServiceDidNotStartInTimeException (app closed itself).
             val nm = getSystemService(NotificationManager::class.java)
-            if (nm != null && nm.activeNotifications.any { it.id == PLACEHOLDER_NOTIFICATION_ID }) return
+            val existing = nm?.activeNotifications?.firstOrNull { it.id == PLACEHOLDER_NOTIFICATION_ID }
+            if (existing != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(
+                        PLACEHOLDER_NOTIFICATION_ID,
+                        existing.notification,
+                        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+                    )
+                } else {
+                    startForeground(PLACEHOLDER_NOTIFICATION_ID, existing.notification)
+                }
+                return
+            }
             val track = AudioEngine.currentTrack.value
             val initialTitle = track?.let { displayTitle(it.surahNameEn, it.ayahNo, it.isFullSurah) } ?: "Ghaith"
             val initialSubtitle = track?.reciterName?.takeIf { it.isNotBlank() } ?: "Preparing recitation…"
@@ -683,18 +752,20 @@ class QuranPlaybackService : MediaSessionService() {
     }
 
     private fun createNotificationChannel() {        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val manager = getSystemService(NotificationManager::class.java) ?: return
-        if (manager.getNotificationChannel(CHANNEL_ID) != null) return
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "Quran playback",
-            NotificationManager.IMPORTANCE_LOW,
-        ).apply {
-            description = "Background Quran recitation controls"
-            setShowBadge(false)
-            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-        }
-        manager.createNotificationChannel(channel)
+        try {
+            val manager = getSystemService(NotificationManager::class.java) ?: return
+            if (try { manager.getNotificationChannel(CHANNEL_ID) } catch (_: Exception) { null } != null) return
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Quran playback",
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                description = "Background Quran recitation controls"
+                setShowBadge(false)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            }
+            manager.createNotificationChannel(channel)
+        } catch (_: Exception) { }
     }
 }
 
@@ -808,10 +879,14 @@ private class ShadeBitmapLoader(
             val bitmap = BitmapFactory.decodeResource(resources, com.ghais.android.R.drawable.ghaith_art)
             if (bitmap != null) return bitmap
         } catch (_: Exception) { }
+        try {
+            return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        } catch (_: Exception) { }
         return try {
-            Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-        } catch (_: Exception) {
             BitmapFactory.decodeResource(resources, android.R.drawable.sym_def_app_icon)
+                ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        } catch (_: Exception) {
+            Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
         }
     }
 }
