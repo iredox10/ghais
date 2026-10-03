@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:drawable="@drawable/ghaith_logo"
+        android:top="28dp"
+        android:bottom="28dp"
+        android:left="28dp"
+        android:right="28dp"
+        android:gravity="center" />
+</layer-list>
