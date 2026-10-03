@@ -64,6 +64,8 @@ class QuranPlaybackService : MediaSessionService() {
         const val ACTION_PREV = "com.ghais.android.action.PREV"
         const val ACTION_SEEK_FORWARD = "com.ghais.android.action.SEEK_FORWARD"
         const val ACTION_SEEK_BACK = "com.ghais.android.action.SEEK_BACK"
+        const val ACTION_PLAY_SCHEDULE = "com.ghais.android.action.PLAY_SCHEDULE"
+        const val EXTRA_SCHEDULE_ID = "schedule_id"
 
         /** Custom session commands rendered as notification custom-layout buttons. */
         const val CUSTOM_FAVORITE_TOGGLE = "FAVORITE_TOGGLE"
@@ -73,6 +75,22 @@ class QuranPlaybackService : MediaSessionService() {
 
         fun start(context: android.content.Context) {
             val intent = Intent(context, QuranPlaybackService::class.java)
+            try {
+                androidx.core.content.ContextCompat.startForegroundService(context, intent)
+            } catch (_: Exception) {
+                try { context.startService(intent) } catch (_: Exception) { }
+            }
+        }
+
+        /**
+         * Scheduled-playback entry point: same FGS start path as [start],
+         * carrying the schedule id so onStartCommand can dispatch it after
+         * the placeholder promotion. Never throws.
+         */
+        fun startWithSchedule(context: android.content.Context, scheduleId: String) {
+            val intent = Intent(context, QuranPlaybackService::class.java)
+                .setAction(ACTION_PLAY_SCHEDULE)
+                .putExtra(EXTRA_SCHEDULE_ID, scheduleId)
             try {
                 androidx.core.content.ContextCompat.startForegroundService(context, intent)
             } catch (_: Exception) {
@@ -327,6 +345,8 @@ class QuranPlaybackService : MediaSessionService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Idle explicit start (e.g. legacy warm-start): no media -> no notification
         // within 10s -> system kills the app. Stop immediately instead.
+        // Guard fires ONLY on action == null, so explicit actions — including
+        // ACTION_PLAY_SCHEDULE — always skip it and reach the promotion below.
         try {
             if (intent?.action == null && try { AudioEngine.currentTrack.value } catch (_: Exception) { null } == null) {
                 val p = try { player ?: PlayerBridge.playerOrNull() } catch (_: Exception) { null }
@@ -369,6 +389,10 @@ class QuranPlaybackService : MediaSessionService() {
                                 SEEK_STEP_MS
                             ).coerceAtLeast(0L),
                     )
+                ACTION_PLAY_SCHEDULE -> {
+                    val sid = intent?.getStringExtra(EXTRA_SCHEDULE_ID)
+                    if (sid != null) com.ghais.android.SchedulePlayback.run(this@QuranPlaybackService, sid)
+                }
             }
         } catch (_: Exception) { }
         return try {

@@ -5,21 +5,14 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.ScheduleEngine
 import com.ghais.data.repository.SchedulesStore
-import com.ghais.domain.model.TrackItem
-import com.ghais.player.AudioEngine
-import com.ghais.player.PlayerBridge
-import com.ghais.player.SleepTimer
-import com.ghais.player.StopCondition
-import kotlin.math.max
-import kotlin.math.min
 
 /**
- * Fires scheduled recitations: looks up the schedule, starts the foreground
- * playback service, queues fromSurah..toSurah for the schedule's reciter,
- * applies the optional minutes sleep timer, then re-schedules (next day).
+ * Fires scheduled recitations: looks up the schedule, then hands playback to
+ * [QuranPlaybackService] via ACTION_PLAY_SCHEDULE, which invokes
+ * [SchedulePlayback.run] to queue the tracks, apply the sleep timer and
+ * re-arm the next alarm.
  *
  * Also re-programs all alarms on BOOT_COMPLETED.
  */
@@ -76,37 +69,8 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
                 return
             }
 
-            PlayerBridge.init(appContext)
-            QuranPlaybackService.start(appContext)
-
-            val reciter = QuranDataRepository.getReciterBySlug(schedule.reciterSlug)
-            val from = min(schedule.fromSurah, schedule.toSurah)
-            val to = max(schedule.fromSurah, schedule.toSurah)
-            val tracks = QuranDataRepository.getSurahs()
-                .filter { it.id in from..to && reciter.isSurahAvailable(it.id) }
-                .map { s ->
-                    TrackItem(
-                        reciterSlug = reciter.slug,
-                        reciterName = reciter.nameEn,
-                        surahId = s.id,
-                        surahNameEn = s.nameEn,
-                        surahNameAr = s.nameAr,
-                        ayahNo = 0,
-                        audioUrl = reciter.getFullSurahUrl(s.id),
-                        durationMs = s.ayahsCount * 15_000L,
-                    )
-                }
-            if (tracks.isEmpty()) return
-
-            AudioEngine.playQueue(tracks, 0)
-
-            val minutes = schedule.durationMin
-            if (minutes != null) {
-                SleepTimer.startTimer(minutes, StopCondition.MINUTES)
-            }
-
-            // Re-schedule for tomorrow.
-            ScheduleEngine.refresh(SchedulesStore.schedules.value)
+            Log.i(TAG, "dispatching schedule $id")
+            QuranPlaybackService.startWithSchedule(appContext, id)
         } catch (e: Exception) {
             Log.e(TAG, "ScheduleAlarmReceiver failed", e)
         }
