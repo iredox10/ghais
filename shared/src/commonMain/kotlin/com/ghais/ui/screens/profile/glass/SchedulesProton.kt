@@ -238,7 +238,16 @@ private fun SchedEditorSheet(
     var hour by remember(initial) { mutableStateOf(initial?.hour?.coerceIn(0, 23) ?: 5) }
     var minute by remember(initial) { mutableStateOf(initial?.minute?.coerceIn(0, 59) ?: 30) }
     var reciterSlug by remember(initial) {
-        mutableStateOf(initial?.reciterSlug ?: reciters.firstOrNull()?.slug.orEmpty())
+        mutableStateOf(
+            initial?.reciterSlug
+                ?: reciters
+                    // Default range is surahs 1..5 — pick the first reciter who
+                    // actually recorded them, or the alarm would fire with zero
+                    // playable tracks (e.g. al-hussaini-al-azzazi has 58..114 only).
+                    .firstOrNull { r -> (1..5).any { sid -> r.isSurahAvailable(sid) } }
+                    ?.slug
+                ?: reciters.firstOrNull()?.slug.orEmpty()
+        )
     }
     var fromSurah by remember(initial) { mutableStateOf(initial?.fromSurah?.coerceIn(1, 114) ?: 1) }
     var toSurah by remember(initial) { mutableStateOf(initial?.toSurah?.coerceIn(1, 114) ?: 5) }
@@ -264,6 +273,16 @@ private fun SchedEditorSheet(
 
     // Validation: range mode requires from <= to; duration mode forces toSurah = 114 on save.
     val rangeValid = useMinutes || fromSurah <= toSurah
+    // Availability: the reciter must have audio for at least one surah of the
+    // effective range, else the alarm fires and ScheduleTracks builds 0 tracks.
+    val availableIds = remember(reciterSlug) {
+        runCatching { QuranDataRepository.getReciterBySlug(reciterSlug).getAvailableSurahIds() }
+            .getOrNull()
+    }
+    val previewFrom = fromSurah.coerceIn(1, 114)
+    val previewTo = if (useMinutes) 114 else toSurah.coerceIn(1, 114).coerceAtLeast(previewFrom)
+    val overlapMissing = availableIds != null && (previewFrom..previewTo).none { it in availableIds }
+    val scheduleValid = rangeValid && !overlapMissing
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -374,6 +393,21 @@ private fun SchedEditorSheet(
                         fontSize = 12.sp
                     )
                 }
+                if (rangeValid && overlapMissing) {
+                    val recordedSpan = availableIds?.let { ids ->
+                        val lo = ids.minOrNull()
+                        val hi = ids.maxOrNull()
+                        if (lo != null && hi != null && ids.size < 114) {
+                            " He recorded surahs $lo–$hi."
+                        } else ""
+                    }.orEmpty()
+                    Text(
+                        text = "“$reciterName” has no audio for surahs $previewFrom–$previewTo." +
+                            recordedSpan,
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 12.sp
+                    )
+                }
             }
 
             // Duration toggle + minutes (simple stepper scoped to duration only).
@@ -429,7 +463,7 @@ private fun SchedEditorSheet(
                     )
                     .border(1.dp, GhaisNoir.BorderCard, CircleShape)
                     .then(
-                        if (rangeValid) {
+                        if (scheduleValid) {
                             Modifier.noirClickable {
                                 val h = hour.coerceIn(0, 23)
                                 val m = minute.coerceIn(0, 59)
@@ -457,7 +491,7 @@ private fun SchedEditorSheet(
             ) {
                 Text(
                     text = "Save",
-                    color = if (rangeValid) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                    color = if (scheduleValid) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold
                 )

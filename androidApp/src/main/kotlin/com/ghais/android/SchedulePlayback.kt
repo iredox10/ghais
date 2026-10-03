@@ -106,7 +106,20 @@ object SchedulePlayback {
             )
             Log.i(TAG, "built ${tracks.size} tracks for $scheduleId")
             if (tracks.isEmpty()) {
-                fail(appContext, found, "No playable tracks for schedule $scheduleId.")
+                val available = reciter.getAvailableSurahIds()
+                val lo = available.minOrNull()
+                val hi = available.maxOrNull()
+                val recorded = if (lo != null && hi != null && available.size < 114) {
+                    " (he recorded surahs $lo–$hi)"
+                } else ""
+                fail(
+                    appContext,
+                    found,
+                    "No playable tracks for schedule $scheduleId: " +
+                        "${reciter.nameEn} has no audio for " +
+                        "surahs ${found.fromSurah}–${found.toSurah}$recorded. " +
+                        "Edit the schedule to fix the range or reciter.",
+                )
                 return
             }
 
