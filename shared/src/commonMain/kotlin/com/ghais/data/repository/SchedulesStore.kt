@@ -21,6 +21,8 @@ import kotlin.time.Clock
  * @param toSurah last surah of the range, 1..114 and >= [fromSurah]
  *   (normalized on add/update).
  * @param durationMin null = play the range to its end; else stop after N minutes.
+ * @param autoStart when true the alarm starts playback automatically;
+ *   when false the user only gets a reminder notification.
  * @param enabled whether the schedule fires.
  */
 @Serializable
@@ -32,6 +34,7 @@ data class RecitationSchedule(
     val fromSurah: Int,
     val toSurah: Int,
     val durationMin: Int? = null,
+    val autoStart: Boolean = true,
     val enabled: Boolean = true
 )
 

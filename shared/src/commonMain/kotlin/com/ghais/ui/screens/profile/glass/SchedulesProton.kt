@@ -140,6 +140,14 @@ fun SchedulesProtonSection() {
                             },
                             onDelete = { SchedulesStore.remove(schedule.id) }
                         )
+                        Text(
+                            text = if (schedule.autoStart) "Auto-starts" else "Reminder only",
+                            color = GhaisNoir.TextTertiary,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 14.dp, top = 3.dp, bottom = 4.dp)
+                        )
                     }
                     Spacer(Modifier.height(2.dp))
                 }
@@ -180,6 +188,7 @@ private fun SchedEditorSheet(
     var toSurah by remember(initial) { mutableStateOf(initial?.toSurah?.coerceIn(1, 114) ?: 5) }
     var useMinutes by remember(initial) { mutableStateOf(initial?.durationMin != null) }
     var minutes by remember(initial) { mutableStateOf(initial?.durationMin?.coerceIn(5, 180) ?: 30) }
+    var autoStart by remember(initial) { mutableStateOf(initial?.autoStart ?: true) }
     var showReciterSheet by remember { mutableStateOf(false) }
     var showFromSheet by remember { mutableStateOf(false) }
     var showToSheet by remember { mutableStateOf(false) }
@@ -332,6 +341,28 @@ private fun SchedEditorSheet(
                 )
             }
 
+            // Auto-start toggle — saved through the same Save path as duration/enabled.
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Start playback automatically",
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 13.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    NoirSwitch(
+                        checked = autoStart,
+                        onCheckedChange = { autoStart = it }
+                    )
+                }
+                Text(
+                    text = if (autoStart) "Alarm starts playback on its own"
+                    else "Off — you only get a reminder notification",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 12.sp
+                )
+            }
+
             // Save / Cancel.
             Box(
                 modifier = Modifier
@@ -358,6 +389,7 @@ private fun SchedEditorSheet(
                                         fromSurah = f,
                                         toSurah = t,
                                         durationMin = if (useMinutes) minutes.coerceIn(5, 180) else null,
+                                        autoStart = autoStart,
                                         enabled = initial?.enabled ?: true
                                     )
                                 )
