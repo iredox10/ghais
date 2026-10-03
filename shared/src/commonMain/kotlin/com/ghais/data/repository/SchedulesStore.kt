@@ -296,4 +296,14 @@ object SchedulesStore {
 expect object ScheduleEngine {
     /** Reprogram all OS alarms from the given schedules (call after every mutation). */
     fun refresh(schedules: List<RecitationSchedule>)
+
+    /**
+     * Whether the OS will deliver alarms exactly on time. Android 12+ denies
+     * this by default; without it schedules fall back to inexact alarms with
+     * no background-start exemption, so playback may not start at all.
+     */
+    fun canScheduleExactAlarms(): Boolean
+
+    /** Open the system screen that grants exact-alarm access; true when launched. */
+    fun openExactAlarmSettings(): Boolean
 }

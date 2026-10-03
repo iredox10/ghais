@@ -24,6 +24,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.ScheduleEngine
 import com.ghais.data.repository.rememberMergedReciters
 import com.ghais.data.repository.RecitationSchedule
 import com.ghais.data.repository.SchedulesStore
@@ -58,10 +60,59 @@ fun SchedulesProtonSection() {
     val schedules by SchedulesStore.schedules.collectAsState()
     var showEditor by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<RecitationSchedule?>(null) }
+    var exactAllowed by remember { mutableStateOf(true) }
+    // Re-check on entry and whenever the editor closes (user may have just
+    // come back from the system grant screen).
+    LaunchedEffect(showEditor) {
+        exactAllowed = ScheduleEngine.canScheduleExactAlarms()
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
+        if (!exactAllowed) {
+            NoirCard(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconWell(icon = Icons.Filled.AlarmOn, size = 32.dp, iconSize = 17.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Exact alarms are off",
+                            color = GhaisNoir.TextPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Schedules may start late or not at all",
+                            color = GhaisNoir.TextTertiary,
+                            fontSize = 11.sp,
+                            maxLines = 2
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .background(GhaisNoir.Fill2, CircleShape)
+                            .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                            .noirClickable { ScheduleEngine.openExactAlarmSettings() }
+                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Allow",
+                            color = GhaisNoir.TextPrimary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+        }
         NoirCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 // Group header inside the card.
@@ -166,6 +217,11 @@ fun SchedulesProtonSection() {
                 if (editing == null) SchedulesStore.add(built) else SchedulesStore.update(built)
                 showEditor = false
                 editing = null
+                // On Android 14+ exact alarms start denied; guide the user to
+                // the grant screen right after saving so the schedule fires.
+                if (!ScheduleEngine.canScheduleExactAlarms()) {
+                    ScheduleEngine.openExactAlarmSettings()
+                }
             }
         )
     }

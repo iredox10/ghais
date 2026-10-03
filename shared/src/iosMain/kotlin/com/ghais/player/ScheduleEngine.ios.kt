@@ -8,4 +8,8 @@ actual object ScheduleEngine {
     actual fun refresh(schedules: List<RecitationSchedule>) {
         // No-op on iOS (see above).
     }
+
+    actual fun canScheduleExactAlarms(): Boolean = true
+
+    actual fun openExactAlarmSettings(): Boolean = false
 }

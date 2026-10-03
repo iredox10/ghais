@@ -93,6 +93,28 @@ actual object ScheduleEngine {
         }
     }
 
+    actual fun canScheduleExactAlarms(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        val ctx = appContext ?: return true // pre-init: don't nag before we can open the grant screen
+        val am = ctx.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return true
+        return try { am.canScheduleExactAlarms() } catch (_: Exception) { true }
+    }
+
+    actual fun openExactAlarmSettings(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
+        val ctx = appContext ?: return false
+        return try {
+            val intent = Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                .setData(android.net.Uri.parse("package:${ctx.packageName}"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ctx.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not open exact-alarm settings", e)
+            false
+        }
+    }
+
     internal fun nextOccurrenceMillis(hour: Int, minute: Int): Long =
         nextTriggerFor(hour, minute)
 
