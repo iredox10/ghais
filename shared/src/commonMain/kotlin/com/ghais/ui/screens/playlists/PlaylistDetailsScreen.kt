@@ -72,7 +72,6 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.home.NoirStatChip
 import com.ghais.ui.screens.player.NowPlayingScreen
-import com.ghais.ui.screens.surah.SurahDetailScreen
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
@@ -273,7 +272,16 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
                             isCurrentTrack = isCurrentSurah,
                             isPlaying = isCurrentSurahPlaying,
                             onToggleFavorite = { track?.let { FavoritesStore.toggle(it) } },
-                            onRowClick = { navigator.push(SurahDetailScreen(surah.id)) },
+                            // Row tap plays straight into the player: the
+                            // Quran text page detour is gone by design.
+                            onRowClick = {
+                                val start = allTracks.indexOfFirst { it.surahId == surah.id }
+                                    .takeIf { it >= 0 } ?: 0
+                                if (allTracks.isNotEmpty()) {
+                                    AudioEngine.playQueue(allTracks, startIndex = start)
+                                    rootNavigator.push(NowPlayingScreen())
+                                }
+                            },
                             onPlayClick = {
                                 val start = allTracks.indexOfFirst { it.surahId == surah.id }
                                     .takeIf { it >= 0 } ?: 0
