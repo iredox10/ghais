@@ -52,9 +52,13 @@ actual object ScheduleEngine {
 
             val exactAllowed =
                 Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
+            if (!exactAllowed) {
+                Log.w(TAG, "exactAllowed=false; using inexact alarms. Grant exact alarms under Settings -> Alarm access for on-time recitation reminders.")
+            }
+            val programmed = mutableListOf<Long>()
             for (schedule in enabled) {
                 try {
-                    val triggerAt = nextOccurrenceMillis(schedule.hour, schedule.minute)
+                    val triggerAt = nextTriggerFor(schedule.hour, schedule.minute)
                     val pi = pendingIntentFor(
                         ctx,
                         schedule.id,
@@ -76,28 +80,39 @@ actual object ScheduleEngine {
                             pi,
                         )
                     }
+                    programmed += triggerAt
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to schedule alarm for ${schedule.id}", e)
                 }
             }
             previousIds = currentIds
+            val nextTriggerAt = programmed.minOrNull()
+            Log.d(TAG, "refresh: ${enabled.size} enabled, exactAllowed=$exactAllowed, next trigger=${formatHourMinute(nextTriggerAt)}")
         } catch (e: Exception) {
             Log.e(TAG, "ScheduleEngine.refresh failed", e)
         }
     }
 
-    private fun nextOccurrenceMillis(hour: Int, minute: Int): Long {
-        val now = System.currentTimeMillis()
+    internal fun nextOccurrenceMillis(hour: Int, minute: Int): Long =
+        nextTriggerFor(hour, minute)
+
+    internal fun nextTriggerFor(hour: Int, minute: Int, nowMillis: Long = System.currentTimeMillis()): Long {
         val cal = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
-        if (cal.timeInMillis <= now) {
+        if (cal.timeInMillis <= nowMillis) {
             cal.add(Calendar.DAY_OF_MONTH, 1)
         }
         return cal.timeInMillis
+    }
+
+    private fun formatHourMinute(millis: Long?): String {
+        if (millis == null) return "-"
+        val cal = Calendar.getInstance().apply { timeInMillis = millis }
+        return "%02d:%02d".format(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))
     }
 
     private fun pendingIntentFor(ctx: Context, scheduleId: String, flags: Int): PendingIntent? {
