@@ -1,9 +1,28 @@
 package com.ghais.data.repository
 
+import com.ghais.data.seed.QuranData
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.HttpClientEngineBase
+import io.ktor.client.engine.HttpClientEngineConfig
+import io.ktor.client.engine.callContext
+import io.ktor.client.request.HttpRequestData
+import io.ktor.client.request.HttpResponseData
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpProtocolVersion
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
+import io.ktor.util.date.GMTDate
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.InternalAPI
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -13,6 +32,47 @@ class QuranAyahRepositoryTest {
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
+    }
+
+    // ------------------------------------------------------------------
+    // Singleton normalisation
+    //
+    // QuranAyahRepository is an `object`: the in-memory cache, the remembered
+    // surah list and the injected HTTP client all outlive a single test, so
+    // the edition one test leaves behind would decide whether the next one
+    // sees bundled seeds, fetched text or placeholders. Normalise through the
+    // same API the app calls on a translation switch.
+    // ------------------------------------------------------------------
+
+    /**
+     * Restores the repository to the state a first-launch user of the default
+     * edition would have: default edition selected, bundled `en.sahih` seeds in
+     * the cache, default-edition persisted text re-read — and a client that
+     * cannot answer, so nothing a previous test kicked off can refill the cache
+     * from the network while this test runs.
+     */
+    @BeforeTest
+    fun setUpQuranAyahRepository() {
+        QuranAyahRepository.configureHttpClient(deadClient)
+        TranslationPrefs.setEdition(TranslationPrefs.DEFAULT_EDITION)
+        QuranAyahRepository.onTranslationChanged()
+        awaitBackgroundFetches()
+    }
+
+    /**
+     * Leaves the singleton pristine for whatever runs next: default edition,
+     * freshly re-seeded cache and, last of all, no injected client. The client
+     * is only released once the refetches this reset launched have settled —
+     * otherwise a straggler would resolve its URL against the real default
+     * client and hit api.alquran.cloud from a unit test.
+     */
+    @AfterTest
+    fun tearDownQuranAyahRepository() {
+        TranslationPrefs.setEdition(TranslationPrefs.DEFAULT_EDITION)
+        QuranAyahRepository.configureHttpClient(deadClient)
+        QuranAyahRepository.onTranslationChanged()
+        awaitBackgroundFetches()
+        QuranAyahRepository.configureHttpClient(null)
     }
 
     @Test
@@ -205,5 +265,228 @@ class QuranAyahRepositoryTest {
     fun testStripBasmalahLeavesUnrelatedOpeningsAlone() {
         val alifLamp = "\u0627\u0644\u0652\u0645\u0652"
         assertEquals(alifLamp, QuranAyahRepository.stripBasmalahPrefix(2, 1, alifLamp))
+    }
+
+    // ------------------------------------------------------------------
+    // Edition awareness
+    // ------------------------------------------------------------------
+
+    /**
+     * The request URL must be built from the edition selected **at call time**.
+     * Nothing between the two switches below invalidates a cache or notifies
+     * the repository — there is deliberately no shadow copy of the edition in
+     * [QuranAyahRepository] — so only a live read of
+     * [TranslationPrefs.selectedEdition] inside the fetch can put two different
+     * editions on the wire in the same test.
+     */
+    @Test
+    fun testFetchUrlUsesEditionSelectedAtCallTime() = runBlocking {
+        val engine = FakeAlQuranEngine(failing = false)
+        QuranAyahRepository.configureHttpClient(HttpClient(engine))
+
+        TranslationPrefs.setEdition("fr.hamidullah")
+        val french = QuranAyahRepository.getAyahsForSurah(110)
+
+        TranslationPrefs.setEdition(TranslationPrefs.DEFAULT_EDITION)
+        val english = QuranAyahRepository.getAyahsForSurah(109)
+
+        val frenchUrls = engine.urls.filter { "/surah/110/" in it }
+        assertTrue(frenchUrls.isNotEmpty(), "no request went out for surah 110: ${engine.urls}")
+        assertTrue(
+            frenchUrls.all { "editions/quran-uthmani,fr.hamidullah" in it },
+            "surah 110 was requested with an edition other than the selected one: $frenchUrls"
+        )
+        val englishUrls = engine.urls.filter { "/surah/109/" in it }
+        assertTrue(englishUrls.isNotEmpty(), "no request went out for surah 109: ${engine.urls}")
+        assertTrue(
+            englishUrls.all { "editions/quran-uthmani,en.sahih" in it },
+            "surah 109 was requested with an edition other than the selected one: $englishUrls"
+        )
+
+        assertEquals(3, french.size, "surah 110 has 3 ayahs")
+        assertEquals("[fr.hamidullah] translation 1", french[0].translation)
+        assertEquals(6, english.size, "surah 109 has 6 ayahs")
+        assertEquals("[en.sahih] translation 1", english[0].translation)
+    }
+
+    /**
+     * The bundled seed text is `en.sahih` and may only surface while that
+     * edition is active: a reader who switched to French must get
+     * placeholders (and then a download), never someone else's translation.
+     * Switching back to the default edition has to bring the offline text
+     * with it, which is what keeps a first-launch user readable offline.
+     */
+    @Test
+    fun testBundledSeedsAreSkippedOutsideTheDefaultEdition() = runBlocking {
+        // A client that cannot answer: any text observed below therefore
+        // either came from the bundle or from generated placeholders.
+        QuranAyahRepository.configureHttpClient(deadClient)
+        TranslationPrefs.setEdition("fr.hamidullah")
+        QuranAyahRepository.onTranslationChanged()
+
+        val placeholder = QuranAyahRepository.getAyahImmediate(112, 1)
+        assertTrue(placeholder.isPlaceholder, "bundled verse leaked into another edition: $placeholder")
+
+        val offlineFrench = QuranAyahRepository.getAyahsForSurah(112)
+        assertEquals(4, offlineFrench.size, "surah 112 has 4 ayahs")
+        assertTrue(
+            offlineFrench.all { it.isPlaceholder },
+            "en.sahih text was served for fr.hamidullah: $offlineFrench"
+        )
+
+        TranslationPrefs.setEdition(TranslationPrefs.DEFAULT_EDITION)
+        QuranAyahRepository.onTranslationChanged()
+
+        val seeded = QuranAyahRepository.getAyahImmediate(112, 1)
+        assertFalse(seeded.isPlaceholder, "bundled seed did not come back for the default edition")
+        // Compare against the sanitizer's own output instead of a hand-typed
+        // literal: shadda and fatha can be typed in either order and still
+        // render identically, so a byte-exact expectation here would only test
+        // the test author, never the seed pipeline.
+        assertEquals(
+            QuranAyahRepository.sanitizeVerseText(112, 1, "قُلْ هُوَ ٱللَّهُ أَحَدٌ"),
+            seeded.textUthmani,
+        )
+    }
+
+    /**
+     * One translation's download must never overwrite another's on disk.
+     * Surah 113 is fetched and persisted for `fr.hamidullah`, then fetched for
+     * `id.indonesian`, and finally `fr.hamidullah` is re-selected with a client
+     * that cannot answer — so the text in that last step can only have been
+     * read back out of the French blob written in the first, proving the
+     * Indonesian download did not clobber it.
+     */
+    @Test
+    fun testPersistedTextIsIsolatedPerEdition() = runBlocking {
+        val engine = FakeAlQuranEngine(failing = false)
+        QuranAyahRepository.configureHttpClient(HttpClient(engine))
+
+        TranslationPrefs.setEdition("fr.hamidullah")
+        QuranAyahRepository.onTranslationChanged()
+        val french = QuranAyahRepository.getAyahsForSurah(113)
+        assertEquals(5, french.size, "surah 113 has 5 ayahs")
+        assertEquals("[fr.hamidullah] translation 1", french[0].translation)
+        QuranAyahRepository.prefetchSurah(113)
+        awaitBackgroundFetches()
+
+        TranslationPrefs.setEdition("id.indonesian")
+        QuranAyahRepository.onTranslationChanged()
+        awaitBackgroundFetches()
+        val indonesian = QuranAyahRepository.getAyahsForSurah(113)
+        assertEquals("[id.indonesian] translation 1", indonesian[0].translation)
+
+        // From here nothing can be fetched, so a complete verse can only be a
+        // disk restore.
+        QuranAyahRepository.configureHttpClient(deadClient)
+        TranslationPrefs.setEdition("fr.hamidullah")
+        QuranAyahRepository.onTranslationChanged()
+        awaitBackgroundFetches()
+
+        val restored = QuranAyahRepository.getAyahImmediate(113, 1)
+        assertFalse(restored.isPlaceholder, "fr.hamidullah text was not restored from disk: $restored")
+        assertEquals("[fr.hamidullah] translation 1", restored.translation)
+    }
+
+    /**
+     * Screens collect [QuranAyahRepository.cacheGen] to know when to re-resolve
+     * the ayah they are showing. A translation switch that failed to bump it
+     * would leave the previous edition's text on screen until something else
+     * happened to invalidate the view.
+     */
+    @Test
+    fun testOnTranslationChangedBumpsCacheGen() {
+        val before = QuranAyahRepository.cacheGen.value
+        QuranAyahRepository.onTranslationChanged()
+        assertTrue(
+            QuranAyahRepository.cacheGen.value > before,
+            "cacheGen did not advance: $before -> ${QuranAyahRepository.cacheGen.value}"
+        )
+    }
+}
+
+/**
+ * Offline client used by the setup/teardown reset and by the test that must
+ * prove a verse came from disk. It replies with a body that carries no `data`,
+ * which is exactly how an unreachable api.alquran.cloud presents itself to
+ * `fetchSurahFromApi`, and it never opens a socket.
+ */
+private val deadClient: HttpClient by lazy { HttpClient(FakeAlQuranEngine(failing = true)) }
+
+/**
+ * Lets the repository's fire-and-forget work settle. Both
+ * [QuranAyahRepository.onTranslationChanged] and [QuranAyahRepository.prefetchSurah]
+ * launch refetches/persists on the repository's own scope, outside any handle
+ * a test can join, and a straggler landing after an assertion would make the
+ * result depend on scheduling. Those launches run against a zero-latency fake
+ * engine, so polling [QuranAyahRepository.loadingSurahs] until it has stayed
+ * empty for a handful of samples is a bounded wait rather than a blind sleep —
+ * and it keeps a leftover fetch from resolving its URL against the real client.
+ */
+private fun awaitBackgroundFetches() {
+    runBlocking {
+        var idleSamples = 0
+        var waitedSamples = 0
+        while (idleSamples < 4 && waitedSamples < 40) {
+            delay(25)
+            waitedSamples++
+            idleSamples = if (QuranAyahRepository.loadingSurahs.value.isEmpty()) {
+                idleSamples + 1
+            } else {
+                0
+            }
+        }
+    }
+}
+
+/**
+ * In-process stand-in for `https://api.alquran.cloud`.
+ *
+ * With [failing] it answers with a body that has no `data`, so the repository
+ * falls through to its offline path. Otherwise it returns a complete
+ * `quran-uthmani` + translation pair whose translation text embeds the edition
+ * taken from the request URL, letting a test tell which edition a response
+ * really belonged to. Every URL is recorded because the request line is the
+ * only observable proof that the edition was read at call time instead of
+ * being remembered from an earlier request.
+ */
+@OptIn(InternalAPI::class)
+private class FakeAlQuranEngine(
+    private val failing: Boolean
+) : HttpClientEngineBase("fake-alquran") {
+
+    override val config: HttpClientEngineConfig = HttpClientEngineConfig()
+
+    private val recordedUrls = MutableStateFlow<List<String>>(emptyList())
+
+    /** Requested URLs, in order, exactly as the repository spelled them. */
+    val urls: List<String> get() = recordedUrls.value
+
+    override suspend fun execute(data: HttpRequestData): HttpResponseData {
+        val url = data.url.toString()
+        recordedUrls.update { it + url }
+        return HttpResponseData(
+            HttpStatusCode.OK,
+            GMTDate(),
+            headersOf(HttpHeaders.ContentType, listOf("application/json; charset=utf-8")),
+            HttpProtocolVersion.HTTP_1_1,
+            ByteReadChannel(if (failing) "{}" else successBody(url)),
+            callContext()
+        )
+    }
+
+    private fun successBody(url: String): String {
+        val surahId = url.substringAfter("/surah/").substringBefore("/").toIntOrNull() ?: return "{}"
+        val edition = url.substringAfter("editions/quran-uthmani,", "")
+        val ayahCount = QuranData.SURAHS.firstOrNull { it.id == surahId }?.ayahsCount ?: return "{}"
+        val uthmaniAyahs = (1..ayahCount).joinToString(",") { n ->
+            """{"numberInSurah":$n,"text":"نص $n"}"""
+        }
+        val translationAyahs = (1..ayahCount).joinToString(",") { n ->
+            """{"numberInSurah":$n,"text":"[$edition] translation $n"}"""
+        }
+        return """{"code":200,"status":"OK","data":[""" +
+            """{"number":$surahId,"ayahs":[$uthmaniAyahs]},""" +
+            """{"number":$surahId,"ayahs":[$translationAyahs]}]}"""
     }
 }

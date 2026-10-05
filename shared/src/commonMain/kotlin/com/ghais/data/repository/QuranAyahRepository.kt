@@ -11,6 +11,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -34,11 +35,23 @@ data class AyahVerse(
 )
 
 /**
- * Unified repository providing authentic Arabic Uthmani text and English translations
- * for all 114 Surahs. Supports:
- * 1. Bundled offline seed data for popular and essential Surahs.
- * 2. On-demand online fetching from AlQuran Cloud API with local in-memory caching.
- * 3. Graceful fallback for offline playback.
+ * Unified repository providing authentic Arabic Uthmani text and translations
+ * for all 114 Surahs, edition-aware: the translation edition is owned by
+ * [TranslationPrefs] and read from it at call time, never mirrored here.
+ * Supports:
+ * 1. Bundled offline seed data for popular and essential Surahs — `en.sahih`
+ *    text only, so it applies solely while [TranslationPrefs.DEFAULT_EDITION]
+ *    is the active edition.
+ * 2. On-demand online fetching from AlQuran Cloud API with local in-memory
+ *    caching, requesting `quran-uthmani,<active edition>`.
+ * 3. Edition-scoped disk persistence (`ayah_text_v3_<edition>_<surah>` plus a
+ *    per-edition index) so switching translations never clobbers another
+ *    edition's downloaded text; pre-v3 blobs remain readable for the default
+ *    edition to avoid refetching for existing users.
+ * 4. Graceful fallback for offline playback.
+ *
+ * Call [onTranslationChanged] after [TranslationPrefs.setEdition] so caches
+ * and in-flight fetches follow the switch.
  */
 object QuranAyahRepository {
 
@@ -119,6 +132,9 @@ object QuranAyahRepository {
 
     // ------------------------------------------------------------------
     // Bundled Seeds for Instant Offline Access
+    // en.sahih text: only ever served while that is the active edition
+    // (see seedBundledVerses / resolveAyahs) — a French or Indonesian
+    // reader must never be shown these translations.
     // ------------------------------------------------------------------
     private val BUNDLED_SEEDS: Map<Int, List<AyahVerse>> = mapOf(
         // Surah 1: Al-Fatihah
@@ -180,12 +196,26 @@ object QuranAyahRepository {
         isLenient = true
     }
 
-    private val httpClient by lazy {
+    private var customHttpClient: HttpClient? = null
+
+    private val defaultHttpClient: HttpClient? by lazy {
         try {
             HttpClient()
         } catch (_: Exception) {
             null
         }
+    }
+
+    private val httpClient: HttpClient?
+        get() = customHttpClient ?: defaultHttpClient
+
+    /**
+     * Optional hook to inject a configured [HttpClient] (e.g. custom timeout,
+     * OkHttp engine, or a test mock); pass null to fall back to the lazily
+     * built default client. Mirrors [QuranTafseerRepository.configureHttpClient].
+     */
+    fun configureHttpClient(client: HttpClient?) {
+        customHttpClient = client
     }
 
     private val _loadingSurahs = MutableStateFlow<Set<Int>>(emptySet())
@@ -204,34 +234,86 @@ object QuranAyahRepository {
         _cacheGen.value = _cacheGen.value + 1
     }
 
-    // Disk-backed text cache so a surah downloaded for hifz stays readable
-    // offline across restarts. multiplatform-settings holds one JSON blob per
-    // surah plus an index of which surahs were persisted; the in-memory cache
-    // above stays the hot path. Generated placeholders are never persisted.
-    private val textSettings: Settings? by lazy {
-        try {
-            Settings()
-        } catch (_: Exception) {
-            null
+    /**
+     * Surahs most recently resolved through [getAyahImmediate] /
+     * [getAyahsForSurah], most recent last. [onTranslationChanged] re-fetches
+     * exactly these when the translation edition changes: a cacheGen bump alone
+     * only helps screens that are already composing, and even they skip
+     * launching while the previous edition's request sits in `_loadingSurahs`.
+     * Capped so a user who has downloaded many surahs cannot trigger a refetch
+     * storm — the surah on screen is always the most recent requester because
+     * screens re-enter through getAyahImmediate on every recomposition.
+     * Held in a StateFlow because it is written from arbitrary dispatchers.
+     */
+    private val requestedSurahs = MutableStateFlow<Set<Int>>(emptySet())
+
+    private const val MAX_REMEMBERED_SURAHS = 8
+
+    private fun noteRequestedSurah(surahId: Int) {
+        requestedSurahs.update { current ->
+            val reordered = (current - surahId) + surahId
+            if (reordered.size <= MAX_REMEMBERED_SURAHS) {
+                reordered
+            } else {
+                reordered.toList().takeLast(MAX_REMEMBERED_SURAHS).toSet()
+            }
         }
     }
 
-    private fun textKey(surahId: Int): String = "ayah_text_v2_$surahId"
-    private fun textIndexKey(): String = "ayah_text_v2_index"
+    // Disk-backed text cache so a surah downloaded for hifz stays readable
+    // offline across restarts. multiplatform-settings holds one JSON blob per
+    // edition+surah plus a per-edition index of which surahs were persisted;
+    // the in-memory cache above stays the hot path. Generated placeholders are
+    // never persisted.
+    //
+    // The no-arg `Settings()` factory needs a platform context (an
+    // androidx.startup initializer on Android, NSUserDefaults on iOS). When it
+    // throws — which is exactly what happens on the JVM unit-test classpath,
+    // where no initializer runs — degrade to a process-local map instead of
+    // disabling persistence outright: same effective durability as the old
+    // `null` store (nothing survives the process), but every edition-scoped
+    // read/write path keeps executing and stays testable on every platform.
+    private val textSettings: Settings by lazy {
+        try {
+            Settings()
+        } catch (_: Exception) {
+            InMemorySettings()
+        }
+    }
+
+    /** v3 keys are scoped by edition so translations cannot overwrite each other. */
+    private fun textKey(edition: String, surahId: Int): String = "ayah_text_v3_${edition}_$surahId"
+    private fun textIndexKey(edition: String): String = "ayah_text_v3_index_${edition}"
+
+    /**
+     * v2 keys: written by earlier releases for the default edition only, so
+     * the legacy fallback below is safe to apply only for that edition.
+     */
+    private fun legacyTextKey(surahId: Int): String = "ayah_text_v2_$surahId"
+    private fun legacyTextIndexKey(): String = "ayah_text_v2_index"
 
     init {
-        // Pre-populate cache with bundled seeds (sanitized copies; BUNDLED_SEEDS stays raw)
+        seedBundledVerses()
+        loadPersistedText()
+        clearLegacyV1Keys()
+    }
+
+    /**
+     * Pre-populates the cache with bundled seeds (sanitized copies;
+     * BUNDLED_SEEDS stays raw). The bundle is en.sahih text, so it must never
+     * appear while another edition is selected.
+     */
+    private fun seedBundledVerses() {
+        if (TranslationPrefs.selectedEdition.value != TranslationPrefs.DEFAULT_EDITION) return
         cache.putAll(
             BUNDLED_SEEDS.mapValues { (_, verses) ->
                 verses.map { v -> v.copy(textUthmani = sanitizeVerseText(v.surahId, v.ayahNo, v.textUthmani)) }
             }
         )
-        loadPersistedText()
-        clearLegacyV1Keys()
     }
 
     private fun clearLegacyV1Keys() {
-        val settings = textSettings ?: return
+        val settings = textSettings
         try {
             val oldIndex = settings.getStringOrNull("ayah_text_v1_index")
             oldIndex?.split(",")?.mapNotNull { it.trim().toIntOrNull() }?.forEach { id ->
@@ -254,65 +336,153 @@ object QuranAyahRepository {
         return (1..expected).all { it in present }
     }
 
+    /**
+     * Restores the ACTIVE edition's persisted blobs into the cache: v3 keys
+     * first, and — only for [TranslationPrefs.DEFAULT_EDITION] — a fallback to
+     * the legacy v2 keys where v3 misses, so existing users keep their
+     * downloaded default-edition text instead of refetching it. Every new
+     * write goes to v3; other editions' blobs are never read or removed here.
+     */
     private fun loadPersistedText() {
-        val settings = textSettings ?: return
+        val settings = textSettings
+        val edition = TranslationPrefs.selectedEdition.value
         try {
-            val rawIndex = settings.getStringOrNull(textIndexKey()) ?: return
-            val ids = rawIndex.split(",").mapNotNull { it.trim().toIntOrNull() }
             var restored = false
-            for (surahId in ids) {
-                try {
-                    val raw = settings.getStringOrNull(textKey(surahId)) ?: continue
-                    val verses = json.decodeFromString<List<AyahVerse>>(raw)
-                        .map { v -> v.copy(textUthmani = sanitizeVerseText(v.surahId, v.ayahNo, v.textUthmani)) }
-                    if (verses.isNotEmpty() && verses.none { isStoredPlaceholder(it) }) {
-                        cache[surahId] = verses
-                        restored = true
-                    } else {
-                        persistTextIndex(ids - surahId)
-                    }
-                } catch (_: Exception) {
-                    // Corrupt entry: drop it from the index, keep going.
-                    persistTextIndex(ids - surahId)
+            val restoredFromV3 = mutableSetOf<Int>()
+
+            val v3IndexKey = textIndexKey(edition)
+            val v3Ids = readIndex(settings, v3IndexKey)
+            val brokenV3 = mutableListOf<Int>()
+            for (surahId in v3Ids) {
+                val raw = settings.getStringOrNull(textKey(edition, surahId))
+                if (raw != null && adoptStoredVerses(surahId, raw)) {
+                    restored = true
+                    restoredFromV3 += surahId
+                } else {
+                    // Missing or corrupt blob: forget it from THIS edition's
+                    // index only — other editions' data is untouched.
+                    brokenV3 += surahId
                 }
             }
+            if (brokenV3.isNotEmpty()) persistIndex(settings, v3IndexKey, v3Ids - brokenV3.toSet())
+
+            if (edition == TranslationPrefs.DEFAULT_EDITION) {
+                val legacyIndexKey = legacyTextIndexKey()
+                val legacyIds = readIndex(settings, legacyIndexKey)
+                val brokenLegacy = mutableListOf<Int>()
+                for (surahId in legacyIds) {
+                    if (surahId in restoredFromV3) continue
+                    val raw = settings.getStringOrNull(legacyTextKey(surahId))
+                    if (raw != null && adoptStoredVerses(surahId, raw)) {
+                        restored = true
+                    } else {
+                        brokenLegacy += surahId
+                    }
+                }
+                if (brokenLegacy.isNotEmpty()) persistIndex(settings, legacyIndexKey, legacyIds - brokenLegacy.toSet())
+            }
+
             if (restored) bumpCacheGen()
         } catch (_: Exception) {
             // Text cache is best-effort; network fetch remains the fallback.
         }
     }
 
-    private fun persistTextIndex(ids: List<Int>) {
+    private fun readIndex(settings: Settings, key: String): List<Int> =
+        settings.getStringOrNull(key)?.split(",")?.mapNotNull { it.trim().toIntOrNull() }.orEmpty()
+
+    private fun persistIndex(settings: Settings, key: String, ids: List<Int>) {
         try {
-            textSettings?.putString(textIndexKey(), ids.joinToString(","))
+            settings.putString(key, ids.distinct().joinToString(","))
         } catch (_: Exception) {
         }
+    }
+
+    /**
+     * Decodes + sanitizes one persisted blob and caches it when it holds a
+     * real (non-placeholder) set. Returns false for missing/corrupt entries so
+     * the caller can drop them from their own index.
+     */
+    private fun adoptStoredVerses(surahId: Int, raw: String): Boolean = try {
+        val verses = json.decodeFromString<List<AyahVerse>>(raw)
+            .map { v -> v.copy(textUthmani = sanitizeVerseText(v.surahId, v.ayahNo, v.textUthmani)) }
+        if (verses.isNotEmpty() && verses.none { isStoredPlaceholder(it) }) {
+            cache[surahId] = verses
+            true
+        } else {
+            false
+        }
+    } catch (_: Exception) {
+        false
     }
 
     /**
      * Warms the verse-text cache for offline reading and persists it to disk.
      * Fire-and-forget from download actions: fetches from network when needed
      * (bundled seeds persist immediately), persists only complete, real sets.
+     *
+     * The edition is snapshotted BEFORE the fetch, the blob is written under
+     * that edition's key, and the snapshot is re-checked under the lock before
+     * the write: [resolveAyahs] answers from the shared in-memory cache on a
+     * hit, so a translation switched while this download was in flight must
+     * never have the new edition's text filed under the old edition's key.
      */
     fun prefetchSurah(surahId: Int) {
+        val edition = TranslationPrefs.selectedEdition.value
         scope.launch {
             try {
-                val verses = getAyahsForSurah(surahId)
+                val verses = resolveAyahs(surahId, edition)
                 if (verses.isEmpty()) return@launch
                 if (verses.any { it.isPlaceholder }) return@launch
                 if (!isSurahListComplete(surahId, verses)) return@launch
                 mutex.withLock {
+                    // Re-check the edition under the lock, not just the
+                    // snapshot taken at call time: resolveAyahs answers from
+                    // the cache on a hit, and after a mid-download switch that
+                    // cache slot already belongs to the NEW edition. Writing
+                    // those verses under [edition]'s key would store one
+                    // translation's text behind another's. Dropping the write
+                    // loses nothing: the active edition keeps its own copy in
+                    // memory, and its own download is what re-persists it.
+                    if (TranslationPrefs.selectedEdition.value != edition) return@withLock
                     try {
-                        textSettings?.putString(textKey(surahId), json.encodeToString(verses))
-                        val ids = (textSettings?.getStringOrNull(textIndexKey())
-                            ?.split(",")?.mapNotNull { it.trim().toIntOrNull() }
-                            .orEmpty() + surahId).distinct()
-                        persistTextIndex(ids)
+                        val settings = textSettings
+                        settings.putString(textKey(edition, surahId), json.encodeToString(verses))
+                        val ids = readIndex(settings, textIndexKey(edition)) + surahId
+                        persistIndex(settings, textIndexKey(edition), ids)
                     } catch (_: Exception) {
                     }
                 }
             } catch (_: Exception) {
             }
+        }
+    }
+
+    /**
+     * Call after [TranslationPrefs.setEdition]: drops in-memory verses of the
+     * previous edition and bumps [cacheGen] so collecting screens re-resolve
+     * the current ayah and the newly selected edition gets fetched.
+     *
+     * A cacheGen bump alone is not enough to guarantee that refetch: screens
+     * re-enter through [getAyahImmediate], which skips launching a fetch while
+     * the previous edition's request is still marked in-flight in
+     * `_loadingSurahs` — a switch racing an in-flight download would otherwise
+     * leave the player on a placeholder forever. The surahs most recently
+     * requested via [getAyahImmediate] / [getAyahsForSurah] are therefore
+     * remembered (see `requestedSurahs`) and re-triggered here, fire-and-forget
+     * on the repository's own scope — the same mechanism [prefetchSurah] uses.
+     * Results fetched under the previous edition are discarded by the edition
+     * guard in `resolveAyahs`, so racing requests cannot clobber each other.
+     * The new edition's persisted text is re-read so switching back to an
+     * already-downloaded translation is instant, even offline.
+     */
+    fun onTranslationChanged() {
+        cache.clear()
+        seedBundledVerses()
+        loadPersistedText()
+        bumpCacheGen()
+        requestedSurahs.value.forEach { surahId ->
+            scope.launch { getAyahsForSurah(surahId) }
         }
     }
 
@@ -324,6 +494,9 @@ object QuranAyahRepository {
      * otherwise triggers background fetch and returns a clean baseline placeholder.
      */
     fun getAyahImmediate(surahId: Int, ayahNo: Int): AyahVerse {
+        // Remember even on a cache hit: this is the surah the player is
+        // showing, so it must be re-fetched if the edition changes later.
+        noteRequestedSurah(surahId)
         val cached = cache[surahId]?.firstOrNull { it.ayahNo == ayahNo && !it.isPlaceholder }
         if (cached != null) return cached
 
@@ -357,21 +530,44 @@ object QuranAyahRepository {
     /**
      * Retrieves all Ayahs for a given Surah (1..114). Checks cache first,
      * then attempts online fetch, falling back to bundled or generated seeds.
+     * The active edition is snapshotted from [TranslationPrefs] at call time so
+     * every path below speaks to a single translation.
      */
-    suspend fun getAyahsForSurah(surahId: Int): List<AyahVerse> {
+    suspend fun getAyahsForSurah(surahId: Int): List<AyahVerse> =
+        resolveAyahs(surahId, TranslationPrefs.selectedEdition.value)
+
+    /**
+     * Resolves a surah for one specific [edition] (snapshot taken by the
+     * caller — [prefetchSurah] snapshots it so its disk key and its verses can
+     * never disagree). Data is only cached/returned when it belongs to that
+     * edition:
+     * - a successful fetch is dropped if the user switched editions while the
+     *   request was in flight, so the previous translation cannot land in the
+     *   new edition's cache slot;
+     * - bundled seeds are en.sahih text, so they apply only when [edition] is
+     *   the default AND is still the active edition;
+     * - otherwise the caller gets the placeholder/offline path.
+     */
+    private suspend fun resolveAyahs(surahId: Int, edition: String): List<AyahVerse> {
+        noteRequestedSurah(surahId)
         mutex.withLock {
             cache[surahId]?.takeIf { isSurahListComplete(surahId, it) }?.let { return it }
         }
 
         _loadingSurahs.value = _loadingSurahs.value + surahId
         try {
-            val fetched = fetchSurahFromApi(surahId)
+            val fetched = fetchSurahFromApi(surahId, edition)
             if (!fetched.isNullOrEmpty() && isSurahListComplete(surahId, fetched)) {
-                mutex.withLock {
-                    cache[surahId] = fetched
+                // Edition guard: cache only for the edition this response was
+                // requested under; onTranslationChanged re-fetches whatever a
+                // switch made stale.
+                if (TranslationPrefs.selectedEdition.value == edition) {
+                    mutex.withLock {
+                        cache[surahId] = fetched
+                    }
+                    bumpCacheGen()
+                    return fetched
                 }
-                bumpCacheGen()
-                return fetched
             }
         } catch (_: Exception) {
             // Network failure / offline
@@ -379,12 +575,16 @@ object QuranAyahRepository {
             _loadingSurahs.value = _loadingSurahs.value - surahId
         }
 
-        // Check bundled seed
-        BUNDLED_SEEDS[surahId]?.let {
-            val cleaned = it.map { v -> v.copy(textUthmani = sanitizeVerseText(v.surahId, v.ayahNo, v.textUthmani)) }
-            mutex.withLock { cache[surahId] = cleaned }
-            bumpCacheGen()
-            return cleaned
+        // Bundled seeds are en.sahih text — usable only for that edition.
+        if (edition == TranslationPrefs.DEFAULT_EDITION &&
+            TranslationPrefs.selectedEdition.value == edition
+        ) {
+            BUNDLED_SEEDS[surahId]?.let {
+                val cleaned = it.map { v -> v.copy(textUthmani = sanitizeVerseText(v.surahId, v.ayahNo, v.textUthmani)) }
+                mutex.withLock { cache[surahId] = cleaned }
+                bumpCacheGen()
+                return cleaned
+            }
         }
 
         // Fallback generator using Surah metadata
@@ -394,24 +594,30 @@ object QuranAyahRepository {
         return generated
     }
 
-    private suspend fun fetchSurahFromApi(surahId: Int): List<AyahVerse>? {
+    /**
+     * Fetches `quran-uthmani` plus the caller's [edition] in one request.
+     * [edition] comes from the caller's snapshot of
+     * [TranslationPrefs.selectedEdition] — the single source of truth — never
+     * from a shadow copy inside this repository.
+     */
+    private suspend fun fetchSurahFromApi(surahId: Int, edition: String): List<AyahVerse>? {
         val client = httpClient ?: return null
-        val url = "https://api.alquran.cloud/v1/surah/$surahId/editions/quran-uthmani,en.sahih"
+        val url = "https://api.alquran.cloud/v1/surah/$surahId/editions/quran-uthmani,$edition"
         val responseText = client.get(url).bodyAsText()
         val root = json.parseToJsonElement(responseText).jsonObject
         val dataArray = root["data"]?.jsonArray ?: return null
         if (dataArray.size < 2) return null
 
         val uthmaniEdition = dataArray[0].jsonObject
-        val englishEdition = dataArray[1].jsonObject
+        val translationEdition = dataArray[1].jsonObject
 
         val uthmaniAyahs = uthmaniEdition["ayahs"]?.jsonArray ?: return null
-        val englishAyahs = englishEdition["ayahs"]?.jsonArray ?: return null
+        val translationAyahs = translationEdition["ayahs"]?.jsonArray ?: return null
 
         val result = mutableListOf<AyahVerse>()
         for (i in 0 until uthmaniAyahs.size) {
             val uObj = uthmaniAyahs[i].jsonObject
-            val eObj = englishAyahs.getOrNull(i)?.jsonObject
+            val eObj = translationAyahs.getOrNull(i)?.jsonObject
 
             val ayahNo = uObj["numberInSurah"]?.jsonPrimitive?.int ?: (i + 1)
             val rawText = uObj["text"]?.jsonPrimitive?.content ?: ""
@@ -428,5 +634,76 @@ object QuranAyahRepository {
             )
         }
         return result
+    }
+
+    /**
+     * Process-local [Settings] used by [textSettings] when the platform's
+     * no-arg `Settings()` factory cannot build a store (no Context on the JVM
+     * unit-test classpath). Data dies with the process — the same effective
+     * durability as the previous `null` settings — but the edition-scoped
+     * persistence logic runs unmodified on every platform instead of silently
+     * no-oping, which is what makes it testable.
+     */
+    private class InMemorySettings : Settings {
+        private val values = mutableMapOf<String, Any?>()
+
+        override val keys: Set<String> get() = values.keys
+        override val size: Int get() = values.size
+
+        override fun clear() {
+            values.clear()
+        }
+
+        override fun remove(key: String) {
+            values.remove(key)
+        }
+
+        override fun hasKey(key: String): Boolean = values.containsKey(key)
+
+        override fun putInt(key: String, value: Int) {
+            values[key] = value
+        }
+
+        override fun getInt(key: String, defaultValue: Int): Int = values[key] as? Int ?: defaultValue
+        override fun getIntOrNull(key: String): Int? = values[key] as? Int
+
+        override fun putLong(key: String, value: Long) {
+            values[key] = value
+        }
+
+        override fun getLong(key: String, defaultValue: Long): Long = values[key] as? Long ?: defaultValue
+        override fun getLongOrNull(key: String): Long? = values[key] as? Long
+
+        override fun putString(key: String, value: String) {
+            values[key] = value
+        }
+
+        override fun getString(key: String, defaultValue: String): String =
+            values[key] as? String ?: defaultValue
+
+        override fun getStringOrNull(key: String): String? = values[key] as? String
+
+        override fun putFloat(key: String, value: Float) {
+            values[key] = value
+        }
+
+        override fun getFloat(key: String, defaultValue: Float): Float = values[key] as? Float ?: defaultValue
+        override fun getFloatOrNull(key: String): Float? = values[key] as? Float
+
+        override fun putDouble(key: String, value: Double) {
+            values[key] = value
+        }
+
+        override fun getDouble(key: String, defaultValue: Double): Double = values[key] as? Double ?: defaultValue
+        override fun getDoubleOrNull(key: String): Double? = values[key] as? Double
+
+        override fun putBoolean(key: String, value: Boolean) {
+            values[key] = value
+        }
+
+        override fun getBoolean(key: String, defaultValue: Boolean): Boolean =
+            values[key] as? Boolean ?: defaultValue
+
+        override fun getBooleanOrNull(key: String): Boolean? = values[key] as? Boolean
     }
 }
