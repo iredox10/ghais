@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -45,6 +46,9 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.ghais.data.repository.QuranAyahRepository
+import com.ghais.data.repository.TranslationCatalog
+import com.ghais.data.repository.TranslationPrefs
 import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.NoirListRow
@@ -53,6 +57,7 @@ import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.NoirSwitch
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.screens.home.NoirStatChip
+import com.ghais.ui.screens.player.TranslationPickerSheet
 import com.ghais.ui.theme.GhaisNoir
 import kotlinx.coroutines.launch
 
@@ -79,6 +84,26 @@ object AppSettingsScreen : Screen {
         // Reminders: local placeholder state only — no scheduler infra wired.
         var dailyReminder by remember { mutableStateOf(false) }
         val reminderTimeLabel = "08:00"
+
+        // Translation: live from TranslationPrefs, catalog-resolved for display.
+        // The row is a second entry point to the ONE picker (shared with the
+        // player) so users can switch edition without leaving Settings.
+        var showTranslationPicker by remember { mutableStateOf(false) }
+        val selectedEditionId by TranslationPrefs.selectedEdition.collectAsState()
+        val translationEdition = remember(selectedEditionId) {
+            TranslationCatalog.byId(selectedEditionId)
+        }
+        val translationTitle = translationEdition?.let { edition ->
+            val name = edition.englishName.trim().ifBlank { edition.languageName.trim() }
+            val flag = edition.countryFlag.trim()
+            if (name.isEmpty()) "Translation" else if (flag.isEmpty()) name else "$flag $name"
+        } ?: "Translation"
+        val translationSubtitle = translationEdition
+            ?.languageName
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { "$it • Tap to change" }
+            ?: "Tap to choose the translation shown while listening"
 
         NoirScreenRoot {
             LazyColumn(
@@ -174,7 +199,20 @@ object AppSettingsScreen : Screen {
                     }
                 }
 
-                // 4. About
+                // 4. Reading / translation
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        NoirSectionHeader(label = "Translation")
+                        NoirListRow(
+                            icon = Icons.Filled.Translate,
+                            title = translationTitle,
+                            subtitle = translationSubtitle,
+                            onClick = { showTranslationPicker = true }
+                        )
+                    }
+                }
+
+                // 5. About
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         NoirSectionHeader(label = "About")
@@ -207,6 +245,21 @@ object AppSettingsScreen : Screen {
                     }
                 }
             }
+
+            // Shared picker, mounted here rather than duplicated: identical
+            // sheet, search and country grouping the player uses. Selection
+            // persists via TranslationPrefs and invalidates the ayah caches so
+            // every surface re-resolves in the new edition.
+            TranslationPickerSheet(
+                visible = showTranslationPicker,
+                selectedEditionId = selectedEditionId,
+                onSelect = { edition ->
+                    TranslationPrefs.setEdition(edition.id)
+                    QuranAyahRepository.onTranslationChanged()
+                    showTranslationPicker = false
+                },
+                onDismiss = { showTranslationPicker = false }
+            )
         }
     }
 }

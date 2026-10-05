@@ -64,6 +64,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.repository.QuranTafseerRepository
+import com.ghais.data.repository.TranslationCatalog
+import com.ghais.data.repository.TranslationPrefs
 import com.ghais.data.seed.QuranData
 import com.ghais.data.share.ShareSheet
 import com.ghais.domain.model.TrackItem
@@ -122,7 +124,9 @@ data class TafseerEntry(
  * Ghais Noir Glass Tafseer Sheet:
  *
  * A modal bottom sheet displaying the authentic Tafseer for the currently
- * playing Ayah or explicit verse parameters.
+ * playing Ayah or explicit verse parameters. The quoted translation is the
+ * ACTIVE edition ([TranslationPrefs.selectedEdition]), named in the card
+ * eyebrow so the reader always knows which translation they are looking at.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -151,6 +155,19 @@ fun TafseerSheet(
     // Resolve current playing track as fallback when parameters are omitted
     val currentTrack by AudioEngine.currentTrack.collectAsState()
     val cacheGen by QuranAyahRepository.cacheGen.collectAsState()
+
+    // WHY collected here and not in resolveTafseerEntry: that resolver is a
+    // plain (non-composable) function, but the sheet must name the translation
+    // it is about to quote. Reading the flow in the composable body keeps the
+    // resolver pure while still re-labelling the card the moment the user
+    // switches edition from the picker or from Settings.
+    val selectedEditionId by TranslationPrefs.selectedEdition.collectAsState()
+    val translationEditionName = remember(selectedEditionId) {
+        TranslationCatalog.byId(selectedEditionId)
+            ?.englishName
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+    }
 
     val entry = remember(currentTrack, surahId, ayahNo, arabicText, englishTranslation, cacheGen) {
         resolveTafseerEntry(
@@ -465,37 +482,11 @@ fun TafseerSheet(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // English Translation Card
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(GhaisShapes.cardNoir)
-                    .background(GhaisNoir.cardFillSoft())
-                    .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardNoir)
-                    .topSpecular(inset = 24.dp)
-                    .padding(18.dp)
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = "TRANSLATION",
-                        color = GhaisNoir.TextTertiary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "“${entry.translation}”",
-                        color = GhaisNoir.TextPrimary,
-                        fontSize = 15.sp,
-                        lineHeight = 23.sp,
-                        fontStyle = FontStyle.Italic,
-                        fontWeight = FontWeight.Normal
-                    )
-                }
-            }
+            // Active-Edition Translation Card
+            TafseerTranslationCard(
+                translation = entry.translation,
+                editionName = translationEditionName
+            )
 
             Spacer(modifier = Modifier.height(18.dp))
 
@@ -710,6 +701,58 @@ fun TafseerSheet(
 }
 
 /**
+ * Translation card: the quoted ayah text under an eyebrow that names the
+ * ACTIVE edition (e.g. `TRANSLATION · Saheeh International`,
+ * `TRANSLATION · Turkish`).
+ *
+ * WHY the label is passed in rather than hardcoded: the app is no longer
+ * English-only — [TranslationPrefs.selectedEdition] decides the text rendered
+ * inside this card, so a fixed "TRANSLATION"/"English" eyebrow would mislabel
+ * the quote. `resolveTafseerEntry` is not composable, so the caller collects
+ * the flow and resolves the display name through
+ * [TranslationCatalog.byId]; an unknown edition id renders the neutral
+ * `TRANSLATION` eyebrow rather than guessing.
+ */
+@Composable
+private fun TafseerTranslationCard(
+    translation: String,
+    editionName: String?
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(GhaisShapes.cardNoir)
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardNoir)
+            .topSpecular(inset = 24.dp)
+            .padding(18.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = editionName?.let { "TRANSLATION · $it" } ?: "TRANSLATION",
+                color = GhaisNoir.TextTertiary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "“$translation”",
+                color = GhaisNoir.TextPrimary,
+                fontSize = 15.sp,
+                lineHeight = 23.sp,
+                fontStyle = FontStyle.Italic,
+                fontWeight = FontWeight.Normal
+            )
+        }
+    }
+}
+
+/**
  * Segmented toggle pill button for selecting between Tafseer sources.
  */
 @Composable
@@ -812,6 +855,14 @@ private fun TafseerAyahBadge(number: Int) {
 /**
  * Smart resolver that blends explicit arguments, live audio player track metadata,
  * and canonical Quranic database records to yield authentic, complete Tafseer content.
+ *
+ * WHY the translation is edition-aware: the sheet is reachable for ANY ayah,
+ * while the curated [KNOWN_TAFSEER_ENTRIES] only covers 5. Those 5 keep their
+ * hand-verified wording, but every other ayah now quotes the live
+ * [QuranAyahRepository.getAyahImmediate] verse — i.e. the user's currently
+ * selected edition (Turkish, Urdu, French, …) instead of the hardcoded filler
+ * sentence this resolver used to synthesise while the real translation was
+ * already sitting in memory. Pure function: no flows, no composition.
  */
 private fun resolveTafseerEntry(
     explicitSurahId: Int?,
@@ -838,8 +889,24 @@ private fun resolveTafseerEntry(
     val verse = QuranAyahRepository.getAyahImmediate(sId, aNo)
     val uthmani = if (verse.isPlaceholder) "" else verse.textUthmani
 
-    val translation = explicitTranslation
+    // WHY this chain: the sheet used to render filler prose for every ayah
+    // outside the 5 curated entries ("A divine verse from Surah X conveying
+    // guidance...") even though `verse` above already holds the REAL, active
+    // edition's translation in memory — the resolver simply never looked at
+    // it. The generic sentence is now the last resort, not the default.
+    //
+    // Order: caller-supplied text (the player passes its own card copy) →
+    // curated entry (hand-verified wording for the celebrated ayahs) →
+    // live verse text (active edition, may be any language) → generic
+    // fallback for the rare case nothing at all is cached.
+    //
+    // The placeholder guard matters: QuranAyahRepository's placeholder carries
+    // a synthetic translation ("Ayah 13 of Surah Ar-Rahman") that would read
+    // as a real quote, so it must never reach this chain.
+    val liveTranslation = verse.translation.trim().takeIf { !verse.isPlaceholder && it.isNotEmpty() }
+    val translation = explicitTranslation?.takeIf { it.isNotBlank() }
         ?: knownEntry?.translation
+        ?: liveTranslation
         ?: defaultTranslationForAyah(sId, aNo, surahEn)
 
     val asad = knownEntry?.asadCommentary
