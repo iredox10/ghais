@@ -389,6 +389,203 @@ class QuranAyahRepositoryTest {
     }
 
     /**
+     * An edition id the app never heard of — a stale deep link, a catalog row
+     * dropped in a later release, hand-edited storage — must degrade to the
+     * offline placeholder path instead of throwing: `getAyahsForSurah` is
+     * called from screens that only know a surah number. Surah 112 is fully
+     * bundled for `en.sahih`, which makes it the strictest probe: an unknown id
+     * must not borrow that text either, since showing English under a bogus id
+     * is the same bug as showing it under a real foreign one.
+     */
+    @Test
+    fun testUnknownEditionIdFallsBackToPlaceholdersInsteadOfCrashing() = runBlocking {
+        QuranAyahRepository.configureHttpClient(deadClient)
+        val garbage = "xx.doesnotexist"
+        assertTrue(
+            TranslationCatalog.byId(garbage) == null,
+            "test premise: $garbage must not be a catalog edition",
+        )
+
+        TranslationPrefs.setEdition(garbage)
+        QuranAyahRepository.onTranslationChanged()
+        awaitBackgroundFetches()
+
+        val immediate = QuranAyahRepository.getAyahImmediate(112, 1)
+        assertTrue(immediate.isPlaceholder, "expected a placeholder for $garbage: $immediate")
+        assertTrue(immediate.textUthmani.contains("آية رقم"), "placeholder text lost: $immediate")
+
+        val verses = QuranAyahRepository.getAyahsForSurah(112)
+        assertEquals(4, verses.size, "surah 112 has 4 ayahs")
+        assertTrue(verses.all { it.isPlaceholder }, "non-placeholder text served for $garbage: $verses")
+        assertTrue(
+            verses.all { it.translation.startsWith("Ayah ") },
+            "expected the generated \"Ayah N of Surah …\" fallback: $verses",
+        )
+
+        TranslationPrefs.setEdition(TranslationPrefs.DEFAULT_EDITION)
+    }
+
+    /**
+     * The contract that makes a switch feel instant: the new edition has to go
+     * on the wire for the surah the player is already showing, even though that
+     * surah is fully resolved in the in-memory cache under the old edition.
+     * The cache slot is not edition-tagged (one entry per surah), so nothing but
+     * the re-fetch [QuranAyahRepository.onTranslationChanged] triggers for the
+     * remembered surahs can put edition B there — screens do not re-request on
+     * their own while the previous edition's request is still marked in-flight
+     * in `loadingSurahs`. Without that re-fetch the player would sit on the old
+     * translation (or a placeholder) until the track changed.
+     *
+     * Surah 105 is used because no other test in this class touches it, so the
+     * repository has never heard of it and cannot answer from memory.
+     */
+    @Test
+    fun testEditionSwitchRefetchesAnAlreadyRequestedSurahUnderTheNewEdition() = runBlocking {
+        val surahId = 105
+        val editionA = "tr.yazir"
+        val editionB = "id.indonesian"
+        val engine = FakeAlQuranEngine(failing = false)
+        QuranAyahRepository.configureHttpClient(HttpClient(engine))
+        // Let anything the setup reset launched drain before the fake answers,
+        // so a straggler cannot be mistaken for this test's traffic.
+        awaitBackgroundFetches()
+
+        TranslationPrefs.setEdition(editionA)
+        val first = QuranAyahRepository.getAyahsForSurah(surahId)
+        assertEquals(5, first.size, "surah 105 has 5 ayahs")
+        assertEquals("[$editionA] translation 1", first[0].translation)
+
+        val underA = engine.urls.filter { "/surah/$surahId/" in it }
+        assertTrue(underA.isNotEmpty(), "no request went out for surah $surahId: ${engine.urls}")
+        assertTrue(
+            underA.all { "editions/quran-uthmani,$editionA" in it },
+            "surah $surahId was requested with an edition other than the selected one: $underA",
+        )
+        val urlsBeforeSwitch = engine.urls.size
+
+        TranslationPrefs.setEdition(editionB)
+        QuranAyahRepository.onTranslationChanged()
+        awaitBackgroundFetches()
+
+        val afterSwitch = engine.urls.drop(urlsBeforeSwitch)
+        assertTrue(
+            afterSwitch.any { "/surah/$surahId/" in it && "editions/quran-uthmani,$editionB" in it },
+            "the switch never re-requested surah $surahId under $editionB: ${engine.urls}",
+        )
+        assertTrue(
+            afterSwitch.none { "/surah/$surahId/" in it && "editions/quran-uthmani,$editionA" in it },
+            "the previous edition was requested again after the switch: $afterSwitch",
+        )
+
+        // And the cache slot for that surah now holds edition B's text.
+        val second = QuranAyahRepository.getAyahsForSurah(surahId)
+        assertEquals(
+            "[$editionB] translation 1",
+            second[0].translation,
+            "the cached verse for surah $surahId still belongs to $editionA",
+        )
+
+        TranslationPrefs.setEdition(TranslationPrefs.DEFAULT_EDITION)
+    }
+
+    /**
+     * The bundle is `en.sahih` text and is the app's offline floor, so it has to
+     * be reachable again the instant the user returns to the default edition —
+     * while another edition's verses for the same surah were sitting in the
+     * in-memory cache a moment earlier. Round trip: en.sahih → Turkish →
+     * Indonesian → back to en.sahih with a client that can no longer answer, so
+     * the only text that can come back for surah 112 is the bundled English one
+     * and nothing may linger from the editions in between.
+     */
+    @Test
+    fun testBundledSeedTextSurvivesARoundTripThroughOtherEditions() = runBlocking {
+        val surahId = 112
+        val engine = FakeAlQuranEngine(failing = false)
+        QuranAyahRepository.configureHttpClient(HttpClient(engine))
+        awaitBackgroundFetches()
+
+        TranslationPrefs.setEdition("tr.yazir")
+        QuranAyahRepository.onTranslationChanged()
+        val turkish = QuranAyahRepository.getAyahsForSurah(surahId)
+        assertEquals("[tr.yazir] translation 1", turkish[0].translation)
+
+        TranslationPrefs.setEdition("id.indonesian")
+        QuranAyahRepository.onTranslationChanged()
+        awaitBackgroundFetches()
+        val indonesian = QuranAyahRepository.getAyahsForSurah(surahId)
+        assertEquals("[id.indonesian] translation 1", indonesian[0].translation)
+
+        // From here nothing can be fetched, so a complete verse can only come
+        // from the bundle (or this edition's own persisted copy of it).
+        QuranAyahRepository.configureHttpClient(deadClient)
+        TranslationPrefs.setEdition(TranslationPrefs.DEFAULT_EDITION)
+        QuranAyahRepository.onTranslationChanged()
+        awaitBackgroundFetches()
+
+        val seeded = QuranAyahRepository.getAyahsForSurah(surahId)
+        assertEquals(4, seeded.size, "surah 112 has 4 ayahs")
+        assertTrue(seeded.none { it.isPlaceholder }, "the bundled text did not come back: $seeded")
+        // The sanitizer is applied to seeds as they enter the cache, so the
+        // Arabic must be a fixed point of it — comparing against the sanitizer's
+        // own output rather than a hand-typed literal, since shadda/fatha can be
+        // typed in either order and still render identically.
+        assertEquals(
+            seeded.map { QuranAyahRepository.sanitizeVerseText(surahId, it.ayahNo, it.textUthmani) },
+            seeded.map { it.textUthmani },
+            "bundled Arabic did not survive the round trip",
+        )
+        assertEquals(
+            "Say, \"He is Allah, [who is] One,",
+            seeded.first().translation,
+            "the bundled en.sahih translation did not come back intact",
+        )
+        assertTrue(
+            seeded.none { it.translation.startsWith("[") },
+            "another edition's text lingered after switching back: $seeded",
+        )
+
+        TranslationPrefs.setEdition(TranslationPrefs.DEFAULT_EDITION)
+    }
+
+    /**
+     * The Arabic text is edition-independent — every request asks for
+     * `quran-uthmani` alongside the translation — so switching translations must
+     * leave the Uthmani text of an already-loaded verse byte-identical, and must
+     * never swap it for a placeholder, because that Arabic is what the user is
+     * reciting from. Catches a switch that dropped the Arabic half of the
+     * response, or that kept serving the previous edition's cached copy.
+     */
+    @Test
+    fun testEditionSwitchLeavesTheArabicTextOfALoadedVerseUnchanged() = runBlocking {
+        val surahId = 104
+        val engine = FakeAlQuranEngine(failing = false)
+        QuranAyahRepository.configureHttpClient(HttpClient(engine))
+        awaitBackgroundFetches()
+
+        TranslationPrefs.setEdition("tr.yazir")
+        val before = QuranAyahRepository.getAyahsForSurah(surahId)
+        assertEquals(9, before.size, "surah 104 has 9 ayahs")
+        assertEquals("[tr.yazir] translation 1", before[0].translation)
+
+        TranslationPrefs.setEdition("id.indonesian")
+        QuranAyahRepository.onTranslationChanged()
+        val after = QuranAyahRepository.getAyahsForSurah(surahId)
+
+        assertEquals(before.map { it.ayahNo }, after.map { it.ayahNo }, "ayah numbering changed across a switch")
+        assertEquals(
+            before.map { it.textUthmani },
+            after.map { it.textUthmani },
+            "Arabic text changed across a translation switch",
+        )
+        assertTrue(after.none { it.isPlaceholder }, "a switch replaced loaded Arabic with placeholders: $after")
+        assertTrue(after.all { !it.textUthmani.contains("آية رقم") }, "placeholder text leaked into the Arabic: $after")
+        // The translation half is the only thing the switch may change.
+        assertEquals("[id.indonesian] translation 1", after[0].translation)
+
+        TranslationPrefs.setEdition(TranslationPrefs.DEFAULT_EDITION)
+    }
+
+    /**
      * Screens collect [QuranAyahRepository.cacheGen] to know when to re-resolve
      * the ayah they are showing. A translation switch that failed to bump it
      * would leave the previous edition's text on screen until something else
