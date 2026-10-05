@@ -27,10 +27,17 @@ object TranslationPrefs {
     val selectedEdition: StateFlow<String> = _selectedEdition.asStateFlow()
 
     fun setEdition(editionId: String) {
-        if (editionId.isBlank() || editionId == _selectedEdition.value) return
-        _selectedEdition.value = editionId
+        // Trim before validating: a stray space from hand-edited storage or a
+        // deep link would otherwise be persisted and then go onto the wire
+        // verbatim, producing a 404 on
+        // `…/editions/quran-uthmani,%20en.sahih%20`. Ids are catalog slugs
+        // (`en.sahih`, `tr.yazir`), so surrounding whitespace is never
+        // meaningful and is dropped here rather than at every read site.
+        val id = editionId.trim()
+        if (id.isBlank() || id == _selectedEdition.value) return
+        _selectedEdition.value = id
         try {
-            settings.putString(KEY_EDITION, editionId)
+            settings.putString(KEY_EDITION, id)
         } catch (_: Exception) {
         }
     }
