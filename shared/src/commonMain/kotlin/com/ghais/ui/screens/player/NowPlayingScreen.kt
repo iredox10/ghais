@@ -91,6 +91,8 @@ import kotlin.math.abs
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.TranslationCatalog
+import com.ghais.data.repository.TranslationPrefs
 import com.ghais.domain.model.RepeatMode
 import com.ghais.player.AmbientMixer
 import com.ghais.player.AudioEngine
@@ -199,8 +201,19 @@ class NowPlayingScreen : Screen {
         // Verse text resolves through the repository cache: placeholders swap
         // to real text when the fetch lands (cacheGen), not on track change.
         val cacheGen by QuranAyahRepository.cacheGen.collectAsState()
-        val currentVerse = remember(currentTrack, cacheGen) { currentTrack?.let { QuranAyahRepository.getAyahImmediate(it.surahId, it.ayahNo.coerceAtLeast(1)) } }
-        val upcomingVerse = remember(currentTrack, queue, currentIndex, cacheGen) {
+        // The selected translation edition. Collected with the same idiom as the
+        // AudioEngine flows above, and threaded into BOTH verse remembers: the
+        // repository's onTranslationChanged() bumps cacheGen, so a new edition
+        // re-resolves the text through cacheGen alone — but cacheGen is a plain
+        // Int and the ayah payload itself does not change identity, so keying
+        // on the edition as well makes the swap a guaranteed re-read (and keeps
+        // this screen correct even if a future refetch path forgets the bump).
+        val selectedTranslationEdition by TranslationPrefs.selectedEdition.collectAsState()
+        val translationLabel = remember(selectedTranslationEdition) {
+            TranslationCatalog.byId(selectedTranslationEdition)?.englishName ?: "Translation"
+        }
+        val currentVerse = remember(currentTrack, cacheGen, selectedTranslationEdition) { currentTrack?.let { QuranAyahRepository.getAyahImmediate(it.surahId, it.ayahNo.coerceAtLeast(1)) } }
+        val upcomingVerse = remember(currentTrack, queue, currentIndex, cacheGen, selectedTranslationEdition) {
             val track = currentTrack ?: return@remember null
             val totalAyahs = QuranDataRepository.getSurahById(track.surahId)?.ayahsCount ?: 7
             val currentAyah = track.ayahNo.coerceAtLeast(1)
@@ -236,18 +249,22 @@ class NowPlayingScreen : Screen {
         var showAmbient by remember { mutableStateOf(false) }
         var showVolume by remember { mutableStateOf(false) }
         var showTafseer by remember { mutableStateOf(false) }
+        var showTranslationPicker by remember { mutableStateOf(false) }
 
         // System-back routes through the guarded dismissPlayer() (idempotent
         // via isDismissed) instead of Voyager's raw pop — prevents a
         // double-pop when the settle tween and a back-press race. Open sheets
         // consume the press first.
         PlayerBackHandler(enabled = true) {
-            if (showSleepTimer || showQueue || showAmbient || showVolume || showTafseer) {
+            if (showSleepTimer || showQueue || showAmbient || showVolume || showTafseer ||
+                showTranslationPicker
+            ) {
                 showSleepTimer = false
                 showQueue = false
                 showAmbient = false
                 showVolume = false
                 showTafseer = false
+                showTranslationPicker = false
             } else {
                 animateOutAndDismiss()
             }
@@ -271,7 +288,7 @@ class NowPlayingScreen : Screen {
         var scrubFraction by remember { mutableStateOf(0f) }
         val poke: () -> Unit = { idleTick++; controlsVisible = true }
         // A live SURFACE: something else already owns the current touch, so a
-        // canvas tap is not ours to interpret. The four ModalBottomSheet popups
+        // canvas tap is not ours to interpret. The five ModalBottomSheet popups
         // are composed inside the player but render in their own window, so
         // their taps never even reach here; showVolume is inline inside the
         // controlsVisible block, so its padding does.
@@ -283,7 +300,7 @@ class NowPlayingScreen : Screen {
         // long ayah. A set like this means "a surface is open", never "a mode
         // is selected".
         val surfaceBusy = showSleepTimer || showQueue || showAmbient || showVolume || showTafseer ||
-            isScrubbing
+            showTranslationPicker || isScrubbing
         // The idle timer additionally waits for the finger to lift. Without it
         // a press held 10s straight — the play button, a drag-to-dismiss, a
         // thumb resting on the verse — had the chrome melt out from under it,
@@ -663,6 +680,13 @@ class NowPlayingScreen : Screen {
                         onPreviousAyah = { poke(); AudioEngine.previousAyah() },
                         onToggleAyahMode = { poke(); AudioEngine.toggleAyahMode() },
                         onOpenTafseer = { poke(); showTafseer = true },
+                        // Translation switcher (ayah-mode card only — this card
+                        // renders solely under AnimatedVisibility(isAyahMode), so
+                        // the control never appears in podcast/surah mode).
+                        // poke() like every other chrome control, so tapping it
+                        // also resets the 10s idle fade.
+                        translationLabel = translationLabel,
+                        onOpenTranslationPicker = { poke(); showTranslationPicker = true },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 12.dp)
@@ -1093,6 +1117,27 @@ class NowPlayingScreen : Screen {
             if (showQueue) QueueSheet(onDismiss = { showQueue = false })
             if (showAmbient) AmbientMixerSheet(mixer = mixer, onDismissRequest = { showAmbient = false })
             if (showTafseer) TafseerSheet(onDismiss = { showTafseer = false })
+            // Translation picker — hosted next to TafseerSheet and gated on
+            // showTranslationPicker exactly the same way (the sheet itself
+            // early-returns when !visible, so this is the only mount point).
+            //
+            // ORDER MATTERS: setEdition first (persists + flips the StateFlow
+            // that drives the chip label), THEN onTranslationChanged() — which
+            // bumps cacheGen so this screen's verse remembers re-resolve and
+            // the new edition is fetched. Reversing them would let the
+            // recomposition read the new label against the OLD cached text.
+            if (showTranslationPicker) {
+                TranslationPickerSheet(
+                    visible = showTranslationPicker,
+                    selectedEditionId = selectedTranslationEdition,
+                    onSelect = { edition ->
+                        TranslationPrefs.setEdition(edition.id)
+                        QuranAyahRepository.onTranslationChanged()
+                        showTranslationPicker = false
+                    },
+                    onDismiss = { showTranslationPicker = false }
+                )
+            }
         }
         }
     }

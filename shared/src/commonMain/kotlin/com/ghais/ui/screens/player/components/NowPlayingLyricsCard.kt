@@ -20,9 +20,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -31,6 +33,7 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,6 +63,7 @@ import com.ghais.data.repository.AyahVerse
 import com.ghais.domain.model.TrackItem
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.util.appendAyahMark
 import com.ghais.ui.util.ayahMarkContent
 import com.ghais.ui.theme.GhaisTypography
@@ -80,6 +84,10 @@ import com.ghais.ui.theme.GhaisTypography
  *   No transliteration, no tools row (loop/tafseer/learning/download live in
  *   their own screens), no NEXT preview, no Record & Compare.
  * - Range-loop and recitation-gap banners render only while active.
+ * - Translation switcher: a subdued pill (12sp, TextSecondary, GhaisNoir.Fill2
+ *   + 1dp BorderCard hairline, GhaisShapes.pill) below the translation naming
+ *   the current edition, opening the player's translation picker. Renders
+ *   whether or not translation text loaded — see the note at its call site.
  * - All callbacks/logic/signatures preserved; scrubber + controls bar untouched.
  */
 @Composable
@@ -92,6 +100,19 @@ fun NowPlayingLyricsCard(
     onPreviousAyah: (() -> Unit)? = null,
     onToggleAyahMode: (() -> Unit)? = null,
     onOpenTafseer: (() -> Unit)? = null,
+    /**
+     * Display name of the translation edition currently in use (e.g.
+     * "Saheeh International"). Required — no default, so a new call site cannot
+     * forget it and silently render a dead chip.
+     */
+    translationLabel: String,
+    /**
+     * Opens the translation picker. Null hides the affordance entirely (used by
+     * the backward-compatible overload below, which has no sheet to host).
+     * Still required at the call site: null is an explicit decision, not a
+     * forgotten one.
+     */
+    onOpenTranslationPicker: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     val isGapActive by AudioEngine.isRecitationGapActive.collectAsState()
@@ -410,6 +431,60 @@ fun NowPlayingLyricsCard(
                             )
                         }
                     }
+
+                    // Translation switcher — the only way to change the edition
+                    // from inside the player, so it lives with the verse.
+                    //
+                    // Placement is deliberately AFTER the if/else above rather
+                    // than inside the translation branch: a blank translation is
+                    // exactly the case where the reader most needs to switch
+                    // (offline, a non-default edition that has not loaded, an
+                    // ayah the edition does not cover). Gating it on
+                    // `!translationText.isNullOrBlank()` would have made the
+                    // control disappear precisely when it is the only remedy.
+                    //
+                    // It rides inside the scrolling column so it scrolls with the
+                    // ayah instead of floating over the chrome, and it is
+                    // LTR (the RTL provider above is scoped to the Arabic block)
+                    // because the label is a romanised translation name.
+                    val openTranslationPicker = onOpenTranslationPicker
+                    if (openTranslationPicker != null) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .widthIn(max = 280.dp)
+                                .clip(GhaisShapes.pill)
+                                .background(GhaisNoir.Fill2)
+                                .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                                .noirClickable { openTranslationPicker() }
+                                .padding(horizontal = 9.dp, vertical = 5.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Translate,
+                                contentDescription = null,
+                                tint = GhaisNoir.TextTertiary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = translationLabel.ifBlank { "Translation" },
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = GhaisNoir.TextSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Default.ExpandMore,
+                                contentDescription = "Change translation",
+                                tint = GhaisNoir.TextTertiary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
             }
             }
 
@@ -472,6 +547,10 @@ fun NowPlayingLyricsCard(
         currentAyahVerse = currentVerse,
         upcomingAyahVerse = upcomingVerse,
         isPlaying = true,
+        // This overload is a static sample with no sheet host, so the chip is
+        // passed as null (no dead affordance) rather than a no-op lambda.
+        translationLabel = "Saheeh International",
+        onOpenTranslationPicker = null,
         modifier = modifier
     )
 }
