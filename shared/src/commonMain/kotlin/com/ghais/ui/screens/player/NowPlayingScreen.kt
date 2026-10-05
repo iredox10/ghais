@@ -601,22 +601,55 @@ class NowPlayingScreen : Screen {
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Video-first: clear the middle so the ambient video breathes.
-                // In ayah mode the verse is the hero, not the video, so the gap
-                // drops to 0.10 and the card takes ~91% of the leftover. But
-                // when an ambient video is actually playing, the video is the
-                // point — the gap returns to the roomy 1f so rain/fire/waves
-                // stay visible behind the verse instead of a sliver.
+                // Top slack above the verse.
                 //
-                // Surah mode is untouched at 1f. The card's AnimatedVisibility is
-                // still a weight(1f) measurable while it is collapsed, so the two
-                // weights stay in the same 1:1 ratio in both modes and the video
-                // gap is exactly what it has always been.
-                Spacer(modifier = Modifier.weight(if (isAyahMode && !hasAmbientVideo) 0.10f else 1f))
+                // Surah/podcast mode is untouched: one weight(1f) gap, byte-for-byte
+                // the behaviour it always had, so the ambient video keeps the roomy
+                // middle. Ayah mode *with* a video deliberately takes that same
+                // branch — when rain/fire/waves are actually playing, the video is
+                // the point and the verse belongs above it, not on top of it.
+                //
+                // Ayah mode without video is the branch that changed. The verse is
+                // the hero there, and the brief is UPPER-MIDDLE: high enough to own
+                // the screen, low enough that a long ayah still has room to grow
+                // before it reaches the controls. The old split was a weight(0.10f)
+                // gap against the card's weight(1f), i.e. the gap was a fixed
+                // *fraction of whatever was left over*. That coupled it to the
+                // chrome: the ~380dp of controls that auto-fade after 10s idle
+                // vanished, the leftover grew, and the gap grew with it — dragging
+                // the whole verse down the screen every time the player idled out.
+                // A fixed 28dp head plus a small 0.10 elasticity decouples them.
+                // At 800dp tall (2400px) the text top lands ≈131dp (≈16% of the
+                // screen) with the controls up and ≈165dp (≈21%) once they have
+                // faded: a ~5% drift instead of a ~70dp jump. The height the fade
+                // hands back is not wasted on air — it flows into the card
+                // (fill = true below), so a long ayah gains ~350dp of viewport
+                // instead of the verse sliding away from where the eye was.
+                if (isAyahMode && !hasAmbientVideo) {
+                    Spacer(modifier = Modifier.height(28.dp))
+                    Spacer(modifier = Modifier.weight(0.10f))
+                } else {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
 
                 // Synchronized Ayah Lyrics card — animated when Ayah mode is active.
+                //
+                // fill = true (was false): the card now takes its whole allocation,
+                // and because the verse inside it is top-aligned in a scrolling
+                // box, every dp of leftover collects at the BOTTOM of the card
+                // instead of below it. Two things follow, and both are the point.
+                // A short ayah renders as a compact block in the upper-middle of
+                // the screen with clear air beneath it — never centred, never
+                // glued to the controls. And a long ayah (2:282) grows downward
+                // into that air and scrolls inside the card; the chrome is the
+                // next sibling in this Column and sits strictly below the card's
+                // bounds, so the translation can never end up behind it. With
+                // fill = false the card shrank to its content instead, and the
+                // freed space landed in the gap above — which is what made the
+                // whole block read as floating mid-screen with nothing anchoring
+                // the text to a stable position.
                 AnimatedVisibility(
-                    modifier = Modifier.weight(1f, fill = false),
+                    modifier = Modifier.weight(1f, fill = true),
                     visible = isAyahMode,
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()

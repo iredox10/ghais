@@ -284,13 +284,24 @@ fun NowPlayingLyricsCard(
             // Active verse — transparent, prominent. No inset, no indicator bar.
             // Arabic Uthmani in quranScript (25.sp, RTL) + enclosed rosette, 2.0x line height.
             // Basmalah header renders as a centered line above ayah 1 (except surahs 1 & 9).
-            // fill = true: the verse is the only vertically-flexible child, so it takes
-            // the whole allocation instead of min(content, allocation). That makes the
-            // viewport deterministic — it stops changing height every time the ayah
-            // changes length, which is what made the card visibly jump mid-playback —
-            // and it guarantees the viewport is the tallest the parent allows rather
-            // than the shortest the text happens to need. Anything still taller than
-            // the box keeps scrolling, so no line is stranded out of reach.
+            //
+            // PARENT CONTRACT (NowPlayingScreen): the caller hands this card a full
+            // weight(1f, fill = true) slot directly under a near-fixed top gap
+            // (28dp + 0.10 elasticity). Two consequences this box must honour:
+            //
+            //  1. This column is weight(1f, fill = true) — it takes the whole
+            //     allocation instead of min(content, allocation), so the viewport
+            //     is deterministic (it stopped changing height every time the ayah
+            //     changed length, which is what made the card visibly jump
+            //     mid-playback) and always as tall as the parent allows rather
+            //     than as short as the text happens to need. Anything taller
+            //     still scrolls, so no line is stranded out of reach.
+            //  2. Content is TOP-aligned inside that slot and the card ends above
+            //     the transport chrome, so leftover height collects at the bottom
+            //     of the card: a short ayah reads as a compact block in the
+            //     upper-middle of the screen, and a long one (2:282) grows
+            //     downward and scrolls — it can never overlap or hide behind the
+            //     controls, which are the card's next sibling in the parent Column.
             //
             // key() so each verse starts at the top (see the note above); the scroll
             // state itself is created inside, where a composable context exists.
@@ -379,7 +390,17 @@ fun NowPlayingLyricsCard(
 
                         // English translation — secondary
                         if (!translationText.isNullOrBlank()) {
-                            Spacer(modifier = Modifier.height(6.dp))
+                            // 11dp, not 6dp. The Arabic block runs on the QCF line
+                            // box (2.0x) whose tashkeel headroom already reads as
+                            // trailing space, so a 6dp gutter visually collapsed to
+                            // almost nothing and the translation sat under the last
+                            // line of the ayah like a footnote — the two scripts read
+                            // as one dense grey mass. 11dp restores a clear section
+                            // break (still less than a third of one 50sp Arabic line)
+                            // so the translation can be scanned as its own block,
+                            // which is the last thing the user has to reach on a long
+                            // ayah. Fonts, sizes and colors are untouched.
+                            Spacer(modifier = Modifier.height(11.dp))
                             Text(
                                 text = translationText,
                                 fontSize = 14.5.sp,
