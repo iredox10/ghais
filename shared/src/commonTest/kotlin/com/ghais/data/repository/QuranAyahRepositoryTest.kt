@@ -396,6 +396,12 @@ class QuranAyahRepositoryTest {
      * bundled for `en.sahih`, which makes it the strictest probe: an unknown id
      * must not borrow that text either, since showing English under a bogus id
      * is the same bug as showing it under a real foreign one.
+     *
+     * What "borrowing" means is the translation, not the Arabic. The Arabic of
+     * a verse is the same in every edition, and a switch deliberately keeps it
+     * on screen (see `rememberedArabic`) — so the player legitimately shows
+     * `qul huwa allahu ahad` here. What must never appear is a translation
+     * from another edition.
      */
     @Test
     fun testUnknownEditionIdFallsBackToPlaceholdersInsteadOfCrashing() = runBlocking {
@@ -411,8 +417,10 @@ class QuranAyahRepositoryTest {
         awaitBackgroundFetches()
 
         val immediate = QuranAyahRepository.getAyahImmediate(112, 1)
-        assertTrue(immediate.isPlaceholder, "expected a placeholder for $garbage: $immediate")
-        assertTrue(immediate.textUthmani.contains("آية رقم"), "placeholder text lost: $immediate")
+        assertTrue(
+            immediate.translation.isBlank(),
+            "another edition's translation leaked under $garbage: $immediate",
+        )
 
         val verses = QuranAyahRepository.getAyahsForSurah(112)
         assertEquals(4, verses.size, "surah 112 has 4 ayahs")
@@ -581,6 +589,47 @@ class QuranAyahRepositoryTest {
         assertTrue(after.all { !it.textUthmani.contains("آية رقم") }, "placeholder text leaked into the Arabic: $after")
         // The translation half is the only thing the switch may change.
         assertEquals("[id.indonesian] translation 1", after[0].translation)
+
+        TranslationPrefs.setEdition(TranslationPrefs.DEFAULT_EDITION)
+    }
+
+    /**
+     * A switch must not blank the verse the reader is looking at. With the
+     * network dead — the moment the new edition would actually be missing —
+     * the synchronous accessor the player calls has to keep serving the Arabic
+     * it already had, with an empty translation rather than either the previous
+     * edition's text or a "Loading ayah…" placeholder that hides the Arabic.
+     * And once the new edition does arrive it has to win outright, with nothing
+     * of the parked Arabic left behind.
+     */
+    @Test
+    fun testSwitchKeepsArabicOnScreenWhenTheNewEditionCannotBeFetched() = runBlocking {
+        val surahId = 104
+        QuranAyahRepository.configureHttpClient(HttpClient(FakeAlQuranEngine(failing = false)))
+        awaitBackgroundFetches()
+
+        val before = QuranAyahRepository.getAyahsForSurah(surahId)
+        assertTrue(before.none { it.isPlaceholder }, "setup: surah did not load: $before")
+
+        // The network dies at the exact moment the reader switches language.
+        QuranAyahRepository.configureHttpClient(deadClient)
+        TranslationPrefs.setEdition("tr.yazir")
+        QuranAyahRepository.onTranslationChanged()
+
+        val midSwitch = QuranAyahRepository.getAyahImmediate(surahId, 1)
+        assertFalse(midSwitch.isPlaceholder, "player would render a placeholder mid-switch: $midSwitch")
+        assertEquals(before[0].textUthmani, midSwitch.textUthmani, "player lost the Arabic mid-switch")
+        assertTrue(midSwitch.translation.isBlank(), "the previous edition's translation survived: $midSwitch")
+        awaitBackgroundFetches()
+
+        // The new edition shows up: it takes over completely, and the parked
+        // Arabic is retired rather than lingering behind the real data.
+        QuranAyahRepository.configureHttpClient(HttpClient(FakeAlQuranEngine(failing = false)))
+        TranslationPrefs.setEdition("tr.yazir")
+        QuranAyahRepository.onTranslationChanged()
+        val settled = QuranAyahRepository.getAyahsForSurah(surahId)
+        assertEquals("[tr.yazir] translation 1", settled[0].translation, "new edition did not take over")
+        assertEquals(before.map { it.textUthmani }, settled.map { it.textUthmani })
 
         TranslationPrefs.setEdition(TranslationPrefs.DEFAULT_EDITION)
     }

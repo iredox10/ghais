@@ -191,6 +191,21 @@ object QuranAyahRepository {
     private val mutex = Mutex()
     private val cache = mutableMapOf<Int, List<AyahVerse>>()
 
+    /**
+     * Arabic-only snapshot of the verses a translation switch retired.
+     *
+     * Deliberately NOT part of [cache]: `resolveAyahs` treats a complete cache
+     * entry as "already have this surah" and skips the network, so parking
+     * translation-less verses there would silently disable the refetch and the
+     * reader would stare at a permanently blank translation. This map is read
+     * by [getAyahImmediate] alone — the display path — so the verse keeps
+     * rendering while the new edition is still on its way, and disappears the
+     * moment real data for that surah lands (see the removal in
+     * `resolveAyahs`). Arabic is edition-independent, so nothing here can ever
+     * show the wrong language.
+     */
+    private val rememberedArabic = mutableMapOf<Int, List<AyahVerse>>()
+
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -459,9 +474,11 @@ object QuranAyahRepository {
     }
 
     /**
-     * Call after [TranslationPrefs.setEdition]: drops in-memory verses of the
-     * previous edition and bumps [cacheGen] so collecting screens re-resolve
-     * the current ayah and the newly selected edition gets fetched.
+     * Call after [TranslationPrefs.setEdition]: retires the previous edition's
+     * translation out of the in-memory verses and bumps [cacheGen] so
+     * collecting screens re-resolve the current ayah and the newly selected
+     * edition gets fetched. The Arabic text survives the switch — only the
+     * translation half is edition-specific.
      *
      * A cacheGen bump alone is not enough to guarantee that refetch: screens
      * re-enter through [getAyahImmediate], which skips launching a fetch while
@@ -477,6 +494,26 @@ object QuranAyahRepository {
      * already-downloaded translation is instant, even offline.
      */
     fun onTranslationChanged() {
+        // Park the Arabic before wiping the cache. Wiping used to blank the
+        // verse to "Loading ayah…" for as long as the newly selected edition
+        // took to arrive — the most visible way to make a language switch feel
+        // like a glitch, and it threw away the very text the reader is in the
+        // middle of memorizing. Only the translation half is edition-specific,
+        // so the Arabic goes to `rememberedArabic` (display-only, never a fetch
+        // short-circuit) and the refetch below refills the translation. If that
+        // fetch never arrives — offline, or an edition the API cannot serve —
+        // the reader keeps the Arabic, and the translation chip is right there
+        // to switch back.
+        cache.forEach { (surahId, verses) ->
+            val arabic = verses
+                .filterNot { it.isPlaceholder }
+                .map { it.copy(translation = "", transliteration = "") }
+            if (arabic.isNotEmpty()) rememberedArabic[surahId] = arabic
+        }
+        // Only a surah the player has actually asked for can still be on
+        // screen, and that set is already capped — so bound the parking lot to
+        // it rather than letting it grow with every switch.
+        rememberedArabic.keys.retainAll(requestedSurahs.value.toSet())
         cache.clear()
         seedBundledVerses()
         loadPersistedText()
@@ -490,8 +527,11 @@ object QuranAyahRepository {
         cache[surahId]?.any { it.ayahNo == ayahNo && !it.isPlaceholder } == true
 
     /**
-     * Synchronously returns cached or bundled Ayah verse if available,
-     * otherwise triggers background fetch and returns a clean baseline placeholder.
+     * Synchronous accessor for the verse on screen. Order of preference:
+     * real cached text, then the Arabic parked by a translation switch (so the
+     * ayah never blanks out from under the reader), and only then a clean
+     * baseline placeholder. A fetch is kicked off whenever the cache misses,
+     * so both fallback paths are temporary by construction.
      */
     fun getAyahImmediate(surahId: Int, ayahNo: Int): AyahVerse {
         // Remember even on a cache hit: this is the surah the player is
@@ -506,6 +546,11 @@ object QuranAyahRepository {
                 getAyahsForSurah(surahId)
             }
         }
+
+        // Switch in flight: show the Arabic we already know instead of a
+        // placeholder. Translation stays empty on purpose — half the old
+        // edition's text on screen would be worse than none.
+        rememberedArabic[surahId]?.firstOrNull { it.ayahNo == ayahNo }?.let { return it }
 
         return placeholderAyah(surahId, ayahNo)
     }
@@ -565,6 +610,9 @@ object QuranAyahRepository {
                     mutex.withLock {
                         cache[surahId] = fetched
                     }
+                    // Real text is back: retire the parked Arabic so it can
+                    // never outlive the data it was standing in for.
+                    rememberedArabic.remove(surahId)
                     bumpCacheGen()
                     return fetched
                 }
