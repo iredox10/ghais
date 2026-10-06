@@ -622,27 +622,34 @@ class NowPlayingScreen : Screen {
                 //
                 // Surah/podcast mode is untouched: one weight(1f) gap, byte-for-byte
                 // the behaviour it always had, so the ambient video keeps the roomy
-                // middle. Ayah mode *with* a video deliberately takes that same
-                // branch — when rain/fire/waves are actually playing, the video is
-                // the point and the verse belongs above it, not on top of it.
+                // middle. Ayah mode always takes the anchored branch below —
+                // ambience on or off. It used to fall back to the roomy gap when a
+                // video was playing, which slid the whole verse down the screen
+                // the moment someone turned rain/fire/waves on: the same ayah sat
+                // in two different places depending on a setting that has nothing
+                // to do with reading it. A reader switching ambience mid-session is
+                // usually switching because they are still memorizing, and having
+                // the text jump is the opposite of helpful. The video is a
+                // background layer behind a scrim, so it keeps its room below the
+                // verse; only the empty air above it is gone.
                 //
-                // Ayah mode without video is the branch that changed. The verse is
-                // the hero there, and the brief is UPPER-MIDDLE: high enough to own
-                // the screen, low enough that a long ayah still has room to grow
-                // before it reaches the controls. The old split was a weight(0.10f)
-                // gap against the card's weight(1f), i.e. the gap was a fixed
-                // *fraction of whatever was left over*. That coupled it to the
-                // chrome: the ~380dp of controls that auto-fade after 10s idle
-                // vanished, the leftover grew, and the gap grew with it — dragging
-                // the whole verse down the screen every time the player idled out.
-                // A fixed 28dp head plus a small 0.10 elasticity decouples them.
+                // Ayah mode is the branch that changed from the old
+                // weight(0.10f)-vs-1f split: the verse is the hero there, and the
+                // brief is UPPER-MIDDLE — high enough to own the screen, low enough
+                // that a long ayah still has room to grow before it reaches the
+                // controls. That old split made the gap a fixed *fraction of
+                // whatever was left over*, coupling it to the chrome: the ~380dp of
+                // controls that auto-fade after 10s idle vanished, the leftover grew,
+                // and the gap grew with it — dragging the whole verse down every
+                // time the player idled out. A fixed 28dp head plus a small 0.10
+                // elasticity decouples them.
                 // At 800dp tall (2400px) the text top lands ≈131dp (≈16% of the
                 // screen) with the controls up and ≈165dp (≈21%) once they have
                 // faded: a ~5% drift instead of a ~70dp jump. The height the fade
                 // hands back is not wasted on air — it flows into the card
                 // (fill = true below), so a long ayah gains ~350dp of viewport
                 // instead of the verse sliding away from where the eye was.
-                if (isAyahMode && !hasAmbientVideo) {
+                if (isAyahMode) {
                     Spacer(modifier = Modifier.height(28.dp))
                     Spacer(modifier = Modifier.weight(0.10f))
                 } else {
