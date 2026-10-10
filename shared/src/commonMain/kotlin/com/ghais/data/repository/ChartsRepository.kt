@@ -152,6 +152,13 @@ object ChartsRepository {
             mutex.withLock {
                 val cached = loadCached()
                 if (cached != null) _snapshot.value = cached.snapshot
+                if (!AppwriteConfig.isConfigured()) {
+                    // Fail-closed on placeholder config: serve the disk cache
+                    // only, never hit the network (commonMain has no Log, so
+                    // println is the warning channel on both platforms).
+                    println("ChartsRepository: Appwrite not configured; skipping charts refresh.")
+                    return
+                }
                 if (cached != null && !isStale(cached.fetchedAt)) return
                 val fresh = fetchRemote() ?: return
                 persist(fresh, nowMs())

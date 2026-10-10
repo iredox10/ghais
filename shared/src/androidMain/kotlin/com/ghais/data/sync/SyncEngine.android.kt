@@ -6,6 +6,7 @@ import com.ghais.data.auth.AuthRepository
 import com.ghais.data.auth.PersistentCookieJar
 import com.ghais.data.repository.Broadcast
 import com.ghais.data.repository.BroadcastRepository
+import com.ghais.data.repository.ChartsRepository
 import com.ghais.data.repository.CustomRoutinesStore
 import com.ghais.data.repository.DevotionalRepository
 import com.ghais.data.repository.EditorialPlaylist
@@ -375,6 +376,10 @@ actual object SyncEngine {
             }
             runCollection(PLAYLISTS) {
                 refreshEditorial()
+                // Public charts rollup (12h TTL, never throws): same
+                // best-effort scope as the editorial pull — offline keeps
+                // the last-good snapshot, never breaks the pass.
+                ChartsRepository.refresh()
                 pushRoutines(db, userId)
             }
             runCollection(ROUTINE_BACKUPS) {
