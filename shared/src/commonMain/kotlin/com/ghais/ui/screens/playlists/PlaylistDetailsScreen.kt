@@ -29,26 +29,36 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -57,6 +67,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.data.repository.FavoritesStore
+import com.ghais.data.repository.UserPlaylists
 import com.ghais.data.seed.QuranData
 import com.ghais.domain.model.Surah
 import com.ghais.domain.model.TrackItem
@@ -95,6 +106,21 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val rootNavigator = LocalRootNavigator.current ?: navigator.parent ?: navigator
+        // Id-resolution order: user playlists first (UserPlaylists.get wins
+        // for any stored id), mood lookup second. The mood path below is
+        // untouched read-only behavior. Collecting the flow keeps renames /
+        // track edits live.
+        val userList by UserPlaylists.playlists.collectAsState()
+        val userPlaylist = remember(playlistId, userList) {
+            UserPlaylists.get(playlistId) ?: userList.firstOrNull { it.id == playlistId }
+        }
+        if (userPlaylist != null) {
+            UserPlaylistDetailsContent(
+                playlistId = playlistId,
+                playlist = userPlaylist
+            )
+            return
+        }
         val playlist = remember(playlistId) { moodPlaylistById(playlistId) }
         val reciter = remember { QuranData.RECITERS.first() }
         val surahs = remember(playlist) {
@@ -614,6 +640,414 @@ private fun ActiveNoirEqualizer(
         )
     }
 }
+
+/**
+ * Owner branch for user-created playlists (resolved via
+ * `UserPlaylists.get(id)` before the mood lookup): rename (dialog), delete
+ * (confirm → pop), per-row remove, move up/down chevrons, and play-all via
+ * the same `AudioEngine.playQueue` + NowPlaying push pattern as the mood
+ * path. Strict Noir Glass monochrome, mirroring the mood screen shells.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UserPlaylistDetailsContent(
+    playlistId: String,
+    playlist: UserPlaylists.UserPlaylist
+) {
+    val navigator = LocalNavigator.currentOrThrow
+    val rootNavigator = LocalRootNavigator.current ?: navigator.parent ?: navigator
+    var showRename by remember { mutableStateOf(false) }
+    var renameText by remember(playlistId, playlist.name) { mutableStateOf(playlist.name) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    val tracks = playlist.tracks
+    val currentTrack by AudioEngine.currentTrack.collectAsState()
+    val isPlaying by AudioEngine.isPlaying.collectAsState()
+
+    fun playAll(startIndex: Int = 0) {
+        if (tracks.isNotEmpty()) {
+            AudioEngine.playQueue(tracks, startIndex = startIndex.coerceIn(0, tracks.lastIndex))
+            rootNavigator.push(NowPlayingScreen())
+        }
+    }
+
+    NoirScreenRoot {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = {},
+                    navigationIcon = {
+                        IconButton(
+                            onClick = { navigator.pop() },
+                            modifier = Modifier.padding(start = 4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(GhaisNoir.Fill2)
+                                    .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = GhaisNoir.TextPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
+                    )
+                )
+            }
+        ) { paddingValues ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(bottom = 120.dp) // room for MiniPlayer & dock
+            ) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "YOUR PLAYLIST",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 1.2.sp
+                            )
+                            Text(
+                                text = if (tracks.size == 1) "1 track" else "${tracks.size} tracks",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Normal
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Listen to",
+                            style = GhaisTypography.displayEditorial,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = playlist.name,
+                            style = GhaisTypography.displayEditorialBold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        NoirHeroCard(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(84.dp)
+                                            .background(GhaisNoir.wellFill(), CircleShape)
+                                            .border(1.dp, GhaisNoir.SpecularTop, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = playlist.name.take(1).uppercase(),
+                                            color = GhaisNoir.TextPrimary,
+                                            fontSize = 32.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "PLAYLIST",
+                                            color = GhaisNoir.TextTertiary,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            letterSpacing = 1.2.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = playlist.name,
+                                            color = GhaisNoir.TextPrimary,
+                                            fontSize = 20.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Spacer(modifier = Modifier.height(3.dp))
+                                        Text(
+                                            text = if (tracks.size == 1) "1 track • Personal"
+                                                else "${tracks.size} tracks • Personal",
+                                            color = GhaisNoir.TextSecondary,
+                                            fontSize = 12.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                ChromePillButton(
+                                    text = "Play All",
+                                    onClick = { playAll() },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = tracks.isNotEmpty(),
+                                    leadingIcon = Icons.Default.PlayArrow
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    GhostPillButton(
+                                        text = "Rename",
+                                        onClick = {
+                                            renameText = playlist.name
+                                            showRename = true
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    GhostPillButton(
+                                        text = "Delete",
+                                        onClick = { showDeleteConfirm = true },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        NoirSectionHeader(
+                            label = "Tracks in this playlist",
+                            actionLabel = "${tracks.size} tracks",
+                            onAction = {}
+                        )
+                    }
+                }
+
+                if (tracks.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No tracks yet — add recitations from a surah or reciter.",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                } else {
+                    itemsIndexed(
+                        items = tracks,
+                        key = { index, track -> "user_${playlistId}_${UserPlaylists.trackKeyOf(track)}#$index" }
+                    ) { index, track ->
+                        val isCurrent =
+                            currentTrack?.audioUrl == track.audioUrl
+                        val isCurrentPlaying = isCurrent && isPlaying
+                        val stateSuffix = when {
+                            isCurrentPlaying -> " • Playing"
+                            isCurrent -> " • Queued"
+                            else -> ""
+                        }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 5.dp)
+                        ) {
+                            NoirListRow(
+                                title = "${track.surahNameEn} (${track.surahNameAr})",
+                                subtitle = "${track.reciterName}$stateSuffix",
+                                icon = Icons.Default.MusicNote,
+                                chevron = false,
+                                onClick = { playAll(index) },
+                                trailing = {
+                                    IconButton(
+                                        onClick = {
+                                            UserPlaylists.moveTrack(playlistId, index, index - 1)
+                                        },
+                                        enabled = index > 0,
+                                        modifier = Modifier.size(30.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.KeyboardArrowUp,
+                                            contentDescription = "Move up",
+                                            tint = if (index > 0) GhaisNoir.TextSecondary
+                                                else GhaisNoir.TextDisabled,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            UserPlaylists.moveTrack(playlistId, index, index + 1)
+                                        },
+                                        enabled = index < tracks.lastIndex,
+                                        modifier = Modifier.size(30.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.KeyboardArrowDown,
+                                            contentDescription = "Move down",
+                                            tint = if (index < tracks.lastIndex) GhaisNoir.TextSecondary
+                                                else GhaisNoir.TextDisabled,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            UserPlaylists.removeTrack(playlistId, UserPlaylists.trackKeyOf(track))
+                                        },
+                                        modifier = Modifier.size(34.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Delete,
+                                            contentDescription = "Remove",
+                                            tint = GhaisNoir.TextTertiary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+
+                item { Spacer(modifier = Modifier.height(4.dp)) }
+            }
+        }
+    }
+
+    if (showRename) {
+        AlertDialog(
+            onDismissRequest = { showRename = false },
+            containerColor = GhaisNoir.NoirBlack,
+            shape = GhaisShapes.cardNoir,
+            title = {
+                Text(
+                    text = "Rename playlist",
+                    color = GhaisNoir.TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                BasicTextField(
+                    value = renameText,
+                    onValueChange = { renameText = it },
+                    singleLine = true,
+                    textStyle = TextStyle(
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 15.sp
+                    ),
+                    cursorBrush = SolidColor(GhaisNoir.TextPrimary),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(GhaisNoir.insetFill(), GhaisShapes.row)
+                        .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.row)
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        // Blank names are ignored — dialog just dismisses.
+                        val trimmed = renameText.trim()
+                        if (trimmed.isNotEmpty()) {
+                            UserPlaylists.rename(playlistId, trimmed)
+                        }
+                        showRename = false
+                    }
+                ) {
+                    Text(
+                        text = "Save",
+                        color = GhaisNoir.TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRename = false }) {
+                    Text(
+                        text = "Cancel",
+                        color = GhaisNoir.TextSecondary
+                    )
+                }
+            }
+        )
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            containerColor = GhaisNoir.NoirBlack,
+            shape = GhaisShapes.cardNoir,
+            title = {
+                Text(
+                    text = "Delete playlist?",
+                    color = GhaisNoir.TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Text(
+                    text = "“${playlist.name}” will be removed. This can't be undone.",
+                    color = GhaisNoir.TextSecondary,
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        UserPlaylists.delete(playlistId)
+                        showDeleteConfirm = false
+                        navigator.pop()
+                    }
+                ) {
+                    Text(
+                        text = "Delete",
+                        color = GhaisNoir.TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text(
+                        text = "Keep",
+                        color = GhaisNoir.TextSecondary
+                    )
+                }
+            }
+        )
+    }
+}
+
+/**
+ * Stable per-track identity for `UserPlaylists.removeTrack` — delegates to
+ * the store's own `trackKeyOf` (`"<reciterSlug>:<surahId>:<ayahNo>"`) so the
+ * UI can never drift from the owner's match.
+ */
+private fun userTrackKey(track: TrackItem): String =
+    UserPlaylists.trackKeyOf(track)
 
 /**
  * Helper to compute formatted duration from ayah count (e.g. 7 ayahs -> "1:45").

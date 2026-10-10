@@ -125,7 +125,7 @@ object FavoritesScreen : Screen {
                                 maxLines = 1
                             )
                             Text(
-                                text = "Favorites",
+                                text = "Liked Songs",
                                 style = GhaisTypography.displayEditorialBold,
                                 maxLines = 1
                             )
@@ -198,7 +198,7 @@ object FavoritesScreen : Screen {
 
                             if (favorites.isNotEmpty()) {
                                 NoirSectionHeader(
-                                    label = "Saved recitations",
+                                    label = "Liked songs",
                                     actionLabel = "${favorites.size} tracks",
                                     onAction = {}
                                 )
@@ -227,7 +227,7 @@ object FavoritesScreen : Screen {
                                         )
                                         Spacer(modifier = Modifier.height(14.dp))
                                         Text(
-                                            text = "No favorites yet",
+                                            text = "No liked songs yet",
                                             color = GhaisNoir.TextPrimary,
                                             fontSize = 18.sp,
                                             fontWeight = FontWeight.Bold,

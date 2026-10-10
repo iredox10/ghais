@@ -29,14 +29,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -64,9 +69,11 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.EditorialPlaylist
 import com.ghais.data.repository.EditorialRepository
+import com.ghais.data.repository.UserPlaylists
 import com.ghais.data.repository.toTrackItems
 import com.ghais.data.sync.SyncEngine
 import com.ghais.player.AudioEngine
+import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
@@ -115,6 +122,13 @@ object LibraryScreen : Tab {
         var query by remember { mutableStateOf("") }
         var selectedFilter by remember { mutableStateOf("All") }
 
+        // User playlists (owned by another agent — code against the
+        // UserPlaylists contract only) + offline index for the Downloads tile.
+        val userPlaylists by UserPlaylists.playlists.collectAsState()
+        val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
+        var showCreateDialog by remember { mutableStateOf(false) }
+        var createName by remember { mutableStateOf("") }
+
         // Live editorial shelf (read-only public catalog; empty until the
         // first successful pull — the section hides itself when empty).
         val editorial by EditorialRepository.playlists.collectAsState()
@@ -136,6 +150,17 @@ object LibraryScreen : Tab {
                     playlist.description.contains(query, ignoreCase = true)
                 val matchesFilter = selectedFilter == "All" ||
                     libraryCategory(playlist.id) == selectedFilter
+                matchesQuery && matchesFilter
+            }
+        }
+
+        // User playlists respect search (by name) and show under "All" only —
+        // mood categories (Night/Calm/…) don't apply to user collections.
+        val filteredUserPlaylists = remember(query, selectedFilter, userPlaylists) {
+            userPlaylists.filter { playlist ->
+                val matchesQuery = query.isBlank() ||
+                    playlist.name.contains(query, ignoreCase = true)
+                val matchesFilter = selectedFilter == "All"
                 matchesQuery && matchesFilter
             }
         }
@@ -187,27 +212,92 @@ object LibraryScreen : Tab {
                     }
                 }
 
-                if (filteredPlaylists.isEmpty()) {
+                if (filteredPlaylists.isEmpty() && filteredUserPlaylists.isEmpty()) {
                     item(span = { GridItemSpan(2) }) {
                         NoirLibraryEmpty()
                     }
                 } else {
+                    // Downloads entry point: always visible (device-level, outside
+                    // search/filter like the editorial shelf).
+                    item(span = { GridItemSpan(2) }) {
+                        NoirDownloadsTile(
+                            downloadedCount = downloadedKeys.size,
+                            onClick = { rootNavigator?.push(DownloadsScreen()) }
+                        )
+                    }
+
+                    // User playlists: visible under "All" + name search only.
+                    if (selectedFilter == "All") {
+                        item(span = { GridItemSpan(2) }) {
+                            NoirSectionHeader(
+                                label = "Your playlists • ${filteredUserPlaylists.size}",
+                                actionLabel = "+ New",
+                                onAction = {
+                                    createName = ""
+                                    showCreateDialog = true
+                                }
+                            )
+                        }
+                        item {
+                            NoirCreatePlaylistTile(
+                                onClick = {
+                                    createName = ""
+                                    showCreateDialog = true
+                                }
+                            )
+                        }
+                        items(filteredUserPlaylists, key = { it.id }) { playlist ->
+                            NoirUserPlaylistTile(
+                                name = playlist.name,
+                                trackCount = playlist.tracks.size,
+                                onClick = { rootNavigator?.push(PlaylistDetailsScreen(playlist.id)) }
+                            )
+                        }
+                    }
+
                     item(span = { GridItemSpan(2) }) {
                         NoirSectionHeader(label = "Collections • ${filteredPlaylists.size}")
                     }
-                    item {
-                        NoirRoutinesTile(
-                            onClick = { rootNavigator?.push(MyRoutinesScreen) }
-                        )
-                    }
-                    items(filteredPlaylists, key = { it.id }) { playlist ->
-                        NoirLibraryTile(
-                            playlist = playlist,
-                            onClick = { rootNavigator?.push(PlaylistDetailsScreen(playlist.id)) }
-                        )
+                    if (filteredPlaylists.isNotEmpty()) {
+                        item {
+                            NoirRoutinesTile(
+                                onClick = { rootNavigator?.push(MyRoutinesScreen) }
+                            )
+                        }
+                        items(filteredPlaylists, key = { it.id }) { playlist ->
+                            NoirLibraryTile(
+                                playlist = playlist,
+                                onClick = { rootNavigator?.push(PlaylistDetailsScreen(playlist.id)) }
+                            )
+                        }
                     }
                 }
             }
+        }
+
+        // Create-playlist dialog lives outside the grid (LazyGridScope can't
+        // emit dialogs) but inside Content so it captures rootNavigator.
+        if (showCreateDialog) {
+            NoirCreatePlaylistDialog(
+                name = createName,
+                onNameChange = { createName = it },
+                onConfirm = {
+                    val trimmed = createName.trim()
+                    if (trimmed.isNotEmpty()) {
+                        // create("") returns "" on blank — only navigate on a real id.
+                        val newId = UserPlaylists.create(trimmed)
+                        showCreateDialog = false
+                        createName = ""
+                        if (newId.isNotBlank()) {
+                            rootNavigator?.push(PlaylistDetailsScreen(newId))
+                        }
+                    }
+                },
+                onDismiss = {
+                    showCreateDialog = false
+                    createName = ""
+                }
+            )
         }
     }
 }
@@ -476,6 +566,347 @@ private fun NoirRoutinesTile(onClick: () -> Unit) {
             )
         }
     }
+}
+
+/**
+ * Downloads tile — same Noir bento shell as [NoirRoutinesTile] (soft glass
+ * fill + 1px card border + top-only specular, clay icon-well + dual text +
+ * circular chevron). The count reads live from
+ * `QuranDownloads.downloadedKeys`; tap pushes `DownloadsScreen` (owned by
+ * another agent — referenced by contract, same package).
+ */
+@Composable
+private fun NoirDownloadsTile(
+    downloadedCount: Int,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(NoirLibraryTileShape)
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, NoirLibraryTileShape)
+            .topSpecular()
+            .noirClickable(onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(GhaisNoir.sheen())
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconWell(icon = Icons.Filled.Download, size = 44.dp, iconSize = 22.dp)
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "›",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Light
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Downloads",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.2).sp,
+                color = GhaisNoir.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Your offline recitations",
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Normal,
+                lineHeight = 16.5.sp,
+                color = GhaisNoir.TextSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = if (downloadedCount == 1) "1 downloaded • Offline"
+                    else "$downloadedCount downloaded • Offline",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
+                color = GhaisNoir.TextTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Create-playlist affordance tile — same shell as [NoirRoutinesTile]; opens
+ * the create dialog. Always first in the "Your playlists" section.
+ */
+@Composable
+private fun NoirCreatePlaylistTile(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(NoirLibraryTileShape)
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, NoirLibraryTileShape)
+            .topSpecular()
+            .noirClickable(onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(GhaisNoir.sheen())
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconWell(icon = Icons.Filled.Add, size = 44.dp, iconSize = 22.dp)
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "+",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Light
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Create playlist",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.2).sp,
+                color = GhaisNoir.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Name your own collection of recitations",
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Normal,
+                lineHeight = 16.5.sp,
+                color = GhaisNoir.TextSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "Playlist • Personal",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
+                color = GhaisNoir.TextTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * User-playlist tile — same Noir bento shell as [NoirLibraryTile] (soft
+ * glass + specular + sheen/scrim) with a monochrome note plate instead of
+ * mood artwork. Tap pushes `PlaylistDetailsScreen(playlist.id)`.
+ */
+@Composable
+private fun NoirUserPlaylistTile(
+    name: String,
+    trackCount: Int,
+    onClick: () -> Unit
+) {
+    val countText = if (trackCount == 1) "1 track" else "$trackCount tracks"
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(NoirLibraryTileShape)
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, NoirLibraryTileShape)
+            .topSpecular()
+            .noirClickable(onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(GhaisNoir.sheen())
+        )
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.28f)
+                        )
+                    )
+                )
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                NoirLibraryBadge("Playlist")
+            }
+            Spacer(Modifier.height(12.dp))
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(76.dp)
+                        .clip(NoirLibraryArtShape)
+                        .background(GhaisNoir.wellFill())
+                        .border(1.dp, GhaisNoir.BorderCard, NoirLibraryArtShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MusicNote,
+                        contentDescription = null,
+                        tint = GhaisNoir.TextTertiary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = 0.35f))
+                    )
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            Text(
+                text = name,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.2).sp,
+                color = GhaisNoir.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = if (trackCount == 0) "No tracks yet — open to add recitations" else countText,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Normal,
+                lineHeight = 16.5.sp,
+                color = GhaisNoir.TextSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "$countText • Personal",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
+                color = GhaisNoir.TextTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Create-playlist dialog — Noir card (mirrors EditProfileDialogGlass):
+ * ghost text field, blank names ignored by the caller.
+ */
+@Composable
+private fun NoirCreatePlaylistDialog(
+    name: String,
+    onNameChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = GhaisNoir.NoirBlack,
+        shape = GhaisShapes.cardNoir,
+        title = {
+            Text(
+                text = "New playlist",
+                color = GhaisNoir.TextPrimary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+        },
+        text = {
+            BasicTextField(
+                value = name,
+                onValueChange = onNameChange,
+                singleLine = true,
+                textStyle = TextStyle(
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 15.sp
+                ),
+                cursorBrush = SolidColor(GhaisNoir.TextPrimary),
+                decorationBox = { inner ->
+                    if (name.isEmpty()) {
+                        Text(
+                            text = "e.g. Night reflections",
+                            color = GhaisNoir.TextDisabled,
+                            fontSize = 15.sp
+                        )
+                    }
+                    inner()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(GhaisNoir.insetFill(), GhaisShapes.row)
+                    .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.row)
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = "Create",
+                    color = GhaisNoir.TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = "Cancel",
+                    color = GhaisNoir.TextSecondary
+                )
+            }
+        }
+    )
 }
 
 /**

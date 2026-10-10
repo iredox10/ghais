@@ -24,6 +24,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Share
+import com.ghais.data.share.ShareSheet
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -238,7 +240,11 @@ object StatsScreen : Screen {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Box(
                             modifier = Modifier
                                 .size(42.dp)
@@ -253,6 +259,34 @@ object StatsScreen : Screen {
                                 contentDescription = "Back",
                                 tint = GhaisNoir.TextPrimary,
                                 modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(GhaisNoir.Fill2)
+                                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                                .noirClickable(onClick = {
+                                    ShareSheet.shareText(
+                                        title = "Ghaith — My Quran Year",
+                                        text = buildWrappedCard(
+                                            totalHoursText = totalHoursText,
+                                            dayStreak = stats.daysStreak,
+                                            topQariName = topQaris.firstOrNull()?.second,
+                                            topQariPlays = topQaris.firstOrNull()?.third?.toLong(),
+                                            topSurahName = topSurahs.firstOrNull()?.second,
+                                            topSurahPlays = topSurahs.firstOrNull()?.third
+                                        )
+                                    )
+                                }),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Share,
+                                contentDescription = "Share your stats",
+                                tint = GhaisNoir.TextPrimary,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -702,6 +736,36 @@ private fun formatCompactMinutes(minutes: Float): String {
 }
 
 private val WEEKDAY_SHORT = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+/**
+ * Wrapped-style share card: total hours, day streak, top qari + top surah.
+ * Shared via [ShareSheet.shareText] (common call; the iOS stub no-ops safely).
+ */
+private fun buildWrappedCard(
+    totalHoursText: String,
+    dayStreak: Int,
+    topQariName: String?,
+    topQariPlays: Long?,
+    topSurahName: String?,
+    topSurahPlays: Long?
+): String = buildString {
+    appendLine("Ghaith — My Quran Year")
+    appendLine()
+    appendLine("$totalHoursText listened • $dayStreak-day streak")
+    appendLine()
+    if (topQariName != null && topQariPlays != null) {
+        appendLine("Top Qari: $topQariName ($topQariPlays plays)")
+    } else {
+        appendLine("Top Qari: —")
+    }
+    if (topSurahName != null && topSurahPlays != null) {
+        appendLine("Top Surah: $topSurahName ($topSurahPlays plays)")
+    } else {
+        appendLine("Top Surah: —")
+    }
+    appendLine()
+    append("Listen, memorize & reflect with Ghaith")
+}
 
 /** Epoch day 0 (1970-01-01) was a Thursday. */
 private fun weekdayShort(epochDay: Long): String {
