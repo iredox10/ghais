@@ -52,12 +52,15 @@ fun formatSpeedLabel(speed: Float): String {
     return "${label}×"
 }
 
-// Content tracks are full-surah audio files, so AYAH repeat would loop a whole
-// surah file under a confusing label — intentionally skipped in the UI cycle.
+// Repeat cycle OFF → AYAH → SURAH → QUEUE. AYAH replays the current unit:
+// the current ayah clip in ayah mode (see handleAyahTrackEnd), the current
+// surah file in full-surah mode (QueueManager.playNext returns the current
+// track under AYAH, replayed via startPlayback in handleSurahTrackEnd).
 fun nextRepeatMode(current: RepeatMode): RepeatMode = when (current) {
-    RepeatMode.OFF -> RepeatMode.SURAH
+    RepeatMode.OFF -> RepeatMode.AYAH
+    RepeatMode.AYAH -> RepeatMode.SURAH
     RepeatMode.SURAH -> RepeatMode.QUEUE
-    else -> RepeatMode.OFF
+    RepeatMode.QUEUE -> RepeatMode.OFF
 }
 
 /**
@@ -117,10 +120,11 @@ fun PlayerControls(
             onClick = onNext
         )
 
-        // Repeat mode (cycles OFF → SURAH → QUEUE) — toggle well.
+        // Repeat mode (cycles OFF → AYAH → SURAH → QUEUE) — toggle well.
         ToggleWell(
-            icon = if (repeatMode == RepeatMode.SURAH) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+            icon = if (repeatMode == RepeatMode.AYAH || repeatMode == RepeatMode.SURAH) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
             contentDescription = when (repeatMode) {
+                RepeatMode.AYAH -> "Repeat ayah"
                 RepeatMode.SURAH -> "Repeat surah"
                 RepeatMode.QUEUE -> "Repeat queue"
                 else -> "Repeat off"

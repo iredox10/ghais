@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.data.repository.QuranAyahRepository
+import com.ghais.data.share.ShareSheet
+import com.ghais.domain.model.RepeatMode
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.NoirScreenRoot
@@ -46,6 +48,9 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisTypography
 import com.ghais.ui.util.appendAyahMark
 import com.ghais.ui.util.ayahMarkContent
+import com.russhwolf.settings.Settings
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -65,6 +70,130 @@ data class MushafAyahData(
     val durationMs: Long,
     val tafsirSnippet: String
 )
+
+/**
+ * Persisted UI prefs for the Mushaf screen (HifzUiPrefs-style: multiplatform
+ * [Settings] with try/catch reads/writes, file-local since HifzUiPrefs only
+ * owns its loop-settings flag).
+ *
+ * Bookmarks are `(surahId, ayahNo)` pairs persisted as `"surahId:ayahNo"`
+ * strings under [KEY_BOOKMARKS] (FollowStore-style JSON list), because the
+ * track-level [com.ghais.data.repository.FavoritesStore] identity (audio URL)
+ * does not fit verse bookmarks.
+ */
+private object MushafUiPrefs {
+    const val SURAH_ID = 18
+
+    private const val KEY_BOOKMARKS = "mushaf_bookmarks"
+    private const val KEY_TAJWEED = "mushaf_tajweed"
+    private const val KEY_TRANSLATION = "mushaf_show_translation"
+    private const val KEY_FONT_SIZE = "mushaf_font_size"
+    private const val KEY_PAGE_VIEW = "mushaf_page_view"
+    private const val KEY_REPEAT_IDX = "mushaf_repeat_idx"
+
+    private val settings: Settings by lazy { Settings() }
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+
+    fun loadBookmarkedAyahs(surahId: Int = SURAH_ID): Set<Int> = try {
+        val raw = settings.getString(KEY_BOOKMARKS, "")
+        if (raw.isBlank()) emptySet()
+        else json.decodeFromString<List<String>>(raw)
+            .mapNotNull { entry ->
+                val parts = entry.split(":")
+                val s = parts.getOrNull(0)?.toIntOrNull()
+                val a = parts.getOrNull(1)?.toIntOrNull()
+                if (s == surahId && a != null) a else null
+            }.toSet()
+    } catch (_: Exception) {
+        emptySet()
+    }
+
+    fun saveBookmarkedAyahs(ayahs: Set<Int>, surahId: Int = SURAH_ID) {
+        try {
+            settings.putString(
+                KEY_BOOKMARKS,
+                json.encodeToString(ayahs.map { "$surahId:$it" })
+            )
+        } catch (_: Exception) {
+        }
+    }
+
+    fun isTajweed(): Boolean = getFlag(KEY_TAJWEED, true)
+    fun setTajweed(active: Boolean) = putFlag(KEY_TAJWEED, active)
+
+    fun showTranslation(): Boolean = getFlag(KEY_TRANSLATION, true)
+    fun setShowTranslation(visible: Boolean) = putFlag(KEY_TRANSLATION, visible)
+
+    fun isPageView(): Boolean = getFlag(KEY_PAGE_VIEW, false)
+    fun setPageView(pageView: Boolean) = putFlag(KEY_PAGE_VIEW, pageView)
+
+    fun fontSize(): Int = try {
+        settings.getInt(KEY_FONT_SIZE, 28)
+    } catch (_: Exception) {
+        28
+    }
+
+    fun setFontSize(size: Int) {
+        try {
+            settings.putInt(KEY_FONT_SIZE, size)
+        } catch (_: Exception) {
+        }
+    }
+
+    fun repeatIdx(): Int = try {
+        settings.getInt(KEY_REPEAT_IDX, 1).coerceIn(0, 3)
+    } catch (_: Exception) {
+        1
+    }
+
+    fun setRepeatIdx(idx: Int) {
+        try {
+            settings.putInt(KEY_REPEAT_IDX, idx.coerceIn(0, 3))
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun getFlag(key: String, default: Boolean): Boolean = try {
+        settings.getBoolean(key, default)
+    } catch (_: Exception) {
+        default
+    }
+
+    private fun putFlag(key: String, value: Boolean) {
+        try {
+            settings.putBoolean(key, value)
+        } catch (_: Exception) {
+        }
+    }
+}
+
+/**
+ * Repeat-capsule label position → engine [RepeatMode].
+ *
+ * - "1x Loop" → AYAH (repeat the current ayah)
+ * - "3x Loop" → SURAH (engine has no N-times counter; surah-level loop is the
+ *   closest available semantic — the "3x" count itself is NOT enforced)
+ * - "∞ Hifz" → QUEUE (loop the whole queue indefinitely)
+ * - "Loop Off" → OFF
+ */
+private fun mushafRepeatModeFor(idx: Int): RepeatMode = when (idx) {
+    0 -> RepeatMode.AYAH
+    1 -> RepeatMode.SURAH
+    2 -> RepeatMode.QUEUE
+    else -> RepeatMode.OFF
+}
+
+/** "Surah X ayah Y + translation" share text (TafseerSheet-style). */
+private fun mushafShareText(ayah: MushafAyahData, surahNameEn: String = "Al-Kahf"): String =
+    buildString {
+        appendLine("Surah $surahNameEn — Ayah ${ayah.ayahNumber}")
+        appendLine()
+        appendLine(ayah.textUthmani + (ayah.tajweedPart.orEmpty()))
+        appendLine()
+        appendLine("\"${ayah.translation}\"")
+        appendLine()
+        append("Shared via Ghaith")
+    }
 
 /**
  * Strict Noir Glass Mushaf — true-black canvas (glow zone -> #050506 +
@@ -95,13 +224,13 @@ object MushafScreen : Tab {
 
     @Composable
     override fun Content() {
-        var isTajweedActive by remember { mutableStateOf(true) }
-        var showTranslation by remember { mutableStateOf(true) }
-        var arabicFontSize by remember { mutableStateOf(28) }
+        var isTajweedActive by remember { mutableStateOf(MushafUiPrefs.isTajweed()) }
+        var showTranslation by remember { mutableStateOf(MushafUiPrefs.showTranslation()) }
+        var arabicFontSize by remember { mutableStateOf(MushafUiPrefs.fontSize()) }
         var playingAyah by remember { mutableStateOf(1) }
-        var bookmarkedAyahs by remember { mutableStateOf(setOf(1)) }
-        var repeatStateIdx by remember { mutableStateOf(1) } // 0: 1x, 1: 3x Loop, 2: ∞ Hifz, 3: Loop Off
-        var isPageViewMode by remember { mutableStateOf(false) }
+        var bookmarkedAyahs by remember { mutableStateOf(MushafUiPrefs.loadBookmarkedAyahs()) }
+        var repeatStateIdx by remember { mutableStateOf(MushafUiPrefs.repeatIdx()) } // 0: 1x, 1: 3x Loop, 2: ∞ Hifz, 3: Loop Off
+        var isPageViewMode by remember { mutableStateOf(MushafUiPrefs.isPageView()) }
         var activeTafsirAyah by remember { mutableStateOf<MushafAyahData?>(null) }
         var isSurahMenuOpen by remember { mutableStateOf(false) }
         var selectedSurahName by remember { mutableStateOf("Al-Kahf (18)") }
@@ -220,11 +349,18 @@ object MushafScreen : Tab {
                                 32 -> 36
                                 else -> 28
                             }
+                            MushafUiPrefs.setFontSize(arabicFontSize)
                         },
                         showTranslation = showTranslation,
-                        onToggleTranslation = { showTranslation = !showTranslation },
+                        onToggleTranslation = {
+                            showTranslation = !showTranslation
+                            MushafUiPrefs.setShowTranslation(showTranslation)
+                        },
                         isTajweed = isTajweedActive,
-                        onToggleTajweed = { isTajweedActive = !isTajweedActive },
+                        onToggleTajweed = {
+                            isTajweedActive = !isTajweedActive
+                            MushafUiPrefs.setTajweed(isTajweedActive)
+                        },
                         isAudioPlaying = isAudioPlaying,
                         onToggleAudio = toggleGlobalAudio
                     )
@@ -276,9 +412,17 @@ object MushafScreen : Tab {
                                 } else {
                                     bookmarkedAyahs + ayah.ayahNumber
                                 }
+                                MushafUiPrefs.saveBookmarkedAyahs(bookmarkedAyahs)
                             },
                             onTafsirClick = { activeTafsirAyah = ayah },
-                            onShareClick = { /* Share functionality */ }
+                            onShareClick = {
+                                if (ShareSheet.isAvailable()) {
+                                    ShareSheet.shareText(
+                                        title = "Al-Kahf ${ayah.ayahNumber}",
+                                        text = mushafShareText(ayah)
+                                    )
+                                }
+                            }
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                     }
@@ -290,13 +434,19 @@ object MushafScreen : Tab {
                     MushafBottomToolsCapsule(
                         repeatLabel = repeatStates[repeatStateIdx],
                         onCycleRepeat = {
-                            repeatStateIdx = (repeatStateIdx + 1) % repeatStates.size
+                            val nextIdx = (repeatStateIdx + 1) % repeatStates.size
+                            repeatStateIdx = nextIdx
+                            MushafUiPrefs.setRepeatIdx(nextIdx)
+                            AudioEngine.setRepeatMode(mushafRepeatModeFor(nextIdx))
                         },
                         onOpenTafsir = {
                             activeTafsirAyah = ayahs.find { it.ayahNumber == playingAyah } ?: ayahs.first()
                         },
                         isPageView = isPageViewMode,
-                        onTogglePageView = { isPageViewMode = !isPageViewMode }
+                        onTogglePageView = {
+                            isPageViewMode = !isPageViewMode
+                            MushafUiPrefs.setPageView(isPageViewMode)
+                        }
                     )
                     Spacer(modifier = Modifier.height(120.dp))
                 }

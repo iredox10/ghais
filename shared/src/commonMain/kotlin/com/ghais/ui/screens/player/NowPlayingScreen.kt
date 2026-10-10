@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
@@ -243,6 +244,7 @@ class NowPlayingScreen : Screen {
         val sleepTimerState by com.ghais.player.SleepTimer.state.collectAsState()
         val favorites by FavoritesStore.favoriteTracks.collectAsState()
         val repeatMode = playbackState.settings.repeatMode
+        val isShuffle = playbackState.settings.shuffle
 
         var showSleepTimer by remember { mutableStateOf(false) }
         var showQueue by remember { mutableStateOf(false) }
@@ -1091,9 +1093,16 @@ class NowPlayingScreen : Screen {
                         tint = GhaisNoir.TextTertiary,
                         onClick = { poke(); showSleepTimer = true }
                     )
+                    NoirUtilityWell(
+                        icon = Icons.Filled.Shuffle,
+                        contentDescription = "Shuffle",
+                        active = isShuffle,
+                        tint = if (isShuffle) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                        onClick = { poke(); AudioEngine.toggleShuffle() }
+                    )
                     val repeatActive = repeatMode != RepeatMode.OFF
                     NoirUtilityWell(
-                        icon = if (repeatMode == RepeatMode.SURAH) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                        icon = if (repeatMode == RepeatMode.AYAH || repeatMode == RepeatMode.SURAH) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
                         contentDescription = "Repeat",
                         active = repeatActive,
                         tint = if (repeatActive) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,

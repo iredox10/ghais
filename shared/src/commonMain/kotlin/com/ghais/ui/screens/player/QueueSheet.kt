@@ -23,6 +23,8 @@ import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -428,21 +430,69 @@ fun QueueSheet(
                                     )
                                 }
                             }
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(GhaisNoir.Fill1)
-                                    .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
-                                    .noirClickable { AudioEngine.removeFromQueue(index) },
-                                contentAlignment = Alignment.Center
+                            // Reorder: plain up/down chevrons calling
+                            // AudioEngine.moveInQueue (QueueManager.move) instead of
+                            // long-press drag. Deliberate: no new dependency (no
+                            // reorderable-lazy-list lib), no gesture conflict with the
+                            // sheet's swipe-to-dismiss, and chevrons are accessible.
+                            // Indices are the ORIGINAL queue positions (entry.index),
+                            // so moves stay correct while a search filter is active.
+                            // The inner wells consume the tap — row skipToIndex does
+                            // not fire. remove/clear/skip paths are untouched.
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Clear,
-                                    contentDescription = "Remove from queue",
-                                    tint = GhaisNoir.TextTertiary,
-                                    modifier = Modifier.size(16.dp)
-                                )
+                                val canMoveUp = index > 0
+                                val canMoveDown = index < queue.size - 1
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(GhaisNoir.Fill1)
+                                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                                        .noirClickable { if (canMoveUp) AudioEngine.moveInQueue(index, index - 1) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowUp,
+                                        contentDescription = "Move up in queue",
+                                        tint = if (canMoveUp) GhaisNoir.TextTertiary else GhaisNoir.TextDisabled,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(GhaisNoir.Fill1)
+                                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                                        .noirClickable { if (canMoveDown) AudioEngine.moveInQueue(index, index + 1) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowDown,
+                                        contentDescription = "Move down in queue",
+                                        tint = if (canMoveDown) GhaisNoir.TextTertiary else GhaisNoir.TextDisabled,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(GhaisNoir.Fill1)
+                                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                                        .noirClickable { AudioEngine.removeFromQueue(index) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = "Remove from queue",
+                                        tint = GhaisNoir.TextTertiary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
                         }
                     }

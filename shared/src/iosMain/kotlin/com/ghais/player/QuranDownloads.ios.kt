@@ -35,6 +35,16 @@ import platform.Foundation.stringByDeletingLastPathComponent
 actual object QuranDownloads {
     private const val PREF_KEY = "ghais_downloaded"
 
+    // Wi-Fi-only gate: shared Settings key with the PlaybackSettings contract
+    // (`data/repository/PlaybackSettings.kt` — boolean `playback_wifi_only`,
+    // default true). Read from NSUserDefaults directly (the backing store
+    // multiplatform Settings uses on iOS) so this engine stays decoupled from
+    // the UI-layer prefs owner. iOS has no Wi-Fi-transport probe wired
+    // (NetworkMonitor.ios is a fail-open stub tracking online/offline only),
+    // so enforcement stays fail-open here until an NWPathMonitor-based check
+    // lands; the read is kept so the gate lights up with the probe.
+    private const val KEY_WIFI_ONLY = "playback_wifi_only"
+
     // Pre-rebrand index key, derived without hardcoding the legacy literal.
     // Adopted + deleted once on load so existing downloads stay indexed.
     private fun legacyPrefKey(): String = "quran" + "_downloaded"
@@ -122,6 +132,19 @@ actual object QuranDownloads {
         }
     }
 
+    private fun isWifiOnly(): Boolean = try {
+        val defaults = NSUserDefaults.standardUserDefaults
+        // boolForKey returns false for a missing key, but the contract default
+        // is true — hence the explicit presence check.
+        if (defaults.objectForKey(KEY_WIFI_ONLY) == null) true
+        else defaults.boolForKey(KEY_WIFI_ONLY)
+    } catch (_: Exception) {
+        true
+    }
+
+    // Stub until an NWPathMonitor-based probe lands (see KEY_WIFI_ONLY).
+    private fun isOnWifi(): Boolean = true
+
     actual fun isDownloaded(slug: String, surahId: Int): Boolean =
         _downloadedKeys.value.contains(DownloadKeys.key(slug, surahId))
 
@@ -156,6 +179,12 @@ actual object QuranDownloads {
     // Shared NSURLSession machinery for surah + ayah keys (indeterminate -1f
     // progress, persisted index update on success).
     private fun startDownload(key: String, url: String, path: String) {
+        // Wi-Fi-only gate (see KEY_WIFI_ONLY): no transport probe on iOS yet,
+        // so fail-open — the key read stays so enforcement lights up with it.
+        if (isWifiOnly() && !isOnWifi()) {
+            _failedKeys.value = _failedKeys.value + key
+            return
+        }
         synchronized(lock) {
             if (_downloadedKeys.value.contains(key) || !inFlight.add(key)) return
         }

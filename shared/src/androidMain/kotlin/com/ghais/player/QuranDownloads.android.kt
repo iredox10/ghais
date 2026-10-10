@@ -1,6 +1,8 @@
 package com.ghais.player
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.Log
 import com.russhwolf.settings.Settings
 import java.io.File
@@ -43,6 +45,13 @@ import kotlinx.coroutines.withContext
 actual object QuranDownloads {
     private const val TAG = "QuranDownloads"
     private const val PREF_KEY = "ghais_downloaded"
+
+    // Wi-Fi-only gate: shared Settings key with PlaybackSettings
+    // (`data/repository/PlaybackSettings.kt` — boolean `playback_wifi_only`,
+    // default true). Read directly instead of importing the object so this
+    // engine stays decoupled from the UI-layer prefs owner. Bare
+    // (non-namespaced) key, matching the TranslationPrefs style.
+    private const val KEY_WIFI_ONLY = "playback_wifi_only"
 
     // Pre-rebrand index key, derived without hardcoding the legacy literal.
     // Adopted + deleted once on load so existing downloads stay indexed.
@@ -145,6 +154,28 @@ actual object QuranDownloads {
             Log.e(TAG, "QuranDownloads used before init — call QuranDownloads.init(context) from MainActivity")
         }
         return ctx
+    }
+
+    private fun isWifiOnly(): Boolean = try {
+        settings.getBoolean(KEY_WIFI_ONLY, true)
+    } catch (_: Exception) {
+        true
+    }
+
+    // Best-effort Wi-Fi transport probe (NetworkMonitor only tracks
+    // online/offline, not the transport). Fail-open (true) when there is no
+    // Context yet or the capabilities cannot be read, matching NetworkMonitor's
+    // fail-open philosophy — a missing probe must never permanently block
+    // downloads.
+    private fun isOnWifi(ctx: Context): Boolean = try {
+        val cm = ctx.applicationContext
+            .getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return true
+        val network = cm.activeNetwork ?: return true
+        val caps = cm.getNetworkCapabilities(network) ?: return true
+        caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+    } catch (_: Exception) {
+        true
     }
 
     private fun baseDir(ctx: Context): File = File(ctx.filesDir, "quran")
@@ -304,6 +335,15 @@ actual object QuranDownloads {
     // idempotency (already-downloaded / in-flight no-ops), progress/failed
     // flow updates, .part temp file + atomic rename, persisted index update.
     private fun enqueueDownload(ctx: Context, key: String, url: String, finalFile: File) {
+        // Wi-Fi-only gate (see KEY_WIFI_ONLY): refuse metered downloads before
+        // touching idempotency/progress state. Recorded as a failed key so the
+        // row surfaces a retryable state instead of stalling silently; the next
+        // tap on Wi-Fi proceeds normally.
+        if (isWifiOnly() && !isOnWifi(ctx)) {
+            Log.i(TAG, "Deferring download until Wi-Fi (wifi-only on): $key")
+            _failedKeys.value = _failedKeys.value + key
+            return
+        }
         // Engine-level idempotency: no caller can trigger a re-download for a
         // key that is already downloaded or actively downloading.
         if (_downloadedKeys.value.contains(key)) {

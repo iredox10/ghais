@@ -206,12 +206,12 @@ object OnboardingScreen : Screen {
                                     SchedulesStore.add(
                                         RecitationSchedule(
                                             id = SchedulesStore.newId(),
-                                            hour = hour,
-                                            minute = minute,
+                                            hour = hour.coerceIn(0, 23),
+                                            minute = minute.coerceIn(0, 59),
                                             reciterSlug = followed.firstOrNull() ?: "mishary",
                                             fromSurah = 1,
                                             toSurah = 114,
-                                            durationMin = minutes,
+                                            durationMin = minutes.coerceIn(5, 180),
                                             enabled = true
                                         )
                                     )
@@ -668,8 +668,8 @@ private fun GoalReminderStep(
 
             if (showClock) {
                 val clockState = rememberTimePickerState(
-                    initialHour = hour,
-                    initialMinute = minute,
+                    initialHour = hour.coerceIn(0, 23),
+                    initialMinute = minute.coerceIn(0, 59),
                     is24Hour = true
                 )
                 Dialog(onDismissRequest = { showClock = false }) {
@@ -707,6 +707,15 @@ private fun GoalReminderStep(
                     }
                 }
             }
+            // Read-only exact-alarm guidance (same copy as the settings
+            // reminder row): no permission API is called from onboarding, the
+            // grant flow lives on the schedules/settings surfaces.
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "If exact alarms are off in system settings, reminders may arrive late.",
+                color = GhaisNoir.TextTertiary,
+                fontSize = 12.sp
+            )
         }
         Spacer(modifier = Modifier.height(20.dp))
         PrimaryButton(label = "Continue", onClick = onContinue)

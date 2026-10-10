@@ -114,7 +114,16 @@ object HifzMasteryStore {
     private fun ayahKey(surahId: Int, ayahNo: Int): String =
         "$MASTERY_KEY_PREFIX${surahId}_$ayahNo"
 
-    private val settings: Settings by lazy { Settings() }
+    /** Test seam: Settings factory (unit tests install an in-memory store). */
+    internal var settingsFactory: () -> Settings = { Settings() }
+    private var cachedSettings: Settings? = null
+    private val settings: Settings
+        get() = cachedSettings ?: settingsFactory().also { cachedSettings = it }
+
+    /** Drops the cached Settings so the next access rebuilds via [settingsFactory]. */
+    internal fun resetSettingsCache() {
+        cachedSettings = null
+    }
 
     // In-memory cache of non-NEW mastery statuses: Pair(surahId, ayahNo) -> MasteryStatus
     private val _masteryMap = MutableStateFlow<Map<Pair<Int, Int>, MasteryStatus>>(emptyMap())

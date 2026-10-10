@@ -2,6 +2,8 @@ package com.ghais.player
 
 import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.PlaybackSettings as PlaybackPrefs
+import com.ghais.ui.screens.reciters.resolveReciterPhoto
 import com.ghais.data.seed.QuranData
 import com.ghais.domain.model.HifzRange
 import com.ghais.domain.model.Reciter
@@ -477,6 +479,7 @@ object AudioEngine {
         PlayerBridge.setSpeed(_playbackSpeed.value)
         PlayerBridge.setVolume(_volume.value)
         PlayerBridge.setPlaybackMetadata(trackDisplayTitle(loadTrack), loadTrack.reciterName)
+        PlayerBridge.setPlaybackArtworkUri(artworkUriFor(loadTrack))
         // Same offline-first resolution as startPlayback: a download completing
         // mid-preload does not swap the stream — offline applies next load.
         // Ayah tracks prefer their own clip so hifz repetition plays the verse,
@@ -1222,6 +1225,7 @@ object AudioEngine {
         PlayerBridge.setSpeed(_playbackSpeed.value)
         PlayerBridge.setVolume(_volume.value)
         PlayerBridge.setPlaybackMetadata(trackDisplayTitle(track), track.reciterName)
+        PlayerBridge.setPlaybackArtworkUri(artworkUriFor(track))
         // Prefer offline file when downloaded. Ayah tracks prefer their own
         // downloaded clip (hifz repetition needs the verse, not the full
         // surah); the surah file stays the fallback before streaming.
@@ -1391,6 +1395,14 @@ object AudioEngine {
                 } else {
                     SleepTimer.onSurahEnded()
                     if (!_isPlaying.value) return
+                    // Autoplay off stops at queue end even when repeat QUEUE
+                    // would wrap to index 0. Intra-surah verse stepping above
+                    // is unaffected (one surah = one logical track).
+                    if (!PlaybackPrefs.autoplayNext.value && isQueueEndForAutoplay()) {
+                        SleepTimer.onQueueEnded()
+                        stopPlayback()
+                        return
+                    }
                     val nextSurah = queueManager.playNext(forceAdvance = false)
                     if (nextSurah != null) {
                         _currentIndex.value = queueManager.currentIndex
@@ -1409,6 +1421,13 @@ object AudioEngine {
     private fun handleSurahTrackEnd() {
         SleepTimer.onSurahEnded()
         if (!_isPlaying.value) return
+        // Autoplay off: stop at queue end even if repeat QUEUE would wrap.
+        // Manual next/previous (forceAdvance) bypasses this gate.
+        if (!PlaybackPrefs.autoplayNext.value && isQueueEndForAutoplay()) {
+            SleepTimer.onQueueEnded()
+            stopPlayback()
+            return
+        }
         val nextTrack = queueManager.playNext(forceAdvance = false)
         if (nextTrack != null) {
             _currentIndex.value = queueManager.currentIndex
@@ -1439,6 +1458,37 @@ object AudioEngine {
             name
         } else {
             "$name - Ayah ${track.ayahNo}"
+        }
+    }
+
+    /**
+     * Reciter portrait for lockscreen/notification artwork, resolved with the
+     * same cloud-first resolver the UI uses (`resolveReciterPhoto` — what
+     * `rememberCloudPhoto` falls back to synchronously). TrackItem itself
+     * carries no artwork (`imageUrl` is always null), so this is the only
+     * non-null source. Layering note: player → ui import, accepted because
+     * the resolver is a pure non-composable function in commonMain; moving
+     * it to data/ would touch every existing UI caller. Never throws —
+     * null clears the pending bridge artwork.
+     */
+    private fun artworkUriFor(track: TrackItem): String? = try {
+        resolveReciterPhoto(track.reciterSlug)
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
+     * True when the just-finished item is the last queue entry under OFF or
+     * QUEUE repeat — i.e. OFF would return null (stop) or QUEUE would wrap
+     * to index 0. AYAH/SURAH repeat loop by explicit repeat choice and never
+     * reach a queue end, so the autoplay gate leaves them alone.
+     */
+    private fun isQueueEndForAutoplay(): Boolean {
+        val size = queueManager.queue.size
+        if (size == 0) return true
+        return when (queueManager.repeatMode) {
+            RepeatMode.OFF, RepeatMode.QUEUE -> queueManager.currentIndex >= size - 1
+            RepeatMode.AYAH, RepeatMode.SURAH -> false
         }
     }
 
