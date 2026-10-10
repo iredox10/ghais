@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.platform.LocalDensity
@@ -40,6 +42,7 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -76,12 +79,14 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.RelatedQaris
 import com.ghais.data.seed.GhaisAssets
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.Surah
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
+import com.ghais.player.ReciterRadio
 import com.ghais.ui.components.noir.ChromeFab
 import com.ghais.ui.components.noir.NoirListRow
 import com.ghais.ui.components.noir.NoirScreenRoot
@@ -176,6 +181,21 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
             FollowStore.refreshCount(reciter.slug)
         }
 
+        // Discovery: radio station seeded by this reciter (empty = no CTA).
+        val stationTracks: List<TrackItem> = remember(reciter) {
+            ReciterRadio.stationQueue(reciter.slug)
+        }
+
+        // Discovery: voices most like this one (empty rail stays hidden).
+        val related: List<Reciter> = remember(reciter) {
+            RelatedQaris.relatedTo(reciter, QuranDataRepository.getBrowseReciters(), 8)
+        }
+        LaunchedEffect(related) {
+            if (related.isNotEmpty()) {
+                FollowStore.refreshCounts(related.map { it.slug })
+            }
+        }
+
         // Library offline fraction — drives the hero segmented meter.
         val downloadedCount = remember(reciter.slug, surahs, downloaded) {
             surahs.count { "${reciter.slug}/${it.id}" in downloaded }
@@ -253,6 +273,13 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                             onShuffle = {
                                 if (playableTracks.isNotEmpty()) {
                                     AudioEngine.playQueue(playableTracks.shuffled(), startIndex = 0)
+                                    rootNavigator.push(NowPlayingScreen())
+                                }
+                            },
+                            radioEnabled = stationTracks.isNotEmpty(),
+                            onStartRadio = {
+                                if (stationTracks.isNotEmpty()) {
+                                    AudioEngine.playStation("${reciter.nameEn} Radio", stationTracks)
                                     rootNavigator.push(NowPlayingScreen())
                                 }
                             },
@@ -338,6 +365,64 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                 }
                             }
                         )
+                    }
+
+                    // Discovery rail: voices most like this one. Hidden when empty.
+                    if (related.isNotEmpty()) {
+                        item(key = "more-like") {
+                            Spacer(modifier = Modifier.height(18.dp))
+                            NoirSectionHeader(
+                                label = "More like ${reciter.nameEn}",
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                items(
+                                    items = related,
+                                    key = { it.slug }
+                                ) { relatedReciter ->
+                                    val relatedPhoto =
+                                        rememberCloudPhoto(relatedReciter.slug)
+                                            ?: photoForSlug(relatedReciter.slug)
+                                    ReciterReelCard(
+                                        reciter = relatedReciter,
+                                        photoUrl = relatedPhoto,
+                                        onClick = {
+                                            navigator.push(
+                                                ReciterProfileScreen(relatedReciter.slug)
+                                            )
+                                        },
+                                        onPlayClick = {
+                                            val relatedSurahs =
+                                                QuranDataRepository.getSurahsForReciter(relatedReciter)
+                                                    .filter { relatedReciter.isSurahAvailable(it.id) }
+                                            val relatedTracks = relatedSurahs.map { surah ->
+                                                TrackItem(
+                                                    reciterSlug = relatedReciter.slug,
+                                                    reciterName = relatedReciter.nameEn,
+                                                    surahId = surah.id,
+                                                    surahNameEn = surah.nameEn,
+                                                    surahNameAr = surah.nameAr,
+                                                    ayahNo = 0,
+                                                    audioUrl = relatedReciter.getFullSurahUrl(surah.id),
+                                                    textUthmani = "",
+                                                    durationMs = surah.ayahsCount * 15_000L
+                                                )
+                                            }
+                                            if (relatedTracks.isNotEmpty()) {
+                                                AudioEngine.playQueue(relatedTracks, startIndex = 0)
+                                                rootNavigator.push(NowPlayingScreen())
+                                            }
+                                        },
+                                        isFollowing = relatedReciter.slug in followedSlugs,
+                                        onFollowClick = { FollowStore.toggle(relatedReciter.slug) },
+                                        followerCount = followerCounts[relatedReciter.slug]
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -429,6 +514,8 @@ private fun ReciterNoirHeroPlate(
     collapseRangePx: Float,
     onPlayAll: () -> Unit,
     onShuffle: () -> Unit,
+    radioEnabled: Boolean,
+    onStartRadio: () -> Unit,
     onToggleFollow: () -> Unit,
     onDownloadAll: () -> Unit
 ) {
@@ -624,6 +711,13 @@ private fun ReciterNoirHeroPlate(
                 label = "Shuffle",
                 onClick = onShuffle,
                 enabled = playEnabled,
+                modifier = Modifier.weight(1f)
+            )
+            ReciterNoirAction(
+                icon = Icons.Filled.Radio,
+                label = "Start Radio",
+                onClick = onStartRadio,
+                enabled = radioEnabled,
                 modifier = Modifier.weight(1f)
             )
             ReciterNoirAction(

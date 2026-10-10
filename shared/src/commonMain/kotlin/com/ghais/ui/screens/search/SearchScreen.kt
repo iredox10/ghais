@@ -37,11 +37,16 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
+import com.ghais.data.repository.ChartsRepository
 import com.ghais.data.repository.DevotionalRepository
+import com.ghais.data.repository.EditorialPlaylist
+import com.ghais.data.repository.EditorialRepository
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.SearchHistoryStore
+import com.ghais.data.repository.reciterCountryKey
 import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.data.repository.resolveFollowedQari
+import com.ghais.data.repository.toTrackItems
 import com.ghais.data.seed.QuranData
 import com.ghais.domain.model.DevotionalItem
 import com.ghais.domain.model.Reciter
@@ -58,13 +63,18 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.devotional.DevotionPlayerScreen
+import com.ghais.ui.screens.mood.AVAILABLE_MOODS
+import com.ghais.ui.screens.mood.MoodItem
 import com.ghais.ui.screens.player.NowPlayingScreen
+import com.ghais.ui.screens.playlists.PlaylistDetailsScreen
 import com.ghais.ui.screens.reciters.ReciterProfileScreen
+import com.ghais.ui.screens.reciters.RegionRecitersScreen
 import com.ghais.ui.screens.surah.SurahDetailScreen
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
 import kotlinx.coroutines.delay
+import kotlin.time.Clock
 import com.ghais.ui.util.realImageUrlOrNull
 
 /**
@@ -72,6 +82,15 @@ import com.ghais.ui.util.realImageUrlOrNull
  * the full passage. Same budget the devotional list screen uses.
  */
 private const val ARABIC_SNIPPET_MAX: Int = 88
+
+/** Lookback window for the hub's "New playlists" section. */
+private const val NEW_PLAYLIST_WINDOW_MS: Long = 30L * 24L * 60L * 60L * 1000L
+
+/** Nations shown in the hub's "Browse by nation" chip row. */
+private const val HUB_NATION_COUNT: Int = 8
+
+/** Rows shown in the hub's "Top qaris this week" / "New playlists" sections. */
+private const val HUB_TOP_ROW_COUNT: Int = 5
 
 /**
  * Noir Glass — strict monochrome redesign.
@@ -109,6 +128,43 @@ class SearchScreen : Screen {
         val browseReciters = rememberBrowseReciters()
         val searchResults = remember(query, browseReciters) { SearchEngine.search(query, browseReciters) }
 
+        // Browse-hub sources (blank-query state only; search execution below
+        // never reads them). Charts publish instantly from disk cache, then
+        // refetch when stale; editorial "new" derives from the synced shelf.
+        val chartsSnapshot by ChartsRepository.snapshot.collectAsState()
+        val editorialPlaylists by EditorialRepository.playlists.collectAsState()
+        LaunchedEffect(Unit) { ChartsRepository.refresh() }
+
+        // Top nations by reciter count, grouped on the flag-insensitive
+        // country key with the richest raw spelling as the label — the same
+        // grouping RecitersScreen uses, so a chip pushes a region screen that
+        // contains exactly these reciters.
+        val topNations = remember(browseReciters) {
+            browseReciters
+                .groupBy { reciterCountryKey(it.country).ifBlank { "other" } }
+                .map { (key, reciters) ->
+                    val label = reciters
+                        .map { it.country.trim() }
+                        .filter { it.isNotBlank() }
+                        .maxByOrNull { it.count { ch -> !ch.isLetterOrDigit() && ch != ' ' } }
+                        ?.takeIf { reciterCountryKey(it) == key }
+                        ?: reciters.first().country.ifBlank { "Other" }
+                    label to reciters.size
+                }
+                .sortedByDescending { (_, count) -> count }
+                .take(HUB_NATION_COUNT)
+        }
+        val topQaris = remember(chartsSnapshot) {
+            chartsSnapshot?.topQaris7d.orEmpty()
+                .take(HUB_TOP_ROW_COUNT)
+                .mapNotNull { QuranDataRepository.getBrowseReciterBySlug(it) }
+        }
+        val newPlaylists = remember(editorialPlaylists) {
+            EditorialRepository.newSince(
+                Clock.System.now().toEpochMilliseconds() - NEW_PLAYLIST_WINDOW_MS
+            ).take(HUB_TOP_ROW_COUNT)
+        }
+
         // Shared queue builder — unchanged playback logic, surah entry point varies.
         // Filtered to surahs the reciter actually has audio for; entry falls
         // back to the nearest available surah so we never queue a known-404.
@@ -143,6 +199,27 @@ class SearchScreen : Screen {
                 QuranDataRepository.getReciterBySlug(it.reciterSlug)
             } ?: QuranDataRepository.getFallbackReciter()
             playSurahQueue(entrySurahId, reciter.slug, reciter.nameEn)
+        }
+
+        // Single-surah playback for a hub mood tap — the exact wiring
+        // MoodScreen uses (Mishary queue entry, guarded on audio
+        // availability), minus the sheet-pop which has no meaning here.
+        fun playMood(mood: MoodItem) {
+            val reciter = QuranDataRepository.getReciterBySlug("mishary")
+            if (reciter.isSurahAvailable(mood.surahId)) {
+                AudioEngine.playTrack(
+                    TrackItem(
+                        reciterSlug = "mishary",
+                        reciterName = "Sheikh Mishary Rashid Alafasy",
+                        surahId = mood.surahId,
+                        surahNameEn = mood.surahNameEn,
+                        surahNameAr = mood.surahNameAr,
+                        ayahNo = 0,
+                        audioUrl = mood.audioUrl,
+                        durationMs = 300000L
+                    )
+                )
+            }
         }
 
         NoirScreenRoot {
@@ -195,22 +272,114 @@ class SearchScreen : Screen {
                         onAction = { SearchHistoryStore.clear() }
                             .takeIf { recentQueries.isNotEmpty() }
                     )
-                    if (recentQueries.isEmpty()) {
-                        SearchEmptyWell(
-                            headline = "Search anything",
-                            hint = "Surahs, reciters, duas, or ayah refs like 2:255"
-                        )
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = 2.dp, bottom = 120.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
+                    // Recents stay on top; the browse hub lives below in the
+                    // same scroll. Every hub section hides when its data is
+                    // empty. Order: moods, nations, top qaris, new playlists.
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(top = 2.dp, bottom = 120.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        if (recentQueries.isEmpty()) {
+                            item(key = "search-empty") {
+                                SearchEmptyWell(
+                                    headline = "Search anything",
+                                    hint = "Surahs, reciters, duas, or ayah refs like 2:255"
+                                )
+                            }
+                        } else {
                             items(recentQueries, key = { "recent-$it" }) { recentQuery ->
                                 RecentSearchRow(
                                     query = recentQuery,
                                     onClick = { query = recentQuery },
                                     onRemove = { SearchHistoryStore.remove(recentQuery) }
+                                )
+                            }
+                        }
+
+                        if (AVAILABLE_MOODS.isNotEmpty()) {
+                            item(key = "hub-mood-gap") { Spacer(Modifier.height(8.dp)) }
+                            item(key = "hub-mood-header") {
+                                NoirSectionHeader(label = "Browse by mood")
+                            }
+                            items(
+                                AVAILABLE_MOODS.chunked(2),
+                                key = { "hub-mood-${it.first().id}" }
+                            ) { pair ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    pair.forEach { mood ->
+                                        MoodHubTile(
+                                            mood = mood,
+                                            onClick = { playMood(mood) },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                                }
+                            }
+                        }
+
+                        if (topNations.isNotEmpty()) {
+                            item(key = "hub-nation-gap") { Spacer(Modifier.height(8.dp)) }
+                            item(key = "hub-nation-header") {
+                                NoirSectionHeader(label = "Browse by nation")
+                            }
+                            item(key = "hub-nation-chips") {
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    contentPadding = PaddingValues(vertical = 2.dp)
+                                ) {
+                                    items(topNations, key = { "hub-nation-${it.first}" }) { nation ->
+                                        NationHubChip(
+                                            label = nation.first,
+                                            count = nation.second,
+                                            onClick = { navigator.push(RegionRecitersScreen(nation.first)) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        if (topQaris.isNotEmpty()) {
+                            item(key = "hub-qaris-gap") { Spacer(Modifier.height(8.dp)) }
+                            item(key = "hub-qaris-header") {
+                                NoirSectionHeader(label = "Top qaris this week")
+                            }
+                            items(topQaris, key = { "hub-qari-${it.catalogKey()}" }) { reciter ->
+                                ReciterNoirRow(
+                                    reciter = reciter,
+                                    onOpen = { navigator.push(ReciterProfileScreen(reciter.slug)) },
+                                    onPlay = {
+                                        playSurahQueue(
+                                            entrySurahId = 1,
+                                            reciterSlug = reciter.slug,
+                                            reciterName = reciter.nameEn
+                                        )
+                                    }
+                                )
+                            }
+                        }
+
+                        if (newPlaylists.isNotEmpty()) {
+                            item(key = "hub-playlists-gap") { Spacer(Modifier.height(8.dp)) }
+                            item(key = "hub-playlists-header") {
+                                NoirSectionHeader(label = "New playlists")
+                            }
+                            items(newPlaylists, key = { "hub-playlist-${it.id}" }) { playlist ->
+                                PlaylistHubRow(
+                                    playlist = playlist,
+                                    // Tap-to-play: PlaylistDetailsScreen only knows mood ids and
+                                    // would show the wrong content for an editorial id.
+                                    onOpen = {
+                                        val tracks = playlist.toTrackItems()
+                                        if (tracks.isNotEmpty()) {
+                                            AudioEngine.playQueue(tracks, startIndex = 0)
+                                            navigator.push(NowPlayingScreen())
+                                        }
+                                    }
                                 )
                             }
                         }
@@ -907,6 +1076,156 @@ private fun RecentSearchRow(
                 contentDescription = "Remove $query",
                 tint = GhaisNoir.TextSecondary,
                 modifier = Modifier.size(14.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Browse-hub mood tile: NoirListRow language (soft card fill + 1px card
+ * border + 22% top-only specular, [GhaisShapes.row] clipping) with an
+ * [IconWell] and dual text, sized to share a two-column row. Tap runs the
+ * same single-surah playback MoodScreen uses.
+ */
+@Composable
+private fun MoodHubTile(
+    mood: MoodItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .clip(GhaisShapes.row)
+            .background(GhaisNoir.cardFillSoft(), GhaisShapes.row)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.row)
+            .topSpecular(inset = 22.dp)
+            .noirClickable(onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconWell(
+            icon = mood.icon,
+            size = 40.dp,
+            iconSize = 20.dp,
+            contentDescription = null,
+            tint = GhaisNoir.TextSecondary
+        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 10.dp)
+        ) {
+            Text(
+                text = mood.title,
+                color = GhaisNoir.TextPrimary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = mood.subtitle,
+                color = GhaisNoir.TextSecondary,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Browse-hub nation chip: resting ghost pill (Fill2 wash + card hairline +
+ * 62% label), same recipe as an unselected filter chip. Label carries the
+ * reciter count so the ordering reads as a ranking.
+ */
+@Composable
+private fun NationHubChip(
+    label: String,
+    count: Int,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(GhaisShapes.pill)
+            .background(GhaisNoir.Fill2)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+            .noirClickable(onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "$label • $count",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = GhaisNoir.TextSecondary
+        )
+    }
+}
+
+/**
+ * Browse-hub playlist row in the NoirListRow language: soft card fill + 1px
+ * card border + 22% top-only specular, book IconWell, dual text, circular
+ * chevron. The row opens [PlaylistDetailsScreen], mirroring the Collections
+ * tile navigation.
+ */
+@Composable
+private fun PlaylistHubRow(
+    playlist: EditorialPlaylist,
+    onOpen: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(GhaisShapes.row)
+            .background(GhaisNoir.cardFillSoft(), GhaisShapes.row)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.row)
+            .topSpecular(inset = 22.dp)
+            .noirClickable(onOpen)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconWell(
+            icon = Icons.AutoMirrored.Filled.MenuBook,
+            size = 40.dp,
+            iconSize = 18.dp,
+            contentDescription = null,
+            tint = GhaisNoir.TextSecondary
+        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp, end = 8.dp)
+        ) {
+            Text(
+                text = playlist.title,
+                color = GhaisNoir.TextPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "${playlist.items.size} tracks",
+                color = GhaisNoir.TextSecondary,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .border(1.dp, GhaisNoir.BorderGhost, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = GhaisNoir.TextTertiary,
+                modifier = Modifier.size(18.dp)
             )
         }
     }

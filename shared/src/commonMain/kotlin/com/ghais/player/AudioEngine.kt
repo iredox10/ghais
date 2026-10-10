@@ -172,6 +172,9 @@ object AudioEngine {
     private val _currentIndex = MutableStateFlow(-1)
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
 
+    private val _stationLabel = MutableStateFlow<String?>(null)
+    val stationLabel: StateFlow<String?> = _stationLabel.asStateFlow()
+
     // --- Hifz & Memorization StateFlows ---
     private val _ayahRepetitionTarget = MutableStateFlow(1)
     val ayahRepetitionTarget: StateFlow<Int> = _ayahRepetitionTarget.asStateFlow()
@@ -340,6 +343,7 @@ object AudioEngine {
         queueManager.addToQueue(surahTrack)
         _queue.value = queueManager.queue
         _currentIndex.value = queueManager.currentIndex
+        _stationLabel.value = queueManager.stationLabel
         pendingSeekMs = startPositionMs.coerceAtLeast(0L)
         pendingSeekTries = if (pendingSeekMs > 0L) 40 else 0
         if (isAyah) {
@@ -369,12 +373,14 @@ object AudioEngine {
             }
             _queue.value = queueManager.queue
             _currentIndex.value = queueManager.currentIndex
+            _stationLabel.value = queueManager.stationLabel
             playAyah(targetTrack.surahId, targetTrack.ayahNo, targetTrack.reciterSlug, startPositionMs)
         } else {
             _isAyahMode.value = false
             queueManager.setQueue(tracks, startIndex)
             _queue.value = queueManager.queue
             _currentIndex.value = queueManager.currentIndex
+            _stationLabel.value = queueManager.stationLabel
             val surah = queueManager.currentTrack
             if (surah != null) {
                 pendingSeekMs = startPositionMs.coerceAtLeast(0L)
@@ -384,6 +390,28 @@ object AudioEngine {
                 stopPlayback()
             }
         }
+    }
+
+    /**
+     * Starts a reciter-radio station EXACTLY like [playQueue] (same queueing
+     * + bridge start path), with the queue attributed to [label].
+     *
+     * Ordering: [playQueue] first, label stamp second. [playQueue] routes
+     * through `QueueManager.setQueue`, which clears `stationLabel` — so the
+     * label must be applied after playback starts. The stamp uses
+     * `QueueManager.setStationLabel` (no queue mutation), NOT
+     * `QueueManager.playStation` (which would re-run `setQueue` and reset
+     * the just-started index/position).
+     *
+     * Empty [tracks] is a strict no-op: unlike [playQueue] (which clears on
+     * empty), this returns without touching the engine so the current
+     * session keeps playing.
+     */
+    fun playStation(label: String, tracks: List<TrackItem>, startIndex: Int = 0) {
+        if (tracks.isEmpty()) return
+        playQueue(tracks, startIndex)
+        queueManager.setStationLabel(label)
+        _stationLabel.value = label
     }
 
     /**
@@ -414,6 +442,7 @@ object AudioEngine {
         queueManager.addToQueue(surahTrack)
         _queue.value = queueManager.queue
         _currentIndex.value = queueManager.currentIndex
+        _stationLabel.value = queueManager.stationLabel
         // The queue holds the surah row (like playTrack); the loaded item is
         // the track as given so per-ayah restores keep their ayah URL.
         val loadTrack = if (isAyah) track else surahTrack
@@ -526,6 +555,7 @@ object AudioEngine {
         }
         _queue.value = queueManager.queue
         _currentIndex.value = queueManager.currentIndex
+        _stationLabel.value = queueManager.stationLabel
 
         playAyah(surahId, validAyahNo, reciter.slug)
     }
@@ -748,6 +778,7 @@ object AudioEngine {
         }
         _queue.value = queueManager.queue
         _currentIndex.value = queueManager.currentIndex
+        _stationLabel.value = queueManager.stationLabel
 
         val ayahTrack = buildAyahTrack(surahId, validAyahNo, reciter.slug, reciter.nameEn)
         pendingSeekMs = startPositionMs.coerceAtLeast(0L)
@@ -844,6 +875,7 @@ object AudioEngine {
         queueManager.addToQueue(surahTrack)
         _queue.value = queueManager.queue
         _currentIndex.value = queueManager.currentIndex
+        _stationLabel.value = queueManager.stationLabel
         if (_currentTrack.value == null && _playbackState.value.status == PlaybackStatus.IDLE) {
             if (_isAyahMode.value) {
                 playAyah(surahTrack.surahId, 1, surahTrack.reciterSlug)
@@ -860,6 +892,7 @@ object AudioEngine {
         queueManager.addAllToQueue(surahTracks)
         _queue.value = queueManager.queue
         _currentIndex.value = queueManager.currentIndex
+        _stationLabel.value = queueManager.stationLabel
         if (wasEmpty && _currentTrack.value == null && _playbackState.value.status == PlaybackStatus.IDLE) {
             val firstSurah = queueManager.currentTrack ?: surahTracks.firstOrNull() ?: return
             if (_isAyahMode.value) {
@@ -954,6 +987,7 @@ object AudioEngine {
         queueManager.toggleShuffle()
         _queue.value = queueManager.queue
         _currentIndex.value = queueManager.currentIndex
+        _stationLabel.value = queueManager.stationLabel
         _playbackState.update { state ->
             state.copy(settings = state.settings.copy(shuffle = queueManager.isShuffle))
         }
@@ -1117,6 +1151,7 @@ object AudioEngine {
         val nextTrack = queueManager.removeAt(index)
         _queue.value = queueManager.queue
         _currentIndex.value = queueManager.currentIndex
+        _stationLabel.value = queueManager.stationLabel
 
         if (queueManager.queue.isEmpty()) {
             clear()
@@ -1137,6 +1172,7 @@ object AudioEngine {
         if (queueManager.move(fromIndex, toIndex)) {
             _queue.value = queueManager.queue
             _currentIndex.value = queueManager.currentIndex
+            _stationLabel.value = queueManager.stationLabel
         }
     }
 
@@ -1149,6 +1185,7 @@ object AudioEngine {
         queueManager.clear()
         _queue.value = emptyList()
         _currentIndex.value = -1
+        _stationLabel.value = null
         _isAyahMode.value = false
     }
 

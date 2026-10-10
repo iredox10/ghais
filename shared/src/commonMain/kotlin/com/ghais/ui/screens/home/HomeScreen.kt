@@ -31,6 +31,7 @@ import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.data.repository.DevotionalRepository
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.toTrackItems
 import com.ghais.data.seed.JumpBackInItem
 import com.ghais.domain.model.DEVOTIONAL_TRACK_SLUG
 import com.ghais.domain.model.DevotionKind
@@ -153,6 +154,53 @@ object HomeScreen : Tab {
                     )
                     HomeFollowedRow(onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) })
                     Spacer(Modifier.height(18.dp))
+                }
+
+                // -------------------------------------------------------------
+                // Your Daily Mix — deterministic daily hero from top qaris.
+                // Each discovery shelf below owns its header + trailing
+                // spacing and renders nothing when empty, so a hidden shelf
+                // leaves zero gap in the scroll.
+                // -------------------------------------------------------------
+                item {
+                    HomeDailyMixShelf(
+                        onOpenPlayer = { rootNavigator?.push(NowPlayingScreen()) }
+                    )
+                }
+
+                // -------------------------------------------------------------
+                // Top Qaris this week — cloud chart wells
+                // -------------------------------------------------------------
+                item {
+                    HomeTopQarisShelf(
+                        onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) }
+                    )
+                }
+
+                // -------------------------------------------------------------
+                // New from qaris you follow — recent editorial per follow set
+                // -------------------------------------------------------------
+                item {
+                    HomeNewFromFollowedShelf(
+                        // Tap-to-play: PlaylistDetailsScreen only knows mood ids.
+                        onPlay = { playlist ->
+                            val tracks = playlist.toTrackItems()
+                            if (tracks.isNotEmpty()) {
+                                AudioEngine.playQueue(tracks, startIndex = 0)
+                                rootNavigator?.push(NowPlayingScreen())
+                            }
+                        }
+                    )
+                }
+
+                // -------------------------------------------------------------
+                // Discover — related qaris from the top listen
+                // -------------------------------------------------------------
+                item {
+                    HomeDiscoverShelf(
+                        onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) },
+                        onOpenPlayer = { rootNavigator?.push(NowPlayingScreen()) }
+                    )
                 }
 
                 // -------------------------------------------------------------

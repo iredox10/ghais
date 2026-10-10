@@ -72,6 +72,7 @@ fun QueueSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val queue by AudioEngine.queue.collectAsState()
+    val stationLabel by AudioEngine.stationLabel.collectAsState()
     val currentIndex by AudioEngine.currentIndex.collectAsState()
     val currentTrack by AudioEngine.currentTrack.collectAsState()
     val isAyahMode by AudioEngine.isAyahMode.collectAsState()
@@ -144,6 +145,14 @@ fun QueueSheet(
                             }
                             Text(
                                 text = posText,
+                                color = GhaisNoir.TextSecondary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        if (stationLabel != null) {
+                            Text(
+                                text = "Up next from $stationLabel",
                                 color = GhaisNoir.TextSecondary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium

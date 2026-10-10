@@ -15,6 +15,9 @@ class QueueManager {
     var isShuffle: Boolean = false
         private set
 
+    var stationLabel: String? = null
+        private set
+
     val queue: List<TrackItem>
         get() = _queue.toList()
 
@@ -25,6 +28,7 @@ class QueueManager {
         get() = if (currentIndex in _queue.indices) _queue[currentIndex] else null
 
     fun setQueue(items: List<TrackItem>, startIndex: Int = 0) {
+        stationLabel = null
         _originalQueue.clear()
         _originalQueue.addAll(items)
 
@@ -271,5 +275,28 @@ class QueueManager {
         _queue.clear()
         _originalQueue.clear()
         currentIndex = -1
+        stationLabel = null
+    }
+
+    /**
+     * Replaces the queue with a reciter-radio station and labels it.
+     * Delegates to [setQueue] (which clears any previous label) then sets
+     * [stationLabel]. Any other queue-replacing path ([setQueue], [clear])
+     * clears the label so stale station branding never lingers.
+     */
+    fun playStation(label: String, items: List<TrackItem>) {
+        setQueue(items)
+        stationLabel = label
+    }
+
+    /**
+     * Stamps [stationLabel] without touching the queue, index, or position.
+     * Used by `AudioEngine.playStation` AFTER `playQueue` has started
+     * playback: `playQueue` routes through [setQueue] (which clears the
+     * label), so the label must be applied after — and reusing [playStation]
+     * here would re-run `setQueue` and reset the just-started position.
+     */
+    fun setStationLabel(label: String?) {
+        stationLabel = label
     }
 }

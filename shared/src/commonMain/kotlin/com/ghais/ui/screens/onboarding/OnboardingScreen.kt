@@ -82,6 +82,7 @@ import com.ghais.ui.theme.GhaisTypography
 
 private const val PageCount = 5
 private const val LastPage = PageCount - 1
+private const val MaxOnboardingReciters = 3
 
 object OnboardingScreen : Screen {
     @Composable
@@ -183,8 +184,11 @@ object OnboardingScreen : Screen {
                             reciters = reciters,
                             followed = followed,
                             onPick = { slug ->
-                                FollowStore.clear()
-                                FollowStore.follow(slug)
+                                if (FollowStore.isFollowing(slug)) {
+                                    FollowStore.unfollow(slug)
+                                } else if (followed.size < MaxOnboardingReciters) {
+                                    FollowStore.follow(slug)
+                                }
                             },
                             onContinue = { goTo(3) }
                         )
@@ -258,10 +262,11 @@ private fun DotsRow(current: Int) {
 }
 
 @Composable
-private fun PrimaryButton(label: String, onClick: () -> Unit) {
+private fun PrimaryButton(label: String, onClick: () -> Unit, enabled: Boolean = true) {
     ChromePillButton(
         text = label,
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier.fillMaxWidth()
     )
 }
@@ -418,18 +423,29 @@ private fun ReciterStep(
     onContinue: () -> Unit
 ) {
     StepScroll {
-        Text(
-            text = "Choose your Qari",
-            style = GhaisTypography.displayEditorialSmall
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Choose your Qari",
+                style = GhaisTypography.displayEditorialSmall,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "${followed.size} of $MaxOnboardingReciters",
+                color = GhaisNoir.TextTertiary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "Tap a voice to follow — you can change it anytime.",
+            text = "Pick up to $MaxOnboardingReciters voices to follow — you can change them anytime.",
             color = GhaisNoir.TextTertiary,
             fontSize = 14.sp
         )
         Spacer(modifier = Modifier.height(18.dp))
-        val selectedSlug = followed.firstOrNull()
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val gap = 8.dp
             val avatarSize = ((maxWidth - gap * 3) / 4).coerceIn(48.dp, 64.dp)
@@ -475,6 +491,24 @@ private fun ReciterStep(
                                         CircleShape
                                     )
                             )
+                            if (selected) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(22.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White, CircleShape)
+                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = null,
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -491,8 +525,10 @@ private fun ReciterStep(
             }
         }
         Spacer(modifier = Modifier.height(18.dp))
-        if (selectedSlug != null) {
-            val name = QuranDataRepository.getReciterBySlug(selectedSlug).nameEn
+        if (followed.isNotEmpty()) {
+            val names = followed.map { slug ->
+                runCatching { QuranDataRepository.getReciterBySlug(slug).nameEn }.getOrNull() ?: slug
+            }
             NoirCard(modifier = Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -503,10 +539,12 @@ private fun ReciterStep(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "Selected: $name",
+                        text = "Selected (${followed.size} of $MaxOnboardingReciters): ${names.joinToString(", ")}",
                         color = GhaisNoir.TextPrimary,
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -517,10 +555,8 @@ private fun ReciterStep(
                 fontSize = 13.sp
             )
         }
-        if (selectedSlug != null) {
-            Spacer(modifier = Modifier.height(20.dp))
-            PrimaryButton(label = "Continue", onClick = onContinue)
-        }
+        Spacer(modifier = Modifier.height(20.dp))
+        PrimaryButton(label = "Continue", onClick = onContinue, enabled = followed.isNotEmpty())
     }
 }
 
