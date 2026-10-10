@@ -17,6 +17,7 @@ import com.ghais.data.repository.HifzMasteryStore
 import com.ghais.data.repository.KhatmaStore
 import com.ghais.data.repository.MasteryStatus
 import com.ghais.data.repository.OnboardingStore
+import com.ghais.data.repository.PlayEventLog
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.RecitationSchedule
 import com.ghais.data.repository.SchedulesStore
@@ -33,6 +34,7 @@ import com.ghais.data.seed.JumpBackInItem
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import io.appwrite.Client
+import io.appwrite.ID
 import io.appwrite.Query
 import io.appwrite.exceptions.AppwriteException
 import io.appwrite.services.Databases
@@ -146,6 +148,12 @@ actual object SyncEngine {
     private const val HIFZ_ATTR_LAST_REVIEW_DAY = "last_review_day"
     private const val SEARCH_HISTORY = "search_history"
 
+    // Declared here rather than in the sibling-owned `SyncModels.kt`, which this
+    // file does not edit — same as TELEMETRY / PLAYLISTS above. Ids only: the
+    // attribute names they are written by live in `appwrite/collections.json`,
+    // which no code hardcodes a copy of.
+    private const val PLAY_EVENTS = "play_events"
+
     /**
      * `audioUrl` scheme the likes pull uses for a cloud like whose reciter slug
      * is blank or unknown, so the row is still identity-stable in
@@ -155,8 +163,8 @@ actual object SyncEngine {
 
     // Must match the local cap enforced by `UserUsageRepository.recordProgress`
     // and `restoreHistory`. A higher value only inflates the pull query and
-    // the push `take`, since the local list can never exceed 15.
-    private const val HISTORY_CAP = 15
+    // the push `take`, since the local list can never exceed 200.
+    private const val HISTORY_CAP = 200
 
     // Must match `SearchHistoryStore`'s own MAX_SIZE: a higher value only
     // inflates the pull query, since the local list can never exceed it.
@@ -332,6 +340,9 @@ actual object SyncEngine {
             runCollection(HISTORY) {
                 val cloudHasData = pullHistory(db, userId)
                 pushHistory(db, userId, cloudHasData)
+            }
+            runCollection(PLAY_EVENTS) {
+                uploadPlayEvents()
             }
             runCollection(SCHEDULES) {
                 val cloudHasData = pullSchedules(db, userId)
@@ -553,7 +564,50 @@ actual object SyncEngine {
         runCollection(HISTORY) {
             pushHistory(db, userId, pullHistory(db, userId))
         }
+        runCollection(PLAY_EVENTS) {
+            uploadPlayEvents()
+        }
         clean
+    }
+
+    /**
+     * Best-effort upload of the [PlayEventLog] buffer into [PLAY_EVENTS]
+     * (create-only, one document per event via [ID.unique()]; never
+     * update/delete — events are append-only, unlike every pull-then-push
+     * collection above).
+     *
+     * Mirrors the file's write pattern (`db.createDocument(DB_ID, …)` with a
+     * `Map<String, Any?>` payload) inside the caller's `runCollection` guard,
+     * so an unprovisioned collection is skipped without poisoning the pass.
+     * Drains first, then re-records only the unsent remainder on ANY failure
+     * (offline included) — already-sent events keep their documents, and the
+     * re-queue is cap-bounded by [PlayEventLog.MAX_BUFFER]. Never throws.
+     */
+    actual suspend fun uploadPlayEvents() {
+        val ctx = appContext ?: return
+        if (!AppwriteConfig.isConfigured()) return
+        if (AuthRepository.session.value?.userId == null) return
+        val events = PlayEventLog.drain()
+        if (events.isEmpty()) return
+        var sent = 0
+        try {
+            val db = databases(ctx)
+            for ((index, event) in events.withIndex()) {
+                val data: Map<String, Any?> = buildMap {
+                    put("reciterSlug", event.reciterSlug)
+                    put("surahId", event.surahId)
+                    put("ms", event.ms)
+                    event.ownerId?.takeIf { it.isNotBlank() }?.let { put("ownerId", it) }
+                }
+                db.createDocument(DB_ID, PLAY_EVENTS, ID.unique(), data)
+                sent = index + 1
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "play_events upload failed after $sent/${events.size}; re-queuing remainder.", e)
+            for (event in events.drop(sent)) {
+                PlayEventLog.record(event.reciterSlug, event.surahId, event.ms, event.ownerId)
+            }
+        }
     }
 
     /**
@@ -3480,12 +3534,24 @@ actual object SyncEngine {
                 position = asInt(item.data["position"])?.coerceAtLeast(0) ?: 0,
             )
         }.sortedBy { it.position }
+        // Optional date/attribution attributes (absent on legacy docs):
+        // missing key -> default, wrong type -> default, never throws.
+        // Primary keys are camelCase (`publishedAt`, `qariSlugs`); snake_case
+        // fallbacks accepted so either admin-side naming keeps working.
+        val publishedAt =
+            asLong(data["publishedAt"] ?: data["published_at"])?.coerceAtLeast(0L) ?: 0L
+        val qariSlugs = when (val raw = data["qariSlugs"] ?: data["qari_slugs"]) {
+            is List<*> -> raw.mapNotNull { (it as? String)?.trim()?.takeIf { s -> s.isNotEmpty() } }
+            else -> emptyList()
+        }
         return EditorialPlaylist(
             id = docId,
             title = title,
             description = (data["description"] as? String)?.trim().orEmpty(),
             coverUrl = (data["cover_url"] as? String)?.trim()?.takeIf { it.isNotEmpty() },
             items = items,
+            publishedAt = publishedAt,
+            qariSlugs = qariSlugs,
         )
     }
 

@@ -11,9 +11,13 @@ import kotlinx.serialization.Serializable
  * Editorial (public-catalog) playlist models.
  *
  * Mirrors the live `playlists` / `playlist_items` collections
- * (`playlists{owner_id,title,description,is_public,cover_url}`,
+ * (`playlists{owner_id,title,description,is_public,cover_url,publishedAt,qariSlugs}`,
  * `playlist_items{playlist_id,position,reciter_slug,surah_id,ayah_from,ayah_to}`).
  * Admin publishes with `owner_id = "editorial"`, `is_public = true`.
+ *
+ * `publishedAt` is epoch millis (0 = undated legacy doc) and `qariSlugs`
+ * lists the featured reciter slugs. Both are optional server-side: old docs
+ * without them parse to defaults and never throw.
  *
  * Read-only on the client: no create/edit API. Fresh data arrives via
  * `SyncEngine.refreshEditorial()` (android actual), which writes here with
@@ -35,6 +39,10 @@ data class EditorialPlaylist(
     val description: String = "",
     val coverUrl: String? = null,
     val items: List<EditorialPlaylistItem> = emptyList(),
+    /** Epoch millis the playlist was published; 0 = undated legacy doc. */
+    val publishedAt: Long = 0L,
+    /** Featured reciter slugs; empty when unattributed / legacy doc. */
+    val qariSlugs: List<String> = emptyList(),
 )
 
 /**
@@ -62,6 +70,29 @@ object EditorialRepository {
 
     fun get(id: String): EditorialPlaylist? =
         _playlists.value.firstOrNull { it.id == id }
+
+    /**
+     * Playlists published at/after [sinceMs], newest first.
+     *
+     * Undated legacy docs (`publishedAt == 0`) are always excluded, even
+     * when [sinceMs] <= 0.
+     */
+    fun newSince(sinceMs: Long): List<EditorialPlaylist> =
+        _playlists.value
+            .filter { it.publishedAt > 0L && it.publishedAt >= sinceMs }
+            .sortedByDescending { it.publishedAt }
+
+    /**
+     * Playlists featuring [slug], newest first (undated sort last at 0).
+     * Blank slugs match nothing.
+     */
+    fun featuring(slug: String): List<EditorialPlaylist> {
+        val clean = slug.trim()
+        if (clean.isEmpty()) return emptyList()
+        return _playlists.value
+            .filter { it.qariSlugs.contains(clean) }
+            .sortedByDescending { it.publishedAt }
+    }
 }
 
 /**

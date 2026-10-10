@@ -23,6 +23,10 @@ actual object SyncEngine {
         // No-op until a Native HTTP sync path lands.
     }
 
+    actual suspend fun uploadPlayEvents() {
+        // No-op until a Native HTTP sync path lands (buffer stays local).
+    }
+
     actual suspend fun refreshEditorial() {
         // No-op until a Native HTTP sync path lands (shelf stays empty on iOS).
     }

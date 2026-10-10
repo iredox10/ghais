@@ -82,6 +82,17 @@ expect object SyncEngine {
     suspend fun syncNow()
 
     /**
+     * Best-effort upload of the [com.ghais.data.repository.PlayEventLog]
+     * buffer into the `play_events` collection (create-only, one document per
+     * event; never update/delete).
+     *
+     * Drains the buffer and re-queues only the unsent remainder on ANY
+     * failure (offline / unprovisioned collection / signed out), so data is
+     * kept, cap-bounded, for the next pass. Never throws.
+     */
+    suspend fun uploadPlayEvents()
+
+    /**
      * Best-effort pull of the public editorial catalog (`playlists` with
      * `is_public = true`, limit 20 + `playlist_items` per playlist, limit 50
      * ordered by `position`) into `EditorialRepository`.

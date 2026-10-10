@@ -1117,6 +1117,93 @@
           "note": "One document per distinct query; a repeat search updates ranked_at_ms instead of appending a duplicate."
         }
       ]
+    },
+    {
+      "$id": "play_events",
+      "name": "Play Events",
+      "permissions": [
+        "create(\"users\")"
+      ],
+      "documentSecurity": false,
+      "attributes": [
+        {
+          "key": "reciterSlug",
+          "type": "string",
+          "size": 64,
+          "required": true,
+          "note": "Camel-case key per the charts spec (older collections use snake_case like reciter_slug). Size 64 matches reciter_slug everywhere else."
+        },
+        {
+          "key": "surahId",
+          "type": "integer",
+          "required": true,
+          "note": "Append-only raw play log: collection grants create(\"users\") only, so any signed-in user can append but nobody reads via the client. The aggregate-charts function reads through the API key, which bypasses collection permissions (same pattern as the reciter_stats admin writes)."
+        },
+        {
+          "key": "ms",
+          "type": "integer",
+          "required": false,
+          "note": "Listened milliseconds for this event, if known."
+        },
+        {
+          "key": "ownerId",
+          "type": "string",
+          "size": 36,
+          "required": false,
+          "note": "Signed-in user id when known (size 36 matches user_id). Anonymous plays omit it; the aggregate-charts function then falls back to the document $id for dedupe. Optional on purpose so anonymous clients can still create events."
+        }
+      ],
+      "indexes": [
+        {
+          "key": "reciter_slug_idx",
+          "type": "key",
+          "attributes": [
+            "reciterSlug"
+          ],
+          "note": "Supports the aggregate-charts grouping by reciter. $createdAt is a system attribute and cannot be declared as an index attribute here, so the function range-pages on $createdAt (Query.greaterThan + orderAsc) instead."
+        }
+      ]
+    },
+    {
+      "$id": "charts",
+      "name": "Global Charts",
+      "permissions": [
+        "read(\"any\")"
+      ],
+      "documentSecurity": true,
+      "attributes": [
+        {
+          "key": "topQaris7d",
+          "type": "string",
+          "size": 64,
+          "required": true,
+          "array": true,
+          "note": "Top-20 reciter slugs by deduped play count over the last 7 days, rank order. Element size 64 matches reciter_slug. Collection is read(\"any\") with no create/update/delete, mirroring reciter_stats: clients are read-only and the aggregate-charts function writes via its API key, which bypasses collection permissions."
+        },
+        {
+          "key": "topQaris30d",
+          "type": "string",
+          "size": 64,
+          "required": true,
+          "array": true,
+          "note": "Top-20 reciter slugs by deduped play count over the last 30 days, rank order."
+        },
+        {
+          "key": "trending",
+          "type": "string",
+          "size": 64,
+          "required": true,
+          "array": true,
+          "note": "Top-20 reciter slugs by velocity: 7d share of plays vs 30d baseline share, rank order."
+        },
+        {
+          "key": "generatedAt",
+          "type": "datetime",
+          "required": true,
+          "note": "UTC ISO-8601 timestamp of the aggregate-charts run that wrote this document. Datetime (not integer ms) per the charts spec; older collections predate this and use integer *_ms / *_at fields instead."
+        }
+      ],
+      "indexes": []
     }
   ],
   "buckets": [

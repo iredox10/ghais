@@ -143,8 +143,12 @@ object UserUsageRepository {
      * `HISTORY_CAP` must stay equal to it — a higher value there only inflates
      * the cloud pull query and the push `take`, because the local list can
      * never grow past this.
+     *
+     * Raised 15 → 200 for the bigger-history / Daily Mix work. Append-only
+     * safe: the stored JSON schema ([PersistedHistoryItem]) is unchanged, so
+     * existing 15-item payloads load as-is and simply grow up to the new cap.
      */
-    const val HISTORY_CAP = 15
+    const val HISTORY_CAP = 200
 
     // Derives the pre-rebrand base key ("quran…" + "ify_…" form) without
     // hardcoding the legacy literal, so the rename stays grep-clean.
@@ -535,6 +539,37 @@ object UserUsageRepository {
 
     private val _history = MutableStateFlow<List<JumpBackInItem>>(emptyList())
     val history: StateFlow<List<JumpBackInItem>> = _history.asStateFlow()
+
+    /**
+     * Most-played reciter slugs from [history], most plays first.
+     *
+     * Replicates the derivation `StatsScreen` uses for its "Top Qari" card
+     * (group non-blank slugs → count → most plays first, `take(limit)`), with
+     * two deliberate differences, both documented so the two never silently
+     * diverge:
+     * - Ties break by slug here, not by display name: name resolution
+     *   (`resolveFollowedQari`) is UI-layer work and this stays a pure,
+     *   deterministic read off the flow. Empty history → empty list.
+     * - The devotional sentinel ([DEVOTIONAL_TRACK_SLUG]) is excluded: it is
+     *   not a reciter, and downstream consumers (Daily Mix) resolve every
+     *   returned slug to a real reciter — a devotional row would misattribute
+     *   to the fallback reciter. `StatsScreen` still counts it (display-only).
+     */
+    fun topQariSlugs(limit: Int = 5): List<String> {
+        if (limit <= 0) return emptyList()
+        return try {
+            _history.value
+                .filter { it.reciterSlug.isNotBlank() && it.reciterSlug != DEVOTIONAL_TRACK_SLUG }
+                .groupingBy { it.reciterSlug }
+                .eachCount()
+                .entries
+                .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+                .take(limit)
+                .map { it.key }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
 
     private val _stats = MutableStateFlow(
         UserListeningStats(
@@ -1224,6 +1259,7 @@ object UserUsageRepository {
             if (positionMs >= 30_000L || progress >= 0.95f) {
                 playCountCounted = true
                 recordSurahPlay(surahId)
+                PlayEventLog.record(track.reciterSlug, surahId, positionMs, currentOwnerId.takeIf { it != "local" })
             }
         } catch (_: Exception) {
         }

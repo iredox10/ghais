@@ -164,8 +164,11 @@ object QuranDataRepository {
      * Deliberately excludes recording *editions* (teacher / mujawwad /
      * haramain slugs): those are distinct audio folders and stay separate
      * rows so their playback is never merged away.
+     *
+     * Internal (not private) so [RelatedQaris] excludes alias-twins with the
+     * exact grouping the browse list uses.
      */
-    private fun personKeyFor(reciter: Reciter): String {
+    internal fun personKeyFor(reciter: Reciter): String {
         val slug = reciter.slug.trim().lowercase()
         return RECITER_PERSON_ALIASES[slug] ?: slug
     }

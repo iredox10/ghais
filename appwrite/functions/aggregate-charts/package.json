@@ -1,0 +1,11 @@
+{
+  "name": "aggregate-charts",
+  "version": "1.0.0",
+  "description": "Daily global charts aggregation for Quranify (top qaris 7d/30d + trending).",
+  "main": "index.js",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "node-appwrite": "^14.0.0"
+  }
+}
