@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static launcher shortcuts. Each fires a quranify:// deep link at
+     MainActivity (singleTask -> onNewIntent), parsed by parseAppLink and
+     routed via DeepLinkBus. Icons reuse drawables already in the app —
+     no new binaries. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="continue_listening"
+        android:enabled="true"
+        android:icon="@drawable/ic_notification"
+        android:shortLabel="@string/shortcut_continue">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="quranify://home"
+            android:targetPackage="com.ghais.android"
+            android:targetClass="com.ghais.android.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="hifz"
+        android:enabled="true"
+        android:icon="@drawable/ghaith_mark"
+        android:shortLabel="@string/shortcut_hifz">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="quranify://hifz"
+            android:targetPackage="com.ghais.android"
+            android:targetClass="com.ghais.android.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="search"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_search"
+        android:shortLabel="@string/shortcut_search">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="quranify://search"
+            android:targetPackage="com.ghais.android"
+            android:targetClass="com.ghais.android.MainActivity" />
+    </shortcut>
+</shortcuts>

@@ -1,6 +1,7 @@
 package com.ghais.android
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -11,6 +12,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.ghais.App
 import com.ghais.player.QuranDownloads
+import com.ghais.ui.navigation.DeepLinkBus
+import com.ghais.ui.navigation.parseAppLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -91,6 +94,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             App()
         }
+        // Cold-start deep link / static shortcut (singleTask re-deliveries land
+        // in onNewIntent below). Posts to DeepLinkBus; the Compose side drains
+        // it next to the root navigator (see DeepLink.kt KDoc).
+        handleDeepLink(intent)
     }
 
     override fun onNewIntent(intent: android.content.Intent) {
@@ -101,6 +108,22 @@ class MainActivity : ComponentActivity() {
         // already be settled.
         try {
             com.ghais.data.auth.GoogleWebAuth.onRedirect(intent.data)
+        } catch (_: Exception) { }
+        // App-link / static-shortcut routing, alongside the OAuth redirect.
+        // OAuth URIs (appwrite-callback-*) parse as null and are ignored here.
+        handleDeepLink(intent)
+    }
+
+    /**
+     * Parses VIEW intents (`quranify://…`, `https://ghaith.app/…`, static
+     * shortcuts) into an [com.ghais.ui.navigation.AppLink] and posts it for
+     * the root navigator. Unknown / launcher intents are ignored.
+     */
+    private fun handleDeepLink(intent: Intent?) {
+        try {
+            val uriString = intent?.data?.toString() ?: return
+            val link = parseAppLink(uriString) ?: return
+            DeepLinkBus.post(link)
         } catch (_: Exception) { }
     }
 

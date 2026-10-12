@@ -36,6 +36,33 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="appwrite-callback-tikitakatalk" android:host="auth" />
             </intent-filter>
+            <!-- Custom-scheme deep links: quranify://surah/2, quranify://ayah/2/255,
+                 quranify://reciter/mishary, quranify://home, quranify://hifz,
+                 quranify://search (also used by static shortcuts). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="quranify" />
+            </intent-filter>
+            <!-- App Links (autoVerify needs assetlinks.json served at
+                 https://ghaith.app/.well-known/assetlinks.json — server-side,
+                 not in this repo; without it these fall back to a chooser). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="ghaith.app" android:pathPattern="/surah/.*" />
+                <data android:scheme="https" android:host="ghaith.app" android:pathPattern="/ayah/.*" />
+                <data android:scheme="https" android:host="ghaith.app" android:pathPattern="/reciter/.*" />
+                <data android:scheme="https" android:host="ghaith.app" android:pathPattern="/home" />
+                <data android:scheme="https" android:host="ghaith.app" android:pathPattern="/hifz" />
+                <data android:scheme="https" android:host="ghaith.app" android:pathPattern="/search" />
+            </intent-filter>
+            <!-- Static launcher shortcuts (Continue listening / Hifz / Search). -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
 
         <service

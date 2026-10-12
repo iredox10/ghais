@@ -120,6 +120,22 @@ internal fun decideHifzTransition(
 internal fun hifzPauseCountdownSeconds(pauseBetweenMs: Long): Int =
     if (pauseBetweenMs <= 0L) 0 else ((pauseBetweenMs + 999L) / 1000L).toInt().coerceAtLeast(1)
 
+/**
+ * N-times ayah repeat counter decision (UI-driven one-shot repeats).
+ *
+ * Pure helper so commonTest can exhaustively exercise the counting without
+ * booting the [AudioEngine] singleton (its init touches PlayerBridge, which
+ * needs a platform player). [AudioEngine.handleAyahTrackEnd] delegates to
+ * exactly this: while [remaining] > 0 the current ayah replays and the
+ * counter decrements; at 0 (or below — negatives normalize to 0) playback
+ * advances through the normal range/repeat/queue logic.
+ *
+ * @return (newRemaining, replay): newRemaining is remaining - 1 when
+ * replaying, 0 otherwise; replay is true iff the ayah must replay.
+ */
+internal fun consumeAyahRepeat(remaining: Int): Pair<Int, Boolean> =
+    if (remaining > 0) Pair(remaining - 1, true) else Pair(0, false)
+
 object AudioEngine {
     private val queueManager: QueueManager = QueueManager()
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -195,6 +211,14 @@ object AudioEngine {
 
     private val _hifzRange = MutableStateFlow<HifzRange?>(null)
     val hifzRange: StateFlow<HifzRange?> = _hifzRange.asStateFlow()
+
+    private val _ayahRepeatRemaining = MutableStateFlow(0)
+    /**
+     * N-times ayah repeat counter: replays left for the current ayah.
+     * 0 = inactive. Set via [setAyahRepeatCount], cleared via
+     * [clearAyahRepeat] or implicitly by manual next/previous / track change.
+     */
+    val ayahRepeatRemaining: StateFlow<Int> = _ayahRepeatRemaining.asStateFlow()
 
     private var gapJob: Job? = null
     private var pendingGapAction: (() -> Unit)? = null
@@ -338,6 +362,7 @@ object AudioEngine {
     private val maxAutoSkipErrors: Int = 10
 
     fun playTrack(track: TrackItem, startPositionMs: Long = 0L) {
+        clearAyahRepeat()
         val isAyah = track.ayahNo > 0 && !track.isFullSurah
         _isAyahMode.value = isAyah
         val surahTrack = track.toSurahTrack()
@@ -360,6 +385,7 @@ object AudioEngine {
             clear()
             return
         }
+        clearAyahRepeat()
         val targetTrack = tracks.getOrNull(startIndex) ?: tracks.firstOrNull() ?: return
         val isAyahList = targetTrack.ayahNo > 0 && !targetTrack.isFullSurah
 
@@ -437,6 +463,7 @@ object AudioEngine {
      */
     fun prepareTrack(track: TrackItem, positionMs: Long = 0L) {
         if (_currentTrack.value != null) return
+        clearAyahRepeat()
         val isAyah = track.ayahNo > 0 && !track.isFullSurah
         _isAyahMode.value = isAyah
         val surahTrack = track.toSurahTrack()
@@ -497,6 +524,7 @@ object AudioEngine {
 
     fun setAyahMode(enabled: Boolean) {
         if (enabled == _isAyahMode.value) return
+        clearAyahRepeat()
         if (enabled) {
             _isAyahMode.value = true
             val current = _currentTrack.value
@@ -529,6 +557,7 @@ object AudioEngine {
     }
 
     fun playSurahInAyahMode(surahId: Int, reciterSlug: String? = null, startAyahNo: Int = 1) {
+        clearAyahRepeat()
         val targetSlug = reciterSlug ?: _currentTrack.value?.reciterSlug ?: queueManager.currentTrack?.reciterSlug ?: "mishary"
         val reciter = QuranDataRepository.getReciterBySlug(targetSlug)
         val totalAyahs = getAyahCountForSurah(surahId)
@@ -726,6 +755,29 @@ object AudioEngine {
         _currentAyahRepetition.value = 1
     }
 
+    /**
+     * Arms the N-times ayah repeat counter: the next [count] ayah-track ends
+     * replay the CURRENT ayah, decrementing per replay. [count] <= 0 clears
+     * (same as [clearAyahRepeat]). Independent of [RepeatMode] and [hifzRange]
+     * — the counter consumes first, then the normal repeat/range logic
+     * applies once it hits 0. Manual next/previous or any track change
+     * clears it. Never throws.
+     */
+    fun setAyahRepeatCount(count: Int) {
+        try {
+            _ayahRepeatRemaining.value = if (count <= 0) 0 else count
+        } catch (_: Exception) {
+        }
+    }
+
+    /** Disarms the N-times ayah repeat counter ([ayahRepeatRemaining] -> 0). Never throws. */
+    fun clearAyahRepeat() {
+        try {
+            _ayahRepeatRemaining.value = 0
+        } catch (_: Exception) {
+        }
+    }
+
     fun skipRecitationGap() {
         if (_isRecitationGapActive.value) {
             val pending = pendingGapAction
@@ -741,6 +793,7 @@ object AudioEngine {
         startPositionMs: Long = 0L
     ) {
         cancelGap()
+        clearAyahRepeat()
         _currentAyahRepetition.value = 1
         playAyahInternal(surahId, ayahNo, reciterSlug, startPositionMs)
     }
@@ -1000,6 +1053,7 @@ object AudioEngine {
 
     fun nextAyah() {
         cancelGap()
+        clearAyahRepeat()
         _currentAyahRepetition.value = 1
         val current = _currentTrack.value
         if (current == null) {
@@ -1039,6 +1093,7 @@ object AudioEngine {
 
     fun skipNext() {
         cancelGap()
+        clearAyahRepeat()
         _currentAyahRepetition.value = 1
         val nextSurah = queueManager.playNext(forceAdvance = true)
         if (nextSurah != null) {
@@ -1058,6 +1113,7 @@ object AudioEngine {
 
     fun previousAyah() {
         cancelGap()
+        clearAyahRepeat()
         _currentAyahRepetition.value = 1
         val current = _currentTrack.value ?: return
         if (_currentPositionMs.value > 3_000L) {
@@ -1094,6 +1150,7 @@ object AudioEngine {
     }
 
     fun skipPrevious() {
+        clearAyahRepeat()
         val current = _currentTrack.value
         if (_isAyahMode.value) {
             if (current != null && (current.ayahNo > 1 || _currentPositionMs.value > 3_000L)) {
@@ -1137,6 +1194,7 @@ object AudioEngine {
     }
 
     fun skipToIndex(index: Int) {
+        clearAyahRepeat()
         val surahTrack = queueManager.skipToIndex(index)
         if (surahTrack != null) {
             _currentIndex.value = queueManager.currentIndex
@@ -1150,6 +1208,7 @@ object AudioEngine {
 
     fun removeFromQueue(index: Int) {
         if (index !in queueManager.queue.indices) return
+        clearAyahRepeat()
         val wasCurrent = (index == queueManager.currentIndex)
         val nextTrack = queueManager.removeAt(index)
         _queue.value = queueManager.queue
@@ -1260,6 +1319,7 @@ object AudioEngine {
 
     private fun stopPlayback() {
         cancelGap()
+        clearAyahRepeat()
         _currentAyahRepetition.value = 1
         PlayerBridge.stop()
         progressJob?.cancel()
@@ -1309,6 +1369,22 @@ object AudioEngine {
         val totalAyahs = getAyahCountForSurah(surahId)
         val reciterSlug = current.reciterSlug
         val lastDurationMs = effectiveDuration()
+
+        // 0. N-times ayah repeat counter (UI-driven one-shot repeats).
+        // Consumes first, independent of RepeatMode and hifzRange: while
+        // remaining > 0 the CURRENT ayah replays and the counter decrements;
+        // once it hits 0 the range/repeat/queue logic below applies.
+        // Surah-mode paths (handleSurahTrackEnd) never touch this counter.
+        val (updatedRepeat, replayAyah) = consumeAyahRepeat(_ayahRepeatRemaining.value)
+        if (updatedRepeat != _ayahRepeatRemaining.value) {
+            _ayahRepeatRemaining.value = updatedRepeat
+        }
+        if (replayAyah) {
+            executeWithRecitationGap(lastDurationMs) {
+                playAyahInternal(surahId, currentAyah, reciterSlug)
+            }
+            return
+        }
 
         // 1. Bounded Range Loop Mode (per-ayah repeats + inter-repeat pause).
         // While a range is active for this surah its repeatPerAyah governs the

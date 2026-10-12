@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_continue">Continue listening</string>
+    <string name="shortcut_continue_long">Continue listening where you left off</string>
+    <string name="shortcut_hifz">Hifz</string>
+    <string name="shortcut_hifz_long">Open memorization practice</string>
+    <string name="shortcut_search">Search</string>
+    <string name="shortcut_search_long">Search surahs, reciters and ayahs</string>
+</resources>

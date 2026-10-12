@@ -6,6 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,10 +38,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.ghais.data.repository.AyahVerse
 import com.ghais.data.repository.QuranAyahRepository
+import com.ghais.data.seed.PageJuzIndex
+import com.ghais.data.seed.QuranData
 import com.ghais.data.share.ShareSheet
 import com.ghais.domain.model.RepeatMode
-import com.ghais.domain.model.TrackItem
+import com.ghais.domain.model.Surah
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
@@ -48,7 +53,9 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisTypography
 import com.ghais.ui.util.appendAyahMark
 import com.ghais.ui.util.ayahMarkContent
+import com.ghais.ui.util.toArabicDigits
 import com.russhwolf.settings.Settings
+import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.math.PI
@@ -68,8 +75,40 @@ data class MushafAyahData(
     val footnote: String? = null,
     val audioUrl: String,
     val durationMs: Long,
-    val tafsirSnippet: String
+    val tafsirSnippet: String,
+    val isPlaceholder: Boolean = false
 )
+
+/** Default reciter for Mushaf playback — matches the engine default and the
+ * previously hardcoded Alafasy EveryAyah audio URLs. */
+private const val MUSHAF_RECITER_SLUG = "mishary"
+private const val MUSHAF_AUDIO_FOLDER = "Alafasy_128kbps"
+
+/** Per-ayah audio URL in the EveryAyah shape (SS SAAA.mp3), same as before. */
+private fun mushafAyahAudioUrl(surahId: Int, ayahNo: Int): String {
+    val s = surahId.toString().padStart(3, '0')
+    val a = ayahNo.toString().padStart(3, '0')
+    return "https://everyayah.com/data/$MUSHAF_AUDIO_FOLDER/$s$a.mp3"
+}
+
+/** Maps a repository verse to the UI model. Placeholder verses (offline /
+ * not-yet-fetched) are kept honestly: their generated text is shown as-is
+ * with a footnote, never blanked and never crashing. */
+private fun AyahVerse.toMushafAyah(): MushafAyahData = MushafAyahData(
+    ayahNumber = ayahNo,
+    textUthmani = textUthmani,
+    translation = translation.ifBlank { "Translation unavailable — check connection and retry." },
+    footnote = if (isPlaceholder) "Full text not downloaded yet — connect and tap Retry." else null,
+    audioUrl = mushafAyahAudioUrl(surahId, ayahNo),
+    durationMs = 0L,
+    tafsirSnippet = "",
+    isPlaceholder = isPlaceholder
+)
+
+/**
+ * Juz/page numbers come from [PageJuzIndex] (Quran.com v4 Madani pagination,
+ * verified against AlQuran Cloud; see data/seed/PageJuzIndex.kt).
+ */
 
 /**
  * Persisted UI prefs for the Mushaf screen (HifzUiPrefs-style: multiplatform
@@ -79,10 +118,13 @@ data class MushafAyahData(
  * Bookmarks are `(surahId, ayahNo)` pairs persisted as `"surahId:ayahNo"`
  * strings under [KEY_BOOKMARKS] (FollowStore-style JSON list), because the
  * track-level [com.ghais.data.repository.FavoritesStore] identity (audio URL)
- * does not fit verse bookmarks.
+ * does not fit verse bookmarks. Same key as before, so old bookmarks
+ * (including `:18:`-era `"18:N"` entries) still load — the only change is
+ * that saving no longer drops other surahs (the old saver rewrote the whole
+ * list with a single surah's set).
  */
 private object MushafUiPrefs {
-    const val SURAH_ID = 18
+    const val DEFAULT_SURAH_ID = 18
 
     private const val KEY_BOOKMARKS = "mushaf_bookmarks"
     private const val KEY_TAJWEED = "mushaf_tajweed"
@@ -90,11 +132,25 @@ private object MushafUiPrefs {
     private const val KEY_FONT_SIZE = "mushaf_font_size"
     private const val KEY_PAGE_VIEW = "mushaf_page_view"
     private const val KEY_REPEAT_IDX = "mushaf_repeat_idx"
+    private const val KEY_SURAH_ID = "mushaf_surah_id"
 
     private val settings: Settings by lazy { Settings() }
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
-    fun loadBookmarkedAyahs(surahId: Int = SURAH_ID): Set<Int> = try {
+    fun loadSurahId(): Int = try {
+        settings.getInt(KEY_SURAH_ID, DEFAULT_SURAH_ID).coerceIn(1, 114)
+    } catch (_: Exception) {
+        DEFAULT_SURAH_ID
+    }
+
+    fun saveSurahId(surahId: Int) {
+        try {
+            settings.putInt(KEY_SURAH_ID, surahId.coerceIn(1, 114))
+        } catch (_: Exception) {
+        }
+    }
+
+    fun loadAllBookmarks(): Set<Pair<Int, Int>> = try {
         val raw = settings.getString(KEY_BOOKMARKS, "")
         if (raw.isBlank()) emptySet()
         else json.decodeFromString<List<String>>(raw)
@@ -102,17 +158,20 @@ private object MushafUiPrefs {
                 val parts = entry.split(":")
                 val s = parts.getOrNull(0)?.toIntOrNull()
                 val a = parts.getOrNull(1)?.toIntOrNull()
-                if (s == surahId && a != null) a else null
+                if (s != null && a != null && s in 1..114 && a >= 1) s to a else null
             }.toSet()
     } catch (_: Exception) {
         emptySet()
     }
 
-    fun saveBookmarkedAyahs(ayahs: Set<Int>, surahId: Int = SURAH_ID) {
+    fun saveAllBookmarks(all: Set<Pair<Int, Int>>) {
         try {
+            val clean = all
+                .filter { (s, a) -> s in 1..114 && a >= 1 }
+                .sortedWith(compareBy({ it.first }, { it.second }))
             settings.putString(
                 KEY_BOOKMARKS,
-                json.encodeToString(ayahs.map { "$surahId:$it" })
+                json.encodeToString(clean.map { (s, a) -> "$s:$a" })
             )
         } catch (_: Exception) {
         }
@@ -168,19 +227,40 @@ private object MushafUiPrefs {
 }
 
 /**
- * Repeat-capsule label position → engine [RepeatMode].
+ * Repeat-capsule label position → engine wiring.
  *
- * - "1x Loop" → AYAH (repeat the current ayah)
- * - "3x Loop" → SURAH (engine has no N-times counter; surah-level loop is the
- *   closest available semantic — the "3x" count itself is NOT enforced)
- * - "∞ Hifz" → QUEUE (loop the whole queue indefinitely)
- * - "Loop Off" → OFF
+ * Uses the N-times engine API (`setAyahRepeatCount` / `clearAyahRepeat`,
+ * landed mid-wave in AudioEngine.kt) exactly per spec:
+ *
+ * - "1x Loop" → setAyahRepeatCount(1) (+ RepeatMode OFF, so playback
+ *   advances normally after the one replay instead of looping forever)
+ * - "3x Loop" → setAyahRepeatCount(3) (+ RepeatMode OFF, same reason)
+ * - "∞ Hifz" → clearAyahRepeat() + setRepeatMode(QUEUE) (loop the queue;
+ *   clearing first so a stale counter can't eat the start of the loop)
+ * - "Loop Off" → clearAyahRepeat() + setRepeatMode(OFF)
+ *
+ * Note: tapping any verse calls playSurahInAyahMode, which clears the
+ * counter engine-side — arming 1x/3x then tapping a new verse disarms it.
  */
-private fun mushafRepeatModeFor(idx: Int): RepeatMode = when (idx) {
-    0 -> RepeatMode.AYAH
-    1 -> RepeatMode.SURAH
-    2 -> RepeatMode.QUEUE
-    else -> RepeatMode.OFF
+private fun applyMushafRepeat(idx: Int) {
+    when (idx) {
+        0 -> {
+            AudioEngine.setAyahRepeatCount(1)
+            AudioEngine.setRepeatMode(RepeatMode.OFF)
+        }
+        1 -> {
+            AudioEngine.setAyahRepeatCount(3)
+            AudioEngine.setRepeatMode(RepeatMode.OFF)
+        }
+        2 -> {
+            AudioEngine.clearAyahRepeat()
+            AudioEngine.setRepeatMode(RepeatMode.QUEUE)
+        }
+        else -> {
+            AudioEngine.clearAyahRepeat()
+            AudioEngine.setRepeatMode(RepeatMode.OFF)
+        }
+    }
 }
 
 /** "Surah X ayah Y + translation" share text (TafseerSheet-style). */
@@ -206,6 +286,12 @@ private fun mushafShareText(ayah: MushafAyahData, surahNameEn: String = "Al-Kahf
  * eye comfort. Arabic/uthmani stays at 100% white on all dark wells —
  * never dimmed below 85%. Tab signature, audio/bookmark/tafsir state and
  * navigation targets are unchanged.
+ *
+ * Real reader: [surahId] state (persisted, default 18) drives content fetch
+ * for all 114 surahs via [QuranAyahRepository.getAyahsForSurah], the header
+ * shows real juz/page + metadata, audio goes through
+ * [AudioEngine.playSurahInAyahMode], and bookmarks are `surah:ayah` pairs
+ * across all surahs with a jump-to-verse section.
  */
 object MushafScreen : Tab {
 
@@ -227,94 +313,133 @@ object MushafScreen : Tab {
         var isTajweedActive by remember { mutableStateOf(MushafUiPrefs.isTajweed()) }
         var showTranslation by remember { mutableStateOf(MushafUiPrefs.showTranslation()) }
         var arabicFontSize by remember { mutableStateOf(MushafUiPrefs.fontSize()) }
+        var surahId by remember { mutableStateOf(MushafUiPrefs.loadSurahId()) }
         var playingAyah by remember { mutableStateOf(1) }
-        var bookmarkedAyahs by remember { mutableStateOf(MushafUiPrefs.loadBookmarkedAyahs()) }
+        var allBookmarks by remember { mutableStateOf(MushafUiPrefs.loadAllBookmarks()) }
         var repeatStateIdx by remember { mutableStateOf(MushafUiPrefs.repeatIdx()) } // 0: 1x, 1: 3x Loop, 2: ∞ Hifz, 3: Loop Off
         var isPageViewMode by remember { mutableStateOf(MushafUiPrefs.isPageView()) }
         var activeTafsirAyah by remember { mutableStateOf<MushafAyahData?>(null) }
         var isSurahMenuOpen by remember { mutableStateOf(false) }
-        var selectedSurahName by remember { mutableStateOf("Al-Kahf (18)") }
+        var pendingJumpAyah by remember { mutableStateOf<Int?>(null) }
+
+        val surah: Surah = remember(surahId) {
+            QuranData.SURAHS.firstOrNull { it.id == surahId }
+                ?: QuranData.SURAHS.firstOrNull { it.id == MushafUiPrefs.DEFAULT_SURAH_ID }
+                ?: QuranData.SURAHS.first()
+        }
+
+        val bookmarkedAyahs: Set<Int> = remember(allBookmarks, surahId) {
+            allBookmarks.filter { it.first == surahId }.map { it.second }.toSet()
+        }
+
+        // ---- Verse fetch (QuranAyahRepository is the single source of truth).
+        // getAyahsForSurah suspends through cache → network → bundled seeds →
+        // generated placeholders, so one call yields the final list; the
+        // cacheGen refresh below only swaps text when a background write
+        // (e.g. translation switch) lands, without flashing the skeleton.
+        var verses by remember(surahId) { mutableStateOf<List<AyahVerse>?>(null) }
+        var loadFailed by remember(surahId) { mutableStateOf(false) }
+        var retryToken by remember(surahId) { mutableStateOf(0) }
+        val cacheGen by QuranAyahRepository.cacheGen.collectAsState()
+
+        LaunchedEffect(surahId, retryToken) {
+            verses = null
+            loadFailed = false
+            try {
+                verses = QuranAyahRepository.getAyahsForSurah(surahId)
+            } catch (_: Exception) {
+                loadFailed = true
+            }
+        }
+        LaunchedEffect(cacheGen) {
+            if (verses != null && !loadFailed) {
+                try {
+                    verses = QuranAyahRepository.getAyahsForSurah(surahId)
+                } catch (_: Exception) {
+                }
+            }
+        }
+
+        val isLoading = verses == null && !loadFailed
+        val ayahs = remember(verses) {
+            (verses ?: emptyList()).sortedBy { it.ayahNo }.map { it.toMushafAyah() }
+        }
+        val allPlaceholders = ayahs.isNotEmpty() && (verses?.all { it.isPlaceholder } == true)
+
+        val headerJuz = remember(surahId, playingAyah) {
+            PageJuzIndex.juzOf(surahId, playingAyah)
+        }
+        val headerPage = remember(surahId, playingAyah) {
+            PageJuzIndex.pageOf(surahId, playingAyah)
+        }
 
         val isAudioPlaying by AudioEngine.isPlaying.collectAsState()
         val currentTrack by AudioEngine.currentTrack.collectAsState()
 
         val repeatStates = listOf("1x Loop", "3x Loop", "∞ Hifz", "Loop Off")
 
-        val ayahs = remember {
-            listOf(
-                MushafAyahData(
-                    ayahNumber = 1,
-                    textUthmani = "الْحَمْدُ لِلَّهِ الَّذِي أَنزَلَ عَلَىٰ عَبْدِهِ الْكِتَابَ وَلَمْ يَجْعَل لَّهُۥ",
-                    tajweedPart = " عِوَجَاۜ",
-                    tajweedPrefix = false,
-                    translation = "[All] praise is [due] to Allah, who has sent down upon His Servant the Book and has not made therein any deviance.",
-                    footnote = "Sahih International • Footnote: i.e., crookedness, corruption or inaccuracy",
-                    audioUrl = "https://everyayah.com/data/Alafasy_128kbps/018001.mp3",
-                    durationMs = 15000L,
-                    tafsirSnippet = "Praise be to Allah, Who has sent down to His servant Muhammad the Book (the Qur'an) without any crookedness or ambiguity, upright in its guidance."
-                ),
-                MushafAyahData(
-                    ayahNumber = 2,
-                    textUthmani = " لِّيُنذِرَ بَأْسًا شَدِيدًا مِّن لَّدُنْهُ وَيُبَشِّرَ الْمُؤْمِنِينَ الَّذِينَ يَعْمَلُونَ الصَّالِحَاتِ أَنَّ لَهُمْ أَجْرًا حَسَنًا",
-                    tajweedPart = "قَيِّمًا",
-                    tajweedPrefix = true,
-                    translation = "[He has made it] straight, to warn of severe punishment from Him and to give good tidings to the believers who do righteous deeds that they will have a good reward.",
-                    footnote = "Sahih International",
-                    audioUrl = "https://everyayah.com/data/Alafasy_128kbps/018002.mp3",
-                    durationMs = 20000L,
-                    tafsirSnippet = "Upright and balanced, to warn the disbelievers of severe punishment directly from Allah and to give glad tidings to believers who perform good deeds."
-                ),
-                MushafAyahData(
-                    ayahNumber = 3,
-                    textUthmani = "مَّاكِثِينَ فِيهِ أَبَدًا",
-                    tajweedPart = null,
-                    tajweedPrefix = false,
-                    translation = "In which they will remain forever.",
-                    footnote = "Sahih International",
-                    audioUrl = "https://everyayah.com/data/Alafasy_128kbps/018003.mp3",
-                    durationMs = 8000L,
-                    tafsirSnippet = "Abiding eternally in the gardens of bliss, never desiring any transfer or departure from it."
-                ),
-                MushafAyahData(
-                    ayahNumber = 4,
-                    textUthmani = "وَيُنذِرَ الَّذِينَ قَالُوا اتَّخَذَ اللَّهُ وَلَدًا",
-                    tajweedPart = null,
-                    tajweedPrefix = false,
-                    translation = "And to warn those who say, 'Allah has taken a son.'",
-                    footnote = "Sahih International",
-                    audioUrl = "https://everyayah.com/data/Alafasy_128kbps/018004.mp3",
-                    durationMs = 11000L,
-                    tafsirSnippet = "A targeted warning to those among polytheists and groups who blasphemously claim that the Almighty has offspring."
-                ),
-                MushafAyahData(
-                    ayahNumber = 5,
-                    textUthmani = "مَّا لَهُم بِهِ مِنْ عِلْمٍ وَلَا لِآبَائِهِمْ ۚ كَبُرَتْ كَلِمَةً تَخْرُجُ مِنْ أَفْوَاهِهِمْ ۚ",
-                    tajweedPart = " إِن يَقُولُونَ إِلَّا كَذِبًا",
-                    tajweedPrefix = false,
-                    translation = "They have no knowledge of it, nor had their fathers. Grave is the word that comes out of their mouths; they speak not except a lie.",
-                    footnote = "Sahih International",
-                    audioUrl = "https://everyayah.com/data/Alafasy_128kbps/018005.mp3",
-                    durationMs = 18000L,
-                    tafsirSnippet = "They and their ancestors speak without proof or knowledge; monstrous is the word that leaves their mouths."
-                )
-            )
+        val listState = rememberLazyListState()
+        val uiScope = rememberCoroutineScope()
+
+        fun selectSurah(id: Int, ayah: Int = 1) {
+            val target = id.coerceIn(1, 114)
+            isSurahMenuOpen = false
+            pendingJumpAyah = null
+            if (target != surahId) {
+                surahId = target
+                MushafUiPrefs.saveSurahId(target)
+            }
+            playingAyah = ayah.coerceAtLeast(1)
+            uiScope.launch {
+                try {
+                    listState.scrollToItem(0)
+                } catch (_: Exception) {
+                }
+            }
         }
 
-        // Function to start audio for a specific Ayah
+        fun jumpToBookmark(targetSurah: Int, targetAyah: Int) {
+            isSurahMenuOpen = false
+            val ayah = targetAyah.coerceAtLeast(1)
+            if (targetSurah != surahId) {
+                surahId = targetSurah.coerceIn(1, 114)
+                MushafUiPrefs.saveSurahId(surahId)
+            }
+            playingAyah = ayah
+            if (isPageViewMode) {
+                isPageViewMode = false
+                MushafUiPrefs.setPageView(false)
+            }
+            // List for a just-switched surah composes after fetch; retry the
+            // scroll when verses arrive (see LaunchedEffect below).
+            pendingJumpAyah = ayah
+            uiScope.launch {
+                try {
+                    listState.scrollToItem((2 + ayah - 1).coerceAtLeast(0))
+                } catch (_: Exception) {
+                }
+            }
+        }
+
+        LaunchedEffect(surahId, verses) {
+            pendingJumpAyah?.let { ayah ->
+                try {
+                    listState.scrollToItem((2 + ayah - 1).coerceAtLeast(0))
+                } catch (_: Exception) {
+                } finally {
+                    pendingJumpAyah = null
+                }
+            }
+        }
+
+        // Visible-surah playback in ayah mode (mirrors MemorizationScreen's
+        // playSurahInAyahMode invocation: surahId + reciter slug + start ayah).
         val playAyahAudio: (MushafAyahData) -> Unit = { ayah ->
             playingAyah = ayah.ayahNumber
-            AudioEngine.playTrack(
-                TrackItem(
-                    reciterSlug = "mishary",
-                    reciterName = "Sheikh Mishary Rashid Alafasy",
-                    surahId = 18,
-                    surahNameEn = "Al-Kahf",
-                    surahNameAr = "الكهف",
-                    ayahNo = ayah.ayahNumber,
-                    audioUrl = ayah.audioUrl,
-                    textUthmani = ayah.textUthmani,
-                    durationMs = ayah.durationMs
-                )
+            AudioEngine.playSurahInAyahMode(
+                surahId = surahId,
+                reciterSlug = MUSHAF_RECITER_SLUG,
+                startAyahNo = ayah.ayahNumber
             )
         }
 
@@ -322,26 +447,33 @@ object MushafScreen : Tab {
             if (isAudioPlaying) {
                 AudioEngine.pause()
             } else {
-                val targetAyah = ayahs.find { it.ayahNumber == playingAyah } ?: ayahs.first()
-                playAyahAudio(targetAyah)
+                val targetAyah = ayahs.find { it.ayahNumber == playingAyah } ?: ayahs.firstOrNull()
+                if (targetAyah != null) playAyahAudio(targetAyah)
             }
+        }
+
+        val toggleBookmark: (Int) -> Unit = { ayahNo ->
+            val key = surahId to ayahNo
+            allBookmarks = if (key in allBookmarks) allBookmarks - key else allBookmarks + key
+            MushafUiPrefs.saveAllBookmarks(allBookmarks)
         }
 
         NoirScreenRoot {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 120.dp)
             ) {
                 // 1. Top floating control capsule (noir glass).
                 item {
                     MushafControlCapsule(
-                        selectedSurah = selectedSurahName,
+                        selectedSurahId = surahId,
+                        selectedSurahLabel = "${surah.nameEn} (${surah.id})",
+                        juzNo = headerJuz,
+                        pageNo = headerPage,
                         isSurahMenuOpen = isSurahMenuOpen,
                         onToggleSurahMenu = { isSurahMenuOpen = !isSurahMenuOpen },
-                        onSelectSurah = { surah ->
-                            selectedSurahName = surah
-                            isSurahMenuOpen = false
-                        },
+                        onSelectSurah = { selectSurah(it) },
                         arabicFontSize = arabicFontSize,
                         onCycleFontSize = {
                             arabicFontSize = when (arabicFontSize) {
@@ -367,13 +499,43 @@ object MushafScreen : Tab {
                     Spacer(modifier = Modifier.height(14.dp))
                 }
 
-                // 2. Surah ornamentation header banner.
+                // 2. Surah ornamentation header banner (real metadata).
                 item {
-                    SurahHeaderBanner()
+                    SurahHeaderBanner(
+                        surah = surah,
+                        juzNo = headerJuz,
+                        pageNo = headerPage
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // 3. Ayah reading stream OR classic dark-paper page view.
+                // 3. Loading / error / offline states (never blank-crash).
+                if (isLoading) {
+                    item {
+                        MushafLoadingCard(surahNameEn = surah.nameEn)
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+                if (loadFailed && verses == null) {
+                    item {
+                        MushafErrorCard(
+                            surahNameEn = surah.nameEn,
+                            onRetry = { retryToken++ }
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+                if (!isLoading && !loadFailed && allPlaceholders) {
+                    item {
+                        MushafOfflineNoticeCard(
+                            surahNameEn = surah.nameEn,
+                            onRetry = { retryToken++ }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
+
+                // 4. Ayah reading stream OR classic dark-paper page view.
                 if (isPageViewMode) {
                     item {
                         MushafPageViewCard(
@@ -381,14 +543,21 @@ object MushafScreen : Tab {
                             activeAyah = playingAyah,
                             arabicFontSize = arabicFontSize,
                             isTajweed = isTajweedActive,
+                            surahId = surahId,
+                            surahNameAr = surah.nameAr,
+                            juzNo = headerJuz,
+                            pageNo = headerPage,
                             onSelectAyah = { ayah -> playAyahAudio(ayah) }
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 } else {
-                    items(ayahs.size) { index ->
-                        val ayah = ayahs[index]
-                        val isActive = playingAyah == ayah.ayahNumber
+                    items(ayahs, key = { it.ayahNumber }) { ayah ->
+                        val isActive = if (currentTrack?.surahId == surahId && (currentTrack?.ayahNo ?: 0) > 0) {
+                            (currentTrack?.ayahNo ?: -1) == ayah.ayahNumber
+                        } else {
+                            playingAyah == ayah.ayahNumber
+                        }
                         val isBookmarked = bookmarkedAyahs.contains(ayah.ayahNumber)
 
                         AyahBlock(
@@ -398,6 +567,7 @@ object MushafScreen : Tab {
                             isTajweed = isTajweedActive,
                             showTranslation = showTranslation,
                             arabicFontSize = arabicFontSize,
+                            surahId = surahId,
                             onCardClick = { playingAyah = ayah.ayahNumber },
                             onPlayClick = {
                                 if (isActive && isAudioPlaying) {
@@ -406,20 +576,13 @@ object MushafScreen : Tab {
                                     playAyahAudio(ayah)
                                 }
                             },
-                            onBookmarkClick = {
-                                bookmarkedAyahs = if (isBookmarked) {
-                                    bookmarkedAyahs - ayah.ayahNumber
-                                } else {
-                                    bookmarkedAyahs + ayah.ayahNumber
-                                }
-                                MushafUiPrefs.saveBookmarkedAyahs(bookmarkedAyahs)
-                            },
+                            onBookmarkClick = { toggleBookmark(ayah.ayahNumber) },
                             onTafsirClick = { activeTafsirAyah = ayah },
                             onShareClick = {
                                 if (ShareSheet.isAvailable()) {
                                     ShareSheet.shareText(
-                                        title = "Al-Kahf ${ayah.ayahNumber}",
-                                        text = mushafShareText(ayah)
+                                        title = "${surah.nameEn} ${ayah.ayahNumber}",
+                                        text = mushafShareText(ayah, surah.nameEn)
                                     )
                                 }
                             }
@@ -428,7 +591,20 @@ object MushafScreen : Tab {
                     }
                 }
 
-                // 4. Reading-mode bottom utilities capsule.
+                // 5. Saved bookmarks across all surahs (tap jumps to surah/ayah).
+                item {
+                    MushafBookmarksSection(
+                        bookmarks = allBookmarks,
+                        onJump = { s, a -> jumpToBookmark(s, a) },
+                        onRemove = { s, a ->
+                            allBookmarks = allBookmarks - (s to a)
+                            MushafUiPrefs.saveAllBookmarks(allBookmarks)
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                // 6. Reading-mode bottom utilities capsule.
                 item {
                     Spacer(modifier = Modifier.height(10.dp))
                     MushafBottomToolsCapsule(
@@ -437,10 +613,10 @@ object MushafScreen : Tab {
                             val nextIdx = (repeatStateIdx + 1) % repeatStates.size
                             repeatStateIdx = nextIdx
                             MushafUiPrefs.setRepeatIdx(nextIdx)
-                            AudioEngine.setRepeatMode(mushafRepeatModeFor(nextIdx))
+                            applyMushafRepeat(nextIdx)
                         },
                         onOpenTafsir = {
-                            activeTafsirAyah = ayahs.find { it.ayahNumber == playingAyah } ?: ayahs.first()
+                            activeTafsirAyah = ayahs.find { it.ayahNumber == playingAyah } ?: ayahs.firstOrNull()
                         },
                         isPageView = isPageViewMode,
                         onTogglePageView = {
@@ -456,6 +632,7 @@ object MushafScreen : Tab {
             if (activeTafsirAyah != null) {
                 TafsirDialog(
                     ayah = activeTafsirAyah!!,
+                    surahNameEn = surah.nameEn,
                     onDismiss = { activeTafsirAyah = null }
                 )
             }
@@ -469,10 +646,13 @@ object MushafScreen : Tab {
  */
 @Composable
 private fun MushafControlCapsule(
-    selectedSurah: String,
+    selectedSurahId: Int,
+    selectedSurahLabel: String,
+    juzNo: Int,
+    pageNo: Int,
     isSurahMenuOpen: Boolean,
     onToggleSurahMenu: () -> Unit,
-    onSelectSurah: (String) -> Unit,
+    onSelectSurah: (Int) -> Unit,
     arabicFontSize: Int,
     onCycleFontSize: () -> Unit,
     showTranslation: Boolean,
@@ -496,7 +676,7 @@ private fun MushafControlCapsule(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Surah selector — ghost pill + noir dropdown.
+            // Surah selector — ghost pill + noir dropdown (all 114 surahs).
             Box {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -515,7 +695,7 @@ private fun MushafControlCapsule(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = selectedSurah,
+                        text = selectedSurahLabel,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = GhaisNoir.TextPrimary,
@@ -536,30 +716,39 @@ private fun MushafControlCapsule(
                     onDismissRequest = onToggleSurahMenu,
                     modifier = Modifier.background(Color(0xFF141416))
                 ) {
-                    val surahList = listOf(
-                        "Al-Fatihah (1)",
-                        "Al-Baqarah (2)",
-                        "Al-Kahf (18)",
-                        "Ya-Sin (36)",
-                        "Ar-Rahman (55)",
-                        "Al-Mulk (67)"
-                    )
-                    surahList.forEach { surah ->
+                    QuranData.SURAHS.forEach { s ->
+                        val selected = s.id == selectedSurahId
                         DropdownMenuItem(
                             text = {
-                                Text(
-                                    text = surah,
-                                    color = if (surah == selectedSurah) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
-                                    fontWeight = if (surah == selectedSurah) FontWeight.Bold else FontWeight.Normal
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = s.id.toString(),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (selected) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary
+                                    )
+                                    Text(
+                                        text = s.nameEn,
+                                        color = if (selected) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                    Text(
+                                        text = s.nameAr,
+                                        color = GhaisNoir.TextTertiary,
+                                        fontSize = 12.sp
+                                    )
+                                }
                             },
-                            onClick = { onSelectSurah(surah) }
+                            onClick = { onSelectSurah(s.id) }
                         )
                     }
                 }
             }
 
-            // Juz / Page indicator — engraved inset.
+            // Juz / Page indicator — engraved inset (real header numbers).
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(14.dp))
@@ -576,7 +765,7 @@ private fun MushafControlCapsule(
                     )
                     Spacer(modifier = Modifier.width(3.dp))
                     Text(
-                        text = "15",
+                        text = juzNo.toString(),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = GhaisNoir.TextPrimary
@@ -593,7 +782,7 @@ private fun MushafControlCapsule(
                         color = GhaisNoir.TextTertiary
                     )
                     Text(
-                        text = "293",
+                        text = pageNo.toString(),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = GhaisNoir.TextPrimary
@@ -719,9 +908,14 @@ private fun MushafControlCapsule(
 /**
  * Monochrome surah banner: sacred-geometry backdrop, ghost info pills,
  * engraved rosette with uthmani at 100% white, luminous Bismillah.
+ * Metadata (revelation type, verse count, juz/page) is real per surah.
  */
 @Composable
-private fun SurahHeaderBanner() {
+private fun SurahHeaderBanner(
+    surah: Surah,
+    juzNo: Int,
+    pageNo: Int
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -778,14 +972,14 @@ private fun SurahHeaderBanner() {
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Info pills — ghost washes, monochrome glyphs.
+            // Info pills — ghost washes, monochrome glyphs (real metadata).
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                NoirInfoPill(icon = Icons.Default.Place, text = "Meccan")
-                NoirInfoPill(icon = Icons.Default.FilterList, text = "110 Verses")
-                NoirInfoPill(icon = Icons.Default.Star, text = "Friday Sunnah", emphasized = true)
+                NoirInfoPill(icon = Icons.Default.Place, text = surah.revelationType)
+                NoirInfoPill(icon = Icons.Default.FilterList, text = "${surah.ayahsCount} Verses")
+                NoirInfoPill(icon = Icons.Default.Star, text = surah.transliteration, emphasized = true)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -818,7 +1012,7 @@ private fun SurahHeaderBanner() {
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "سُورَةُ الكَهْفِ",
+                            text = "سُورَةُ ${surah.nameAr}",
                             fontSize = 32.sp,
                             lineHeight = 64.sp,
                             fontWeight = FontWeight.Normal,
@@ -826,7 +1020,7 @@ private fun SurahHeaderBanner() {
                             color = GhaisNoir.TextPrimary
                         )
                         Text(
-                            text = "THE CAVE",
+                            text = surah.nameEn.uppercase(),
                             fontSize = 10.sp,
                             letterSpacing = 2.5.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -853,22 +1047,37 @@ private fun SurahHeaderBanner() {
             Spacer(modifier = Modifier.height(14.dp))
 
             // Bismillah — uthmani at 100% white, translation secondary.
+            // Surah 9 has no Bismillah header (single source of truth:
+            // QuranAyahRepository.hasBasmalahHeader); surah 1 keeps it since
+            // verse 1 IS the Basmalah there.
+            if (QuranAyahRepository.hasBasmalahHeader(surah.id)) {
+                Text(
+                    text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Normal,
+                    style = GhaisTypography.quranScript,
+                    color = GhaisNoir.TextPrimary,
+                    lineHeight = 52.sp,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
+                    fontSize = 12.sp,
+                    fontStyle = FontStyle.Italic,
+                    color = GhaisNoir.TextSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            // Juz / page line — real header numbers.
             Text(
-                text = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Normal,
-                style = GhaisTypography.quranScript,
-                color = GhaisNoir.TextPrimary,
-                lineHeight = 52.sp,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
-                fontSize = 12.sp,
-                fontStyle = FontStyle.Italic,
-                color = GhaisNoir.TextSecondary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 4.dp)
+                text = "Juz $juzNo • Page $pageNo",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.2.sp,
+                color = GhaisNoir.TextTertiary
             )
         }
     }
@@ -1002,6 +1211,21 @@ private fun AyahBlock(
                                 letterSpacing = 0.8.sp
                             )
                         }
+                    }
+
+                    if (ayah.isPlaceholder) {
+                        Text(
+                            text = "OFFLINE",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = GhaisNoir.TextTertiary,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(GhaisNoir.Fill2)
+                                .border(1.dp, GhaisNoir.BorderGhost, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
                     }
                 }
 
@@ -1173,6 +1397,296 @@ private fun GhostCircleButton(
     }
 }
 
+/** Loading skeleton while the surah's verses resolve (cache → network). */
+@Composable
+private fun MushafLoadingCard(surahNameEn: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(18.dp))
+            .topSpecular(inset = 24.dp)
+            .padding(18.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(28.dp),
+                color = GhaisNoir.TextPrimary,
+                strokeWidth = 2.dp
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "Loading $surahNameEn…",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = GhaisNoir.TextSecondary
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            repeat(3) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(GhaisNoir.Fill2)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+/** Error card with retry when the verse fetch throws. */
+@Composable
+private fun MushafErrorCard(surahNameEn: String, onRetry: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(18.dp))
+            .topSpecular(inset = 24.dp)
+            .padding(18.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Default.CloudOff,
+                contentDescription = null,
+                tint = GhaisNoir.TextTertiary,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Couldn't load $surahNameEn",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = GhaisNoir.TextPrimary
+            )
+            Text(
+                text = "Check your connection and try again.",
+                fontSize = 12.sp,
+                color = GhaisNoir.TextSecondary,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(GhaisNoir.chromeFill())
+                    .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(18.dp))
+                    .noirClickable(onClick = onRetry)
+                    .padding(horizontal = 18.dp, vertical = 10.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    tint = GhaisNoir.OnChrome,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Retry",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GhaisNoir.OnChrome
+                )
+            }
+        }
+    }
+}
+
+/** Honest offline notice when only placeholder verses are available. */
+@Composable
+private fun MushafOfflineNoticeCard(surahNameEn: String, onRetry: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(18.dp))
+            .topSpecular(inset = 24.dp)
+            .padding(horizontal = 18.dp, vertical = 14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "$surahNameEn isn't downloaded yet",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GhaisNoir.TextPrimary
+                )
+                Text(
+                    text = "Showing verse placeholders — connect to load the full text.",
+                    fontSize = 12.sp,
+                    color = GhaisNoir.TextSecondary,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(GhaisNoir.Fill4)
+                    .border(1.dp, GhaisNoir.SpecularTop, RoundedCornerShape(16.dp))
+                    .noirClickable(onClick = onRetry)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Retry loading surah",
+                    tint = GhaisNoir.TextPrimary,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Retry",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GhaisNoir.TextPrimary
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Saved bookmarks across ALL surahs. Tap jumps to that surah/ayah; the X
+ * removes the bookmark. Always visible so the feature is discoverable.
+ */
+@Composable
+private fun MushafBookmarksSection(
+    bookmarks: Set<Pair<Int, Int>>,
+    onJump: (Int, Int) -> Unit,
+    onRemove: (Int, Int) -> Unit
+) {
+    val sorted = remember(bookmarks) {
+        bookmarks.sortedWith(compareBy({ it.first }, { it.second }))
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(18.dp))
+            .topSpecular(inset = 24.dp)
+            .padding(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Bookmark,
+                    contentDescription = null,
+                    tint = GhaisNoir.TextPrimary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "Bookmarks",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GhaisNoir.TextPrimary
+                )
+                Text(
+                    text = sorted.size.toString(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GhaisNoir.TextTertiary,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (sorted.isEmpty()) {
+                Text(
+                    text = "No bookmarks yet — tap the bookmark icon on any verse.",
+                    fontSize = 12.sp,
+                    color = GhaisNoir.TextTertiary,
+                    lineHeight = 17.sp
+                )
+            } else {
+                sorted.forEach { (s, a) ->
+                    val name = QuranData.SURAHS.firstOrNull { it.id == s }?.nameEn ?: "Surah $s"
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderGhost, RoundedCornerShape(12.dp))
+                            .noirClickable(onClick = { onJump(s, a) })
+                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(GhaisNoir.wellFill())
+                                .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = a.toString(),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = GhaisNoir.TextPrimary
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = name,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = GhaisNoir.TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "Ayah $a",
+                                fontSize = 11.sp,
+                                color = GhaisNoir.TextTertiary
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Jump to $name ayah $a",
+                            tint = GhaisNoir.TextTertiary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        GhostCircleButton(
+                            icon = Icons.Default.Close,
+                            contentDescription = "Remove bookmark $name ayah $a",
+                            onClick = { onRemove(s, a) }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+}
+
 /**
  * Reading-mode bottom utilities capsule in noir glass: ghost repeat + tafsir
  * pills, chromium page/stream toggle. State reads through fill elevation.
@@ -1298,6 +1812,9 @@ private fun MushafPageViewCard(
     arabicFontSize: Int,
     isTajweed: Boolean,
     surahId: Int = 18,
+    surahNameAr: String = "الكهف",
+    juzNo: Int = 15,
+    pageNo: Int = 293,
     onSelectAyah: (MushafAyahData) -> Unit
 ) {
     Box(
@@ -1325,14 +1842,14 @@ private fun MushafPageViewCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "جُزْء ١٥",
+                        text = "جُزْء ${toArabicDigits(juzNo)}",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.sp,
                         color = GhaisNoir.TextSecondary
                     )
                     Text(
-                        text = "سُورَةُ الكَهْفِ",
+                        text = "سُورَةُ $surahNameAr",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Normal,
                         style = GhaisTypography.quranScript,
@@ -1340,7 +1857,7 @@ private fun MushafPageViewCard(
                         color = GhaisNoir.TextPrimary
                     )
                     Text(
-                        text = "صَفْحَة ٢٩٣",
+                        text = "صَفْحَة ${toArabicDigits(pageNo)}",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.sp,
@@ -1436,7 +1953,7 @@ private fun MushafPageViewCard(
 
             // Page footer.
             Text(
-                text = "— ٢٩٣ —",
+                text = "— ${toArabicDigits(pageNo)} —",
                 fontSize = 12.sp,
                 letterSpacing = 0.sp,
                 color = GhaisNoir.TextTertiary,
@@ -1448,13 +1965,19 @@ private fun MushafPageViewCard(
 
 /**
  * Tafsir sheet dialog in noir glass: dark card, 100%-white quote Arabic,
- * ghost rule, secondary body, white Close affordance.
+ * ghost rule, secondary body, white Close affordance. Verse commentary is
+ * not bundled on this screen, so the dialog shows the translation with an
+ * honest note instead of a hardcoded snippet.
  */
 @Composable
 private fun TafsirDialog(
     ayah: MushafAyahData,
+    surahNameEn: String,
     onDismiss: () -> Unit
 ) {
+    val body = ayah.tafsirSnippet.ifBlank {
+        "Full tafsir commentary isn't bundled on this screen — showing the translation for $surahNameEn ayah ${ayah.ayahNumber}.\n\n\"${ayah.translation}\""
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -1470,7 +1993,7 @@ private fun TafsirDialog(
                     color = GhaisNoir.TextPrimary
                 )
                 Text(
-                    text = "Ayah ${ayah.ayahNumber}",
+                    text = "$surahNameEn ${ayah.ayahNumber}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = GhaisNoir.TextTertiary
@@ -1502,7 +2025,7 @@ private fun TafsirDialog(
                 HorizontalDivider(color = GhaisNoir.BorderGhost)
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = ayah.tafsirSnippet,
+                    text = body,
                     fontSize = 14.sp,
                     color = GhaisNoir.TextSecondary,
                     lineHeight = 21.sp
@@ -1518,4 +2041,3 @@ private fun TafsirDialog(
         shape = RoundedCornerShape(20.dp)
     )
 }
-

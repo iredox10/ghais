@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -39,6 +40,13 @@ object MainScreen : Screen {
     @Composable
     override fun Content() {
         val rootNavigator = LocalNavigator.currentOrThrow
+        // Deep-link handoff (MainActivity posts parsed AppLinks here via DeepLinkBus).
+        val pendingLink by DeepLinkBus.pending.collectAsState()
+        LaunchedEffect(pendingLink) {
+            val link = DeepLinkBus.consume() ?: return@LaunchedEffect
+            val screen = link.toScreen()
+            if (screen != null) rootNavigator.push(screen) else rootNavigator.popUntilRoot()
+        }
         CompositionLocalProvider(LocalRootNavigator provides rootNavigator) {
             TabNavigator(HomeScreen) {
                 val currentTrack by AudioEngine.currentTrack.collectAsState()
