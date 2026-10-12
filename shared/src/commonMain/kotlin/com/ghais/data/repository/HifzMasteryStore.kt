@@ -44,6 +44,10 @@ const val DEFAULT_HIFZ_DAILY_GOAL = 5
  * applied) by [HifzMasteryStore.exportSnapshot] and written verbatim by
  * [HifzMasteryStore.importSnapshot].
  *
+ * [dueDays] / [intervals] carry the SM-2-lite SRS state (see [HifzMasteryStore.dueToday]):
+ * per-ayah due epoch-day and spacing interval. They default to empty so older
+ * callers and cloud documents without SRS data still restore.
+ *
  * This is the unit of sync, not a wire format. A `hifz_mastery` document would
  * need [statuses] as rows of `surah_id` / `ayah_no` / `status` (the status as
  * its [MasteryStatus] name) plus `daily_goal_count`, `streak_days`,
@@ -55,6 +59,8 @@ data class HifzSnapshot(
     val streakDays: Int = 0,
     val todayReviewedCount: Int = 0,
     val lastReviewDay: Long = 0L,
+    val dueDays: Map<Pair<Int, Int>, Long> = emptyMap(),
+    val intervals: Map<Pair<Int, Int>, Int> = emptyMap(),
 )
 
 /**
@@ -65,6 +71,10 @@ data class HifzSnapshot(
  *
  * Stored via multiplatform [Settings] with keys:
  * - Ayah status: `mastery_{surahId}_{ayahNo}` (one key per ayah)
+ * - SRS state (SM-2-lite, additive): `due_{surahId}_{ayahNo}` (Long epoch day
+ *   the ayah is next due) and `interval_{surahId}_{ayahNo}` (Int spacing
+ *   interval in days). Written on every non-NEW [setStatus], removed on NEW,
+ *   backfilled on [load] for legacy rows (due = first-seen day, interval = 1).
  * - Goal & Streak: `hifz_daily_goal_count`, `hifz_today_reviewed_count`,
  *                  `hifz_last_review_day`, `hifz_streak_days`.
  *
@@ -88,6 +98,10 @@ object HifzMasteryStore {
 
     /** Prefix of the per-ayah keys. Also the whole-namespace prefix for `"local"`. */
     private const val MASTERY_KEY_PREFIX = "mastery_"
+
+    /** Prefixes of the per-ayah SM-2-lite SRS keys (see [dueToday]). */
+    private const val DUE_KEY_PREFIX = "due_"
+    private const val INTERVAL_KEY_PREFIX = "interval_"
 
     /** The unbound / pre-auth owner. [key] and [masteryPrefix] collapse to bare keys for it. */
     private const val LOCAL_OWNER = "local"
@@ -114,6 +128,12 @@ object HifzMasteryStore {
     private fun ayahKey(surahId: Int, ayahNo: Int): String =
         "$MASTERY_KEY_PREFIX${surahId}_$ayahNo"
 
+    private fun dueKey(surahId: Int, ayahNo: Int): String =
+        "$DUE_KEY_PREFIX${surahId}_$ayahNo"
+
+    private fun intervalKey(surahId: Int, ayahNo: Int): String =
+        "$INTERVAL_KEY_PREFIX${surahId}_$ayahNo"
+
     /** Test seam: Settings factory (unit tests install an in-memory store). */
     internal var settingsFactory: () -> Settings = { Settings() }
     private var cachedSettings: Settings? = null
@@ -136,6 +156,15 @@ object HifzMasteryStore {
     // Cached sorted list of weak ayahs (REVIEW_NEEDED)
     private val _weakAyahs = MutableStateFlow<List<Pair<Int, Int>>>(emptyList())
     val weakAyahs: StateFlow<List<Pair<Int, Int>>> = _weakAyahs.asStateFlow()
+
+    // SM-2-lite SRS state: per-ayah due epoch-day and spacing interval (days).
+    // Only non-NEW ayahs are tracked; a missing entry means interval 1 and a
+    // due day of first review (see [getDueDay] / [getInterval]).
+    private val _dueDayMap = MutableStateFlow<Map<Pair<Int, Int>, Long>>(emptyMap())
+    val dueDayMap: StateFlow<Map<Pair<Int, Int>, Long>> = _dueDayMap.asStateFlow()
+
+    private val _intervalMap = MutableStateFlow<Map<Pair<Int, Int>, Int>>(emptyMap())
+    val intervalMap: StateFlow<Map<Pair<Int, Int>, Int>> = _intervalMap.asStateFlow()
 
     // Daily memorization/review goal (default 5 ayahs)
     private val _dailyGoalCount = MutableStateFlow(DEFAULT_HIFZ_DAILY_GOAL)
@@ -231,11 +260,42 @@ object HifzMasteryStore {
             }
             if (status != MasteryStatus.NEW) statuses[surahId to ayahNo] = status
         }
+        // SRS halves: same per-ayah shape under their own prefixes.
+        val dueDays = mutableMapOf<Pair<Int, Int>, Long>()
+        val duePrefix = scopedKey(owner, DUE_KEY_PREFIX)
+        for (k in settings.keys) {
+            if (!k.startsWith(duePrefix)) continue
+            val parts = k.removePrefix(duePrefix).split("_")
+            if (parts.size != 2) continue
+            val surahId = parts[0].toIntOrNull() ?: continue
+            val ayahNo = parts[1].toIntOrNull() ?: continue
+            val due = try {
+                settings.getLongOrNull(k)
+            } catch (_: Exception) {
+                null
+            } ?: continue
+            dueDays[surahId to ayahNo] = due
+        }
+        val intervals = mutableMapOf<Pair<Int, Int>, Int>()
+        val intervalPrefix = scopedKey(owner, INTERVAL_KEY_PREFIX)
+        for (k in settings.keys) {
+            if (!k.startsWith(intervalPrefix)) continue
+            val parts = k.removePrefix(intervalPrefix).split("_")
+            if (parts.size != 2) continue
+            val surahId = parts[0].toIntOrNull() ?: continue
+            val ayahNo = parts[1].toIntOrNull() ?: continue
+            val interval = try {
+                settings.getIntOrNull(k)
+            } catch (_: Exception) {
+                null
+            } ?: continue
+            if (interval > 0) intervals[surahId to ayahNo] = interval
+        }
         val goal = settings.getIntOrNull(scopedKey(owner, KEY_DAILY_GOAL))
         val streak = settings.getIntOrNull(scopedKey(owner, KEY_STREAK_DAYS))
         val reviewed = settings.getIntOrNull(scopedKey(owner, KEY_TODAY_REVIEWED_COUNT))
         val lastDay = settings.getLongOrNull(scopedKey(owner, KEY_LAST_REVIEW_DAY))
-        if (statuses.isEmpty() && goal == null && streak == null && reviewed == null && lastDay == null) {
+        if (statuses.isEmpty() && dueDays.isEmpty() && intervals.isEmpty() && goal == null && streak == null && reviewed == null && lastDay == null) {
             null
         } else {
             HifzSnapshot(
@@ -244,6 +304,8 @@ object HifzMasteryStore {
                 streakDays = streak ?: 0,
                 todayReviewedCount = reviewed ?: 0,
                 lastReviewDay = lastDay ?: 0L,
+                dueDays = dueDays,
+                intervals = intervals,
             )
         }
     } catch (_: Exception) {
@@ -262,6 +324,19 @@ object HifzMasteryStore {
             if (status == MasteryStatus.NEW) continue
             try {
                 settings.putString(scopedKey(owner, ayahKey(coord.first, coord.second)), status.name)
+            } catch (_: Exception) {
+            }
+        }
+        for ((coord, due) in snapshot.dueDays) {
+            try {
+                settings.putLong(scopedKey(owner, dueKey(coord.first, coord.second)), due)
+            } catch (_: Exception) {
+            }
+        }
+        for ((coord, interval) in snapshot.intervals) {
+            if (interval <= 0) continue
+            try {
+                settings.putInt(scopedKey(owner, intervalKey(coord.first, coord.second)), interval)
             } catch (_: Exception) {
             }
         }
@@ -296,6 +371,14 @@ object HifzMasteryStore {
             for (k in settings.keys.filter { it.startsWith(prefix) }) {
                 settings.remove(k)
             }
+            val duePrefix = scopedKey(owner, DUE_KEY_PREFIX)
+            for (k in settings.keys.filter { it.startsWith(duePrefix) }) {
+                settings.remove(k)
+            }
+            val intervalPrefix = scopedKey(owner, INTERVAL_KEY_PREFIX)
+            for (k in settings.keys.filter { it.startsWith(intervalPrefix) }) {
+                settings.remove(k)
+            }
             settings.remove(scopedKey(owner, KEY_DAILY_GOAL))
             settings.remove(scopedKey(owner, KEY_TODAY_REVIEWED_COUNT))
             settings.remove(scopedKey(owner, KEY_LAST_REVIEW_DAY))
@@ -307,6 +390,8 @@ object HifzMasteryStore {
     /** A snapshot indistinguishable from a freshly installed store. */
     private fun HifzSnapshot.isPristine(): Boolean =
         statuses.isEmpty() &&
+            dueDays.isEmpty() &&
+            intervals.isEmpty() &&
             dailyGoalCount == DEFAULT_HIFZ_DAILY_GOAL &&
             streakDays == 0 &&
             todayReviewedCount == 0 &&
@@ -338,6 +423,14 @@ object HifzMasteryStore {
         } catch (_: Exception) {
             0L
         },
+        dueDays = _dueDayMap.value.entries
+            .asSequence()
+            .sortedWith(compareBy({ it.key.first }, { it.key.second }))
+            .associate { it.key to it.value },
+        intervals = _intervalMap.value.entries
+            .asSequence()
+            .sortedWith(compareBy({ it.key.first }, { it.key.second }))
+            .associate { it.key to it.value },
     )
 
     /**
@@ -402,6 +495,11 @@ object HifzMasteryStore {
     /**
      * Explicitly sets the [MasteryStatus] for the specified ayah.
      * Persists to Settings under `mastery_{surahId}_{ayahNo}`.
+     *
+     * SM-2-lite scheduling runs on the same path (additive, no signature
+     * change): MASTERED doubles the per-ayah interval (default 1) and pushes
+     * the due day to `today + max(1, interval * 2)`; REVIEW_NEEDED resets the
+     * interval to 1 with the due day tomorrow; NEW drops the SRS rows.
      */
     fun setStatus(surahId: Int, ayahNo: Int, status: MasteryStatus) {
         val storageKey = key(ayahKey(surahId, ayahNo))
@@ -417,6 +515,82 @@ object HifzMasteryStore {
             }
         }
         updateDerivedFlows()
+        updateSrsOnSetStatus(surahId, ayahNo, status)
+    }
+
+    /**
+     * SM-2-lite half of [setStatus]: maintains the per-ayah `due_` /
+     * `interval_` rows and their in-memory mirrors. Kept separate so the
+     * status path above stays byte-for-byte what it was.
+     */
+    private fun updateSrsOnSetStatus(surahId: Int, ayahNo: Int, status: MasteryStatus) {
+        val coord = surahId to ayahNo
+        when (status) {
+            MasteryStatus.MASTERED -> {
+                val today = currentEpochDay()
+                val nextInterval = maxOf(1, (_intervalMap.value[coord] ?: 1) * 2)
+                val nextDue = today + nextInterval
+                try {
+                    settings.putInt(key(intervalKey(surahId, ayahNo)), nextInterval)
+                    settings.putLong(key(dueKey(surahId, ayahNo)), nextDue)
+                } catch (_: Exception) {}
+                _intervalMap.update { it + (coord to nextInterval) }
+                _dueDayMap.update { it + (coord to nextDue) }
+            }
+            MasteryStatus.REVIEW_NEEDED -> {
+                val nextDue = currentEpochDay() + 1L
+                try {
+                    settings.putInt(key(intervalKey(surahId, ayahNo)), 1)
+                    settings.putLong(key(dueKey(surahId, ayahNo)), nextDue)
+                } catch (_: Exception) {}
+                _intervalMap.update { it + (coord to 1) }
+                _dueDayMap.update { it + (coord to nextDue) }
+            }
+            MasteryStatus.NEW -> {
+                try {
+                    settings.remove(key(intervalKey(surahId, ayahNo)))
+                    settings.remove(key(dueKey(surahId, ayahNo)))
+                } catch (_: Exception) {}
+                _intervalMap.update { it - coord }
+                _dueDayMap.update { it - coord }
+            }
+        }
+    }
+
+    /**
+     * Returns the spacing interval in days for the given ayah. Defaults to 1
+     * (an ayah never graded has no spacing history).
+     */
+    fun getInterval(surahId: Int, ayahNo: Int): Int =
+        _intervalMap.value[surahId to ayahNo] ?: 1
+
+    /**
+     * Returns the epoch day the given ayah is next due for review. Defaults
+     * to the first-review day: a tracked ayah with no stored due row is due
+     * the day it is first seen (today on a fresh load).
+     */
+    fun getDueDay(surahId: Int, ayahNo: Int): Long =
+        _dueDayMap.value[surahId to ayahNo] ?: currentEpochDay()
+
+    /**
+     * Ayahs due for review on [nowEpochDay] (defaults to today): every tracked
+     * (non-NEW) ayah whose due day is on or before that day.
+     *
+     * Sorted overdue-first (ascending due day), ties in surah/ayah order, so
+     * the most lapsed ayah heads a "due today" queue.
+     */
+    fun dueToday(nowEpochDay: Long = currentEpochDay()): List<Pair<Int, Int>> {
+        val today = currentEpochDay()
+        val dues = _dueDayMap.value
+        return _masteryMap.value.keys
+            .filter { (dues[it] ?: today) <= nowEpochDay }
+            .sortedWith(
+                compareBy(
+                    { dues[it] ?: today },
+                    { it.first },
+                    { it.second },
+                ),
+            )
     }
 
     /**
@@ -520,6 +694,8 @@ object HifzMasteryStore {
         _masteryMap.value = emptyMap()
         _totalMasteredCount.value = 0
         _weakAyahs.value = emptyList()
+        _dueDayMap.value = emptyMap()
+        _intervalMap.value = emptyMap()
         _todayReviewedCount.value = 0
         _streakDays.value = 0
         _dailyGoalCount.value = DEFAULT_HIFZ_DAILY_GOAL
@@ -559,6 +735,7 @@ object HifzMasteryStore {
 
         _masteryMap.value = loadedMap
         updateDerivedFlows()
+        loadSrsState(loadedMap.keys)
 
         val savedGoal = try {
             settings.getInt(key(KEY_DAILY_GOAL), DEFAULT_HIFZ_DAILY_GOAL)
@@ -612,6 +789,50 @@ object HifzMasteryStore {
                 } catch (_: Exception) {}
             }
         }
+    }
+
+    /**
+     * Restores the SM-2-lite mirrors for [tracked] coords. Rows graded before
+     * this feature existed have a status but no `due_` / `interval_` keys;
+     * those backfill to the first-review-day default (due = today, interval =
+     * 1) and persist it, so a legacy profile is due-today honest on first
+     * load and roundtrips afterwards.
+     */
+    private fun loadSrsState(tracked: Set<Pair<Int, Int>>) {
+        val srsToday = currentEpochDay()
+        val dues = mutableMapOf<Pair<Int, Int>, Long>()
+        val intervals = mutableMapOf<Pair<Int, Int>, Int>()
+        for (coord in tracked) {
+            val (surahId, ayahNo) = coord
+            val storedDue = try {
+                settings.getLongOrNull(key(dueKey(surahId, ayahNo)))
+            } catch (_: Exception) {
+                null
+            }
+            val storedInterval = try {
+                settings.getIntOrNull(key(intervalKey(surahId, ayahNo)))
+            } catch (_: Exception) {
+                null
+            }
+            if (storedDue != null) {
+                dues[coord] = storedDue
+            } else {
+                dues[coord] = srsToday
+                try {
+                    settings.putLong(key(dueKey(surahId, ayahNo)), srsToday)
+                } catch (_: Exception) {}
+            }
+            if (storedInterval != null && storedInterval > 0) {
+                intervals[coord] = storedInterval
+            } else {
+                intervals[coord] = 1
+                try {
+                    settings.putInt(key(intervalKey(surahId, ayahNo)), 1)
+                } catch (_: Exception) {}
+            }
+        }
+        _dueDayMap.value = dues
+        _intervalMap.value = intervals
     }
 
     private fun updateDerivedFlows() {

@@ -171,6 +171,109 @@ class HifzMasteryStoreTest {
         assertTrue(HifzMasteryStore.isDailyGoalReached())
     }
 
+    // --- SM-2-lite SRS (due days + intervals, additive in setStatus) ---
+
+    @Test
+    fun testMasteredDoublesIntervalEachTime() {
+        HifzMasteryStore.setStatus(3, 7, MasteryStatus.MASTERED)
+        assertEquals(2, HifzMasteryStore.getInterval(3, 7))
+        val firstDue = HifzMasteryStore.getDueDay(3, 7)
+
+        HifzMasteryStore.setStatus(3, 7, MasteryStatus.MASTERED)
+        assertEquals(4, HifzMasteryStore.getInterval(3, 7))
+        val secondDue = HifzMasteryStore.getDueDay(3, 7)
+
+        // Same-day grading: due moves from today+2 to today+4.
+        assertEquals(2, secondDue - firstDue)
+    }
+
+    @Test
+    fun testReviewNeededResetsIntervalAndDueTomorrow() {
+        HifzMasteryStore.setStatus(3, 7, MasteryStatus.MASTERED)
+        HifzMasteryStore.setStatus(3, 7, MasteryStatus.MASTERED)
+        assertEquals(4, HifzMasteryStore.getInterval(3, 7))
+
+        HifzMasteryStore.setStatus(3, 7, MasteryStatus.REVIEW_NEEDED)
+        assertEquals(1, HifzMasteryStore.getInterval(3, 7))
+
+        // A fresh REVIEW_NEEDED is also due tomorrow: same-day equality holds
+        // without touching the real clock.
+        HifzMasteryStore.setStatus(4, 9, MasteryStatus.REVIEW_NEEDED)
+        assertEquals(1, HifzMasteryStore.getInterval(4, 9))
+        assertEquals(HifzMasteryStore.getDueDay(4, 9), HifzMasteryStore.getDueDay(3, 7))
+    }
+
+    @Test
+    fun testSettingNewClearsSrsState() {
+        HifzMasteryStore.setStatus(5, 5, MasteryStatus.MASTERED)
+        assertEquals(2, HifzMasteryStore.getInterval(5, 5))
+
+        HifzMasteryStore.setStatus(5, 5, MasteryStatus.NEW)
+
+        assertEquals(1, HifzMasteryStore.getInterval(5, 5))
+        assertTrue(
+            HifzMasteryStore.dueToday(Long.MAX_VALUE).none { it == (5 to 5) },
+        )
+    }
+
+    @Test
+    fun testDueTodayOrdersOverdueFirst() {
+        HifzMasteryStore.setStatus(1, 1, MasteryStatus.REVIEW_NEEDED) // due T+1
+        HifzMasteryStore.setStatus(2, 5, MasteryStatus.MASTERED) // due T+2
+        HifzMasteryStore.setStatus(1, 3, MasteryStatus.MASTERED)
+        HifzMasteryStore.setStatus(1, 3, MasteryStatus.MASTERED) // due T+4
+
+        val tomorrow = HifzMasteryStore.getDueDay(1, 1)
+        val plusTwo = HifzMasteryStore.getDueDay(2, 5)
+        val plusFour = HifzMasteryStore.getDueDay(1, 3)
+
+        assertTrue(HifzMasteryStore.dueToday(tomorrow - 1).isEmpty())
+        assertEquals(listOf(1 to 1), HifzMasteryStore.dueToday(tomorrow))
+        assertEquals(
+            listOf(1 to 1, 2 to 5),
+            HifzMasteryStore.dueToday(plusTwo),
+        )
+        // (1,1) is overdue by T+4 and still heads the queue; ties break by
+        // surah/ayah order.
+        assertEquals(
+            listOf(1 to 1, 2 to 5, 1 to 3),
+            HifzMasteryStore.dueToday(plusFour),
+        )
+        assertEquals(
+            listOf(1 to 1, 2 to 5, 1 to 3),
+            HifzMasteryStore.dueToday(plusFour + 30),
+        )
+    }
+
+    @Test
+    fun testSrsStateSurvivesSettingsReload() {
+        val backing = TestSettings()
+        HifzMasteryStore.settingsFactory = { backing }
+        HifzMasteryStore.resetSettingsCache()
+        HifzMasteryStore.setOwner("srs-roundtrip")
+        HifzMasteryStore.clearAll()
+
+        HifzMasteryStore.setStatus(1, 1, MasteryStatus.MASTERED)
+        HifzMasteryStore.setStatus(1, 1, MasteryStatus.MASTERED)
+        val due = HifzMasteryStore.getDueDay(1, 1)
+
+        val snapshot = HifzMasteryStore.exportSnapshot()
+        assertEquals(4, snapshot.intervals[1 to 1])
+        assertEquals(due, snapshot.dueDays[1 to 1])
+
+        // Bounce owners to force load() from the same Settings without
+        // clearing it (account -> account carries nothing).
+        HifzMasteryStore.setOwner("srs-bounce")
+        assertEquals(1, HifzMasteryStore.getInterval(1, 1))
+        HifzMasteryStore.setOwner("srs-roundtrip")
+
+        assertEquals(4, HifzMasteryStore.getInterval(1, 1))
+        assertEquals(due, HifzMasteryStore.getDueDay(1, 1))
+        assertEquals(MasteryStatus.MASTERED, HifzMasteryStore.getStatus(1, 1))
+        assertEquals(listOf(1 to 1), HifzMasteryStore.dueToday(due))
+        assertTrue(HifzMasteryStore.dueToday(due - 1).none { it == (1 to 1) })
+    }
+
     @Test
     fun testSurahMasteredPercentageUsesSeedAyahCounts() {
         // Al-Fatihah has 7 ayahs in the bundled seed data.

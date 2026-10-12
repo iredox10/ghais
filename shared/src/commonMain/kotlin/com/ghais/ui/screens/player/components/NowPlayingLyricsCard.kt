@@ -34,6 +34,8 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,7 +43,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.ghais.data.repository.HifzMasteryStore
+import com.ghais.data.repository.MasteryStatus
 import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.player.AudioEngine
 import androidx.compose.ui.Alignment
@@ -88,6 +94,11 @@ import com.ghais.ui.theme.GhaisTypography
  *   + 1dp BorderCard hairline, GhaisShapes.pill) below the translation naming
  *   the current edition, opening the player's translation picker. Renders
  *   whether or not translation text loaded — see the note at its call site.
+ * - Blind self-test (hifz): an eye toggle beside the translation pill conceals
+ *   the Arabic verse and the translation behind per-block tap-to-reveal
+ *   placeholders plus a "Reveal all" control; while concealed, "Got it" /
+ *   "Missed" grade buttons write MASTERED / REVIEW_NEEDED for the current
+ *   ayah via HifzMasteryStore. Blind state is remember-only (no Settings).
  * - All callbacks/logic/signatures preserved; scrubber + controls bar untouched.
  */
 @Composable
@@ -113,12 +124,24 @@ fun NowPlayingLyricsCard(
      * forgotten one.
      */
     onOpenTranslationPicker: (() -> Unit)?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /**
+     * Starting value for blind self-test mode. Optional with a default so
+     * existing call sites are untouched; the live toggle is remember-only and
+     * never persisted to Settings.
+     */
+    blindInitial: Boolean = false
 ) {
     val isGapActive by AudioEngine.isRecitationGapActive.collectAsState()
     val gapCountdown by AudioEngine.recitationGapCountdown.collectAsState()
     val hifzRange by AudioEngine.hifzRange.collectAsState()
     val loadingSurahs by QuranAyahRepository.loadingSurahs.collectAsState()
+
+    // Blind self-test preference: in-memory only (remember), shared across
+    // verse changes so reciting through a range stays concealed. Per-block
+    // reveal state lives inside the keyed verse block below and resets per ayah.
+    var blindOn by remember { mutableStateOf(blindInitial) }
+    val masteryMap by HifzMasteryStore.masteryMap.collectAsState()
 
     val displayAyahNo = currentTrack?.ayahNo?.takeIf { it > 0 }
         ?: currentAyahVerse?.ayahNo
@@ -327,6 +350,10 @@ fun NowPlayingLyricsCard(
             // key() so each verse starts at the top (see the note above); the scroll
             // state itself is created inside, where a composable context exists.
             key(surahId, displayAyahNo) {
+            // Per-block reveal: scoped inside key() so each new ayah starts
+            // concealed again while the blindOn preference above survives.
+            var arabicRevealed by remember { mutableStateOf(false) }
+            var translationRevealed by remember { mutableStateOf(false) }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -375,6 +402,12 @@ fun NowPlayingLyricsCard(
                                     // one thing this change cannot give back. Reclaimed height
                                     // is spent on density, not scale — mushaf look intact.
                                     if (activeArabic.isNotBlank()) {
+                                        if (blindOn && !arabicRevealed) {
+                                            ConcealedVerseBlock(
+                                                label = "Arabic concealed — tap to reveal",
+                                                onReveal = { arabicRevealed = true }
+                                            )
+                                        } else {
                                         Text(
                                             text = buildAnnotatedString {
                                                 append(activeArabic)
@@ -404,6 +437,7 @@ fun NowPlayingLyricsCard(
                                             inlineContent = ayahMarkContent(ringSize = 19.sp, digitSize = 9.sp),
                                             modifier = Modifier.fillMaxWidth()
                                         )
+                                        }
                                     }
                                 }
                             }
@@ -422,14 +456,75 @@ fun NowPlayingLyricsCard(
                             // which is the last thing the user has to reach on a long
                             // ayah. Fonts, sizes and colors are untouched.
                             Spacer(modifier = Modifier.height(11.dp))
-                            Text(
-                                text = translationText,
-                                fontSize = 14.5.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = GhaisNoir.TextSecondary,
-                                lineHeight = 21.sp
+                            if (blindOn && !translationRevealed) {
+                                ConcealedVerseBlock(
+                                    label = "Translation concealed — tap to reveal",
+                                    onReveal = { translationRevealed = true }
+                                )
+                            } else {
+                                Text(
+                                    text = translationText,
+                                    fontSize = 14.5.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = GhaisNoir.TextSecondary,
+                                    lineHeight = 21.sp
+                                )
+                            }
+                        }
+
+                    // Blind self-test footer: Reveal-all (only while something
+                    // is still hidden) + Got it / Missed self-grade writing
+                    // straight to HifzMasteryStore for the verse this card
+                    // already resolved (surahId / displayAyahNo) — no new props.
+                    val arabicStillHidden = blindOn && activeArabic.isNotBlank() && !arabicRevealed
+                    val translationStillHidden = blindOn && !translationText.isNullOrBlank() && !translationRevealed
+                    if (blindOn && (arabicStillHidden || translationStillHidden)) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "Reveal all",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = GhaisNoir.TextSecondary,
+                            modifier = Modifier.noirClickable {
+                                arabicRevealed = true
+                                translationRevealed = true
+                            }
+                        )
+                    }
+                    if (blindOn && !isCurrentVerseUnavailable) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        val currentStatus = masteryMap[surahId to displayAyahNo]
+                            ?: MasteryStatus.NEW
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            SelfGradeButton(
+                                text = "Got it",
+                                active = currentStatus == MasteryStatus.MASTERED,
+                                onGrade = {
+                                    HifzMasteryStore.setStatus(
+                                        surahId,
+                                        displayAyahNo,
+                                        MasteryStatus.MASTERED
+                                    )
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                            SelfGradeButton(
+                                text = "Missed",
+                                active = currentStatus == MasteryStatus.REVIEW_NEEDED,
+                                onGrade = {
+                                    HifzMasteryStore.setStatus(
+                                        surahId,
+                                        displayAyahNo,
+                                        MasteryStatus.REVIEW_NEEDED
+                                    )
+                                },
+                                modifier = Modifier.weight(1f)
                             )
                         }
+                    }
                     }
 
                     // Translation switcher — the only way to change the edition
@@ -448,11 +543,24 @@ fun NowPlayingLyricsCard(
                     // LTR (the RTL provider above is scoped to the Arabic block)
                     // because the label is a romanised translation name.
                     val openTranslationPicker = onOpenTranslationPicker
-                    if (openTranslationPicker != null) {
+                    // Blind toggle rides beside the translation pill: same row,
+                    // so the conceal control is found where the reading controls
+                    // live. Rendered whenever the verse is available even when
+                    // the picker is hidden (null), so blind mode never depends
+                    // on which overload hosted the card.
+                    val showBlindToggle = !isCurrentVerseUnavailable
+                    if (openTranslationPicker != null || showBlindToggle) {
                         Spacer(modifier = Modifier.height(10.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                        if (openTranslationPicker != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
+                                .weight(1f, fill = false)
                                 .widthIn(max = 280.dp)
                                 .clip(GhaisShapes.pill)
                                 .background(GhaisNoir.Fill2)
@@ -484,6 +592,30 @@ fun NowPlayingLyricsCard(
                                 modifier = Modifier.size(14.dp)
                             )
                         }
+                        }
+                        if (showBlindToggle) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(GhaisNoir.wellFill())
+                                    .border(
+                                        1.dp,
+                                        if (blindOn) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                                        CircleShape
+                                    )
+                                    .noirClickable { blindOn = !blindOn },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (blindOn) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (blindOn) "Show verse (blind mode on)" else "Hide verse for self-test",
+                                    tint = if (blindOn) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                        }
                     }
             }
             }
@@ -494,6 +626,70 @@ fun NowPlayingLyricsCard(
             // Tools row (loop/tafseer/learning/download) removed for minimal —
             // [onNextAyah]/[onPreviousAyah]/[onToggleAyahMode]/[onOpenTafseer]
             // kept in signature but intentionally not rendered here.
+    }
+}
+
+/**
+ * Placeholder for one concealed verse block in blind self-test mode.
+ * Monochrome ghost pill; tapping reveals just that block.
+ */
+@Composable
+private fun ConcealedVerseBlock(
+    label: String,
+    onReveal: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(GhaisShapes.pill)
+            .background(GhaisNoir.Fill2)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+            .noirClickable { onReveal() }
+            .padding(horizontal = 12.dp, vertical = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = GhaisNoir.TextTertiary
+        )
+    }
+}
+
+/**
+ * One half of the blind self-grade row ("Got it" / "Missed"). Ghost pill
+ * that reads active (Fill4 + specular border + primary text) while the
+ * ayah's stored status matches the grade it writes.
+ */
+@Composable
+private fun SelfGradeButton(
+    text: String,
+    active: Boolean,
+    onGrade: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = modifier
+            .clip(GhaisShapes.pill)
+            .background(if (active) GhaisNoir.Fill4 else GhaisNoir.Fill2)
+            .border(
+                1.dp,
+                if (active) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                GhaisShapes.pill
+            )
+            .noirClickable { onGrade() }
+            .padding(vertical = 8.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 12.5.sp,
+            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (active) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary
+        )
     }
 }
 

@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.HifzReciterLock
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.screens.player.components.VoiceCompareSection
 import com.ghais.ui.theme.GhaisNoir
 
 /**
@@ -40,6 +41,14 @@ import com.ghais.ui.theme.GhaisNoir
  * setHifzRange(surahId, startAyah, endAyah, targetLoops, repeatPerAyah,
  * pauseBetweenMs), wiring the Rep stepper to repeatPerAyah and the Pause
  * stepper (seconds) to pauseBetweenMs.
+ *
+ * Record & compare lives here too: a "Record & compare" toggle under the
+ * Loop/Clear buttons mounts VoiceCompareSection for the current ayah. There
+ * is no platform-capability flag on VoiceRecorderBridge (common expect,
+ * Android MediaRecorder implementation, iOS compiling stub), so the entry is
+ * shown on both platforms — on iOS the section degrades to its empty-state
+ * CTA (startRecording returns false, getRecordingPath is null) with no
+ * crash: graceful stub behavior, no gating wired.
  */
 @Composable
 fun HifzLoopRow(
@@ -64,6 +73,7 @@ fun HifzLoopRow(
     var targetLoops by remember(surahId, range?.targetLoops) {
         mutableStateOf(range?.targetLoops?.coerceAtLeast(1) ?: 1)
     }
+    var showRecorder by remember(surahId) { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -184,6 +194,50 @@ fun HifzLoopRow(
                     fontWeight = FontWeight.Medium
                 )
             }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Record & compare entry (see file KDoc for the no-gating choice):
+        // toggle mounts the wired VoiceCompareSection for the current ayah.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(if (showRecorder) GhaisNoir.Fill4 else GhaisNoir.Fill1)
+                .border(
+                    1.dp,
+                    if (showRecorder) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
+                    RoundedCornerShape(10.dp)
+                )
+                .noirClickable {
+                    onInteract()
+                    showRecorder = !showRecorder
+                }
+                .padding(vertical = 9.dp)
+        ) {
+            Text(
+                text = "Record & compare",
+                color = if (showRecorder) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = if (showRecorder) "▴" else "▾",
+                color = GhaisNoir.TextTertiary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        if (showRecorder) {
+            Spacer(modifier = Modifier.height(8.dp))
+            VoiceCompareSection(
+                surahId = surahId,
+                ayahNo = currentAyah.coerceIn(1, maxAyah)
+            )
         }
     }
 }
