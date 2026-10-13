@@ -28,6 +28,10 @@ import kotlin.time.Clock
  *   range, streamed or cached) or [SOURCE_OFFLINE] (the user's downloaded
  *   surahs, whatever they are — reciter/range are ignored at fire time).
  *   Defaults to stream so every stored JSON and cloud doc keeps working.
+ * @param offlineKeys the selected download keys (`"<slug>/<surahId>"`) an
+ *   offline-source schedule plays, in no particular order (playback sorts
+ *   them). Empty means "everything downloaded at fire time" — the pre-select
+ *   behaviour, kept so older offline schedules keep working.
  */
 @Serializable
 data class RecitationSchedule(
@@ -40,7 +44,8 @@ data class RecitationSchedule(
     val durationMin: Int? = null,
     val autoStart: Boolean = true,
     val enabled: Boolean = true,
-    val source: String = SOURCE_STREAM
+    val source: String = SOURCE_STREAM,
+    val offlineKeys: List<String> = emptyList()
 ) {
     companion object {
         const val SOURCE_STREAM = "stream"

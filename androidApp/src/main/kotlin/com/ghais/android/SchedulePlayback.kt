@@ -119,6 +119,8 @@ object SchedulePlayback {
                     QuranDownloads.downloadedKeys.value,
                     QuranDataRepository.getReciters(),
                     QuranDataRepository.getSurahs(),
+                    // Saved selection (empty = everything downloaded).
+                    onlyKeys = found.offlineKeys.toSet(),
                 )
             } else {
                 ScheduleTracks.buildScheduleTracks(

@@ -57,6 +57,10 @@ object ScheduleTracks {
      * clips are skipped), sorted by reciter then surah so Up Next reads as
      * the user's offline shelf.
      *
+     * When [onlyKeys] is non-empty, only those keys play (a schedule's saved
+     * selection); files deleted since are dropped silently. Empty [onlyKeys]
+     * means "everything downloaded".
+     *
      * A key whose reciter is unknown to [reciters] still gets a track (with a
      * synthetic identity): the player resolves the downloaded file first, so
      * the stream URL only matters for non-downloaded siblings — and here
@@ -66,9 +70,12 @@ object ScheduleTracks {
         downloadedKeys: Collection<String>,
         reciters: List<Reciter>,
         surahs: List<Surah>,
+        onlyKeys: Set<String> = emptySet(),
     ): List<TrackItem> {
         data class Key(val slug: String, val surahId: Int)
+        val selected = onlyKeys.takeIf { it.isNotEmpty() }
         val parsed = downloadedKeys.mapNotNull { key ->
+            if (selected != null && key !in selected) return@mapNotNull null
             val parts = key.split("/")
             if (parts.size != 2) return@mapNotNull null
             val surahId = parts[1].toIntOrNull() ?: return@mapNotNull null

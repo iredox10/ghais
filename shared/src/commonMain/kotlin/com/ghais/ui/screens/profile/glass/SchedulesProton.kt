@@ -265,9 +265,23 @@ private fun SchedEditorSheet(
     // Audio source: streamed reciter range, or the user's offline shelf.
     var useOffline by remember(initial) { mutableStateOf(initial?.isOffline == true) }
     val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
-    val offlineSurahCount = remember(downloadedKeys) {
-        downloadedKeys.count { it.split("/").size == 2 }
+    // Full-surah download keys only (clips can't anchor a schedule).
+    val offlineOptions = remember(downloadedKeys) {
+        downloadedKeys.filter { it.split("/").size == 2 }.sorted()
     }
+    // Saved selection, or everything (the pre-select behaviour) when creating
+    // new or editing an "all downloads" schedule.
+    var selectedKeys by remember(initial) {
+        mutableStateOf(
+            initial?.offlineKeys?.takeIf { it.isNotEmpty() }?.toSet()
+                ?: downloadedKeys.filter { it.split("/").size == 2 }.toSet()
+        )
+    }
+    // Deleted-since files drop out of the effective selection.
+    val effectiveSelection = remember(selectedKeys, downloadedKeys) {
+        selectedKeys.intersect(downloadedKeys.toSet())
+    }
+    val offlineSurahCount = offlineOptions.size
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -294,7 +308,7 @@ private fun SchedEditorSheet(
     val previewFrom = fromSurah.coerceIn(1, 114)
     val previewTo = if (useMinutes) 114 else toSurah.coerceIn(1, 114).coerceAtLeast(previewFrom)
     val overlapMissing = availableIds != null && (previewFrom..previewTo).none { it in availableIds }
-    val scheduleValid = if (useOffline) offlineSurahCount > 0 else rangeValid && !overlapMissing
+    val scheduleValid = if (useOffline) effectiveSelection.isNotEmpty() else rangeValid && !overlapMissing
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -353,13 +367,85 @@ private fun SchedEditorSheet(
                 }
                 Text(
                     text = if (useOffline) {
-                        if (offlineSurahCount == 0) "No downloads yet — download a surah first"
-                        else if (offlineSurahCount == 1) "Plays your 1 downloaded surah"
-                        else "Plays your $offlineSurahCount downloaded surahs in order"
+                        val n = effectiveSelection.size
+                        if (offlineOptions.isEmpty()) "No downloads yet — download a surah first"
+                        else if (n == 0) "Uncheck: pick at least one download below"
+                        else if (n == 1) "Plays your 1 picked surah"
+                        else "Plays your $n picked surahs in order"
                     } else "Stream a reciter's range as usual",
                     color = GhaisNoir.TextTertiary,
                     fontSize = 12.sp
                 )
+            }
+
+            // Offline pick list: which downloads this schedule plays.
+            if (useOffline && offlineOptions.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(text = "Downloads to play", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
+                    offlineOptions.forEach { key ->
+                        val (title, subtitle) = remember(key) { offlineKeyLabel(key) }
+                        val checked = key in effectiveSelection
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    GhaisNoir.Fill2,
+                                    com.ghais.ui.theme.GhaisShapes.cardNoir
+                                )
+                                .border(
+                                    1.dp,
+                                    GhaisNoir.BorderCard,
+                                    com.ghais.ui.theme.GhaisShapes.cardNoir
+                                )
+                                .noirClickable {
+                                    selectedKeys = if (key in selectedKeys) {
+                                        selectedKeys - key
+                                    } else {
+                                        selectedKeys + key
+                                    }
+                                }
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .background(
+                                        if (checked) GhaisNoir.Fill4 else GhaisNoir.Fill2,
+                                        CircleShape
+                                    )
+                                    .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (checked) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .background(GhaisNoir.TextPrimary, CircleShape)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = title,
+                                    color = if (checked) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = subtitle,
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 12.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             if (!useOffline) {
@@ -527,6 +613,11 @@ private fun SchedEditorSheet(
                                             RecitationSchedule.SOURCE_OFFLINE
                                         } else {
                                             RecitationSchedule.SOURCE_STREAM
+                                        },
+                                        offlineKeys = if (useOffline) {
+                                            effectiveSelection.sorted()
+                                        } else {
+                                            initial?.offlineKeys ?: emptyList()
                                         }
                                     )
                                 )
@@ -624,6 +715,30 @@ private fun SurahSelectorRow(
             tint = GhaisNoir.TextTertiary,
             modifier = Modifier.size(20.dp)
         )
+    }
+}
+
+/**
+ * Display label for a download key (`"<slug>/<surahId>"`): surah title +
+ * reciter name for the schedule pick list. Falls back to raw ids; never throws.
+ */
+private fun offlineKeyLabel(key: String): Pair<String, String> {
+    return try {
+        val parts = key.split("/")
+        val slug = parts.getOrNull(0).orEmpty()
+        val surahId = parts.getOrNull(1)?.toIntOrNull() ?: 0
+        val surah = QuranDataRepository.getSurahById(surahId)
+        val title = surah?.nameEn?.ifBlank { null }
+            ?: if (surahId > 0) "Surah $surahId" else key
+        val reciter = runCatching {
+            QuranDataRepository.getBrowseReciterBySlug(slug)
+                ?: QuranDataRepository.getReciters().firstOrNull { it.slug == slug }
+        }.getOrNull()
+        val subtitle = reciter?.nameEn?.takeIf { it.isNotBlank() }
+            ?: slug.ifBlank { "Unknown reciter" }
+        title to subtitle
+    } catch (_: Exception) {
+        key to ""
     }
 }
 

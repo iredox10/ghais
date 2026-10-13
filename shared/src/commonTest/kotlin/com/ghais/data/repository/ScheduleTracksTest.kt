@@ -234,4 +234,26 @@ class ScheduleTracksTest {
             ).isEmpty()
         )
     }
+
+    @Test
+    fun testOfflineSelectionLimitsQueueToPickedKeys() {
+        val tracks = ScheduleTracks.buildOfflineTracks(
+            setOf("alafasy/1", "alafasy/2", "alafasy/3"),
+            listOf(reciter()),
+            surahs,
+            onlyKeys = setOf("alafasy/3", "alafasy/1"),
+        )
+        assertEquals(listOf(1, 3), tracks.map { it.surahId })
+    }
+
+    @Test
+    fun testOfflineSelectionOfDeletedFilesYieldsEmpty() {
+        val tracks = ScheduleTracks.buildOfflineTracks(
+            setOf("alafasy/1"),
+            listOf(reciter()),
+            surahs,
+            onlyKeys = setOf("alafasy/2"),
+        )
+        assertTrue(tracks.isEmpty())
+    }
 }
