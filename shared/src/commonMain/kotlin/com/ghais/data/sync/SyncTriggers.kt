@@ -156,6 +156,14 @@ object SyncTriggers {
                 // so they can be adopted into the new account below. Never
                 // snapshot when switching directly between accounts.
                 val comingFromSignedOut = session != null && lastSessionId == null
+                if (session == null) {
+                    // Sign-out: forget the last account so a later sign-in is
+                    // recognised as coming-from-signed-out and the listening
+                    // done while signed out is snapshotted for adoption.
+                    // Without this, sign-out → listen → sign-in silently drops
+                    // the signed-out listening (never snapshotted, never adopted).
+                    lastSessionId = null
+                }
                 val localFavs = if (comingFromSignedOut) FavoritesStore.favoriteTracks.value else emptyList()
                 val localFollows = if (comingFromSignedOut) FollowStore.followedSlugs.value else emptySet()
                 val localRoutines = if (comingFromSignedOut) CustomRoutinesStore.routines.value else emptyList()
@@ -171,17 +179,26 @@ object SyncTriggers {
                 // See [adoptPendingPreAuthUsage].
                 val localUsage =
                     if (comingFromSignedOut) UserUsageRepository.snapshotPreAuthUsage() else null
-                UserUsageRepository.setOwner(owner)
-                FavoritesStore.setOwner(owner)
-                FollowStore.setOwner(owner)
-                CustomRoutinesStore.setOwner(owner)
-                SchedulesStore.setOwner(owner)
-                KhatmaStore.setOwner(owner)
-                OnboardingStore.setOwner(owner)
-                ReciterSearchHistoryStore.setOwner(owner)
-                HifzMasteryStore.setOwner(owner)
-                SearchHistoryStore.setOwner(owner)
-                QuranDownloads.setOwner(owner)
+                // Each rebind is individually guarded: one store throwing must
+                // never cancel this collector (that would wedge ownerBinding
+                // and freeze every stats/history UI on stale data until restart).
+                fun rebind(block: () -> Unit) {
+                    try {
+                        block()
+                    } catch (_: Exception) {
+                    }
+                }
+                rebind { UserUsageRepository.setOwner(owner) }
+                rebind { FavoritesStore.setOwner(owner) }
+                rebind { FollowStore.setOwner(owner) }
+                rebind { CustomRoutinesStore.setOwner(owner) }
+                rebind { SchedulesStore.setOwner(owner) }
+                rebind { KhatmaStore.setOwner(owner) }
+                rebind { OnboardingStore.setOwner(owner) }
+                rebind { ReciterSearchHistoryStore.setOwner(owner) }
+                rebind { HifzMasteryStore.setOwner(owner) }
+                rebind { SearchHistoryStore.setOwner(owner) }
+                rebind { QuranDownloads.setOwner(owner) }
                 if (comingFromSignedOut) {
                     // Adopt pre-auth choices into the new account, but only
                     // where it is still empty — never overwrite existing data.

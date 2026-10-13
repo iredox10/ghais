@@ -1408,7 +1408,12 @@ object UserUsageRepository {
     }
 
     private fun saveStoredSet(key: String, set: Set<String>) {
-        settings.putString(k(key), set.joinToString(","))
+        // Guarded like every other saver: this runs inside loadStats' repair
+        // pass, where a throw would abort before _stats is assigned and leave
+        // the previous namespace's numbers on screen.
+        try {
+            settings.putString(k(key), set.joinToString(","))
+        } catch (_: Exception) {}
     }
 
     private fun loadDailySeconds(): Map<Long, Long> {
