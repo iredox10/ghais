@@ -41,12 +41,15 @@ import com.ghais.data.repository.ChartsRepository
 import com.ghais.data.repository.DevotionalRepository
 import com.ghais.data.repository.EditorialPlaylist
 import com.ghais.data.repository.EditorialRepository
+import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.SearchHistoryStore
+import com.ghais.data.repository.TranslationPrefs
 import com.ghais.data.repository.reciterCountryKey
 import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.data.repository.toTrackItems
+import com.ghais.data.search.AyahSearchIndex
 import com.ghais.data.seed.QuranData
 import com.ghais.domain.model.DevotionalItem
 import com.ghais.domain.model.Reciter
@@ -128,6 +131,52 @@ class SearchScreen : Screen {
         val browseReciters = rememberBrowseReciters()
         val searchResults = remember(query, browseReciters) { SearchEngine.search(query, browseReciters) }
 
+        // Ayah-text search (AyahSearchIndex wave): edition-scoped, local-only.
+        // SurahDetailScreen takes only surahId (verified) — there is no
+        // scroll-to-ayah target, so rows below push the surah top and the play
+        // disc starts ayah-mode playback from the hit ayah instead.
+        val selectedEdition by TranslationPrefs.selectedEdition.collectAsState()
+        val ayahCacheGen by QuranAyahRepository.cacheGen.collectAsState()
+
+        // Edition invalidation: a switch retires the previous edition's verses
+        // out of the repository (onTranslationChanged), so the index must
+        // forget them too rather than serving stale-edition hits until the
+        // first surah of the new edition is indexed (indexSurah's backstop
+        // only fires then).
+        LaunchedEffect(selectedEdition) { AyahSearchIndex.clear() }
+
+        val trimmedQuery = query.trim()
+        // Mirrors AyahSearchIndex script routing: any Arabic-script char
+        // searches Arabic text; otherwise Latin needs length>=3 to be worth
+        // indexing/matching (shorter Latin substrings match everything).
+        val ayahTextRelevant = trimmedQuery.isNotEmpty() &&
+            (trimmedQuery.any { isArabicScript(it) } || trimmedQuery.length >= 3)
+        val ayahFeedKey = if (ayahTextRelevant) trimmedQuery else null
+        var ayahIndexTick by remember { mutableIntStateOf(0) }
+        // Feed ONLY locally cached + bundled verses — never a network fan-out
+        // from the UI. isAyahAvailable is a side-effect-free synchronous cache
+        // read (no getCachedSurahIds exists on the repository); the per-ayah
+        // gate means getAyahImmediate is called on cache hits only, so no
+        // background fetch is ever triggered from here. Coverage: bundled
+        // seeds (surahs 1, 108, 112, 113, 114 fully + 18:1-5 partial, default
+        // edition only) plus any surah previously downloaded/persisted on
+        // device; non-default editions search downloaded surahs only.
+        // Side effect: feeding marks fed surahs as requested in the repository
+        // (bounded set of 8 — only affects which surahs refetch on an edition
+        // switch, which is desirable here).
+        LaunchedEffect(ayahFeedKey, ayahCacheGen, selectedEdition) {
+            if (ayahFeedKey == null) return@LaunchedEffect
+            feedCachedAyahs(selectedEdition)
+            ayahIndexTick++
+        }
+        val ayahTextHits = remember(trimmedQuery, ayahIndexTick, selectedEdition) {
+            if (!ayahTextRelevant) emptyList()
+            else AyahSearchIndex.search(trimmedQuery)
+        }
+        val ayahIndexedSurahs = remember(trimmedQuery, ayahIndexTick, selectedEdition) {
+            if (!ayahTextRelevant) 0 else AyahSearchIndex.indexedSurahCount()
+        }
+
         // Browse-hub sources (blank-query state only; search execution below
         // never reads them). Charts publish instantly from disk cache, then
         // refetch when stale; editorial "new" derives from the synced shelf.
@@ -199,6 +248,23 @@ class SearchScreen : Screen {
                 QuranDataRepository.getReciterBySlug(it.reciterSlug)
             } ?: QuranDataRepository.getFallbackReciter()
             playSurahQueue(entrySurahId, reciter.slug, reciter.nameEn)
+        }
+
+        // Ayah-mode playback of a surah starting FROM a hit ayah — same
+        // current/fallback reciter resolution as playWithCurrentReciter, but
+        // playSurahInAyahMode (per-ayah queue from startAyahNo) instead of the
+        // full-surah playSurahQueue. Pushes NowPlaying like every other play
+        // entry point in this file.
+        fun playAyahHit(surahId: Int, ayahNo: Int) {
+            val reciter = AudioEngine.currentTrack.value?.let {
+                QuranDataRepository.getReciterBySlug(it.reciterSlug)
+            } ?: QuranDataRepository.getFallbackReciter()
+            AudioEngine.playSurahInAyahMode(
+                surahId = surahId,
+                reciterSlug = reciter.slug,
+                startAyahNo = ayahNo
+            )
+            rootNavigator.push(NowPlayingScreen())
         }
 
         // Single-surah playback for a hub mood tap — the exact wiring
@@ -388,6 +454,12 @@ class SearchScreen : Screen {
 
                     val ayahRef = searchResults.ayahReference
                     val showAyah = ayahRef != null && (selectedFilter == "All" || selectedFilter == "Ayahs")
+                    // Ayah-text hits live alongside (never replacing) the
+                    // single-ref quick-play card above: the card answers
+                    // "2:255", the section below answers "mercy" / pasted
+                    // Arabic. Same All/Ayahs filter gating as the card.
+                    val showAyahHits = ayahTextHits.isNotEmpty() &&
+                        (selectedFilter == "All" || selectedFilter == "Ayahs")
                     val showSurahs = searchResults.surahs.isNotEmpty() &&
                         (selectedFilter == "All" || selectedFilter == "Surahs")
                     val showReciters = searchResults.reciters.isNotEmpty() &&
@@ -402,7 +474,7 @@ class SearchScreen : Screen {
                     // that only matches a devotional (e.g. "istighfar" or a
                     // pasted Arabic phrase) falls through to "No results for …"
                     // with the results sitting right underneath it in memory.
-                    if (!showAyah && !showSurahs && !showReciters && !showDevotionals) {
+                    if (!showAyah && !showAyahHits && !showSurahs && !showReciters && !showDevotionals) {
                         SearchEmptyWell(
                             headline = "No results for \"$query\"",
                             hint = "Try a surah name, reciter, dua, or ayah ref like 2:255"
@@ -419,6 +491,49 @@ class SearchScreen : Screen {
                                         ayahRef = ayahRef,
                                         onClick = { navigator.push(SurahDetailScreen(ayahRef.surahId)) },
                                         onPlay = { playWithCurrentReciter(ayahRef.surahId) }
+                                    )
+                                }
+                            }
+
+                            // Ayah-text section: snippet + owning surah + S:A
+                            // ref per row. Row tap pushes SurahDetailScreen for
+                            // the hit's surah — scroll-to-ayah is unavailable
+                            // (that screen takes only surahId), so the row
+                            // lands at the surah top; the play disc is the
+                            // precise target (ayah-mode from the hit ayah).
+                            // The coverage line is honest by construction: the
+                            // index only ever holds locally cached + bundled
+                            // verses (see the feed above), so N is exactly the
+                            // searchable set.
+                            if (showAyahHits) {
+                                item(key = "header-ayah-hits") {
+                                    NoirSectionHeader(
+                                        label = "Ayahs",
+                                        actionLabel = "${ayahTextHits.size} shown",
+                                        onAction = {}
+                                    )
+                                }
+                                item(key = "ayah-hits-coverage") {
+                                    Text(
+                                        text = if (ayahIndexedSurahs == 1) {
+                                            "Searches 1 downloaded surah"
+                                        } else {
+                                            "Searches $ayahIndexedSurahs downloaded surahs"
+                                        },
+                                        color = GhaisNoir.TextTertiary,
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                items(
+                                    ayahTextHits,
+                                    key = { "ayah-hit-${it.surahId}-${it.ayahNo}" }
+                                ) { hit ->
+                                    AyahTextHitRow(
+                                        hit = hit,
+                                        onOpen = { navigator.push(SurahDetailScreen(hit.surahId)) },
+                                        onPlay = { playAyahHit(hit.surahId, hit.ayahNo) }
                                     )
                                 }
                             }
@@ -1318,5 +1433,163 @@ fun AyahQuickPlayCard(
                 contentDescription = "Play Ayah"
             )
         }
+    }
+}
+
+/**
+ * Ayah-text hit row in the NoirListRow language, copy-adapted from
+ * [SurahNoirRow]: same soft card fill + 1px card border + 22% top-only
+ * specular, same [GhaisShapes.row] clipping, same 52.dp well, same horizontal
+ * 14.dp / vertical 12.dp padding rhythm, same trailing 32.dp ghost play disc.
+ * Content only: the matched-field snippet (authentic text, tashkeel kept for
+ * Arabic) over an owning-surah + "S:A" ref line.
+ *
+ * Two tap targets, mirroring [SurahNoirRow]: the ROW opens
+ * [SurahDetailScreen] for the hit's surah (scroll-to-ayah unavailable — that
+ * screen takes only `surahId`), the DISC starts ayah-mode playback of that
+ * surah from the hit ayah. The disc is a separate `noirClickable` nested
+ * inside the row's, and Compose does not bubble a click consumed by a child,
+ * so a disc tap fires exactly one of them.
+ */
+@Composable
+private fun AyahTextHitRow(
+    hit: AyahSearchIndex.Hit,
+    onOpen: () -> Unit,
+    onPlay: () -> Unit
+) {
+    val surah = remember(hit.surahId) {
+        QuranData.SURAHS.firstOrNull { it.id == hit.surahId }
+    }
+    val snippetIsArabic = remember(hit.snippet) { hit.snippet.any { isArabicScript(it) } }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(GhaisShapes.row)
+            .background(GhaisNoir.cardFillSoft(), GhaisShapes.row)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.row)
+            .topSpecular(inset = 22.dp)
+            .noirClickable(onOpen)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(GhaisShapes.well)
+                .background(GhaisNoir.wellFill())
+                .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.well),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "${hit.ayahNo}",
+                color = GhaisNoir.TextPrimary,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp, end = 8.dp)
+        ) {
+            if (snippetIsArabic) {
+                // Arabic never rides a Latin display style: the ambient
+                // MaterialTheme style carries negative tracking, and non-zero
+                // tracking breaks the cursive joins. arabicSmall plus an
+                // explicit letterSpacing = 0 is the fix, inside an RTL provider
+                // — same rule as the devotional rows' Arabic teaser.
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    Text(
+                        text = hit.snippet,
+                        style = GhaisTypography.arabicSmall,
+                        fontSize = 13.sp,
+                        letterSpacing = 0.sp,
+                        color = GhaisNoir.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            } else {
+                Text(
+                    text = hit.snippet,
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "${surah?.nameEn ?: "Surah ${hit.surahId}"} • ${hit.surahId}:${hit.ayahNo}",
+                color = GhaisNoir.TextSecondary,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                .background(GhaisNoir.Fill2, CircleShape)
+                .noirClickable(onPlay),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = "Play ayah ${hit.surahId}:${hit.ayahNo}",
+                tint = GhaisNoir.TextPrimary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Arabic-script test mirroring [AyahSearchIndex]'s private routing: the same
+ * four ranges (basic Arabic, supplement, presentation forms A/B). Kept local
+ * because the index's copy is private and the UI's relevance gate must agree
+ * with it exactly.
+ */
+private fun isArabicScript(c: Char): Boolean {
+    val v = c.code
+    return v in 0x0600..0x06FF ||
+        v in 0x0750..0x077F ||
+        v in 0xFB50..0xFDFF ||
+        v in 0xFE70..0xFEFF
+}
+
+/**
+ * Feeds [AyahSearchIndex] from synchronously cached verses ONLY — no network.
+ *
+ * No synchronous cached-surah enumeration exists on [QuranAyahRepository], so
+ * [QuranAyahRepository.isAyahAvailable] (a side-effect-free cache read) is the
+ * gate: the surah-1 probe skips uncached surahs, and the per-ayah probe skips
+ * uncached verses, so [QuranAyahRepository.getAyahImmediate] is called on
+ * cache hits only and never triggers its miss-path background fetch. The
+ * per-ayah (not just per-surah) gate matters for the partial bundled seed:
+ * surah 18 ships ayahs 1-5 only, and probing 1..110 through getAyahImmediate
+ * would fan out a fetch for the 105 missing verses.
+ *
+ * Coverage limit: bundled seeds (surahs 1, 108, 112, 113, 114 fully +
+ * 18:1-5 partial — default `en.sahih` edition only, the repository never
+ * serves seed text under another edition) plus any surah previously
+ * downloaded/persisted on device (in-memory cache or Settings blobs restored
+ * at startup, both visible to isAyahAvailable). Total function, never throws.
+ */
+private fun feedCachedAyahs(editionId: String) {
+    try {
+        for (surah in QuranData.SURAHS) {
+            if (!QuranAyahRepository.isAyahAvailable(surah.id, 1)) continue
+            val verses = (1..surah.ayahsCount).mapNotNull { ayahNo ->
+                if (!QuranAyahRepository.isAyahAvailable(surah.id, ayahNo)) null
+                else QuranAyahRepository.getAyahImmediate(surah.id, ayahNo)
+            }
+            if (verses.isEmpty()) continue
+            AyahSearchIndex.indexSurah(surah.id, verses, editionId)
+        }
+    } catch (_: Exception) {
+        // Best-effort: a bad cache entry must never break search.
     }
 }

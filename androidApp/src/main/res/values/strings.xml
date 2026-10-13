@@ -6,4 +6,9 @@
     <string name="shortcut_hifz_long">Open memorization practice</string>
     <string name="shortcut_search">Search</string>
     <string name="shortcut_search_long">Search surahs, reciters and ayahs</string>
+    <string name="widget_desc">Ghaith recitation controls</string>
+    <string name="widget_empty_subtitle">Open the app to start recitation</string>
+    <string name="widget_art_desc">Recitation artwork</string>
+    <string name="widget_toggle_desc">Play or pause</string>
+    <string name="widget_next_desc">Next</string>
 </resources>

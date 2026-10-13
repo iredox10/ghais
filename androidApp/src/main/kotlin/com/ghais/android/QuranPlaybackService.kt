@@ -560,7 +560,17 @@ class QuranPlaybackService : MediaSessionService() {
                         mediaSession?.let { session ->
                             try { onUpdateNotification(session, false) } catch (_: Exception) { }
                         }
+                        try { QuranPlayerWidget.requestRefresh(this@QuranPlaybackService) } catch (_: Exception) { }
                     } catch (_: Exception) { }
+                }
+            } catch (_: Exception) { }
+        }
+        // Widget play/pause state follows the engine even when the provider's
+        // in-process collector is dead.
+        serviceScope.launch {
+            try {
+                AudioEngine.isPlaying.collect {
+                    try { QuranPlayerWidget.requestRefresh(this@QuranPlaybackService) } catch (_: Exception) { }
                 }
             } catch (_: Exception) { }
         }

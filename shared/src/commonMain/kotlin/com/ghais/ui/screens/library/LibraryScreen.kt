@@ -37,6 +37,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,6 +71,7 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.EditorialPlaylist
 import com.ghais.data.repository.EditorialRepository
+import com.ghais.data.repository.KhatmaStore
 import com.ghais.data.repository.UserPlaylists
 import com.ghais.data.repository.toTrackItems
 import com.ghais.data.sync.SyncEngine
@@ -80,6 +83,7 @@ import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
+import com.ghais.ui.screens.mushaf.MushafScreen
 import com.ghais.ui.screens.playlists.MoodPlaylist
 import com.ghais.ui.screens.playlists.MoodPlaylists
 import com.ghais.ui.screens.playlists.PlaylistArt
@@ -126,6 +130,9 @@ object LibraryScreen : Tab {
         // UserPlaylists contract only) + offline index for the Downloads tile.
         val userPlaylists by UserPlaylists.playlists.collectAsState()
         val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
+        // Khatma plans (owned by the depth wave — code against the
+        // KhatmaStore contract only) for the Khatma tile count.
+        val khatmaPlans by KhatmaStore.plans.collectAsState()
         var showCreateDialog by remember { mutableStateOf(false) }
         var createName by remember { mutableStateOf("") }
 
@@ -262,6 +269,23 @@ object LibraryScreen : Tab {
                         item {
                             NoirRoutinesTile(
                                 onClick = { rootNavigator?.push(MyRoutinesScreen) }
+                            )
+                        }
+                        // Khatma entry point: bento pair with Routines (both are
+                        // devotion tools). Same package as KhatmaScreen, same
+                        // rootNavigator push pattern as every tile here.
+                        item {
+                            NoirKhatmaTile(
+                                planCount = khatmaPlans.size,
+                                onClick = { rootNavigator?.push(KhatmaScreen) }
+                            )
+                        }
+                        // Mushaf entry point: completes the devotion-tools bento
+                        // (Routines / Khatma / Mushaf). MushafScreen was an
+                        // unreachable Tab — reachable here with no dock change.
+                        item {
+                            NoirMushafTile(
+                                onClick = { rootNavigator?.push(MushafScreen) }
                             )
                         }
                         items(filteredPlaylists, key = { it.id }) { playlist ->
@@ -558,6 +582,175 @@ private fun NoirRoutinesTile(onClick: () -> Unit) {
             Spacer(Modifier.height(10.dp))
             Text(
                 text = "Routines • Personal",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
+                color = GhaisNoir.TextTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Khatma tile — same Noir bento shell as [NoirRoutinesTile] (soft glass
+ * fill + 1px card border + top-only specular, clay icon-well + dual text +
+ * circular chevron). The count reads live from `KhatmaStore.plans`; tap
+ * pushes `KhatmaScreen` (same package, same rootNavigator pattern as the
+ * Routines tile above). TrackChanges mirrors KhatmaScreen's own icon.
+ */
+@Composable
+private fun NoirKhatmaTile(
+    planCount: Int,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(NoirLibraryTileShape)
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, NoirLibraryTileShape)
+            .topSpecular()
+            .noirClickable(onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(GhaisNoir.sheen())
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconWell(icon = Icons.Filled.TrackChanges, size = 44.dp, iconSize = 22.dp)
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "›",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Light
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Khatma",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.2).sp,
+                color = GhaisNoir.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Quran completion plans",
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Normal,
+                lineHeight = 16.5.sp,
+                color = GhaisNoir.TextSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = if (planCount == 0) "No active plan • Start one"
+                    else if (planCount == 1) "1 active plan • Completion"
+                    else "$planCount active plans • Completion",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal,
+                color = GhaisNoir.TextTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Mushaf tile — same Noir bento shell as [NoirKhatmaTile] (soft glass fill +
+ * 1px card border + top-only specular, clay icon-well + dual text + circular
+ * chevron). Entry point for the previously-orphaned MushafScreen.
+ */
+@Composable
+private fun NoirMushafTile(
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(NoirLibraryTileShape)
+            .background(GhaisNoir.cardFillSoft())
+            .border(1.dp, GhaisNoir.BorderCard, NoirLibraryTileShape)
+            .topSpecular()
+            .noirClickable(onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(GhaisNoir.sheen())
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconWell(icon = Icons.Filled.MenuBook, size = 44.dp, iconSize = 22.dp)
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "›",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Light
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Mushaf",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.2).sp,
+                color = GhaisNoir.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Read with juz & page marks",
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Normal,
+                lineHeight = 16.5.sp,
+                color = GhaisNoir.TextSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "114 surahs • Bookmarks",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 color = GhaisNoir.TextTertiary,
