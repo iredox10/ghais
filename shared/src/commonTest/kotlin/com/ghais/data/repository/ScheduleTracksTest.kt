@@ -187,4 +187,51 @@ class ScheduleTracksTest {
         assertEquals("Surah 2", track.surahNameEn)
         assertEquals("سورة 2", track.surahNameAr)
     }
+
+    // --- 5. Offline shelf (downloaded keys) ---
+
+    @Test
+    fun testOfflineTracksMirrorDownloadedKeysSorted() {
+        val tracks = ScheduleTracks.buildOfflineTracks(
+            setOf("alafasy/3", "alafasy/1", "alafasy/2"),
+            listOf(reciter()),
+            surahs,
+        )
+        assertEquals(listOf(1, 2, 3), tracks.map { it.surahId })
+        assertTrue(tracks.all { it.ayahNo == 0 && it.reciterSlug == "alafasy" })
+    }
+
+    @Test
+    fun testOfflineTracksSkipAyahClipsAndMalformedKeys() {
+        val tracks = ScheduleTracks.buildOfflineTracks(
+            setOf("alafasy/2/5", "alafasy/1", "junk", "alafasy/0", "alafasy/999"),
+            listOf(reciter()),
+            surahs,
+        )
+        assertEquals(listOf(1), tracks.map { it.surahId })
+    }
+
+    @Test
+    fun testOfflineTracksKeepUnknownReciterWithLocalIdentity() {
+        val tracks = ScheduleTracks.buildOfflineTracks(
+            setOf("someone-new/4"),
+            listOf(reciter()),
+            surahs,
+        )
+        val track = tracks.single()
+        assertEquals("someone-new", track.reciterSlug)
+        assertEquals(4, track.surahId)
+        assertEquals("Surah 4", track.surahNameEn)
+    }
+
+    @Test
+    fun testOfflineTracksEmptyWhenNothingDownloaded() {
+        assertTrue(
+            ScheduleTracks.buildOfflineTracks(
+                emptySet(),
+                listOf(reciter()),
+                surahs,
+            ).isEmpty()
+        )
+    }
 }

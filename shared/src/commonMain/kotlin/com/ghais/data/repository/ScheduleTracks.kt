@@ -49,4 +49,46 @@ object ScheduleTracks {
                 )
             }
     }
+
+    /**
+     * Builds the queue for an offline-source schedule (or the downloads
+     * player): every downloaded full surah in [downloadedKeys]
+     * (`"<slug>/<surahId>"` entries; single-ayah `"<slug>/<surahId>/<ayahNo>"`
+     * clips are skipped), sorted by reciter then surah so Up Next reads as
+     * the user's offline shelf.
+     *
+     * A key whose reciter is unknown to [reciters] still gets a track (with a
+     * synthetic identity): the player resolves the downloaded file first, so
+     * the stream URL only matters for non-downloaded siblings — and here
+     * every track IS a download. Returns empty when nothing qualifies.
+     */
+    fun buildOfflineTracks(
+        downloadedKeys: Collection<String>,
+        reciters: List<Reciter>,
+        surahs: List<Surah>,
+    ): List<TrackItem> {
+        data class Key(val slug: String, val surahId: Int)
+        val parsed = downloadedKeys.mapNotNull { key ->
+            val parts = key.split("/")
+            if (parts.size != 2) return@mapNotNull null
+            val surahId = parts[1].toIntOrNull() ?: return@mapNotNull null
+            if (parts[0].isBlank() || surahId !in 1..114) return@mapNotNull null
+            Key(parts[0], surahId)
+        }.sortedWith(compareBy({ it.slug }, { it.surahId }))
+        return parsed.mapNotNull { (slug, surahId) ->
+            val reciter = reciters.firstOrNull { it.slug == slug }
+                ?: Reciter(slug = slug, nameEn = slug, nameAr = "")
+            val surah = surahs.firstOrNull { it.id == surahId }
+            TrackItem(
+                reciterSlug = reciter.slug,
+                reciterName = reciter.nameEn.ifBlank { slug },
+                surahId = surahId,
+                surahNameEn = surah?.nameEn?.ifBlank { null } ?: "Surah $surahId",
+                surahNameAr = surah?.nameAr.orEmpty(),
+                ayahNo = 0,
+                audioUrl = runCatching { reciter.getFullSurahUrl(surahId) }.getOrNull().orEmpty(),
+                durationMs = (surah?.ayahsCount ?: 0) * 15_000L,
+            )
+        }
+    }
 }
