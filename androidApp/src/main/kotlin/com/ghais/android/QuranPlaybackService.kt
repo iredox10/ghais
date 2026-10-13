@@ -204,6 +204,10 @@ class QuranPlaybackService : MediaSessionService() {
         } else {
             ownsPlayer = true
             ExoPlayer.Builder(applicationContext)
+                .setMediaSourceFactory(
+                    com.ghais.player.QuranPlayerFactory.mediaSourceFactory(applicationContext)
+                )
+                .setLoadControl(com.ghais.player.QuranPlayerFactory.loadControl())
                 .setAudioAttributes(
                     AudioAttributes.Builder()
                         .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)

@@ -219,6 +219,8 @@ actual object PlayerBridge {
         var p = exoPlayer
         if (p == null) {
             p = androidx.media3.exoplayer.ExoPlayer.Builder(context.applicationContext)
+                .setMediaSourceFactory(QuranPlayerFactory.mediaSourceFactory(context))
+                .setLoadControl(QuranPlayerFactory.loadControl())
                 .setAudioAttributes(
                     androidx.media3.common.AudioAttributes.Builder()
                         .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_SPEECH)

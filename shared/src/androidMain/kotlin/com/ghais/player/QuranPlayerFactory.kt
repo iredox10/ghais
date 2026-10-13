@@ -1,0 +1,54 @@
+package com.ghais.player
+
+import android.content.Context
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+
+/**
+ * Single place where the app's ExoPlayer network + buffering policy lives.
+ *
+ * Why this exists: recitation MP3s stream from several third-party hosts
+ * (mp3quran CDN, everyayah single-origin, archive.org datanodes). Library
+ * defaults (8s/8s timeouts, cross-protocol redirects disallowed, generic
+ * user-agent, 50s prebuffer targets) made slow hosts hang in BUFFERING and
+ * deprioritised our traffic. The values below fail fast and start fast:
+ * - 10s connect/read timeouts so a dead host surfaces an error instead of
+ *   an endless spinner (the engine's auto-skip path handles the rest).
+ * - Cross-protocol redirects allowed: mp3quran/archive.org edges 301/302
+ *   across http/https and hostnames; refusing them breaks playback.
+ * - App user-agent: archive.org throttles generic clients.
+ * - Streaming-first LoadControl: start after ~1s of audio is buffered even
+ *   if the byte target is unmet (prioritize-time-over-size), cap the buffer
+ *   at 30s so skipping a 2-hour surah doesn't download half of it first.
+ *
+ * Public (not internal) because the app module's playback service builds its
+ * fallback player with the same policy.
+ */
+object QuranPlayerFactory {
+    private const val USER_AGENT = "Ghaith/1 (ExoPlayer; +https://ghaith.app)"
+    private const val CONNECT_TIMEOUT_MS = 10_000
+    private const val READ_TIMEOUT_MS = 10_000
+
+    fun httpFactory(): DefaultHttpDataSource.Factory =
+        DefaultHttpDataSource.Factory()
+            .setConnectTimeoutMs(CONNECT_TIMEOUT_MS)
+            .setReadTimeoutMs(READ_TIMEOUT_MS)
+            .setAllowCrossProtocolRedirects(true)
+            .setUserAgent(USER_AGENT)
+
+    fun mediaSourceFactory(context: Context): DefaultMediaSourceFactory =
+        DefaultMediaSourceFactory(context.applicationContext)
+            .setDataSourceFactory(httpFactory())
+
+    fun loadControl(): DefaultLoadControl =
+        DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                /* minBufferMs = */ 15_000,
+                /* maxBufferMs = */ 30_000,
+                /* bufferForPlaybackMs = */ 1_000,
+                /* bufferForPlaybackAfterRebufferMs = */ 1_000,
+            )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .build()
+}
