@@ -87,7 +87,7 @@ val AVAILABLE_MOODS = listOf(
         surahId = 14,
         surahNameEn = "Ibrahim",
         surahNameAr = "إبراهيم",
-        audioUrl = "https://server8.mp3quran.net/afs/014.mp3"
+        audioUrl = "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/014.mp3"
     ),
     MoodItem(
         id = "anxiety",
@@ -99,7 +99,7 @@ val AVAILABLE_MOODS = listOf(
         surahId = 94,
         surahNameEn = "Ash-Sharh",
         surahNameAr = "الشرح",
-        audioUrl = "https://server8.mp3quran.net/afs/094.mp3"
+        audioUrl = "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/094.mp3"
     ),
     MoodItem(
         id = "hifz",
@@ -111,7 +111,7 @@ val AVAILABLE_MOODS = listOf(
         surahId = 18,
         surahNameEn = "Al-Kahf",
         surahNameAr = "الكهف",
-        audioUrl = "https://server8.mp3quran.net/afs/018.mp3"
+        audioUrl = "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/018.mp3"
     ),
     MoodItem(
         id = "qiyam",
@@ -123,7 +123,7 @@ val AVAILABLE_MOODS = listOf(
         surahId = 67,
         surahNameEn = "Al-Mulk",
         surahNameAr = "الملك",
-        audioUrl = "https://server8.mp3quran.net/afs/067.mp3"
+        audioUrl = "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/067.mp3"
     ),
     MoodItem(
         id = "study",
@@ -135,7 +135,7 @@ val AVAILABLE_MOODS = listOf(
         surahId = 20,
         surahNameEn = "Taha",
         surahNameAr = "طه",
-        audioUrl = "https://server8.mp3quran.net/afs/020.mp3"
+        audioUrl = "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/020.mp3"
     ),
     MoodItem(
         id = "sleep",
@@ -147,7 +147,7 @@ val AVAILABLE_MOODS = listOf(
         surahId = 32,
         surahNameEn = "As-Sajdah",
         surahNameAr = "السجدة",
-        audioUrl = "https://server8.mp3quran.net/afs/032.mp3"
+        audioUrl = "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/032.mp3"
     )
 )
 

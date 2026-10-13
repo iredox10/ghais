@@ -143,14 +143,14 @@ object QuranDataRepository {
             fans = "4.8M fans",
             photoUrl = GhaisAssets.VerifiedReciters[0].photoUrl,
             recitations = listOf(
-                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:52", "https://server8.mp3quran.net/afs/001.mp3"),
-                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "26:45", "https://server8.mp3quran.net/afs/018.mp3"),
-                RecitationTrack(36, "Ya-Sin", "يس", 83, "14:12", "https://server8.mp3quran.net/afs/036.mp3"),
-                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "11:20", "https://server8.mp3quran.net/afs/055.mp3"),
-                RecitationTrack(56, "Al-Waqi'ah", "الواقعة", 96, "10:15", "https://server8.mp3quran.net/afs/056.mp3"),
-                RecitationTrack(67, "Al-Mulk", "الملك", 30, "6:48", "https://server8.mp3quran.net/afs/067.mp3"),
-                RecitationTrack(112, "Al-Ikhlas", "الإخلاص", 4, "0:24", "https://server8.mp3quran.net/afs/112.mp3"),
-                RecitationTrack(114, "An-Nas", "الناس", 6, "0:35", "https://server8.mp3quran.net/afs/114.mp3")
+                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:52", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/001.mp3"),
+                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "26:45", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/018.mp3"),
+                RecitationTrack(36, "Ya-Sin", "يس", 83, "14:12", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/036.mp3"),
+                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "11:20", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/055.mp3"),
+                RecitationTrack(56, "Al-Waqi'ah", "الواقعة", 96, "10:15", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/056.mp3"),
+                RecitationTrack(67, "Al-Mulk", "الملك", 30, "6:48", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/067.mp3"),
+                RecitationTrack(112, "Al-Ikhlas", "الإخلاص", 4, "0:24", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/112.mp3"),
+                RecitationTrack(114, "An-Nas", "الناس", 6, "0:35", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/114.mp3")
             )
         ),
 
@@ -167,14 +167,14 @@ object QuranDataRepository {
             fans = "3.9M fans",
             photoUrl = GhaisAssets.VerifiedReciters[1].photoUrl,
             recitations = listOf(
-                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:48", "https://server11.mp3quran.net/sds/001.mp3"),
-                RecitationTrack(2, "Al-Baqarah", "البقرة", 286, "1:52:10", "https://server11.mp3quran.net/sds/002.mp3"),
-                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "22:15", "https://server11.mp3quran.net/sds/018.mp3"),
-                RecitationTrack(36, "Ya-Sin", "يس", 83, "11:50", "https://server11.mp3quran.net/sds/036.mp3"),
-                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "9:30", "https://server11.mp3quran.net/sds/055.mp3"),
-                RecitationTrack(67, "Al-Mulk", "الملك", 30, "5:45", "https://server11.mp3quran.net/sds/067.mp3"),
-                RecitationTrack(78, "An-Naba", "النبأ", 40, "4:15", "https://server11.mp3quran.net/sds/078.mp3"),
-                RecitationTrack(114, "An-Nas", "الناس", 6, "0:30", "https://server11.mp3quran.net/sds/114.mp3")
+                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:48", "https://cdn.mp3quran.net/audio/abdulrahman-sudais/r1/001.mp3"),
+                RecitationTrack(2, "Al-Baqarah", "البقرة", 286, "1:52:10", "https://cdn.mp3quran.net/audio/abdulrahman-sudais/r1/002.mp3"),
+                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "22:15", "https://cdn.mp3quran.net/audio/abdulrahman-sudais/r1/018.mp3"),
+                RecitationTrack(36, "Ya-Sin", "يس", 83, "11:50", "https://cdn.mp3quran.net/audio/abdulrahman-sudais/r1/036.mp3"),
+                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "9:30", "https://cdn.mp3quran.net/audio/abdulrahman-sudais/r1/055.mp3"),
+                RecitationTrack(67, "Al-Mulk", "الملك", 30, "5:45", "https://cdn.mp3quran.net/audio/abdulrahman-sudais/r1/067.mp3"),
+                RecitationTrack(78, "An-Naba", "النبأ", 40, "4:15", "https://cdn.mp3quran.net/audio/abdulrahman-sudais/r1/078.mp3"),
+                RecitationTrack(114, "An-Nas", "الناس", 6, "0:30", "https://cdn.mp3quran.net/audio/abdulrahman-sudais/r1/114.mp3")
             )
         ),
 
@@ -191,14 +191,14 @@ object QuranDataRepository {
             fans = "3.2M fans",
             photoUrl = GhaisAssets.VerifiedReciters[2].photoUrl,
             recitations = listOf(
-                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:50", "https://server12.mp3quran.net/maher/001.mp3"),
-                RecitationTrack(12, "Yusuf", "يوسف", 111, "28:30", "https://server12.mp3quran.net/maher/012.mp3"),
-                RecitationTrack(19, "Maryam", "مريم", 98, "19:40", "https://server12.mp3quran.net/maher/019.mp3"),
-                RecitationTrack(36, "Ya-Sin", "يس", 83, "13:25", "https://server12.mp3quran.net/maher/036.mp3"),
-                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "10:45", "https://server12.mp3quran.net/maher/055.mp3"),
-                RecitationTrack(67, "Al-Mulk", "الملك", 30, "6:10", "https://server12.mp3quran.net/maher/067.mp3"),
-                RecitationTrack(93, "Ad-Duha", "الضحى", 11, "0:55", "https://server12.mp3quran.net/maher/093.mp3"),
-                RecitationTrack(114, "An-Nas", "الناس", 6, "0:32", "https://server12.mp3quran.net/maher/114.mp3")
+                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:50", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/001.mp3"),
+                RecitationTrack(12, "Yusuf", "يوسف", 111, "28:30", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/012.mp3"),
+                RecitationTrack(19, "Maryam", "مريم", 98, "19:40", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/019.mp3"),
+                RecitationTrack(36, "Ya-Sin", "يس", 83, "13:25", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/036.mp3"),
+                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "10:45", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/055.mp3"),
+                RecitationTrack(67, "Al-Mulk", "الملك", 30, "6:10", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/067.mp3"),
+                RecitationTrack(93, "Ad-Duha", "الضحى", 11, "0:55", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/093.mp3"),
+                RecitationTrack(114, "An-Nas", "الناس", 6, "0:32", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/114.mp3")
             )
         ),
 
@@ -215,13 +215,13 @@ object QuranDataRepository {
             fans = "2.7M fans",
             photoUrl = GhaisAssets.VerifiedReciters[3].photoUrl,
             recitations = listOf(
-                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:55", "https://server11.mp3quran.net/yasser/001.mp3"),
-                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "24:10", "https://server11.mp3quran.net/yasser/018.mp3"),
-                RecitationTrack(32, "As-Sajdah", "السجدة", 30, "7:15", "https://server11.mp3quran.net/yasser/032.mp3"),
-                RecitationTrack(50, "Qaf", "ق", 45, "8:40", "https://server11.mp3quran.net/yasser/050.mp3"),
-                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "11:05", "https://server11.mp3quran.net/yasser/055.mp3"),
-                RecitationTrack(67, "Al-Mulk", "الملك", 30, "6:20", "https://server11.mp3quran.net/yasser/067.mp3"),
-                RecitationTrack(89, "Al-Fajr", "الفجر", 30, "3:50", "https://server11.mp3quran.net/yasser/089.mp3")
+                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:55", "https://cdn.mp3quran.net/audio/yasser-dosari/r1/001.mp3"),
+                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "24:10", "https://cdn.mp3quran.net/audio/yasser-dosari/r1/018.mp3"),
+                RecitationTrack(32, "As-Sajdah", "السجدة", 30, "7:15", "https://cdn.mp3quran.net/audio/yasser-dosari/r1/032.mp3"),
+                RecitationTrack(50, "Qaf", "ق", 45, "8:40", "https://cdn.mp3quran.net/audio/yasser-dosari/r1/050.mp3"),
+                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "11:05", "https://cdn.mp3quran.net/audio/yasser-dosari/r1/055.mp3"),
+                RecitationTrack(67, "Al-Mulk", "الملك", 30, "6:20", "https://cdn.mp3quran.net/audio/yasser-dosari/r1/067.mp3"),
+                RecitationTrack(89, "Al-Fajr", "الفجر", 30, "3:50", "https://cdn.mp3quran.net/audio/yasser-dosari/r1/089.mp3")
             )
         ),
 
@@ -238,13 +238,13 @@ object QuranDataRepository {
             fans = "2.1M fans",
             photoUrl = GhaisAssets.VerifiedReciters[4].photoUrl,
             recitations = listOf(
-                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "1:05", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/001.mp3"),
-                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "29:10", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/018.mp3"),
-                RecitationTrack(19, "Maryam", "مريم", 98, "24:30", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/019.mp3"),
-                RecitationTrack(36, "Ya-Sin", "يس", 83, "16:45", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/036.mp3"),
-                RecitationTrack(50, "Qaf", "ق", 45, "10:20", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/050.mp3"),
-                RecitationTrack(67, "Al-Mulk", "الملك", 30, "7:40", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/067.mp3"),
-                RecitationTrack(79, "An-Nazi'at", "النازعات", 46, "5:30", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/079.mp3")
+                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "1:05", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/001.mp3"),
+                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "29:10", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/018.mp3"),
+                RecitationTrack(19, "Maryam", "مريم", 98, "24:30", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/019.mp3"),
+                RecitationTrack(36, "Ya-Sin", "يس", 83, "16:45", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/036.mp3"),
+                RecitationTrack(50, "Qaf", "ق", 45, "10:20", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/050.mp3"),
+                RecitationTrack(67, "Al-Mulk", "الملك", 30, "7:40", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/067.mp3"),
+                RecitationTrack(79, "An-Nazi'at", "النازعات", 46, "5:30", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/079.mp3")
             )
         ),
 
@@ -284,14 +284,14 @@ object QuranDataRepository {
             fans = "5.1M fans",
             photoUrl = GhaisAssets.VerifiedReciters[6].photoUrl,
             recitations = listOf(
-                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "1:15", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/001.mp3"),
-                RecitationTrack(12, "Yusuf", "يوسف", 111, "42:00", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/012.mp3"),
-                RecitationTrack(19, "Maryam", "مريم", 98, "36:20", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/019.mp3"),
-                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "19:45", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/055.mp3"),
-                RecitationTrack(67, "Al-Mulk", "الملك", 30, "11:30", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/067.mp3"),
-                RecitationTrack(89, "Al-Fajr", "الفجر", 30, "7:15", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/089.mp3"),
-                RecitationTrack(93, "Ad-Duha", "الضحى", 11, "2:40", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/093.mp3"),
-                RecitationTrack(114, "An-Nas", "الناس", 6, "1:10", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/114.mp3")
+                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "1:15", "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/001.mp3"),
+                RecitationTrack(12, "Yusuf", "يوسف", 111, "42:00", "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/012.mp3"),
+                RecitationTrack(19, "Maryam", "مريم", 98, "36:20", "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/019.mp3"),
+                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "19:45", "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/055.mp3"),
+                RecitationTrack(67, "Al-Mulk", "الملك", 30, "11:30", "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/067.mp3"),
+                RecitationTrack(89, "Al-Fajr", "الفجر", 30, "7:15", "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/089.mp3"),
+                RecitationTrack(93, "Ad-Duha", "الضحى", 11, "2:40", "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/093.mp3"),
+                RecitationTrack(114, "An-Nas", "الناس", 6, "1:10", "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/114.mp3")
             )
         ),
 
@@ -308,13 +308,13 @@ object QuranDataRepository {
             fans = "3.5M fans",
             photoUrl = "https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=600&q=80",
             recitations = listOf(
-                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "1:00", "https://server13.mp3quran.net/husr/001.mp3"),
-                RecitationTrack(2, "Al-Baqarah", "البقرة", 286, "2:10:00", "https://server13.mp3quran.net/husr/002.mp3"),
-                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "28:15", "https://server13.mp3quran.net/husr/018.mp3"),
-                RecitationTrack(36, "Ya-Sin", "يس", 83, "15:40", "https://server13.mp3quran.net/husr/036.mp3"),
-                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "13:20", "https://server13.mp3quran.net/husr/055.mp3"),
-                RecitationTrack(67, "Al-Mulk", "الملك", 30, "7:25", "https://server13.mp3quran.net/husr/067.mp3"),
-                RecitationTrack(112, "Al-Ikhlas", "الإخلاص", 4, "0:30", "https://server13.mp3quran.net/husr/112.mp3")
+                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "1:00", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/001.mp3"),
+                RecitationTrack(2, "Al-Baqarah", "البقرة", 286, "2:10:00", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/002.mp3"),
+                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "28:15", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/018.mp3"),
+                RecitationTrack(36, "Ya-Sin", "يس", 83, "15:40", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/036.mp3"),
+                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "13:20", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/055.mp3"),
+                RecitationTrack(67, "Al-Mulk", "الملك", 30, "7:25", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/067.mp3"),
+                RecitationTrack(112, "Al-Ikhlas", "الإخلاص", 4, "0:30", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/112.mp3")
             )
         ),
 
@@ -331,13 +331,13 @@ object QuranDataRepository {
             fans = "2.9M fans",
             photoUrl = "https://images.unsplash.com/photo-1564769625905-50e93615e769?w=600&q=80",
             recitations = listOf(
-                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:45", "https://server7.mp3quran.net/shur/001.mp3"),
-                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "21:30", "https://server7.mp3quran.net/shur/018.mp3"),
-                RecitationTrack(36, "Ya-Sin", "يس", 83, "11:15", "https://server7.mp3quran.net/shur/036.mp3"),
-                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "9:10", "https://server7.mp3quran.net/shur/055.mp3"),
-                RecitationTrack(56, "Al-Waqi'ah", "الواقعة", 96, "8:45", "https://server7.mp3quran.net/shur/056.mp3"),
-                RecitationTrack(67, "Al-Mulk", "الملك", 30, "5:30", "https://server7.mp3quran.net/shur/067.mp3"),
-                RecitationTrack(114, "An-Nas", "الناس", 6, "0:30", "https://server7.mp3quran.net/shur/114.mp3")
+                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:45", "https://cdn.mp3quran.net/audio/saud-shuraim/r1/001.mp3"),
+                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "21:30", "https://cdn.mp3quran.net/audio/saud-shuraim/r1/018.mp3"),
+                RecitationTrack(36, "Ya-Sin", "يس", 83, "11:15", "https://cdn.mp3quran.net/audio/saud-shuraim/r1/036.mp3"),
+                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "9:10", "https://cdn.mp3quran.net/audio/saud-shuraim/r1/055.mp3"),
+                RecitationTrack(56, "Al-Waqi'ah", "الواقعة", 96, "8:45", "https://cdn.mp3quran.net/audio/saud-shuraim/r1/056.mp3"),
+                RecitationTrack(67, "Al-Mulk", "الملك", 30, "5:30", "https://cdn.mp3quran.net/audio/saud-shuraim/r1/067.mp3"),
+                RecitationTrack(114, "An-Nas", "الناس", 6, "0:30", "https://cdn.mp3quran.net/audio/saud-shuraim/r1/114.mp3")
             )
         ),
 
@@ -354,13 +354,13 @@ object QuranDataRepository {
             fans = "2.4M fans",
             photoUrl = "https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&q=80",
             recitations = listOf(
-                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:52", "https://server7.mp3quran.net/s_gmd/001.mp3"),
-                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "24:50", "https://server7.mp3quran.net/s_gmd/018.mp3"),
-                RecitationTrack(36, "Ya-Sin", "يس", 83, "13:40", "https://server7.mp3quran.net/s_gmd/036.mp3"),
-                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "10:55", "https://server7.mp3quran.net/s_gmd/055.mp3"),
-                RecitationTrack(67, "Al-Mulk", "الملك", 30, "6:15", "https://server7.mp3quran.net/s_gmd/067.mp3"),
-                RecitationTrack(71, "Nuh", "نوح", 28, "4:50", "https://server7.mp3quran.net/s_gmd/071.mp3"),
-                RecitationTrack(112, "Al-Ikhlas", "الإخلاص", 4, "0:25", "https://server7.mp3quran.net/s_gmd/112.mp3")
+                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:52", "https://cdn.mp3quran.net/audio/saad-ghamdi/r1/001.mp3"),
+                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "24:50", "https://cdn.mp3quran.net/audio/saad-ghamdi/r1/018.mp3"),
+                RecitationTrack(36, "Ya-Sin", "يس", 83, "13:40", "https://cdn.mp3quran.net/audio/saad-ghamdi/r1/036.mp3"),
+                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "10:55", "https://cdn.mp3quran.net/audio/saad-ghamdi/r1/055.mp3"),
+                RecitationTrack(67, "Al-Mulk", "الملك", 30, "6:15", "https://cdn.mp3quran.net/audio/saad-ghamdi/r1/067.mp3"),
+                RecitationTrack(71, "Nuh", "نوح", 28, "4:50", "https://cdn.mp3quran.net/audio/saad-ghamdi/r1/071.mp3"),
+                RecitationTrack(112, "Al-Ikhlas", "الإخلاص", 4, "0:25", "https://cdn.mp3quran.net/audio/saad-ghamdi/r1/112.mp3")
             )
         ),
 
@@ -377,13 +377,13 @@ object QuranDataRepository {
             fans = "4.2M fans",
             photoUrl = "https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=600&q=80",
             recitations = listOf(
-                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "1:02", "https://server10.mp3quran.net/minsh/001.mp3"),
-                RecitationTrack(12, "Yusuf", "يوسف", 111, "34:10", "https://server10.mp3quran.net/minsh/012.mp3"),
-                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "27:40", "https://server10.mp3quran.net/minsh/018.mp3"),
-                RecitationTrack(36, "Ya-Sin", "يس", 83, "15:20", "https://server10.mp3quran.net/minsh/036.mp3"),
-                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "12:50", "https://server10.mp3quran.net/minsh/055.mp3"),
-                RecitationTrack(67, "Al-Mulk", "الملك", 30, "7:15", "https://server10.mp3quran.net/minsh/067.mp3"),
-                RecitationTrack(89, "Al-Fajr", "الفجر", 30, "4:30", "https://server10.mp3quran.net/minsh/089.mp3")
+                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "1:02", "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/001.mp3"),
+                RecitationTrack(12, "Yusuf", "يوسف", 111, "34:10", "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/012.mp3"),
+                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "27:40", "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/018.mp3"),
+                RecitationTrack(36, "Ya-Sin", "يس", 83, "15:20", "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/036.mp3"),
+                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "12:50", "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/055.mp3"),
+                RecitationTrack(67, "Al-Mulk", "الملك", 30, "7:15", "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/067.mp3"),
+                RecitationTrack(89, "Al-Fajr", "الفجر", 30, "4:30", "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/089.mp3")
             )
         ),
 
@@ -400,13 +400,13 @@ object QuranDataRepository {
             fans = "2.3M fans",
             photoUrl = "https://images.unsplash.com/photo-1519817650390-64a93db51149?w=600&q=80",
             recitations = listOf(
-                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:56", "https://server10.mp3quran.net/ajm/001.mp3"),
-                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "25:30", "https://server10.mp3quran.net/ajm/018.mp3"),
-                RecitationTrack(36, "Ya-Sin", "يس", 83, "14:05", "https://server10.mp3quran.net/ajm/036.mp3"),
-                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "11:40", "https://server10.mp3quran.net/ajm/055.mp3"),
-                RecitationTrack(67, "Al-Mulk", "الملك", 30, "6:35", "https://server10.mp3quran.net/ajm/067.mp3"),
-                RecitationTrack(113, "Al-Falaq", "الفلق", 5, "0:30", "https://server10.mp3quran.net/ajm/113.mp3"),
-                RecitationTrack(114, "An-Nas", "الناس", 6, "0:35", "https://server10.mp3quran.net/ajm/114.mp3")
+                RecitationTrack(1, "Al-Fatihah", "الفاتحة", 7, "0:56", "https://cdn.mp3quran.net/audio/ahmad-ajmi/r1/001.mp3"),
+                RecitationTrack(18, "Al-Kahf", "الكهف", 110, "25:30", "https://cdn.mp3quran.net/audio/ahmad-ajmi/r1/018.mp3"),
+                RecitationTrack(36, "Ya-Sin", "يس", 83, "14:05", "https://cdn.mp3quran.net/audio/ahmad-ajmi/r1/036.mp3"),
+                RecitationTrack(55, "Ar-Rahman", "الرحمن", 78, "11:40", "https://cdn.mp3quran.net/audio/ahmad-ajmi/r1/055.mp3"),
+                RecitationTrack(67, "Al-Mulk", "الملك", 30, "6:35", "https://cdn.mp3quran.net/audio/ahmad-ajmi/r1/067.mp3"),
+                RecitationTrack(113, "Al-Falaq", "الفلق", 5, "0:30", "https://cdn.mp3quran.net/audio/ahmad-ajmi/r1/113.mp3"),
+                RecitationTrack(114, "An-Nas", "الناس", 6, "0:35", "https://cdn.mp3quran.net/audio/ahmad-ajmi/r1/114.mp3")
             )
         )
     )
@@ -427,10 +427,10 @@ object QuranDataRepository {
             totalDuration = "52 mins",
             coverUrl = GhaisAssets.CuratedForPeace[0].coverUrl,
             tracks = listOf(
-                CuratedTrack(67, "Al-Mulk", "الملك", "Mahmoud Khalil Al-Husary", "7:25", "https://server13.mp3quran.net/husr/067.mp3"),
-                CuratedTrack(36, "Ya-Sin", "يس", "Mohamed Siddiq Al-Minshawi", "15:20", "https://server10.mp3quran.net/minsh/036.mp3"),
+                CuratedTrack(67, "Al-Mulk", "الملك", "Mahmoud Khalil Al-Husary", "7:25", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/067.mp3"),
+                CuratedTrack(36, "Ya-Sin", "يس", "Mohamed Siddiq Al-Minshawi", "15:20", "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/036.mp3"),
                 CuratedTrack(55, "Ar-Rahman", "الرحمن", "Omar Hisham Al Arabi", "12:15", "https://archive.org/download/Omar-Hisham/055.mp3"),
-                CuratedTrack(18, "Al-Kahf", "الكهف", "Islam Sobhi", "29:10", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/018.mp3")
+                CuratedTrack(18, "Al-Kahf", "الكهف", "Islam Sobhi", "29:10", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/018.mp3")
             )
         ),
 
@@ -445,10 +445,10 @@ object QuranDataRepository {
             totalDuration = "48 mins",
             coverUrl = GhaisAssets.CuratedForPeace[1].coverUrl,
             tracks = listOf(
-                CuratedTrack(12, "Yusuf", "يوسف", "Maher Al-Muaiqly", "28:30", "https://server12.mp3quran.net/maher/012.mp3"),
-                CuratedTrack(55, "Ar-Rahman", "الرحمن", "Mishary Rashid Alafasy", "11:20", "https://server8.mp3quran.net/afs/055.mp3"),
-                CuratedTrack(93, "Ad-Duha", "الضحى", "Abdul Basit Abdul Samad", "2:40", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/093.mp3"),
-                CuratedTrack(19, "Maryam", "مريم", "Islam Sobhi", "24:30", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/019.mp3")
+                CuratedTrack(12, "Yusuf", "يوسف", "Maher Al-Muaiqly", "28:30", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/012.mp3"),
+                CuratedTrack(55, "Ar-Rahman", "الرحمن", "Mishary Rashid Alafasy", "11:20", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/055.mp3"),
+                CuratedTrack(93, "Ad-Duha", "الضحى", "Abdul Basit Abdul Samad", "2:40", "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/093.mp3"),
+                CuratedTrack(19, "Maryam", "مريم", "Islam Sobhi", "24:30", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/019.mp3")
             )
         ),
 
@@ -463,11 +463,11 @@ object QuranDataRepository {
             totalDuration = "35 mins",
             coverUrl = GhaisAssets.CuratedForPeace[2].coverUrl,
             tracks = listOf(
-                CuratedTrack(1, "Al-Fatihah", "الفاتحة", "Mishary Rashid Alafasy", "0:52", "https://server8.mp3quran.net/afs/001.mp3"),
-                CuratedTrack(36, "Ya-Sin", "يس", "Mishary Rashid Alafasy", "14:12", "https://server8.mp3quran.net/afs/036.mp3"),
-                CuratedTrack(112, "Al-Ikhlas", "الإخلاص", "Mahmoud Khalil Al-Husary", "0:30", "https://server13.mp3quran.net/husr/112.mp3"),
-                CuratedTrack(113, "Al-Falaq", "الفلق", "Ahmed ibn Ali Al-Ajamy", "0:30", "https://server10.mp3quran.net/ajm/113.mp3"),
-                CuratedTrack(114, "An-Nas", "الناس", "Saud Al-Shuraim", "0:30", "https://server7.mp3quran.net/shur/114.mp3")
+                CuratedTrack(1, "Al-Fatihah", "الفاتحة", "Mishary Rashid Alafasy", "0:52", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/001.mp3"),
+                CuratedTrack(36, "Ya-Sin", "يس", "Mishary Rashid Alafasy", "14:12", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/036.mp3"),
+                CuratedTrack(112, "Al-Ikhlas", "الإخلاص", "Mahmoud Khalil Al-Husary", "0:30", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/112.mp3"),
+                CuratedTrack(113, "Al-Falaq", "الفلق", "Ahmed ibn Ali Al-Ajamy", "0:30", "https://cdn.mp3quran.net/audio/ahmad-ajmi/r1/113.mp3"),
+                CuratedTrack(114, "An-Nas", "الناس", "Saud Al-Shuraim", "0:30", "https://cdn.mp3quran.net/audio/saud-shuraim/r1/114.mp3")
             )
         ),
 
@@ -482,9 +482,9 @@ object QuranDataRepository {
             totalDuration = "42 mins",
             coverUrl = GhaisAssets.CuratedForPeace[3].coverUrl,
             tracks = listOf(
-                CuratedTrack(67, "Al-Mulk", "الملك", "Mishary Rashid Alafasy", "6:48", "https://server8.mp3quran.net/afs/067.mp3"),
-                CuratedTrack(32, "As-Sajdah", "السجدة", "Yasser Al-Dossari", "7:15", "https://server11.mp3quran.net/yasser/032.mp3"),
-                CuratedTrack(56, "Al-Waqi'ah", "الواقعة", "Saad Al-Ghamdi", "8:45", "https://server7.mp3quran.net/s_gmd/056.mp3"),
+                CuratedTrack(67, "Al-Mulk", "الملك", "Mishary Rashid Alafasy", "6:48", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/067.mp3"),
+                CuratedTrack(32, "As-Sajdah", "السجدة", "Yasser Al-Dossari", "7:15", "https://cdn.mp3quran.net/audio/yasser-dosari/r1/032.mp3"),
+                CuratedTrack(56, "Al-Waqi'ah", "الواقعة", "Saad Al-Ghamdi", "8:45", "https://cdn.mp3quran.net/audio/saad-ghamdi/r1/056.mp3"),
                 CuratedTrack(71, "Nuh", "نوح", "Omar Hisham Al Arabi", "5:15", "https://archive.org/download/Omar-Hisham/071.mp3")
             )
         ),
@@ -500,10 +500,10 @@ object QuranDataRepository {
             totalDuration = "1 hr 15 mins",
             coverUrl = GhaisAssets.JumpBackInItems[3].coverUrl,
             tracks = listOf(
-                CuratedTrack(50, "Qaf", "ق", "Yasser Al-Dossari", "8:40", "https://server11.mp3quran.net/yasser/050.mp3"),
-                CuratedTrack(19, "Maryam", "مريم", "Maher Al-Muaiqly", "19:40", "https://server12.mp3quran.net/maher/019.mp3"),
-                CuratedTrack(89, "Al-Fajr", "الفجر", "Abdul Basit Abdul Samad", "7:15", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/089.mp3"),
-                CuratedTrack(36, "Ya-Sin", "يس", "Islam Sobhi", "16:45", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/036.mp3")
+                CuratedTrack(50, "Qaf", "ق", "Yasser Al-Dossari", "8:40", "https://cdn.mp3quran.net/audio/yasser-dosari/r1/050.mp3"),
+                CuratedTrack(19, "Maryam", "مريم", "Maher Al-Muaiqly", "19:40", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/019.mp3"),
+                CuratedTrack(89, "Al-Fajr", "الفجر", "Abdul Basit Abdul Samad", "7:15", "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/089.mp3"),
+                CuratedTrack(36, "Ya-Sin", "يس", "Islam Sobhi", "16:45", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/036.mp3")
             )
         ),
 
@@ -518,10 +518,10 @@ object QuranDataRepository {
             totalDuration = "1 hr 30 mins",
             coverUrl = GhaisAssets.JumpBackInItems[1].coverUrl,
             tracks = listOf(
-                CuratedTrack(18, "Al-Kahf", "الكهف", "Mishary Rashid Alafasy", "26:45", "https://server8.mp3quran.net/afs/018.mp3"),
-                CuratedTrack(18, "Al-Kahf", "الكهف", "Abdur-Rahman As-Sudais", "22:15", "https://server11.mp3quran.net/sds/018.mp3"),
-                CuratedTrack(18, "Al-Kahf", "الكهف", "Saad Al-Ghamdi", "24:50", "https://server7.mp3quran.net/s_gmd/018.mp3"),
-                CuratedTrack(62, "Al-Jumu'ah", "الجمعة", "Mahmoud Khalil Al-Husary", "3:10", "https://server13.mp3quran.net/husr/062.mp3")
+                CuratedTrack(18, "Al-Kahf", "الكهف", "Mishary Rashid Alafasy", "26:45", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/018.mp3"),
+                CuratedTrack(18, "Al-Kahf", "الكهف", "Abdur-Rahman As-Sudais", "22:15", "https://cdn.mp3quran.net/audio/abdulrahman-sudais/r1/018.mp3"),
+                CuratedTrack(18, "Al-Kahf", "الكهف", "Saad Al-Ghamdi", "24:50", "https://cdn.mp3quran.net/audio/saad-ghamdi/r1/018.mp3"),
+                CuratedTrack(62, "Al-Jumu'ah", "الجمعة", "Mahmoud Khalil Al-Husary", "3:10", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/062.mp3")
             )
         ),
 
@@ -536,11 +536,11 @@ object QuranDataRepository {
             totalDuration = "46 mins",
             coverUrl = GhaisAssets.JumpBackInItems[0].coverUrl,
             tracks = listOf(
-                CuratedTrack(94, "Ash-Sharh", "الشرح", "Maher Al-Muaiqly", "0:45", "https://server12.mp3quran.net/maher/094.mp3"),
-                CuratedTrack(93, "Ad-Duha", "الضحى", "Abdul Basit Abdul Samad", "2:40", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/093.mp3"),
-                CuratedTrack(67, "Al-Mulk", "الملك", "Islam Sobhi", "7:40", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/067.mp3"),
-                CuratedTrack(55, "Ar-Rahman", "الرحمن", "Mishary Rashid Alafasy", "11:20", "https://server8.mp3quran.net/afs/055.mp3"),
-                CuratedTrack(12, "Yusuf", "يوسف", "Mohamed Siddiq Al-Minshawi", "34:10", "https://server10.mp3quran.net/minsh/012.mp3")
+                CuratedTrack(94, "Ash-Sharh", "الشرح", "Maher Al-Muaiqly", "0:45", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/094.mp3"),
+                CuratedTrack(93, "Ad-Duha", "الضحى", "Abdul Basit Abdul Samad", "2:40", "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/093.mp3"),
+                CuratedTrack(67, "Al-Mulk", "الملك", "Islam Sobhi", "7:40", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/067.mp3"),
+                CuratedTrack(55, "Ar-Rahman", "الرحمن", "Mishary Rashid Alafasy", "11:20", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/055.mp3"),
+                CuratedTrack(12, "Yusuf", "يوسف", "Mohamed Siddiq Al-Minshawi", "34:10", "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/012.mp3")
             )
         ),
 
@@ -555,11 +555,11 @@ object QuranDataRepository {
             totalDuration = "1 hr 10 mins",
             coverUrl = GhaisAssets.JumpBackInItems[2].coverUrl,
             tracks = listOf(
-                CuratedTrack(1, "Al-Fatihah", "الفاتحة", "Mahmoud Khalil Al-Husary", "1:00", "https://server13.mp3quran.net/husr/001.mp3"),
-                CuratedTrack(36, "Ya-Sin", "يس", "Mahmoud Khalil Al-Husary", "15:40", "https://server13.mp3quran.net/husr/036.mp3"),
-                CuratedTrack(67, "Al-Mulk", "الملك", "Mohamed Siddiq Al-Minshawi", "7:15", "https://server10.mp3quran.net/minsh/067.mp3"),
+                CuratedTrack(1, "Al-Fatihah", "الفاتحة", "Mahmoud Khalil Al-Husary", "1:00", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/001.mp3"),
+                CuratedTrack(36, "Ya-Sin", "يس", "Mahmoud Khalil Al-Husary", "15:40", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/036.mp3"),
+                CuratedTrack(67, "Al-Mulk", "الملك", "Mohamed Siddiq Al-Minshawi", "7:15", "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/067.mp3"),
                 CuratedTrack(87, "Al-A'la", "الأعلى", "Omar Hisham Al Arabi", "1:55", "https://archive.org/download/Omar-Hisham/087.mp3"),
-                CuratedTrack(112, "Al-Ikhlas", "الإخلاص", "Mishary Rashid Alafasy", "0:24", "https://server8.mp3quran.net/afs/112.mp3")
+                CuratedTrack(112, "Al-Ikhlas", "الإخلاص", "Mishary Rashid Alafasy", "0:24", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/112.mp3")
             )
         ),
 
@@ -574,13 +574,13 @@ object QuranDataRepository {
             totalDuration = "36 mins",
             coverUrl = GhaisAssets.LibraryTahajjudCover,
             tracks = listOf(
-                CuratedTrack(1, "Al-Fatihah", "الفاتحة", "Mishary Rashid Alafasy", "0:52", "https://server8.mp3quran.net/afs/001.mp3"),
-                CuratedTrack(94, "Ash-Sharh", "الشرح", "Maher Al-Muaiqly", "0:45", "https://server12.mp3quran.net/maher/094.mp3"),
-                CuratedTrack(93, "Ad-Duha", "الضحى", "Abdul Basit Abdul Samad", "2:40", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/093.mp3"),
-                CuratedTrack(55, "Ar-Rahman", "الرحمن", "Mishary Rashid Alafasy", "11:20", "https://server8.mp3quran.net/afs/055.mp3"),
-                CuratedTrack(112, "Al-Ikhlas", "الإخلاص", "Mahmoud Khalil Al-Husary", "0:30", "https://server13.mp3quran.net/husr/112.mp3"),
-                CuratedTrack(113, "Al-Falaq", "الفلق", "Ahmed ibn Ali Al-Ajamy", "0:30", "https://server10.mp3quran.net/ajm/113.mp3"),
-                CuratedTrack(114, "An-Nas", "الناس", "Saud Al-Shuraim", "0:30", "https://server7.mp3quran.net/shur/114.mp3")
+                CuratedTrack(1, "Al-Fatihah", "الفاتحة", "Mishary Rashid Alafasy", "0:52", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/001.mp3"),
+                CuratedTrack(94, "Ash-Sharh", "الشرح", "Maher Al-Muaiqly", "0:45", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/094.mp3"),
+                CuratedTrack(93, "Ad-Duha", "الضحى", "Abdul Basit Abdul Samad", "2:40", "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/093.mp3"),
+                CuratedTrack(55, "Ar-Rahman", "الرحمن", "Mishary Rashid Alafasy", "11:20", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/055.mp3"),
+                CuratedTrack(112, "Al-Ikhlas", "الإخلاص", "Mahmoud Khalil Al-Husary", "0:30", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/112.mp3"),
+                CuratedTrack(113, "Al-Falaq", "الفلق", "Ahmed ibn Ali Al-Ajamy", "0:30", "https://cdn.mp3quran.net/audio/ahmad-ajmi/r1/113.mp3"),
+                CuratedTrack(114, "An-Nas", "الناس", "Saud Al-Shuraim", "0:30", "https://cdn.mp3quran.net/audio/saud-shuraim/r1/114.mp3")
             )
         ),
 
@@ -595,11 +595,11 @@ object QuranDataRepository {
             totalDuration = "1 hr 10 mins",
             coverUrl = GhaisAssets.JumpBackInItems[2].coverUrl,
             tracks = listOf(
-                CuratedTrack(1, "Al-Fatihah", "الفاتحة", "Mahmoud Khalil Al-Husary", "1:00", "https://server13.mp3quran.net/husr/001.mp3"),
+                CuratedTrack(1, "Al-Fatihah", "الفاتحة", "Mahmoud Khalil Al-Husary", "1:00", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/001.mp3"),
                 CuratedTrack(87, "Al-A'la", "الأعلى", "Omar Hisham Al Arabi", "1:55", "https://archive.org/download/Omar-Hisham/087.mp3"),
-                CuratedTrack(36, "Ya-Sin", "يس", "Mahmoud Khalil Al-Husary", "15:40", "https://server13.mp3quran.net/husr/036.mp3"),
-                CuratedTrack(67, "Al-Mulk", "الملك", "Mohamed Siddiq Al-Minshawi", "7:15", "https://server10.mp3quran.net/minsh/067.mp3"),
-                CuratedTrack(112, "Al-Ikhlas", "الإخلاص", "Mishary Rashid Alafasy", "0:24", "https://server8.mp3quran.net/afs/112.mp3")
+                CuratedTrack(36, "Ya-Sin", "يس", "Mahmoud Khalil Al-Husary", "15:40", "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/036.mp3"),
+                CuratedTrack(67, "Al-Mulk", "الملك", "Mohamed Siddiq Al-Minshawi", "7:15", "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/067.mp3"),
+                CuratedTrack(112, "Al-Ikhlas", "الإخلاص", "Mishary Rashid Alafasy", "0:24", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/112.mp3")
             )
         ),
 
@@ -614,10 +614,10 @@ object QuranDataRepository {
             totalDuration = "50 mins",
             coverUrl = GhaisAssets.JumpBackInItems[3].coverUrl,
             tracks = listOf(
-                CuratedTrack(50, "Qaf", "ق", "Yasser Al-Dossari", "8:40", "https://server11.mp3quran.net/yasser/050.mp3"),
-                CuratedTrack(19, "Maryam", "مريم", "Maher Al-Muaiqly", "19:40", "https://server12.mp3quran.net/maher/019.mp3"),
-                CuratedTrack(89, "Al-Fajr", "الفجر", "Abdul Basit Abdul Samad", "7:15", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/089.mp3"),
-                CuratedTrack(36, "Ya-Sin", "يس", "Islam Sobhi", "16:45", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/036.mp3")
+                CuratedTrack(50, "Qaf", "ق", "Yasser Al-Dossari", "8:40", "https://cdn.mp3quran.net/audio/yasser-dosari/r1/050.mp3"),
+                CuratedTrack(19, "Maryam", "مريم", "Maher Al-Muaiqly", "19:40", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/019.mp3"),
+                CuratedTrack(89, "Al-Fajr", "الفجر", "Abdul Basit Abdul Samad", "7:15", "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/089.mp3"),
+                CuratedTrack(36, "Ya-Sin", "يس", "Islam Sobhi", "16:45", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/036.mp3")
             )
         ),
 
@@ -632,10 +632,10 @@ object QuranDataRepository {
             totalDuration = "32 mins",
             coverUrl = GhaisAssets.JumpBackInItems[0].coverUrl,
             tracks = listOf(
-                CuratedTrack(94, "Ash-Sharh", "الشرح", "Maher Al-Muaiqly", "0:45", "https://server12.mp3quran.net/maher/094.mp3"),
-                CuratedTrack(93, "Ad-Duha", "الضحى", "Abdul Basit Abdul Samad", "2:40", "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/093.mp3"),
-                CuratedTrack(67, "Al-Mulk", "الملك", "Islam Sobhi", "7:40", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/067.mp3"),
-                CuratedTrack(55, "Ar-Rahman", "الرحمن", "Mishary Rashid Alafasy", "11:20", "https://server8.mp3quran.net/afs/055.mp3")
+                CuratedTrack(94, "Ash-Sharh", "الشرح", "Maher Al-Muaiqly", "0:45", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/094.mp3"),
+                CuratedTrack(93, "Ad-Duha", "الضحى", "Abdul Basit Abdul Samad", "2:40", "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/093.mp3"),
+                CuratedTrack(67, "Al-Mulk", "الملك", "Islam Sobhi", "7:40", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/067.mp3"),
+                CuratedTrack(55, "Ar-Rahman", "الرحمن", "Mishary Rashid Alafasy", "11:20", "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/055.mp3")
             )
         ),
 
@@ -650,10 +650,10 @@ object QuranDataRepository {
             totalDuration = "40 mins",
             coverUrl = GhaisAssets.LibraryMorningCover,
             tracks = listOf(
-                CuratedTrack(55, "Ar-Rahman", "الرحمن", "Yasser Al-Dossari", "11:05", "https://server11.mp3quran.net/yasser/055.mp3"),
-                CuratedTrack(56, "Al-Waqi'ah", "الواقعة", "Saad Al-Ghamdi", "8:45", "https://server7.mp3quran.net/s_gmd/056.mp3"),
-                CuratedTrack(93, "Ad-Duha", "الضحى", "Maher Al-Muaiqly", "0:55", "https://server12.mp3quran.net/maher/093.mp3"),
-                CuratedTrack(67, "Al-Mulk", "الملك", "Islam Sobhi", "7:40", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/067.mp3")
+                CuratedTrack(55, "Ar-Rahman", "الرحمن", "Yasser Al-Dossari", "11:05", "https://cdn.mp3quran.net/audio/yasser-dosari/r1/055.mp3"),
+                CuratedTrack(56, "Al-Waqi'ah", "الواقعة", "Saad Al-Ghamdi", "8:45", "https://cdn.mp3quran.net/audio/saad-ghamdi/r1/056.mp3"),
+                CuratedTrack(93, "Ad-Duha", "الضحى", "Maher Al-Muaiqly", "0:55", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/093.mp3"),
+                CuratedTrack(67, "Al-Mulk", "الملك", "Islam Sobhi", "7:40", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/067.mp3")
             )
         ),
 
@@ -668,10 +668,10 @@ object QuranDataRepository {
             totalDuration = "46 mins",
             coverUrl = GhaisAssets.CuratedForPeace[1].coverUrl,
             tracks = listOf(
-                CuratedTrack(19, "Maryam", "مريم", "Maher Al-Muaiqly", "19:40", "https://server12.mp3quran.net/maher/019.mp3"),
-                CuratedTrack(12, "Yusuf", "يوسف", "Mohamed Siddiq Al-Minshawi", "28:30", "https://server10.mp3quran.net/minsh/012.mp3"),
-                CuratedTrack(50, "Qaf", "ق", "Islam Sobhi", "10:20", "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/050.mp3"),
-                CuratedTrack(89, "Al-Fajr", "الفجر", "Yasser Al-Dossari", "3:50", "https://server11.mp3quran.net/yasser/089.mp3")
+                CuratedTrack(19, "Maryam", "مريم", "Maher Al-Muaiqly", "19:40", "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/019.mp3"),
+                CuratedTrack(12, "Yusuf", "يوسف", "Mohamed Siddiq Al-Minshawi", "28:30", "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/012.mp3"),
+                CuratedTrack(50, "Qaf", "ق", "Islam Sobhi", "10:20", "https://cdn.mp3quran.net/audio/islam-sobhi/r1/050.mp3"),
+                CuratedTrack(89, "Al-Fajr", "الفجر", "Yasser Al-Dossari", "3:50", "https://cdn.mp3quran.net/audio/yasser-dosari/r1/089.mp3")
             )
         )
     )
@@ -808,18 +808,18 @@ object QuranDataRepository {
 fun DetailedReciter.fullSurahUrl(surahId: Int): String {
     val pad = surahId.toString().padStart(3, '0')
     return when (slug.lowercase()) {
-        "mishary" -> "https://server8.mp3quran.net/afs/$pad.mp3"
-        "al-sudais" -> "https://server11.mp3quran.net/sds/$pad.mp3"
-        "al-muaiqly" -> "https://server12.mp3quran.net/maher/$pad.mp3"
-        "al-dossari" -> "https://server11.mp3quran.net/yasser/$pad.mp3"
-        "islam-sobhi" -> "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/$pad.mp3"
+        "mishary" -> "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/$pad.mp3"
+        "al-sudais" -> "https://cdn.mp3quran.net/audio/abdulrahman-sudais/r1/$pad.mp3"
+        "al-muaiqly" -> "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/$pad.mp3"
+        "al-dossari" -> "https://cdn.mp3quran.net/audio/yasser-dosari/r1/$pad.mp3"
+        "islam-sobhi" -> "https://cdn.mp3quran.net/audio/islam-sobhi/r1/$pad.mp3"
         "omar-hisham" -> "https://archive.org/download/Omar-Hisham/$pad.mp3"
-        "abdul-basit" -> "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/$pad.mp3"
-        "al-husary" -> "https://server13.mp3quran.net/husr/$pad.mp3"
-        "saud-shuraim" -> "https://server7.mp3quran.net/shur/$pad.mp3"
-        "saad-alghamdi" -> "https://server7.mp3quran.net/s_gmd/$pad.mp3"
-        "al-minshawi" -> "https://server10.mp3quran.net/minsh/$pad.mp3"
-        "ahmed-alajamy" -> "https://server10.mp3quran.net/ajm/$pad.mp3"
-        else -> "https://server8.mp3quran.net/afs/$pad.mp3"
+        "abdul-basit" -> "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/$pad.mp3"
+        "al-husary" -> "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/$pad.mp3"
+        "saud-shuraim" -> "https://cdn.mp3quran.net/audio/saud-shuraim/r1/$pad.mp3"
+        "saad-alghamdi" -> "https://cdn.mp3quran.net/audio/saad-ghamdi/r1/$pad.mp3"
+        "al-minshawi" -> "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/$pad.mp3"
+        "ahmed-alajamy" -> "https://cdn.mp3quran.net/audio/ahmad-ajmi/r1/$pad.mp3"
+        else -> "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/$pad.mp3"
     }
 }

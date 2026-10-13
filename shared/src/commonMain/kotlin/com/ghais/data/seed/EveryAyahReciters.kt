@@ -65,7 +65,7 @@ object EveryAyahReciters {
             style = "Teacher (Mu'allim)",
             tempo = "Slow & Measured",
             audioFolder = "Husary_Muallim_128kbps",
-            serverUrl = "https://server13.mp3quran.net/husr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/",
             country = "Egypt",
             description = "The gold standard for Quran memorization. Pauses after each Ayah for student recitation with immaculate Tajweed.",
             isTeacher = true
@@ -77,7 +77,7 @@ object EveryAyahReciters {
             style = "Teacher (Mu'allim)",
             tempo = "Slow & Emotive",
             audioFolder = "Minshawy_Teacher_128kbps",
-            serverUrl = "https://server10.mp3quran.net/minsh/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/",
             country = "Egypt",
             description = "Celebrated Egyptian teaching recitation featuring young students echoing verses in traditional classroom harmony.",
             isTeacher = true
@@ -106,7 +106,7 @@ object EveryAyahReciters {
             style = "Murattal",
             tempo = "Medium",
             audioFolder = "Alafasy_128kbps",
-            serverUrl = "https://server8.mp3quran.net/afs/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/",
             country = "Kuwait",
             description = "Crystal clear melodious recitation celebrated across the world for smooth vocal cadence."
         ),
@@ -117,7 +117,7 @@ object EveryAyahReciters {
             style = "Murattal",
             tempo = "Measured",
             audioFolder = "Husary_128kbps",
-            serverUrl = "https://server13.mp3quran.net/husr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/",
             country = "Egypt",
             description = "Impeccable articulation and pure classical Egyptian Murattal tradition."
         ),
@@ -128,7 +128,7 @@ object EveryAyahReciters {
             style = "Murattal",
             tempo = "Emotive",
             audioFolder = "Minshawy_Murattal_128kbps",
-            serverUrl = "https://server10.mp3quran.net/minsh/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/",
             country = "Egypt",
             description = "The 'Weeping Voice' known for profound spiritual devotion and serene humility."
         ),
@@ -139,7 +139,7 @@ object EveryAyahReciters {
             style = "Murattal",
             tempo = "Medium",
             audioFolder = "Abdul_Basit_Murattal_64kbps",
-            serverUrl = "https://server7.mp3quran.net/basit/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r3/",
             country = "Egypt",
             description = "The Golden Throat whose breath control and tonal precision remain unmatched."
         ),
@@ -152,7 +152,7 @@ object EveryAyahReciters {
             style = "Mujawwad",
             tempo = "Slow & Resonant",
             audioFolder = "Abdul_Basit_Mujawwad_128kbps",
-            serverUrl = "https://server7.mp3quran.net/basit/Almusshaf-Al-Mojawwad/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r1/",
             country = "Egypt",
             description = "Monumental Mujawwad performance highlighting deep resonance and expansive maqamat."
         ),
@@ -163,7 +163,7 @@ object EveryAyahReciters {
             style = "Mujawwad",
             tempo = "Slow & Emotional",
             audioFolder = "Minshawy_Mujawwad_192kbps",
-            serverUrl = "https://server10.mp3quran.net/minsh/Almusshaf-Al-Mojawwad/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-minshawi/r2/",
             country = "Egypt",
             description = "Historic Mujawwad recitation captured with stirring emotive depth."
         ),
@@ -174,7 +174,7 @@ object EveryAyahReciters {
             style = "Mujawwad",
             tempo = "Measured & Reverent",
             audioFolder = "Husary_128kbps_Mujawwad",
-            serverUrl = "https://server13.mp3quran.net/husr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/",
             country = "Egypt",
             description = "Sublime Mujawwad reading blending rigorous phonetic accuracy with solemn beauty."
         ),
@@ -187,7 +187,7 @@ object EveryAyahReciters {
             style = "Haramain",
             tempo = "Brisk & Resonant",
             audioFolder = "Abdurrahmaan_As-Sudais_192kbps",
-            serverUrl = "https://server11.mp3quran.net/sds/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulrahman-sudais/r1/",
             country = "Saudi Arabia",
             description = "Chief Imam of the Grand Mosque in Makkah, famed for passionate tearful recitations."
         ),
@@ -198,7 +198,7 @@ object EveryAyahReciters {
             style = "Haramain",
             tempo = "Fast & Powerful",
             audioFolder = "Saood_ash-Shuraym_128kbps",
-            serverUrl = "https://server7.mp3quran.net/shur/",
+            serverUrl = "https://cdn.mp3quran.net/audio/saud-shuraim/r1/",
             country = "Saudi Arabia",
             description = "Former Imam of Masjid al-Haram, known for vibrant rhythmic flow and clarity."
         ),
@@ -209,7 +209,7 @@ object EveryAyahReciters {
             style = "Haramain",
             tempo = "Medium",
             audioFolder = "MaherAlMuaiqly128kbps",
-            serverUrl = "https://server12.mp3quran.net/maher/",
+            serverUrl = "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/",
             country = "Saudi Arabia",
             description = "Imam of Masjid al-Haram with a deeply soothing, resonant, and universally loved voice."
         ),
@@ -220,7 +220,7 @@ object EveryAyahReciters {
             style = "Haramain",
             tempo = "Emotive",
             audioFolder = "Yasser_Ad-Dussary_128kbps",
-            serverUrl = "https://server11.mp3quran.net/yasser/",
+            serverUrl = "https://cdn.mp3quran.net/audio/yasser-dosari/r1/",
             country = "Saudi Arabia",
             description = "Imam of Masjid al-Haram characterized by soulful pitch shifts and emotional power."
         ),
@@ -231,7 +231,7 @@ object EveryAyahReciters {
             style = "Madinah Murattal",
             tempo = "Deliberate & Slow",
             audioFolder = "Hudhaify_128kbps",
-            serverUrl = "https://server9.mp3quran.net/hthfi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ali-hudhaifi/r1/",
             country = "Saudi Arabia",
             description = "Chief Imam of the Prophet's Mosque in Madinah, celebrated for slow, crystal Tajweed."
         ),
@@ -242,7 +242,7 @@ object EveryAyahReciters {
             style = "Haramain",
             tempo = "Steady & Melodic",
             audioFolder = "Abdullaah_3awwaad_Al-Juhaynee_128kbps",
-            serverUrl = "https://server13.mp3quran.net/jhn/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-juhani/r1/",
             country = "Saudi Arabia",
             description = "Imam of Masjid al-Haram known for his rich baritone cadence."
         ),
@@ -253,7 +253,7 @@ object EveryAyahReciters {
             style = "Madinah Murattal",
             tempo = "Medium",
             audioFolder = "Salah_Al_Budair_128kbps",
-            serverUrl = "https://server6.mp3quran.net/s_bud/",
+            serverUrl = "https://cdn.mp3quran.net/audio/salah-budair/r1/",
             country = "Saudi Arabia",
             description = "Imam and Khatib of the Prophet's Mosque in Madinah."
         ),
@@ -264,7 +264,7 @@ object EveryAyahReciters {
             style = "Haramain Legend",
             tempo = "Flowing",
             audioFolder = "Ali_Jaber_64kbps",
-            serverUrl = "https://server11.mp3quran.net/a_jbr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ali-jaber/r1/",
             country = "Saudi Arabia",
             description = "Legendary former Imam of Masjid al-Haram whose iconic recitations shaped a generation."
         ),
@@ -277,7 +277,7 @@ object EveryAyahReciters {
             style = "Murattal",
             tempo = "Medium",
             audioFolder = "Ghamadi_40kbps",
-            serverUrl = "https://server7.mp3quran.net/s_gmd/",
+            serverUrl = "https://cdn.mp3quran.net/audio/saad-ghamdi/r1/",
             country = "Saudi Arabia",
             description = "A warm, clear voice beloved for decades across Muslim households."
         ),
@@ -288,7 +288,7 @@ object EveryAyahReciters {
             style = "Murattal",
             tempo = "Calm & Reflective",
             audioFolder = "Abu_Bakr_Ash-Shaatree_128kbps",
-            serverUrl = "https://server11.mp3quran.net/shatri/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abubakr-shatri/r1/",
             country = "Saudi Arabia",
             description = "Mellow, tranquil recitation ideal for nighttime contemplation and memorization."
         ),
@@ -299,7 +299,7 @@ object EveryAyahReciters {
             style = "Murattal",
             tempo = "Resonant",
             audioFolder = "Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net",
-            serverUrl = "https://server10.mp3quran.net/ajm/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-ajmi/r1/",
             country = "Saudi Arabia",
             description = "Deeply moving tone, widely recognized for passionate Surah recitations."
         ),
@@ -310,7 +310,7 @@ object EveryAyahReciters {
             style = "Murattal",
             tempo = "Melodic",
             audioFolder = "Fares_Abbad_64kbps",
-            serverUrl = "https://server8.mp3quran.net/frs_a/",
+            serverUrl = "https://cdn.mp3quran.net/audio/fares-abbad/r1/",
             country = "Yemen",
             description = "Distinctive melodious recitation widely celebrated across the Arab world."
         ),
@@ -321,7 +321,7 @@ object EveryAyahReciters {
             style = "Tadabbur",
             tempo = "Slow & Tearful",
             audioFolder = "Hani_Rifai_192kbps",
-            serverUrl = "https://server8.mp3quran.net/hani/",
+            serverUrl = "https://cdn.mp3quran.net/audio/hani-rifai/r1/",
             country = "Saudi Arabia",
             description = "Deeply poignant recitation conveying humility, repentance, and awe."
         ),
@@ -332,7 +332,7 @@ object EveryAyahReciters {
             style = "Hijazi Classic",
             tempo = "Melodic & Serene",
             audioFolder = "Muhammad_Ayyoub_128kbps",
-            serverUrl = "https://server8.mp3quran.net/ayyub/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-ayyub/r1/",
             country = "Saudi Arabia",
             description = "Former Imam of the Prophet's Mosque, renowned for the authentic Hijazi maqam."
         ),
@@ -343,7 +343,7 @@ object EveryAyahReciters {
             style = "Murattal",
             tempo = "Fast & Expressive",
             audioFolder = "Muhammad_Jibreel_128kbps",
-            serverUrl = "https://server8.mp3quran.net/jbrl/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-jibreel/r1/",
             country = "Egypt",
             description = "Famed Imam of Amr ibn al-Aas Mosque in Cairo, known for powerful Du'a recitations."
         ),
@@ -354,7 +354,7 @@ object EveryAyahReciters {
             style = "Modern Murattal",
             tempo = "Medium",
             audioFolder = "Nasser_Alqatami_128kbps",
-            serverUrl = "https://server6.mp3quran.net/qtm/",
+            serverUrl = "https://cdn.mp3quran.net/audio/nasser-qatami/r1/",
             country = "Saudi Arabia",
             description = "Inspiring Riyadh Qari with an expressive modern recitation style."
         ),
@@ -365,7 +365,7 @@ object EveryAyahReciters {
             style = "Egyptian Classic",
             tempo = "Rich & Vocal",
             audioFolder = "Mohammad_al_Tablaway_128kbps",
-            serverUrl = "https://server12.mp3quran.net/tblawi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-tablawi/r1/",
             country = "Egypt",
             description = "Former Sheikh of Egyptian Reciters, recognized for unique vocal timbre and breath."
         ),
@@ -376,7 +376,7 @@ object EveryAyahReciters {
             style = "Madinah Classic",
             tempo = "Steady & Clean",
             audioFolder = "Ibrahim_Akhdar_32kbps",
-            serverUrl = "https://server6.mp3quran.net/akdr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ibrahim-akhdar/r1/",
             country = "Saudi Arabia",
             description = "Sheikh of Madinah Qaris, famous for pristine diction and teaching clarity."
         ),
@@ -387,7 +387,7 @@ object EveryAyahReciters {
             style = "Educational",
             tempo = "Measured",
             audioFolder = "Abdullah_Basfar_192kbps",
-            serverUrl = "https://server6.mp3quran.net/bsfr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-basfar/r1/",
             country = "Saudi Arabia",
             description = "Renowned Quran scholar focused on global Quran memorization initiatives."
         ),
@@ -398,7 +398,7 @@ object EveryAyahReciters {
             style = "Murattal",
             tempo = "Medium",
             audioFolder = "Yaser_Salamah_128kbps",
-            serverUrl = "https://server12.mp3quran.net/salamah/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/yasser-salama/r1/",
             country = "Egypt",
             description = "Gentle, soothing recitation with pristine phonetic transitions."
         ),
@@ -409,7 +409,7 @@ object EveryAyahReciters {
             style = "Murattal Classic",
             tempo = "Steady",
             audioFolder = "mahmoud_ali_al_banna_32kbps",
-            serverUrl = "https://server8.mp3quran.net/bna/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mahmoud-banna/r1/",
             country = "Egypt",
             description = "One of the four founding masters of recorded Murattal on Cairo Radio."
         ),
@@ -420,7 +420,7 @@ object EveryAyahReciters {
             style = "Maqamat Master",
             tempo = "Measured",
             audioFolder = "Mustafa_Ismail_48kbps",
-            serverUrl = "https://server8.mp3quran.net/mustafa/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mustafa-ismail/r1/",
             country = "Egypt",
             description = "The architect of Quranic maqamat, admired by musicians and reciters worldwide."
         ),
@@ -431,7 +431,7 @@ object EveryAyahReciters {
             style = "Teacher / Educational",
             tempo = "Slow & Measured",
             audioFolder = "khalefa_al_tunaiji_64kbps",
-            serverUrl = "https://server12.mp3quran.net/tnjy/",
+            serverUrl = "https://cdn.mp3quran.net/audio/khalifa-tunaiji/r1/",
             country = "UAE",
             description = "Emirati Qari renowned for high pedagogical clarity and deliberate pacing for beginners.",
             isTeacher = true

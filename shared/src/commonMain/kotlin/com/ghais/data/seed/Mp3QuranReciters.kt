@@ -16,7 +16,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server8.mp3quran.net/3zazi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/husayni-azazi/r1/",
             availableSurahList = "58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -28,7 +28,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Libya 🇱🇾",
-            serverUrl = "https://server7.mp3quran.net/dokali/",
+            serverUrl = "https://cdn.mp3quran.net/audio/dokali-alim/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -40,7 +40,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Sudan 🇸🇩",
-            serverUrl = "https://server9.mp3quran.net/alzain/",
+            serverUrl = "https://cdn.mp3quran.net/audio/zain-ahmad/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -52,7 +52,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server9.mp3quran.net/omran/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ashri-omran/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -64,7 +64,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Morocco 🇲🇦",
-            serverUrl = "https://server11.mp3quran.net/koshi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/laayoun-kouchi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -76,7 +76,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Sudan 🇸🇩",
-            serverUrl = "https://server6.mp3quran.net/fateh/",
+            serverUrl = "https://cdn.mp3quran.net/audio/fateh-zubair/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -88,7 +88,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Algeria 🇩🇿",
-            serverUrl = "https://server11.mp3quran.net/qari/",
+            serverUrl = "https://cdn.mp3quran.net/audio/yassen-jazairi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -100,7 +100,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server14.mp3quran.net/shamsan/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/waleed-shamsan/r1/",
             availableSurahList = "1,8,17,19,20,24,25,26,29,30,31,32,33,35,36,37,41,42,43,44,45,47,48,49,50,51,52,53,54,55,56,57,58,59,60,62,63,64,65,66,67,68,70,75,76,81,82,85,86,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -112,7 +112,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/ahmad_huth/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-hudhaifi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,34,35,36,38,39,41,42,43,44,45,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -124,7 +124,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/hawashi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-hawashi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -136,7 +136,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server14.mp3quran.net/swlim/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-suwailem/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -148,7 +148,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Lebanon / Kuwait 🇱🇧 🇰🇼",
-            serverUrl = "https://server10.mp3quran.net/trabulsi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-tarabulsi/r2/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -160,7 +160,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server16.mp3quran.net/nufais/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-nufais/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -172,7 +172,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server10.mp3quran.net/ajm/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-ajmi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -184,7 +184,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server16.mp3quran.net/shaheen/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-shaheen/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -196,7 +196,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Yemen 🇾🇪",
-            serverUrl = "https://server16.mp3quran.net/deban/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-deeban/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -208,7 +208,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/saud/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-saud/r1/",
             availableSurahList = "85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -220,7 +220,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server8.mp3quran.net/saber/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-saber/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -232,7 +232,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/a_binhameed/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-humaid/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,10,11,12,13,15,18,19,20,21,22,25,26,27,28,29,30,31,32,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -244,7 +244,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server10.mp3quran.net/Aamer/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-amer/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -256,7 +256,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server16.mp3quran.net/a_maasaraawi/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-masarawi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -268,7 +268,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server11.mp3quran.net/ahmad_nu/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ahmad-naina/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -280,7 +280,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Malaysia 🇲🇾",
-            serverUrl = "https://server12.mp3quran.net/malaysia/akil/",
+            serverUrl = "https://cdn.mp3quran.net/audio/akhil-rawa/r1/",
             availableSurahList = "50,51,52,56"
         ),
         Reciter(
@@ -292,7 +292,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Malaysia 🇲🇾",
-            serverUrl = "https://server12.mp3quran.net/malaysia/zamri/",
+            serverUrl = "https://cdn.mp3quran.net/audio/zamri-abdullah/r1/",
             availableSurahList = "32,44,55,56,61,67,76"
         ),
         Reciter(
@@ -304,7 +304,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server9.mp3quran.net/akrm/",
+            serverUrl = "https://cdn.mp3quran.net/audio/akram-alaqmi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -316,7 +316,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Bahrain 🇧🇭",
-            serverUrl = "https://server16.mp3quran.net/a_alemadi/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/anas-emadi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -328,7 +328,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/akdr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ibrahim-akhdar/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -340,7 +340,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/jbreen/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ibrahim-jibreen/r1/",
             availableSurahList = "1,2,3,4,6,7,8,10,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,30,31,32,33,34,35,36,37,38,39,40,41,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -352,7 +352,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Jordan / Palestine 🇯🇴 🇵🇸",
-            serverUrl = "https://server11.mp3quran.net/jormy/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ibrahim-jormy/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -364,7 +364,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server10.mp3quran.net/ibrahim_dosri/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ibrahim-dosari/r2/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -376,7 +376,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server10.mp3quran.net/IbrahemSadan/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ibrahim-saadan/r1/",
             availableSurahList = "1,4,5,6,7,8,9,11,12,15,16,19,20,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -388,7 +388,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/Ibrahim-Al-Shahri/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ibrahim-shahri/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -400,7 +400,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/3siri/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ibrahim-asiri/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -412,7 +412,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Libya 🇱🇾",
-            serverUrl = "https://server16.mp3quran.net/i_kshidan/Rewayat-Qalon-A-n-Nafi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ibrahim-kshidan/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -424,7 +424,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia / Yemen 🇸🇦 🇾🇪",
-            serverUrl = "https://server6.mp3quran.net/abkr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/idrees-abkar/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -436,7 +436,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/islam-sobhi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,38,41,42,43,44,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -448,7 +448,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server10.mp3quran.net/bader/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/badr-turki/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -460,7 +460,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/balilah/",
+            serverUrl = "https://cdn.mp3quran.net/audio/bandar-baleela/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -472,7 +472,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Iraq (Kurdistan) 🇮🇶",
-            serverUrl = "https://server16.mp3quran.net/peshawa/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/peshawa-kurdi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -484,7 +484,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Eritrea / Saudi Arabia 🇪🇷 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/twfeeq/",
+            serverUrl = "https://cdn.mp3quran.net/audio/tawfeeq-sayegh/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -496,7 +496,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Somalia 🇸🇴",
-            serverUrl = "https://server11.mp3quran.net/zilaie/",
+            serverUrl = "https://cdn.mp3quran.net/audio/jamaluddin-zailai/r1/",
             availableSurahList = "1,19,32,54,67,70,73,91"
         ),
         Reciter(
@@ -508,7 +508,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Jordan / Palestine 🇯🇴 🇵🇸",
-            serverUrl = "https://server6.mp3quran.net/jamal/",
+            serverUrl = "https://cdn.mp3quran.net/audio/jamal-abdullah/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -520,7 +520,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/jaman/",
+            serverUrl = "https://cdn.mp3quran.net/audio/jamaan-osaimi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -532,7 +532,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "South Africa 🇿🇦",
-            serverUrl = "https://server16.mp3quran.net/J-Abdullah/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/junaid-abdullah/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -544,7 +544,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server11.mp3quran.net/hatem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/hatem-waer/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -556,7 +556,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/H-Aldaghriri/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/hassan-daghriri/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -568,7 +568,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server16.mp3quran.net/h_saleh/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/hassan-saleh/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -580,7 +580,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/alshaik/",
+            serverUrl = "https://cdn.mp3quran.net/audio/hussain-sheikh/r1/",
             availableSurahList = "2,8,13,14,22,32,36,38,44,45,49,50,54,55,56,57,62,63,64,65,66,72,73,75,76,77,78,79,80,81,82,85,87,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -592,7 +592,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/hamad/",
+            serverUrl = "https://cdn.mp3quran.net/audio/hamad-daghriri/r1/",
             availableSurahList = "1,2,12,13,19,21,23,27,29,31,36,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -604,7 +604,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server10.mp3quran.net/jleel/",
+            serverUrl = "https://cdn.mp3quran.net/audio/khalid-jalil/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -616,7 +616,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/K-Alzadi/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/khalid-ziyadi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -628,7 +628,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server14.mp3quran.net/sharekh/",
+            serverUrl = "https://cdn.mp3quran.net/audio/khalid-sharekh/r1/",
             availableSurahList = "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -640,7 +640,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server12.mp3quran.net/shoraimy/",
+            serverUrl = "https://cdn.mp3quran.net/audio/khalid-shuraimi/r1/",
             availableSurahList = "1,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -652,7 +652,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/ghamdi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/khalid-ghamdi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,39,40,41,42,43,45,46,47,49,50,51,52,53,54,55,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,73,75,76,77,80,82,83,85,86,87,88,89,90,91,92,93,94,95,97,98,99,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -664,7 +664,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server10.mp3quran.net/qht/",
+            serverUrl = "https://cdn.mp3quran.net/audio/khalid-qahtani/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -676,7 +676,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/mohna/",
+            serverUrl = "https://cdn.mp3quran.net/audio/khalid-mohanna/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -688,7 +688,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/whabi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/khalid-wahaibi/r1/",
             availableSurahList = "1,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,24,25,29,30,31,32"
         ),
         Reciter(
@@ -700,7 +700,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/kafi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/khalid-abdulkafi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -712,7 +712,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Iran / Iraq 🇮🇷 🇮🇶",
-            serverUrl = "https://server16.mp3quran.net/kh_mohammadi/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/khalid-mohammadi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -724,7 +724,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "United Arab Emirates 🇦🇪",
-            serverUrl = "https://server12.mp3quran.net/tnjy/",
+            serverUrl = "https://cdn.mp3quran.net/audio/khalifa-tunaiji/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -736,7 +736,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Sudan 🇸🇩",
-            serverUrl = "https://server9.mp3quran.net/hamza/",
+            serverUrl = "https://cdn.mp3quran.net/audio/dawood-hamza/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -748,7 +748,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Yemen 🇾🇪",
-            serverUrl = "https://server6.mp3quran.net/rami/",
+            serverUrl = "https://cdn.mp3quran.net/audio/rami-duais/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -760,7 +760,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Morocco 🇲🇦",
-            serverUrl = "https://server12.mp3quran.net/ifrad/",
+            serverUrl = "https://cdn.mp3quran.net/audio/rachid-ifrad/r1/",
             availableSurahList = "1,3,12,13,14,18,20,22,23,25,26,27,28,29,30,31,33,34,35,36,37,38,39,40,41,42,43,46,47,48,49,51,67,68,69,70,71,74,75,79,82,86,87,88,89,93,94,104,109,112"
         ),
         Reciter(
@@ -772,7 +772,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Algeria 🇩🇿",
-            serverUrl = "https://server6.mp3quran.net/bl3/Rewayat-Warsh-A-n-Nafi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/rachid-belalia/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -784,7 +784,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Malaysia 🇲🇾",
-            serverUrl = "https://server12.mp3quran.net/malaysia/rziah/",
+            serverUrl = "https://cdn.mp3quran.net/audio/rodziah-abdulrahman/r1/",
             availableSurahList = "3,8,33,35"
         ),
         Reciter(
@@ -796,7 +796,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Iraq 🇮🇶",
-            serverUrl = "https://server6.mp3quran.net/kurdi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/raad-kurdi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -808,7 +808,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Thailand 🇹🇭",
-            serverUrl = "https://server12.mp3quran.net/malaysia/rogiah/",
+            serverUrl = "https://cdn.mp3quran.net/audio/rogayah-sulong/r1/",
             availableSurahList = "36"
         ),
         Reciter(
@@ -820,7 +820,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Iraq 🇮🇶",
-            serverUrl = "https://server6.mp3quran.net/shakoor/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ramadan-shakoor/r1/",
             availableSurahList = "1,2,3,9,10,12,13,14,23,24,26,29,35,36,39,40,42,43,47,48,49,50,51,57,58,59,60,63,68,69,70,71,72,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,111,112,113,114"
         ),
         Reciter(
@@ -832,7 +832,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server9.mp3quran.net/zakariya/",
+            serverUrl = "https://cdn.mp3quran.net/audio/zakaria-hamama/r1/",
             availableSurahList = "32,36,44,56,67,76,85"
         ),
         Reciter(
@@ -844,7 +844,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server9.mp3quran.net/zaki/",
+            serverUrl = "https://cdn.mp3quran.net/audio/zaki-daghistani/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -856,7 +856,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Thailand 🇹🇭",
-            serverUrl = "https://server12.mp3quran.net/malaysia/mamat/",
+            serverUrl = "https://cdn.mp3quran.net/audio/sapinah-mamat/r1/",
             availableSurahList = "3,14,21,22"
         ),
         Reciter(
@@ -868,7 +868,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/sami_hsn/",
+            serverUrl = "https://cdn.mp3quran.net/audio/sami-hassan/r1/",
             availableSurahList = "1,19,20,24,26,27,32,34,50,55,81,82,86,87,88,91,92,93,94,95,97,102,104,105,109,110,111,112"
         ),
         Reciter(
@@ -880,7 +880,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/sami_dosr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/sami-dosari/r1/",
             availableSurahList = "2,8,9,12,13,14,29,30,31,32,33,34,35,39,40,41,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -892,7 +892,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "Ghamadi_40kbps",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server7.mp3quran.net/s_gmd/",
+            serverUrl = "https://cdn.mp3quran.net/audio/saad-ghamdi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -904,7 +904,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/saad/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/saad-muqrin/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -916,7 +916,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "Saood_ash-Shuraym_128kbps",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server7.mp3quran.net/shur/",
+            serverUrl = "https://cdn.mp3quran.net/audio/saud-shuraim/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -928,7 +928,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/s_sadeiq/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/salman-siddiq/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -940,7 +940,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/salman/",
+            serverUrl = "https://cdn.mp3quran.net/audio/salman-otaibi/r1/",
             availableSurahList = "1,2,3,10,11,14,16,19,23,25,32,36,38,39,40,46,48,50,52,55,56,58,59,61,62,63,64,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -952,7 +952,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/shl/",
+            serverUrl = "https://cdn.mp3quran.net/audio/sahl-yassin/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -964,7 +964,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Iran 🇮🇷",
-            serverUrl = "https://server16.mp3quran.net/s_hashemi/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/sayed-hashemi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -976,7 +976,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server12.mp3quran.net/sayed/",
+            serverUrl = "https://cdn.mp3quran.net/audio/sayed-ramadan/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -988,7 +988,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Malaysia 🇲🇾",
-            serverUrl = "https://server12.mp3quran.net/malaysia/sideen/",
+            serverUrl = "https://cdn.mp3quran.net/audio/saidin-abdulrahman/r1/",
             availableSurahList = "17,23,56,75"
         ),
         Reciter(
@@ -1000,7 +1000,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server11.mp3quran.net/shaban/",
+            serverUrl = "https://cdn.mp3quran.net/audio/shaban-sayyad/r1/",
             availableSurahList = "2,3,4,5,6,7,9,10,11,12,13,16,17,19,20,21,22,24,26,27,28,29,32,33,35,38,40,41,42,43,45,46,47,52,53,54,59,60,67,68,69,77,78,79,80,81,82,87,88,89,90,91,92,94,95,96,97,98,99,100,101,102,103,104,105"
         ),
         Reciter(
@@ -1012,7 +1012,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/shatri/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abubakr-shatri/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1024,7 +1024,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Iraq 🇮🇶",
-            serverUrl = "https://server12.mp3quran.net/taher/",
+            serverUrl = "https://cdn.mp3quran.net/audio/shirzad-taher/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1036,7 +1036,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server12.mp3quran.net/hkm/",
+            serverUrl = "https://cdn.mp3quran.net/audio/saber-abdulhakam/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1048,7 +1048,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server9.mp3quran.net/tlb/",
+            serverUrl = "https://cdn.mp3quran.net/audio/saleh-talib/r1/",
             availableSurahList = "1,2,25,34,38,39,44,45,46,47,55,56,57,58,59,60,61,70,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86"
         ),
         Reciter(
@@ -1060,7 +1060,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/shamrani/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/saleh-shamrani/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1072,7 +1072,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/sahood/",
+            serverUrl = "https://cdn.mp3quran.net/audio/saleh-sahood/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1084,7 +1084,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/s_alquraishi/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/saleh-quraishi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1096,7 +1096,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/habdan/",
+            serverUrl = "https://cdn.mp3quran.net/audio/saleh-habdan/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1108,7 +1108,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/s_bud/",
+            serverUrl = "https://cdn.mp3quran.net/audio/salah-budair/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1120,7 +1120,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server12.mp3quran.net/salah_hashim_m/",
+            serverUrl = "https://cdn.mp3quran.net/audio/salah-hashim/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1132,7 +1132,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "United Arab Emirates 🇦🇪",
-            serverUrl = "https://server8.mp3quran.net/bu_khtr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/salah-bukhatir/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1144,7 +1144,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Yemen 🇾🇪",
-            serverUrl = "https://server14.mp3quran.net/musali/",
+            serverUrl = "https://cdn.mp3quran.net/audio/salah-musalli/r1/",
             availableSurahList = "50,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1156,7 +1156,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Libya 🇱🇾",
-            serverUrl = "https://server10.mp3quran.net/tareq/",
+            serverUrl = "https://cdn.mp3quran.net/audio/tareq-daawob/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1168,7 +1168,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/a_klb/",
+            serverUrl = "https://cdn.mp3quran.net/audio/adel-kalbani/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1180,7 +1180,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/ryan/",
+            serverUrl = "https://cdn.mp3quran.net/audio/adel-rayyan/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1192,7 +1192,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server7.mp3quran.net/asim/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/asim-luhaidan/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1204,7 +1204,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Morocco 🇲🇦",
-            serverUrl = "https://server16.mp3quran.net/A-Benkirane/Rewayat-Warsh-A-n-Nafi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdelmoujib-benkirane/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1216,7 +1216,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/a_binaoun/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulelah-aoun/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1228,7 +1228,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/thubti/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulbari-thubaiti/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1240,7 +1240,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server12.mp3quran.net/bari/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulbari-muhammad/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1252,7 +1252,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server7.mp3quran.net/basit/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulbasit-abdulsamad/r3/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1264,7 +1264,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Yemen 🇾🇪",
-            serverUrl = "https://server16.mp3quran.net/A-Ghailan/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulbadi-ghailan/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1276,7 +1276,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/sds/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulrahman-sudais/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1288,7 +1288,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/a_swaiyd/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulrahman-suwayid/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1300,7 +1300,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server16.mp3quran.net/a_alshahhat/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulrahman-shahat/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1312,7 +1312,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/aloosi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulrahman-oosi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1324,7 +1324,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server10.mp3quran.net/a_majed/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulrahman-majed/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1336,7 +1336,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server16.mp3quran.net/A-AlBadr/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulrahman-badr/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1348,7 +1348,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Somalia / Qatar 🇸🇴 🇶🇦",
-            serverUrl = "https://server16.mp3quran.net/soufi/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulrasheed-sufi/r3/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1360,7 +1360,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/a_ahmed/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulaziz-ahmad/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1372,7 +1372,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/a_turki/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulaziz-turki/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1384,7 +1384,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server9.mp3quran.net/zahrani/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulaziz-zahrani/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1396,7 +1396,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/abdulazizasiri/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulaziz-asiri/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,30,31,32,35,36,37,39,40,41,45,49,50,51,52,53,54,55,56,57,63,66,67,69,70,71,72,73,75,76,77,78,80,81,83,86,87,88,89,93,99,101,107,110,112"
         ),
         Reciter(
@@ -1408,7 +1408,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Algeria 🇩🇿",
-            serverUrl = "https://server16.mp3quran.net/a_sheim/Rewayat-Warsh-A-n-Nafi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdelaziz-sheim/r1/",
             availableSurahList = "1,18,19,31,49,50,51,55,56,66,67,72,75,87,89,112"
         ),
         Reciter(
@@ -1420,7 +1420,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Malaysia 🇲🇾",
-            serverUrl = "https://server12.mp3quran.net/malaysia/abdulgani/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulghani-abdullah/r1/",
             availableSurahList = "1,2,5,6,9,67,87,91,92,94,95,97,114"
         ),
         Reciter(
@@ -1432,7 +1432,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/a_alhazmi/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulkareem-hazmi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1444,7 +1444,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "United Arab Emirates 🇦🇪",
-            serverUrl = "https://server8.mp3quran.net/brmi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-buraimi/r1/",
             availableSurahList = "1,19,23,24,25,31,32,36,49,50,55,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1456,7 +1456,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/buajan/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-buaijan/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1468,7 +1468,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server14.mp3quran.net/khalf/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-khalaf/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1480,7 +1480,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/a_alqrafi/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-qarafi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1492,7 +1492,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server10.mp3quran.net/Abdullahk/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-kandari/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1504,7 +1504,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server16.mp3quran.net/a-almishal/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-mishal/r1/",
             availableSurahList = "8,14,41,49,50,51,52,53,54,55,56"
         ),
         Reciter(
@@ -1516,7 +1516,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/mtrod/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-matrood/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1528,7 +1528,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server14.mp3quran.net/mousa/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-mousa/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1540,7 +1540,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/a_bukhari/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-bukhari/r1/",
             availableSurahList = "1,2,36,37,38,39,40,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1552,7 +1552,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/bsfr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-basfar/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1564,7 +1564,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server12.mp3quran.net/kyat/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-khayyat/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1576,7 +1576,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Malaysia 🇲🇾",
-            serverUrl = "https://server16.mp3quran.net/a_abdl/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-abdal/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1588,7 +1588,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server13.mp3quran.net/jhn/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-juhani/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1600,7 +1600,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Yemen 🇾🇪",
-            serverUrl = "https://server8.mp3quran.net/gulan/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-ghailan/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1612,7 +1612,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Malaysia 🇲🇾",
-            serverUrl = "https://server12.mp3quran.net/malaysia/fhmi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-fahmi/r1/",
             availableSurahList = "1,36,53,75"
         ),
         Reciter(
@@ -1624,7 +1624,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server16.mp3quran.net/kamel/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdullah-kamel/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1636,7 +1636,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Myanmar (Burma) / Saudi Arabia 🇲🇲 🇸🇦",
-            serverUrl = "https://server7.mp3quran.net/m_arkani/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulmajeed-arkani/r1/",
             availableSurahList = "1,12,14,15,18,19,21,22,40,50,56,76,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1648,7 +1648,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/mohsin_harthi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulmohsen-harthi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1660,7 +1660,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server12.mp3quran.net/obk/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulmohsen-obaikan/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1672,7 +1672,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/askr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulmohsen-askar/r1/",
             availableSurahList = "1,2,7,55"
         ),
         Reciter(
@@ -1684,7 +1684,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/qasm/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulmohsen-qasim/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1696,7 +1696,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/a_alaskar/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulmalik-askar/r1/",
             availableSurahList = "30,36,40,69,70,71,75"
         ),
         Reciter(
@@ -1708,7 +1708,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Syria 🇸🇾",
-            serverUrl = "https://server6.mp3quran.net/kanakeri/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulhadi-kanakeri/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1720,7 +1720,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/wdod/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulwadood-haneef/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1732,7 +1732,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Myanmar (Burma) / Saudi Arabia 🇲🇲 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/arkani/",
+            serverUrl = "https://cdn.mp3quran.net/audio/abdulwali-arkani/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1744,7 +1744,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/Othmn/",
+            serverUrl = "https://cdn.mp3quran.net/audio/othman-ansari/r1/",
             availableSurahList = "1,2,3,4,5,6,7,40,41,42,43,44,46,47,48,49,50,51,52,53,54,55,56,58,59,60,61,62,63,64,65,66,67,68,69,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1756,7 +1756,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Ghana 🇬🇭",
-            serverUrl = "https://server16.mp3quran.net/okasha/Rewayat-Albizi-A-n-Ibn-Katheer/",
+            serverUrl = "https://cdn.mp3quran.net/audio/okasha-kameny/r2/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1768,7 +1768,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server9.mp3quran.net/abo_hashim/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ali-abuhashim/r1/",
             availableSurahList = "11,12,18,19,21,25,50,51,52,53,54,55,56,57"
         ),
         Reciter(
@@ -1780,7 +1780,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server9.mp3quran.net/hthfi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ali-hudhaifi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1792,7 +1792,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/a_jbr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ali-jaber/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1804,7 +1804,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server9.mp3quran.net/hajjaj/",
+            serverUrl = "https://cdn.mp3quran.net/audio/ali-souissi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1816,7 +1816,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Indonesia 🇮🇩",
-            serverUrl = "https://server16.mp3quran.net/Alijon/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/alijon-hamdan/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1828,7 +1828,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/hafz/",
+            serverUrl = "https://cdn.mp3quran.net/audio/imad-hafez/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1840,7 +1840,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/darweez/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/omar-duraiwiz/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1852,7 +1852,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Morocco 🇲🇦",
-            serverUrl = "https://server9.mp3quran.net/omar_warsh/",
+            serverUrl = "https://cdn.mp3quran.net/audio/omar-kazabri/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1864,7 +1864,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Mali / Ivory Coast 🇲🇱 🇨🇮",
-            serverUrl = "https://server16.mp3quran.net/i_sanankoua/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/issa-sanankoua/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1876,7 +1876,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Yemen 🇾🇪",
-            serverUrl = "https://server16.mp3quran.net/f_khamery/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/fouad-khamiri/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1888,7 +1888,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Yemen 🇾🇪",
-            serverUrl = "https://server8.mp3quran.net/frs_a/",
+            serverUrl = "https://cdn.mp3quran.net/audio/fares-abbad/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1900,7 +1900,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/fahad_otibi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/fahad-otaibi/r1/",
             availableSurahList = "50,56,69,72,73,74,75,76"
         ),
         Reciter(
@@ -1912,7 +1912,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server11.mp3quran.net/kndri/",
+            serverUrl = "https://cdn.mp3quran.net/audio/fahad-kandari/r1/",
             availableSurahList = "1,2,6,12,14,17,18,19,22,23,30,31,36,42,51,52,53,54,55,56,57,58,59,60,61,62,63,64,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1924,7 +1924,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Bahrain 🇧🇭",
-            serverUrl = "https://server8.mp3quran.net/fawaz/",
+            serverUrl = "https://cdn.mp3quran.net/audio/fawaz-kaabi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,21,22,23,25,26,27,28,29,30,33,35,36,39,40,41,49,54,55,56,57,58,59,62,63,66,67,73,78,87,109,112"
         ),
         Reciter(
@@ -1936,7 +1936,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server16.mp3quran.net/f_hajry/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/faisal-hajri/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1948,7 +1948,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server6.mp3quran.net/lafi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/lafi-oni/r1/",
             availableSurahList = "3,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,27,28,29,30,31,32,33,35,36,37,38,39,40,41,42,43,44,45,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1960,7 +1960,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server9.mp3quran.net/zaml/",
+            serverUrl = "https://cdn.mp3quran.net/audio/majed-zamil/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1972,7 +1972,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/majd_onazi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/majed-anazi/r1/",
             availableSurahList = "1,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1984,7 +1984,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Qatar 🇶🇦",
-            serverUrl = "https://server16.mp3quran.net/mal-allah_jaber/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/malallah-jaber/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -1996,7 +1996,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "Maher_AlMuaiqly_64kbps",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server12.mp3quran.net/maher/",
+            serverUrl = "https://cdn.mp3quran.net/audio/maher-muaiqly/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2008,7 +2008,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Syria 🇸🇾",
-            serverUrl = "https://server10.mp3quran.net/shaksh/",
+            serverUrl = "https://cdn.mp3quran.net/audio/maher-shakhashiro/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2020,7 +2020,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Libya 🇱🇾",
-            serverUrl = "https://server16.mp3quran.net/sneineh/Rewayat-Qalon-A-n-Nafi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-abusnaina/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2032,7 +2032,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/ayyub/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-ayyub/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2044,7 +2044,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Libya 🇱🇾",
-            serverUrl = "https://server16.mp3quran.net/qeniwa/Rewayat-Qalon-A-n-Nafi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-qeniwa/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2056,7 +2056,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Morocco 🇲🇦",
-            serverUrl = "https://server6.mp3quran.net/earawi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-iraoui/r1/",
             availableSurahList = "1,2,3,4,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2068,7 +2068,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Sudan 🇸🇩",
-            serverUrl = "https://server14.mp3quran.net/bukheet/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-bukhait/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2080,7 +2080,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server13.mp3quran.net/braak/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-barrak/r1/",
             availableSurahList = "1,12,14,36,37,44,45,50,51,52,53,54,55,56,57,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2092,7 +2092,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Mauritania 🇲🇷",
-            serverUrl = "https://server12.mp3quran.net/malaysia/hafz/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-hafiz/r1/",
             availableSurahList = "1,19,31"
         ),
         Reciter(
@@ -2104,7 +2104,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Yemen 🇾🇪",
-            serverUrl = "https://server16.mp3quran.net/M-AlZubaidi/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-zubaidi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2116,7 +2116,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server12.mp3quran.net/tblawi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-tablawi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2128,7 +2128,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Yemen 🇾🇪",
-            serverUrl = "https://server16.mp3quran.net/M_Alfaqih/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-faqih/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2140,7 +2140,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/lhdan/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-luhaidan/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2152,7 +2152,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/mhsny/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-muhaisni/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2164,7 +2164,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Iraq 🇮🇶",
-            serverUrl = "https://server10.mp3quran.net/monshed/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-monshed/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,80,81,82,83,84,85,86,87,88,90,91,92,93,94,95,96,97,98,99,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2176,7 +2176,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Morocco 🇲🇦",
-            serverUrl = "https://server16.mp3quran.net/M_Burhaji/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-burhaji/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2188,7 +2188,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server8.mp3quran.net/jbrl/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-jibreel/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2200,7 +2200,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Malaysia 🇲🇾",
-            serverUrl = "https://server12.mp3quran.net/malaysia/hfs/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-ali/r1/",
             availableSurahList = "1,9,11,13,67"
         ),
         Reciter(
@@ -2212,7 +2212,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/m_qari/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-khalil/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2224,7 +2224,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Sudan 🇸🇩",
-            serverUrl = "https://server12.mp3quran.net/malaysia/nor/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-anuar/r1/",
             availableSurahList = "1,12,19,31"
         ),
         Reciter(
@@ -2236,7 +2236,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Russia (Dagestan) 🇷🇺",
-            serverUrl = "https://server16.mp3quran.net/m-dibirov/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-dibirov/r1/",
             availableSurahList = "2,12,13,17,18,19,20,24,26,27,31,32,36,37,41,44,53,55,56,67,70,72,76,79"
         ),
         Reciter(
@@ -2248,7 +2248,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Palestine / Jordan 🇵🇸 🇯🇴",
-            serverUrl = "https://server10.mp3quran.net/rashad/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-shareef/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2260,7 +2260,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server14.mp3quran.net/refat/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-refaat/r1/",
             availableSurahList = "1,10,11,12,17,18,19,20,48,54,55,56,69,72,73,75,76,77,78,79,81,82,83,85,86,87,88,89,96,98,100"
         ),
         Reciter(
@@ -2272,7 +2272,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Malaysia 🇲🇾",
-            serverUrl = "https://server16.mp3quran.net/m_sayed/Rewayat-Warsh-A-n-Nafi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-saayed/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2284,7 +2284,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Malaysia 🇲🇾",
-            serverUrl = "https://server12.mp3quran.net/shah/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-shah/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2296,7 +2296,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server10.mp3quran.net/minsh/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-minshawi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2308,7 +2308,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Syria 🇸🇾",
-            serverUrl = "https://server9.mp3quran.net/abdullah/Rewayat-AlDorai-A-n-Al-Kisa-ai/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-abdullah/r2/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2320,7 +2320,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Sudan 🇸🇩",
-            serverUrl = "https://server12.mp3quran.net/m_krm/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-abdulkareem/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2332,7 +2332,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Pakistan 🇵🇰",
-            serverUrl = "https://server6.mp3quran.net/khan/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muhammad-khan/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2344,7 +2344,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server11.mp3quran.net/mrifai/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mahmoud-rifai/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2356,7 +2356,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server10.mp3quran.net/sheimy/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mahmoud-sheimy/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2368,7 +2368,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server16.mp3quran.net/M-Harfoush/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mahmoud-harfoush/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2380,7 +2380,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server13.mp3quran.net/husr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mahmoud-husary/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2392,7 +2392,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server16.mp3quran.net/m_abdelhakam/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mahmoud-abdulhakam/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2404,7 +2404,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server8.mp3quran.net/bna/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mahmoud-banna/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2416,7 +2416,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Senegal / Sudan 🇸🇳 🇸🇩",
-            serverUrl = "https://server16.mp3quran.net/mukhtar_haj/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mukhtar-haj/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2428,7 +2428,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Tunisia 🇹🇳",
-            serverUrl = "https://server16.mp3quran.net/m_akri/Rewayat-Qalon-A-n-Nafi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/marwan-akri/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2440,7 +2440,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "Alafasy_64kbps",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server8.mp3quran.net/afs/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mishary-alafasy/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2452,7 +2452,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server8.mp3quran.net/mustafa/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mustafa-ismail/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2464,7 +2464,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server6.mp3quran.net/lahoni/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mustafa-lahouni/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2476,7 +2476,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Iraq 🇮🇶",
-            serverUrl = "https://server8.mp3quran.net/ra3ad/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mustafa-azzawi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2488,7 +2488,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Indonesia 🇮🇩",
-            serverUrl = "https://server6.mp3quran.net/muamr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muammar-za/r1/",
             availableSurahList = "36,93,94,97,101,109,110,111"
         ),
         Reciter(
@@ -2500,7 +2500,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/harthi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/moeedh-harthi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2512,7 +2512,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Libya 🇱🇾",
-            serverUrl = "https://server14.mp3quran.net/muftah_sultany/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/muftah-saltani/r3/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2524,7 +2524,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server14.mp3quran.net/mansor/",
+            serverUrl = "https://cdn.mp3quran.net/audio/mansour-salimi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2536,7 +2536,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/bilal/",
+            serverUrl = "https://cdn.mp3quran.net/audio/musa-bilal/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2548,7 +2548,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/obaid/",
+            serverUrl = "https://cdn.mp3quran.net/audio/nasser-obaid/r1/",
             availableSurahList = "3,7,10,13,14,15,19,21,25,26,27,32,35,36,37,38,39,40,41,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2560,7 +2560,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server14.mp3quran.net/alosfor/",
+            serverUrl = "https://cdn.mp3quran.net/audio/nasser-asfour/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2572,7 +2572,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server6.mp3quran.net/qtm/",
+            serverUrl = "https://cdn.mp3quran.net/audio/nasser-qatami/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2584,7 +2584,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server14.mp3quran.net/nasser_almajed/",
+            serverUrl = "https://cdn.mp3quran.net/audio/nasser-majed/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2596,7 +2596,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server9.mp3quran.net/nabil/",
+            serverUrl = "https://cdn.mp3quran.net/audio/nabil-rifai/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2608,7 +2608,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net//nathier/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/nadhir-maliki/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2620,7 +2620,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Iraq 🇮🇶",
-            serverUrl = "https://server8.mp3quran.net/namh/",
+            serverUrl = "https://cdn.mp3quran.net/audio/neama-hassan/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2632,7 +2632,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Sudan 🇸🇩",
-            serverUrl = "https://server16.mp3quran.net/nourin_siddig/Rewayat-Aldori-A-n-Abi-Amr/",
+            serverUrl = "https://cdn.mp3quran.net/audio/noreen-siddiq/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2644,7 +2644,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "United States 🇺🇸",
-            serverUrl = "https://server16.mp3quran.net/h_baqai/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/haroon-baqai/r1/",
             availableSurahList = "1,56,62,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2656,7 +2656,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Jordan / Palestine 🇯🇴 🇵🇸",
-            serverUrl = "https://server16.mp3quran.net/h_abudalal/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/hashim-abudalal/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2668,7 +2668,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/hani/",
+            serverUrl = "https://cdn.mp3quran.net/audio/hani-rifai/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2680,7 +2680,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Oman 🇴🇲",
-            serverUrl = "https://server11.mp3quran.net/hazza/",
+            serverUrl = "https://cdn.mp3quran.net/audio/hazza-balushi/r1/",
             availableSurahList = "1,6,8,12,13,14,15,17,18,19,20,21,22,25,29,30,31,32,34,35,36,37,38,39,40,41,42,43,44,45,46,47,49,50,51,52,53,54,55,56,57,61,63,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2692,7 +2692,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Morocco 🇲🇦",
-            serverUrl = "https://server16.mp3quran.net/H-Lharraz/Rewayat-Warsh-A-n-Nafi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/hicham-lharraz/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2704,7 +2704,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server16.mp3quran.net/hitham/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/haitham-jadani/r1/",
             availableSurahList = "1,2,3,4,6,7,8,9,10,11,12,13,14,15,16,17,19,20,21,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,61,62,63,64,67,68,69,70,72,75,76,77,78,79,80,81,82,83,84,85,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2716,7 +2716,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Yemen 🇾🇪",
-            serverUrl = "https://server16.mp3quran.net/h_dukhain/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/haitham-dukhain/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2728,7 +2728,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server11.mp3quran.net/wasel/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/wasel-methen/r1/",
             availableSurahList = "8,9,36,38,42,45,50,59,60"
         ),
         Reciter(
@@ -2740,7 +2740,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Yemen 🇾🇪",
-            serverUrl = "https://server6.mp3quran.net/wdee3/",
+            serverUrl = "https://cdn.mp3quran.net/audio/wadee-yamani/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2752,7 +2752,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Iraq (Kurdistan) 🇮🇶",
-            serverUrl = "https://server11.mp3quran.net/wishear/",
+            serverUrl = "https://cdn.mp3quran.net/audio/wishear-arbili/r1/",
             availableSurahList = "55,56"
         ),
         Reciter(
@@ -2764,7 +2764,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Iraq 🇮🇶",
-            serverUrl = "https://server8.mp3quran.net/dlami/",
+            serverUrl = "https://cdn.mp3quran.net/audio/waleed-dulaimi/r1/",
             availableSurahList = "1,8,11,12,17,19,31,37,39,41,45,48,49,50,51,52,53,54,63,70,75,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2776,7 +2776,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Libya 🇱🇾",
-            serverUrl = "https://server9.mp3quran.net/waleed/",
+            serverUrl = "https://cdn.mp3quran.net/audio/waleed-naehi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2788,7 +2788,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "Yasser_Ad-Dussary_128kbps",
             country = "Saudi Arabia 🇸🇦",
-            serverUrl = "https://server11.mp3quran.net/yasser/",
+            serverUrl = "https://cdn.mp3quran.net/audio/yasser-dosari/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2800,7 +2800,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server6.mp3quran.net/fyl/",
+            serverUrl = "https://cdn.mp3quran.net/audio/yasser-faylakawi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,39,40,41,44,56,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,113,114"
         ),
         Reciter(
@@ -2812,7 +2812,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server9.mp3quran.net/qurashi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/yasser-qurashi/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2824,7 +2824,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server9.mp3quran.net/mzroyee/",
+            serverUrl = "https://cdn.mp3quran.net/audio/yasser-mazrouei/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2836,7 +2836,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Egypt 🇪🇬",
-            serverUrl = "https://server12.mp3quran.net/salamah/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/yasser-salama/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2848,7 +2848,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Syria 🇸🇾",
-            serverUrl = "https://server12.mp3quran.net/yahya/",
+            serverUrl = "https://cdn.mp3quran.net/audio/yahya-hawwa/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2860,7 +2860,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Morocco 🇲🇦",
-            serverUrl = "https://server7.mp3quran.net/dgsh/",
+            serverUrl = "https://cdn.mp3quran.net/audio/youssef-edghouch/r1/",
             availableSurahList = "1,3,55,67,71,73,75,78,82,85,87,88,90,91,92,100,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2872,7 +2872,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Kuwait 🇰🇼",
-            serverUrl = "https://server9.mp3quran.net/yousef/",
+            serverUrl = "https://cdn.mp3quran.net/audio/yousef-shoaey/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2884,7 +2884,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Yemen 🇾🇪",
-            serverUrl = "https://server16.mp3quran.net/Y_ALaidroos/Rewayat-Hafs-A-n-Assem/",
+            serverUrl = "https://cdn.mp3quran.net/audio/yousef-aidarous/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2896,7 +2896,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Yemen / Saudi Arabia 🇾🇪 🇸🇦",
-            serverUrl = "https://server8.mp3quran.net/noah/",
+            serverUrl = "https://cdn.mp3quran.net/audio/yousef-ahmad/r1/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         ),
         Reciter(
@@ -2908,7 +2908,7 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             tempo = "medium",
             audioFolder = "",
             country = "Morocco 🇲🇦",
-            serverUrl = "https://server16.mp3quran.net/souilass/Rewayat-Warsh-A-n-Nafi/",
+            serverUrl = "https://cdn.mp3quran.net/audio/younes-souilass/r1/",
             availableSurahList = "1,2,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,45,46,47,48,50,51,52,53,54,56,57,67,71,73,76,77,78,79,80,81,82,86,89,90,91,93,95,97,112"
         )
 )
