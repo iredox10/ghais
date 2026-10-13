@@ -42,6 +42,7 @@ import com.ghais.data.repository.ScheduleEngine
 import com.ghais.data.repository.rememberMergedReciters
 import com.ghais.data.repository.RecitationSchedule
 import com.ghais.data.repository.SchedulesStore
+import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.components.noir.NoirSwitch
@@ -176,9 +177,13 @@ fun SchedulesProtonSection() {
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             )
                         }
-                        val reciterName = runCatching {
-                            QuranDataRepository.getReciterBySlug(schedule.reciterSlug).nameEn
-                        }.getOrNull()?.takeIf { it.isNotBlank() } ?: schedule.reciterSlug
+                        val reciterName = if (schedule.isOffline) {
+                            "Offline downloads"
+                        } else {
+                            runCatching {
+                                QuranDataRepository.getReciterBySlug(schedule.reciterSlug).nameEn
+                            }.getOrNull()?.takeIf { it.isNotBlank() } ?: schedule.reciterSlug
+                        }
                         ScheduleRowCard(
                             schedule = schedule,
                             reciterName = reciterName,
@@ -257,6 +262,12 @@ private fun SchedEditorSheet(
     var showReciterSheet by remember { mutableStateOf(false) }
     var showFromSheet by remember { mutableStateOf(false) }
     var showToSheet by remember { mutableStateOf(false) }
+    // Audio source: streamed reciter range, or the user's offline shelf.
+    var useOffline by remember(initial) { mutableStateOf(initial?.isOffline == true) }
+    val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
+    val offlineSurahCount = remember(downloadedKeys) {
+        downloadedKeys.count { it.split("/").size == 2 }
+    }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -272,6 +283,7 @@ private fun SchedEditorSheet(
     }
 
     // Validation: range mode requires from <= to; duration mode forces toSurah = 114 on save.
+    // Offline mode ignores reciter/range entirely and needs ≥1 downloaded surah.
     val rangeValid = useMinutes || fromSurah <= toSurah
     // Availability: the reciter must have audio for at least one surah of the
     // effective range, else the alarm fires and ScheduleTracks builds 0 tracks.
@@ -282,7 +294,7 @@ private fun SchedEditorSheet(
     val previewFrom = fromSurah.coerceIn(1, 114)
     val previewTo = if (useMinutes) 114 else toSurah.coerceIn(1, 114).coerceAtLeast(previewFrom)
     val overlapMissing = availableIds != null && (previewFrom..previewTo).none { it in availableIds }
-    val scheduleValid = rangeValid && !overlapMissing
+    val scheduleValid = if (useOffline) offlineSurahCount > 0 else rangeValid && !overlapMissing
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -323,6 +335,34 @@ private fun SchedEditorSheet(
                 )
             }
 
+            // Audio source: streamed reciter range, or the offline shelf.
+            // Offline plays whatever the user has downloaded — no network
+            // needed when the alarm fires.
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Play from offline downloads",
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 13.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    NoirSwitch(
+                        checked = useOffline,
+                        onCheckedChange = { useOffline = it }
+                    )
+                }
+                Text(
+                    text = if (useOffline) {
+                        if (offlineSurahCount == 0) "No downloads yet — download a surah first"
+                        else if (offlineSurahCount == 1) "Plays your 1 downloaded surah"
+                        else "Plays your $offlineSurahCount downloaded surahs in order"
+                    } else "Stream a reciter's range as usual",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 12.sp
+                )
+            }
+
+            if (!useOffline) {
             // Reciter selector row → modal.
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(text = "Reciter", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
@@ -410,6 +450,8 @@ private fun SchedEditorSheet(
                 }
             }
 
+            } // end if (!useOffline): reciter + range pickers are stream-only.
+
             // Duration toggle + minutes (simple stepper scoped to duration only).
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -480,7 +522,12 @@ private fun SchedEditorSheet(
                                         toSurah = t,
                                         durationMin = if (useMinutes) minutes.coerceIn(5, 180) else null,
                                         autoStart = autoStart,
-                                        enabled = initial?.enabled ?: true
+                                        enabled = initial?.enabled ?: true,
+                                        source = if (useOffline) {
+                                            RecitationSchedule.SOURCE_OFFLINE
+                                        } else {
+                                            RecitationSchedule.SOURCE_STREAM
+                                        }
                                     )
                                 )
                             }

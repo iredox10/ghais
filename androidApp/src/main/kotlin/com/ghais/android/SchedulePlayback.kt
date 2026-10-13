@@ -10,6 +10,7 @@ import com.ghais.data.repository.ScheduleTracks
 import com.ghais.data.repository.SchedulesStore
 import com.ghais.player.AudioEngine
 import com.ghais.player.PlayerBridge
+import com.ghais.player.QuranDownloads
 import com.ghais.player.SleepTimer
 import com.ghais.player.StopCondition
 
@@ -99,13 +100,45 @@ object SchedulePlayback {
             Log.i(TAG, "PlayerBridge initialized for $scheduleId")
 
             val reciter = QuranDataRepository.getReciterBySlug(found.reciterSlug)
-            val tracks = ScheduleTracks.buildScheduleTracks(
-                found,
-                reciter,
-                QuranDataRepository.getSurahs(),
-            )
-            Log.i(TAG, "built ${tracks.size} tracks for $scheduleId")
+            // Offline-source schedules play the user's downloaded shelf,
+            // whatever it holds at fire time — no network needed. The download
+            // index is per-owner and this is a fresh process, so init +
+            // rebind here (same as the schedules store below).
+            val tracks = if (found.isOffline) {
+                try {
+                    QuranDownloads.init(appContext)
+                } catch (e: Exception) {
+                    Log.w(TAG, "QuranDownloads.init failed", e)
+                }
+                try {
+                    AuthRepository.cachedSession.value?.userId?.let { QuranDownloads.setOwner(it) }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Downloads owner bind failed; using local namespace.", e)
+                }
+                ScheduleTracks.buildOfflineTracks(
+                    QuranDownloads.downloadedKeys.value,
+                    QuranDataRepository.getReciters(),
+                    QuranDataRepository.getSurahs(),
+                )
+            } else {
+                ScheduleTracks.buildScheduleTracks(
+                    found,
+                    reciter,
+                    QuranDataRepository.getSurahs(),
+                )
+            }
+            Log.i(TAG, "built ${tracks.size} tracks for $scheduleId (source=${found.source})")
             if (tracks.isEmpty()) {
+                if (found.isOffline) {
+                    fail(
+                        appContext,
+                        found,
+                        "No playable tracks for schedule $scheduleId: there are no " +
+                            "offline downloads yet. Download a surah first, or edit " +
+                            "the schedule to use a streamed reciter.",
+                    )
+                    return
+                }
                 val available = reciter.getAvailableSurahIds()
                 val lo = available.minOrNull()
                 val hi = available.maxOrNull()

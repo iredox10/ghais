@@ -24,6 +24,10 @@ import kotlin.time.Clock
  * @param autoStart when true the alarm starts playback automatically;
  *   when false the user only gets a reminder notification.
  * @param enabled whether the schedule fires.
+ * @param source where the audio comes from: [SOURCE_STREAM] (reciter +
+ *   range, streamed or cached) or [SOURCE_OFFLINE] (the user's downloaded
+ *   surahs, whatever they are — reciter/range are ignored at fire time).
+ *   Defaults to stream so every stored JSON and cloud doc keeps working.
  */
 @Serializable
 data class RecitationSchedule(
@@ -35,8 +39,17 @@ data class RecitationSchedule(
     val toSurah: Int,
     val durationMin: Int? = null,
     val autoStart: Boolean = true,
-    val enabled: Boolean = true
-)
+    val enabled: Boolean = true,
+    val source: String = SOURCE_STREAM
+) {
+    companion object {
+        const val SOURCE_STREAM = "stream"
+        const val SOURCE_OFFLINE = "offline"
+    }
+
+    /** True when the alarm must play the offline shelf, not a reciter range. */
+    val isOffline: Boolean get() = source == SOURCE_OFFLINE
+}
 
 /**
  * SchedulesStore: persisted store of recitation schedules.
