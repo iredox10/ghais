@@ -1,6 +1,7 @@
 package com.ghais.player
 
 import android.content.Context
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -37,9 +38,16 @@ object QuranPlayerFactory {
             .setAllowCrossProtocolRedirects(true)
             .setUserAgent(USER_AGENT)
 
-    fun mediaSourceFactory(context: Context): DefaultMediaSourceFactory =
-        DefaultMediaSourceFactory(context.applicationContext)
-            .setDataSourceFactory(httpFactory())
+    fun mediaSourceFactory(context: Context): DefaultMediaSourceFactory {
+        val app = context.applicationContext
+        // DefaultDataSource routes by scheme (file:// downloads go to the
+        // file source, https:// streams to our tuned HTTP factory). Wiring
+        // the HTTP factory directly would force LOCAL files through HTTP
+        // and crash with ClassCastException (FileURLConnection is not an
+        // HttpURLConnection) — breaking all offline playback.
+        return DefaultMediaSourceFactory(app)
+            .setDataSourceFactory(DefaultDataSource.Factory(app, httpFactory()))
+    }
 
     fun loadControl(): DefaultLoadControl =
         DefaultLoadControl.Builder()
