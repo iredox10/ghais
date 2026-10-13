@@ -50,7 +50,7 @@ fun NoirBottomDock(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = 520.dp)
-                .height(68.dp),
+                .height(78.dp),
             shape = GhaisShapes.navDock,
             color = DockBarFill,
             border = BorderStroke(1.dp, GhaisNoir.BorderCard),

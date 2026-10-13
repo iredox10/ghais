@@ -8,7 +8,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Tune
@@ -27,6 +30,7 @@ import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.data.auth.AuthRepository
 import com.ghais.data.repository.BroadcastRepository
+import com.ghais.data.share.SupportKind
 import com.ghais.ui.components.noir.NoirGrainOverlay
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirAmbientGlow
@@ -37,6 +41,7 @@ import com.ghais.ui.screens.profile.glass.GlassCardContainer
 import com.ghais.ui.screens.profile.glass.ProfileIdentityPill
 import com.ghais.ui.screens.profile.glass.ProtonSwitchRow
 import com.ghais.ui.screens.profile.glass.SchedulesProtonSection
+import com.ghais.ui.screens.profile.glass.SupportSheet
 import com.ghais.ui.screens.broadcasts.BroadcastsScreen
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.screens.settings.AppSettingsScreen
@@ -153,6 +158,9 @@ object ProfileScreen : Tab {
             mutableStateOf(settings.migratedProfileBoolean(PREF_DHIKR_ALERT, true))
         }
 
+        // Support sheet channel (null = hidden).
+        var supportKind by remember { mutableStateOf<SupportKind?>(null) }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -260,7 +268,41 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 5. Log out (ghost danger row — muted, no red)
+                // 5. Support — bug reports, ideas and contact via email
+                // -----------------------------------------------------------------
+                item {
+                    NoirSectionHeader(label = "Support")
+                    GlassCardContainer {
+                        com.ghais.ui.screens.profile.NoirSettingsRow(
+                            icon = Icons.Filled.BugReport,
+                            title = "Report a bug",
+                            subtitle = "Tell us what went wrong",
+                            onClick = { supportKind = SupportKind.BUG }
+                        )
+
+                        NoirRowDivider()
+
+                        com.ghais.ui.screens.profile.NoirSettingsRow(
+                            icon = Icons.Filled.Lightbulb,
+                            title = "Suggest a feature",
+                            subtitle = "Tell us what Ghaith should do",
+                            onClick = { supportKind = SupportKind.FEATURE }
+                        )
+
+                        NoirRowDivider()
+
+                        com.ghais.ui.screens.profile.NoirSettingsRow(
+                            icon = Icons.Filled.MailOutline,
+                            title = "Contact us",
+                            subtitle = "Write to the Ghaith team",
+                            onClick = { supportKind = SupportKind.CONTACT }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(18.dp))
+                }
+
+                // -----------------------------------------------------------------
+                // 6. Log out (ghost danger row — muted, no red)
                 // -----------------------------------------------------------------
                 item {
                     GlassCardContainer {
@@ -274,6 +316,15 @@ object ProfileScreen : Tab {
             // Film grain over everything (last = on top).
             NoirGrainOverlay()
         }
+
+        // ---------------------------------------------------------------------
+        // Support sheet (bug / feature / contact → pre-filled email)
+        // ---------------------------------------------------------------------
+        SupportSheet(
+            kind = supportKind,
+            accountEmail = session?.email,
+            onDismiss = { supportKind = null }
+        )
 
         // ---------------------------------------------------------------------
         // Edit Profile Dialog
