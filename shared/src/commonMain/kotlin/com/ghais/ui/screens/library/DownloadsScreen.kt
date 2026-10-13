@@ -52,7 +52,11 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.domain.model.Reciter
+import com.ghais.domain.model.TrackItem
+import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
+import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirHeroCard
@@ -296,6 +300,10 @@ class DownloadsScreen : Screen {
                                         subtitle = downloadSubtitle(entry, itemProgress),
                                         icon = Icons.Default.Download,
                                         chevron = false,
+                                        onClick = {
+                                            playDownloaded(entry)
+                                            navigator.push(NowPlayingScreen())
+                                        },
                                         trailing = {
                                             DownloadRowTrailing(
                                                 onDelete = {
@@ -420,8 +428,57 @@ private fun downloadSubtitle(entry: DownloadEntry, itemProgress: Float?): String
     return if (entry.ayahNo != null) "${entry.subtitle} • Ayah clip" else entry.subtitle
 }
 
-private fun deleteDownloadKey(key: String) {
-    val parts = key.split("/")
+/**
+ * Plays a downloaded entry. The engine resolves the downloaded file first
+ * (offline-first), so the tapped item always plays local audio — even with
+ * no network — while queue siblings stream normally.
+ */
+private fun playDownloaded(entry: DownloadEntry) {
+    if (entry.surahId <= 0) return
+    // Single-ayah clip: ayah-mode playback starting at the clipped verse.
+    if (entry.ayahNo != null && entry.ayahNo > 0) {
+        AudioEngine.playSurahInAyahMode(entry.surahId, entry.slug, entry.ayahNo)
+        return
+    }
+    val reciter = QuranDataRepository.getBrowseReciterBySlug(entry.slug)
+        ?: QuranDataRepository.getReciters().firstOrNull { it.slug == entry.slug }
+        ?: Reciter(slug = entry.slug, nameEn = entry.subtitle, nameAr = "")
+    // Queue the reciter's available surahs starting at the downloaded one so
+    // "next" keeps working after the local file finishes.
+    val surahs = QuranDataRepository.getSurahs().filter { reciter.isSurahAvailable(it.id) }
+    if (surahs.isEmpty()) {
+        AudioEngine.playTrack(
+            TrackItem(
+                reciterSlug = reciter.slug,
+                reciterName = reciter.nameEn,
+                surahId = entry.surahId,
+                surahNameEn = entry.title,
+                surahNameAr = "",
+                ayahNo = 0,
+                audioUrl = reciter.getFullSurahUrl(entry.surahId),
+                durationMs = 0L
+            )
+        )
+        return
+    }
+    val allTracks = surahs.map { s ->
+        TrackItem(
+            reciterSlug = reciter.slug,
+            reciterName = reciter.nameEn,
+            surahId = s.id,
+            surahNameEn = s.nameEn,
+            surahNameAr = s.nameAr,
+            ayahNo = 0,
+            audioUrl = reciter.getFullSurahUrl(s.id),
+            durationMs = s.ayahsCount * 15_000L
+        )
+    }
+    val startIndex = allTracks.indexOfFirst { it.surahId == entry.surahId }
+        .takeIf { it >= 0 } ?: 0
+    AudioEngine.playQueue(allTracks, startIndex = startIndex)
+}
+
+private fun deleteDownloadKey(key: String) {    val parts = key.split("/")
     val slug = parts.getOrNull(0).orEmpty()
     val surahId = parts.getOrNull(1)?.toIntOrNull() ?: return
     val ayahNo = parts.getOrNull(2)?.toIntOrNull()
