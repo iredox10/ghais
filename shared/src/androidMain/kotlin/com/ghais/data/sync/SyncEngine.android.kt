@@ -475,6 +475,13 @@ actual object SyncEngine {
         var lastPushed: String? = null
         var wasPlaying = false
         var quickRetries = 0
+        // Offline→online edge: the one-shot syncNow in SyncTriggers covers the
+        // reconnect, but if that pass fails or is skipped (already SYNCING),
+        // a paused device would otherwise never flush its offline listening —
+        // the gate below requires playing. So the first tick after an edge
+        // forces one full pass regardless of playback state.
+        var reconnectFlush = false
+        var pumpWasOnline = true
         while (true) {
             var nextDelayMs = LISTENING_PUSH_INTERVAL_MS
             val urgent = listeningPushUrgent
@@ -482,12 +489,15 @@ actual object SyncEngine {
             try {
                 val userId = AuthRepository.session.value?.userId
                 val ctx = appContext
+                val onlineNow = NetworkMonitor.isOnline.value
+                if (onlineNow && !pumpWasOnline) reconnectFlush = true
+                pumpWasOnline = onlineNow
                 // Null checks are inline (not folded into a `canPush` boolean)
                 // so `userId`/`ctx` smart-cast into the pass below.
                 if (userId != null &&
                     ctx != null &&
                     AppwriteConfig.isConfigured() &&
-                    NetworkMonitor.isOnline.value &&
+                    onlineNow &&
                     // A full pass is already walking every collection; skip
                     // rather than duplicate its work in parallel.
                     _status.value != SyncStatus.SYNCING
@@ -498,8 +508,9 @@ actual object SyncEngine {
                     // `wasPlaying` covers the pause/stop edge: the position
                     // freezes there, so that is the last tick that can still
                     // carry the final resume point to the cloud.
-                    if (moved && (playing || wasPlaying)) {
+                    if ((moved && (playing || wasPlaying)) || reconnectFlush) {
                         if (pushListeningOnce(ctx, userId)) {
+                            reconnectFlush = false
                             // Re-read AFTER the pass: if the state moved while
                             // we were pushing it, what is on the cloud is
                             // already stale, so come back quickly — bounded, so
