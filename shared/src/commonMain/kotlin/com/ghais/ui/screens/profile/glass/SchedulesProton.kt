@@ -269,6 +269,13 @@ private fun SchedEditorSheet(
     val offlineOptions = remember(downloadedKeys) {
         downloadedKeys.filter { it.split("/").size == 2 }.sorted()
     }
+    // Offline options grouped by reciter (slug → keys), groups ordered by
+    // reciter display name so a full downloaded qari reads as one block with
+    // a one-tap select-all header.
+    val offlineGroups = remember(offlineOptions) {
+        offlineOptions.groupBy { it.substringBefore("/") }.toList()
+            .sortedBy { (slug, _) -> offlineReciterName(slug).lowercase() }
+    }
     // Saved selection, or everything (the pre-select behaviour) when creating
     // new or editing an "all downloads" schedule.
     var selectedKeys by remember(initial) {
@@ -378,70 +385,130 @@ private fun SchedEditorSheet(
                 )
             }
 
-            // Offline pick list: which downloads this schedule plays.
+            // Offline pick list: which downloads this schedule plays,
+            // grouped by reciter so a full downloaded qari is one block.
             if (useOffline && offlineOptions.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(text = "Downloads to play", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
-                    offlineOptions.forEach { key ->
-                        val (title, subtitle) = remember(key) { offlineKeyLabel(key) }
-                        val checked = key in effectiveSelection
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    GhaisNoir.Fill2,
-                                    com.ghais.ui.theme.GhaisShapes.cardNoir
-                                )
-                                .border(
-                                    1.dp,
-                                    GhaisNoir.BorderCard,
-                                    com.ghais.ui.theme.GhaisShapes.cardNoir
-                                )
-                                .noirClickable {
-                                    selectedKeys = if (key in selectedKeys) {
-                                        selectedKeys - key
-                                    } else {
-                                        selectedKeys + key
+                    offlineGroups.forEach { (slug, keys) ->
+                        val reciterName = remember(slug) { offlineReciterName(slug) }
+                        val pickedInGroup = keys.count { it in effectiveSelection }
+                        val allPicked = pickedInGroup == keys.size
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // Qari header: name + x/y picked, tap selects or
+                            // clears the whole reciter.
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        GhaisNoir.Fill4,
+                                        com.ghais.ui.theme.GhaisShapes.cardNoir
+                                    )
+                                    .border(
+                                        1.dp,
+                                        GhaisNoir.BorderCard,
+                                        com.ghais.ui.theme.GhaisShapes.cardNoir
+                                    )
+                                    .noirClickable {
+                                        selectedKeys = if (allPicked) {
+                                            selectedKeys - keys.toSet()
+                                        } else {
+                                            selectedKeys + keys.toSet()
+                                        }
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .background(
+                                            if (allPicked) GhaisNoir.Fill2 else GhaisNoir.Fill4,
+                                            CircleShape
+                                        )
+                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (allPicked) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(10.dp)
+                                                .background(GhaisNoir.TextPrimary, CircleShape)
+                                        )
                                     }
                                 }
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .background(
-                                        if (checked) GhaisNoir.Fill4 else GhaisNoir.Fill2,
-                                        CircleShape
-                                    )
-                                    .border(1.dp, GhaisNoir.BorderCard, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (checked) {
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = reciterName,
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    text = "$pickedInGroup/${keys.size}",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 12.sp
+                                )
+                            }
+                            // That qari's downloaded surahs.
+                            keys.forEach { key ->
+                                val (title, _) = remember(key) { offlineKeyLabel(key) }
+                                val checked = key in effectiveSelection
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 14.dp)
+                                        .background(
+                                            GhaisNoir.Fill2,
+                                            com.ghais.ui.theme.GhaisShapes.cardNoir
+                                        )
+                                        .border(
+                                            1.dp,
+                                            GhaisNoir.BorderCard,
+                                            com.ghais.ui.theme.GhaisShapes.cardNoir
+                                        )
+                                        .noirClickable {
+                                            selectedKeys = if (key in selectedKeys) {
+                                                selectedKeys - key
+                                            } else {
+                                                selectedKeys + key
+                                            }
+                                        }
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(10.dp)
-                                            .background(GhaisNoir.TextPrimary, CircleShape)
+                                            .size(20.dp)
+                                            .background(
+                                                if (checked) GhaisNoir.Fill4 else GhaisNoir.Fill2,
+                                                CircleShape
+                                            )
+                                            .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (checked) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(9.dp)
+                                                    .background(GhaisNoir.TextPrimary, CircleShape)
+                                            )
+                                        }
+                                    }
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(
+                                        text = title,
+                                        color = if (checked) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = title,
-                                    color = if (checked) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = subtitle,
-                                    color = GhaisNoir.TextTertiary,
-                                    fontSize = 12.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
                             }
                         }
                     }
@@ -719,10 +786,25 @@ private fun SurahSelectorRow(
 }
 
 /**
+ * Reciter display name for a download slug, for the schedule pick-list group
+ * headers. Falls back to the raw slug; never throws.
+ */
+private fun offlineReciterName(slug: String): String {
+    return try {
+        runCatching {
+            QuranDataRepository.getBrowseReciterBySlug(slug)
+                ?: QuranDataRepository.getReciters().firstOrNull { it.slug == slug }
+        }.getOrNull()?.nameEn?.takeIf { it.isNotBlank() }
+            ?: slug.ifBlank { "Unknown reciter" }
+    } catch (_: Exception) {
+        slug.ifBlank { "Unknown reciter" }
+    }
+}
+
+/**
  * Display label for a download key (`"<slug>/<surahId>"`): surah title +
  * reciter name for the schedule pick list. Falls back to raw ids; never throws.
- */
-private fun offlineKeyLabel(key: String): Pair<String, String> {
+ */private fun offlineKeyLabel(key: String): Pair<String, String> {
     return try {
         val parts = key.split("/")
         val slug = parts.getOrNull(0).orEmpty()
