@@ -74,7 +74,14 @@ import kotlinx.coroutines.delay
  * "Recent searches" section (rows resolved via [QuranDataRepository.getReciterBySlug],
  * per-item remove, "Clear all" ghost action, ghost-well empty state). Typing
  * shows live results with the same matching as RecitersScreen
- * (nameEn / nameAr / country contains, ignoreCase, ~300ms debounce).
+ * (nameEn / nameAr / country contains, ignoreCase, ~300ms debounce) plus a
+ * transliteration-tolerant pass ([reciterMatchesNormalizedQuery]): both the
+ * query and the candidate nameEn/slug/country go through
+ * [normalizeReciterSearchText] (lowercase, diacritic + Arabic-harakat strip,
+ * common variant unification, non-alphanumeric strip), so "Ahmed" finds
+ * "Ahmad", "abdul basit" finds "abdul-basit", "Mahmoud" finds "Mahmud" and
+ * "Qaree" finds "Qari". The plain contains check stays as the fallback (it
+ * is the only path that matches Arabic script).
  *
  * Row tap records the slug in [ReciterSearchHistoryStore] and pushes
  * [ReciterProfileScreen]. The trailing play disc keeps the direct-play path:
@@ -122,7 +129,8 @@ class ReciterSearchScreen : Screen {
                 it.nameEn.contains(q, ignoreCase = true) ||
                     it.nameAr.contains(q, ignoreCase = true) ||
                     it.country.contains(q, ignoreCase = true) ||
-                    it.slug.contains(q, ignoreCase = true)
+                    it.slug.contains(q, ignoreCase = true) ||
+                    reciterMatchesNormalizedQuery(it, q)
             }
         }
 
@@ -298,6 +306,90 @@ class ReciterSearchScreen : Screen {
                 }
             }
         }
+    }
+}
+
+/**
+ * Agent A6 — transliteration-tolerant reciter matching (common-safe: no
+ * `java.text`, so it runs on every platform and in commonTest).
+ *
+ * [normalizeReciterSearchText] folds both the query and the candidate fields
+ * to a common spelling: lowercase, Latin-diacritic fold, Arabic harakat /
+ * tatweel / combining-mark strip, common transliteration-variant unification
+ * (`ahmed` -> `ahmad`, `baset` -> `basit`, `ou`/`oo` -> `u`, `ee` -> `i`),
+ * then non-alphanumeric strip (keeps `a-z0-9` + Arabic letters) so
+ * hyphen/space/case variants (`abdul-basit` vs `abdul basit` vs
+ * `AbdulBaset`) collapse to one key.
+ *
+ * [reciterMatchesNormalizedQuery] reports the normalized-contains hit over
+ * nameEn/slug/country. Callers keep the plain `contains` check as the
+ * fallback — it is the only path matching un-normalized Arabic script.
+ */
+fun normalizeReciterSearchText(raw: String): String {
+    var s = raw.lowercase().trim()
+    if (s.isEmpty()) return ""
+    // Strip Arabic harakat (064B-065F), superscript alef (0670), tatweel
+    // (0640) and Latin combining marks (0300-036F) before folding.
+    s = s.filter { c ->
+        val code = c.code
+        !(code in 0x064B..0x065F || code == 0x0670 || code == 0x0640 || code in 0x0300..0x036F)
+    }
+    val folded = StringBuilder(s.length)
+    for (c in s) folded.append(foldLatinDiacritic(c))
+    s = folded.toString()
+    // Longest-first variant unification (order matters: "ahmed" before the
+    // generic folds so the full-name variant wins).
+    s = s.replace("ahmed", "ahmad")
+        .replace("baset", "basit")
+        .replace("ou", "u")
+        .replace("oo", "u")
+        .replace("ee", "i")
+    return s.filter { c ->
+        c in 'a'..'z' || c in '0'..'9' || c.code in 0x0621..0x064A
+    }
+}
+
+/** Latin diacritic fold for [normalizeReciterSearchText]; unknown chars pass through. */
+private fun foldLatinDiacritic(c: Char): String = when (c) {
+    'à', 'á', 'â', 'ã', 'ä', 'å', 'ā', 'ă', 'ą', 'ǎ', 'ȁ', 'ȃ' -> "a"
+    'è', 'é', 'ê', 'ë', 'ē', 'ĕ', 'ė', 'ę', 'ě', 'ȅ', 'ȇ' -> "e"
+    'ì', 'í', 'î', 'ï', 'ĩ', 'ī', 'ĭ', 'į', 'ı', 'ǐ', 'ȉ', 'ȋ' -> "i"
+    'ò', 'ó', 'ô', 'õ', 'ö', 'ø', 'ō', 'ŏ', 'ő', 'ǒ', 'ȍ', 'ȏ' -> "o"
+    'ù', 'ú', 'û', 'ü', 'ũ', 'ū', 'ŭ', 'ů', 'ű', 'ų', 'ǔ', 'ȕ', 'ȗ' -> "u"
+    'ý', 'ÿ', 'ŷ' -> "y"
+    'ç', 'ć', 'ĉ', 'ċ', 'č' -> "c"
+    'ñ', 'ń', 'ņ', 'ň' -> "n"
+    'š', 'ś', 'ŝ', 'ş', 'ș' -> "s"
+    'ž', 'ź', 'ż' -> "z"
+    'ĝ', 'ğ', 'ġ', 'ģ' -> "g"
+    'ĥ', 'ħ' -> "h"
+    'ĵ' -> "j"
+    'ķ' -> "k"
+    'ľ', 'ĺ', 'ļ', 'ł' -> "l"
+    'ď', 'đ', 'ð' -> "d"
+    'ř', 'ŗ', 'ŕ' -> "r"
+    'ţ', 'ť', 'ŧ', 'ț' -> "t"
+    'ß' -> "ss"
+    'æ' -> "ae"
+    'œ' -> "oe"
+    'þ' -> "th"
+    else -> c.toString()
+}
+
+/**
+ * Normalized-contains match of [query] against a reciter's nameEn/slug/
+ * country. False when the normalized query is blank (so blank input never
+ * matches everything). Never throws.
+ */
+fun reciterMatchesNormalizedQuery(reciter: Reciter, query: String): Boolean {
+    return try {
+        val nq = normalizeReciterSearchText(query)
+        if (nq.isBlank()) return false
+        normalizeReciterSearchText(reciter.nameEn).contains(nq) ||
+            normalizeReciterSearchText(reciter.slug).contains(nq) ||
+            normalizeReciterSearchText(reciter.country).contains(nq)
+    } catch (_: Exception) {
+        false
     }
 }
 
