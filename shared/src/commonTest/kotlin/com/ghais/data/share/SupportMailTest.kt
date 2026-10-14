@@ -5,9 +5,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Guards the support email template ([buildSupportBody]/[supportSubject]):
- * the user's words on top, diagnostics (app version, device, OS, account)
- * below the fold — so a report arriving at [SUPPORT_EMAIL] is actionable.
+ * Guards the Gmail-direct support flow: every row opens a compose window
+ * with [SUPPORT_EMAIL], [supportSubject] and [buildSupportBody] pre-filled,
+ * so the user only writes their message and hits send.
  */
 class SupportMailTest {
 
@@ -24,27 +24,24 @@ class SupportMailTest {
     }
 
     @Test
-    fun testBugBodyCarriesUserTextAndDiagnostics() {
-        val body = buildSupportBody(SupportKind.BUG, "audio stops", "a@b.c")
+    fun testBugBodyHasPromptAndDiagnostics() {
+        val body = buildSupportBody(SupportKind.BUG, "a@b.c")
         assertTrue(body.contains("What happened:"))
-        assertTrue(body.contains("audio stops"))
         assertTrue(body.contains("App:"))
         assertTrue(body.contains("Device:"))
-        assertTrue(body.contains("OS:"))
         assertTrue(body.contains("User: a@b.c"))
     }
 
     @Test
-    fun testGuestAccountFallsBackToGuestLabel() {
-        val body = buildSupportBody(SupportKind.FEATURE, "dark mode", null)
+    fun testFeatureBodyPrompt() {
+        val body = buildSupportBody(SupportKind.FEATURE, null)
         assertTrue(body.contains("Your idea:"))
-        assertTrue(body.contains("dark mode"))
         assertTrue(body.contains("User: guest"))
     }
 
     @Test
     fun testBlankAccountEmailFallsBackToGuestLabel() {
-        val body = buildSupportBody(SupportKind.CONTACT, "hello", "  ")
+        val body = buildSupportBody(SupportKind.CONTACT, "  ")
         assertTrue(body.contains("Your message:"))
         assertTrue(body.contains("User: guest"))
     }

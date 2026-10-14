@@ -71,7 +71,11 @@ class MainActivity : ComponentActivity() {
         // without the network-state permission / OEM-skewed services.
         guardInit("NetworkMonitor") { com.ghais.data.sync.NetworkMonitor.init(this) }
         guardInit("ShareSheet") { com.ghais.data.share.ShareSheet.init(this) }
-        guardInit("SupportMail") { com.ghais.data.share.SupportMail.init(this) }
+        // Support rows open Gmail directly — the backend needs an Activity.
+        guardInit("SupportMail") {
+            com.ghais.data.share.SupportMailBackend.activity =
+                java.lang.ref.WeakReference(this)
+        }
         // Download-index restore walks filesDir (disk I/O): off the main
         // thread so a large/cold cache can't ANR the launch. Lookups degrade
         // to streaming until the index lands, so deferring is safe.
