@@ -71,6 +71,10 @@ private val DeckArtShape = RoundedCornerShape(24.dp)
  * dispose, so swiping to the next card (or closing the sheet) never leaves
  * audio running behind the new card. Presentation only — swipe/follow/advance
  * decisions live in [DeckSheet].
+ *
+ * AGENT P7 — additive v2 reason line under the why-line: [reason] wins when
+ * supplied, else [deckReason] when [affinities] is non-empty, else nothing
+ * (v1 call sites render exactly as before).
  */
 @Composable
 fun DeckCard(
@@ -79,10 +83,15 @@ fun DeckCard(
     total: Int,
     photoUrl: String?,
     taste: TasteProfile? = null,
+    affinities: Map<String, Float> = emptyMap(),
+    reason: String? = null,
     modifier: Modifier = Modifier
 ) {
     val whyLine = remember(reciter) { whyLineFor(reciter) }
     val matchReason = remember(reciter, taste) { matchReasonFor(reciter, taste) }
+    val deckReasonLine = remember(reciter, affinities, reason) {
+        reason ?: if (affinities.isNotEmpty()) deckReason(reciter, affinities) else null
+    }
 
     // Auto-play the 30s sample when this card appears; stop when it leaves.
     LaunchedEffect(reciter.slug) {
@@ -148,6 +157,17 @@ fun DeckCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            if (deckReasonLine != null) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = deckReasonLine,
+                    color = GhaisNoir.TextSecondary,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
             if (matchReason != null) {
                 Spacer(Modifier.height(8.dp))
                 DeckMatchChip(text = matchReason)

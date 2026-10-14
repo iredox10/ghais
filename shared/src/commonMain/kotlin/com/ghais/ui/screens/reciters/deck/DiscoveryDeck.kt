@@ -8,6 +8,7 @@ import kotlin.time.Clock
 
 /**
  * AGENT A4 — "Today's voices" swipe discovery deck: pure deck-building logic.
+ * AGENT P7 — personalized deck v2 (affinity-aware recipe, additive).
  *
  * UI-free on purpose so it stays unit-testable in commonTest. The deck is
  * deterministic per calendar day: the same epoch-day + the same inputs always
@@ -23,6 +24,16 @@ import kotlin.time.Clock
  * - edge-of-taste picks: everything else below the threshold, for discovery.
  * Anchors lead (position 0) then interleave every third slot (3, 6, 9).
  *
+ * P7 v2 recipe (only when [todayDeck]'s `affinities` param is non-empty):
+ * - exploitation (up to [ExploitationSlotCount] slots): top-affine unplayed
+ *   voices first, ties broken by the day seed.
+ * - exploration ([ExplorationSlotCount] slots): low-affinity well-known voices
+ *   the user never tried (well-known proxy = Hafs riwayah, the default most
+ *   listeners know; no popularity signal exists in the catalog), labelled
+ *   [deckReason] "Outside your usual".
+ * - fresh anchors (remaining slots): same [AnchorScoreThreshold] rule as v1.
+ * Final order is exploit → explore → fresh-anchor.
+ *
  * Already-followed / already-listened slugs are excluded *where the data is
  * available* (non-empty sets), plus the quiz's explicit [TasteProfile.skippedSlugs].
  * When exclusion would starve the deck below [MaxDeckCards], the remainder is
@@ -35,6 +46,18 @@ const val FamiliarAnchorCount = 4
 
 /** Minimum [scoreReciter] affinity for a familiar anchor (see recipe above). */
 const val AnchorScoreThreshold = 0.65f
+
+/** P7 v2: exploitation slots (top-affine unplayed first). */
+const val ExploitationSlotCount = 6
+
+/** P7 v2: exploration slots (low-affinity well-known voices never tried). */
+const val ExplorationSlotCount = 2
+
+/**
+ * P7 v2: normalized affinity at or below this counts as low-affinity
+ * (exploration candidate + "Outside your usual" [deckReason]).
+ */
+const val ExplorationAffinityThreshold = 0.35f
 
 const val MillisPerDay = 86_400_000L
 
@@ -54,6 +77,11 @@ fun normalizeDeckSlug(slug: String): String =
  * @param followedSlugs followed reciter slugs; empty = no data, no exclusion.
  * @param epochDay calendar-day seed; defaults to today. Tests inject fixed days.
  * @param maxCards deck cap; defaults to [MaxDeckCards].
+ * @param affinities P7 v2: normalized-or-raw reciter slug → 0f..1f affinity
+ *   (e.g. from P1 SignalStore). Empty (default) = v1 recipe, so existing call
+ *   sites compile and behave unchanged. Non-empty = v2 recipe (exploit 6 /
+ *   explore 2 / fresh-anchor 2, see file KDoc). Keys are normalized with
+ *   [normalizeDeckSlug]; missing slugs score 0f (never tried).
  */
 fun todayDeck(
     reciters: List<Reciter>,
@@ -61,7 +89,8 @@ fun todayDeck(
     history: Set<String> = emptySet(),
     followedSlugs: Set<String> = emptySet(),
     epochDay: Long = todayEpochDay(),
-    maxCards: Int = MaxDeckCards
+    maxCards: Int = MaxDeckCards,
+    affinities: Map<String, Float> = emptyMap()
 ): List<Reciter> {
     if (reciters.isEmpty() || maxCards <= 0) return emptyList()
     val rng = Random(epochDay)
@@ -79,6 +108,11 @@ fun todayDeck(
             .filter { normalizeDeckSlug(it.slug) in excluded }
             .shuffled(rng)
         (fresh + excludedReciters).distinctBy { normalizeDeckSlug(it.slug) }
+    }
+
+    val normalizedAffinities = affinities.mapKeys { normalizeDeckSlug(it.key) }
+    if (normalizedAffinities.isNotEmpty()) {
+        return affinityDeck(pool, taste, normalizedAffinities, rng, maxCards)
     }
 
     if (!hasTasteSignals(taste)) {
@@ -161,4 +195,120 @@ fun matchReasonFor(reciter: Reciter, taste: TasteProfile?): String? {
         return "Picked for your ${mood.name.lowercase()} mood"
     }
     return "Matches your taste"
+}
+
+/**
+ * AGENT P7 — v2 affinity-aware deck (exploit → explore → fresh-anchor).
+ *
+ * Pure and deterministic: every shuffle/sort draws from [rng] (seeded with
+ * the epoch day by [todayDeck]) and Kotlin sorts are stable, so ties keep
+ * seeded order. Always fills to `min(pool.size, maxCards)` with no
+ * duplicates: leftover slots fall back to seeded pool order.
+ */
+private fun affinityDeck(
+    pool: List<Reciter>,
+    taste: TasteProfile?,
+    affinities: Map<String, Float>,
+    rng: Random,
+    maxCards: Int
+): List<Reciter> {
+    fun affinityOf(reciter: Reciter): Float =
+        affinities[normalizeDeckSlug(reciter.slug)] ?: 0f
+    fun isWellKnown(reciter: Reciter): Boolean =
+        reciter.riwayah.trim().equals("Hafs", ignoreCase = true)
+
+    // Seeded shuffle first so every rank below has a deterministic tie-break.
+    val shuffled = pool.shuffled(rng)
+
+    // Exploitation: top-affine unplayed first.
+    val exploitWant = minOf(ExploitationSlotCount, maxCards)
+    val exploit = shuffled.sortedByDescending(::affinityOf).take(exploitWant)
+    val exploitKeys = exploit.map { normalizeDeckSlug(it.slug) }.toSet()
+
+    // Exploration: lowest-affinity voices never tried, well-known (Hafs)
+    // leading — the "Outside your usual" slots.
+    val exploreWant = minOf(ExplorationSlotCount, (maxCards - exploit.size).coerceAtLeast(0))
+    val explore = shuffled
+        .filter { normalizeDeckSlug(it.slug) !in exploitKeys }
+        .sortedWith(compareBy({ if (isWellKnown(it)) 0 else 1 }, ::affinityOf))
+        .take(exploreWant)
+    val takenKeys = exploitKeys + explore.map { normalizeDeckSlug(it.slug) }.toSet()
+
+    // Fresh anchors: same threshold rule as v1, from whatever remains
+    // (seeded order when taste is unknown).
+    val anchorWant = (maxCards - exploit.size - explore.size).coerceAtLeast(0)
+    val remainder = shuffled.filter { normalizeDeckSlug(it.slug) !in takenKeys }
+    val anchors = if (hasTasteSignals(taste)) {
+        remainder.filter { scoreReciter(it, taste!!) >= AnchorScoreThreshold }.take(anchorWant)
+    } else {
+        remainder.take(anchorWant)
+    }
+
+    // Fill any shortfall (e.g. thin anchor pool) from the leftover pool in
+    // seeded order so the sheet still gets a full lineup.
+    val deck = ArrayList<Reciter>(maxCards)
+    deck.addAll(exploit)
+    deck.addAll(explore)
+    deck.addAll(anchors)
+    if (deck.size < maxCards) {
+        val deckKeys = deck.map { normalizeDeckSlug(it.slug) }.toSet()
+        deck.addAll(shuffled.filter { normalizeDeckSlug(it.slug) !in deckKeys }.take(maxCards - deck.size))
+    }
+    return deck.take(maxCards)
+}
+
+/**
+ * AGENT P7 — per-card reason line for the v2 deck ("Loved by slow-pace
+ * listeners" style, from reciter attributes; low-affinity voices read
+ * "Outside your usual"). Pure and never blank, so [DeckCard] and tests share
+ * one source of truth.
+ */
+fun deckReason(reciter: Reciter, affinities: Map<String, Float> = emptyMap()): String {
+    val affinity = affinities.mapKeys { normalizeDeckSlug(it.key) }[normalizeDeckSlug(reciter.slug)]
+    if (affinity != null && affinity <= ExplorationAffinityThreshold) {
+        return "Outside your usual"
+    }
+    val tempo = reciter.tempo.lowercase()
+    val style = reciter.style.lowercase()
+    val riwayahRaw = reciter.riwayah.trim()
+    val slowHit = tempo.contains("slow") || tempo.contains("deliberate") ||
+        tempo.contains("precise") || tempo.contains("calm") ||
+        tempo.contains("reflective") || tempo.contains("serene") || tempo.contains("tearful")
+    if (slowHit) return "Loved by slow-pace listeners"
+    val flowingHit = tempo.contains("flowing") || tempo.contains("brisk") ||
+        tempo.contains("fast") || tempo.contains("expressive") ||
+        tempo.contains("powerful") || tempo.contains("melodic")
+    if (flowingHit) return "Loved by flowing-pace listeners"
+    if (style.contains("mujawwad")) return "A mujawwad favourite"
+    if (style.contains("muallim") || style.contains("teacher") || style.contains("educational")) {
+        return "A study-steady favourite"
+    }
+    if (style.contains("taraweeh") || style.contains("haramain") || style.contains("maqamat")) {
+        return "A taraweeh-night favourite"
+    }
+    if (riwayahRaw.isNotEmpty() && !riwayahRaw.equals("Hafs", ignoreCase = true)) {
+        return "A $riwayahRaw-path rarity"
+    }
+    val steadyHit = tempo.contains("measured") || tempo.contains("steady") ||
+        tempo.contains("medium") || tempo.contains("reverent") ||
+        tempo.contains("clean") || tempo.contains("resonant") || tempo.contains("rich")
+    if (steadyHit) return "Loved by steady-pace listeners"
+    return "A listener favourite"
+}
+
+/**
+ * AGENT P7 — deck-outcome hook: call on every follow/skip so personalization
+ * can learn which voices land. Intentional no-op stub for now.
+ *
+ * One-line swap once P1 SignalStore lands (coordinator wires later):
+ * `SignalStore.recordDeckOutcome(slug, followed)`.
+ */
+@Suppress("UNUSED_PARAMETER")
+fun recordDeckOutcome(slug: String, followed: Boolean) {
+    // P1 SignalStore landed: deck verdicts are taste votes.
+    try {
+        if (followed) com.ghais.personal.SignalStore.recordFollow(slug)
+        else com.ghais.personal.SignalStore.recordSkipQuick(slug)
+    } catch (_: Exception) {
+    }
 }

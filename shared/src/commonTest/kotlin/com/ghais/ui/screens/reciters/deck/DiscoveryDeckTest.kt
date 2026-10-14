@@ -137,4 +137,77 @@ class DiscoveryDeckTest {
         assertEquals("Measured pace · Hafs", whyLineFor(voice(0, tempo = "medium", riwayah = "Hafs")))
         assertEquals("Unhurried pace · Warsh", whyLineFor(voice(1, tempo = "slow", riwayah = "Warsh")))
     }
+
+    // AGENT P7 — personalized deck v2 additions (additive; v1 tests above untouched).
+
+    @Test
+    fun testAffinityOrdersTopAffineFirst() {
+        // Exploitation: the single highest-affinity unplayed voice leads,
+        // regardless of the day seed's tie-break (unique top rank).
+        val reciters = catalog(25)
+        val affinities = reciters.associate { it.slug to 0.1f } +
+            mapOf("deck-voice-12" to 0.95f, "deck-voice-3" to 0.9f)
+        val deck = todayDeck(reciters, taste, epochDay = 20_375L, affinities = affinities)
+        assertEquals(10, deck.size)
+        assertEquals("deck-voice-12", deck.first().slug)
+    }
+
+    @Test
+    fun testExplorationSlotsPresent() {
+        // 6 high-affinity voices fill exploitation; at least 2 low-affinity
+        // voices must still surface via the exploration slots.
+        val reciters = catalog(25)
+        val affinities = buildMap {
+            reciters.forEachIndexed { i, r -> put(r.slug, if (i < 6) 0.9f else 0.1f) }
+        }
+        val deck = todayDeck(reciters, taste, epochDay = 20_375L, affinities = affinities)
+        assertEquals(10, deck.size)
+        val normalized = affinities.mapKeys { normalizeDeckSlug(it.key) }
+        val lowInDeck = deck.count {
+            (normalized[normalizeDeckSlug(it.slug)] ?: 1f) <= ExplorationAffinityThreshold
+        }
+        assertTrue(lowInDeck >= ExplorationSlotCount, "expected >=$ExplorationSlotCount exploration voices, got $lowInDeck")
+    }
+
+    @Test
+    fun testAffinityDeckDeterministic() {
+        val reciters = catalog(25)
+        val affinities = reciters.associate { it.slug to ((it.slug.hashCode() % 100) / 100f + 0.5f) }
+        val first = todayDeck(reciters, taste, epochDay = 20_375L, affinities = affinities)
+        val second = todayDeck(reciters, taste, epochDay = 20_375L, affinities = affinities)
+        assertEquals(first.map { it.slug }, second.map { it.slug })
+    }
+
+    @Test
+    fun testAffinityDeckRespectsExclusionsAndCap() {
+        val reciters = catalog(25)
+        val affinities = reciters.associate { it.slug to 0.8f }
+        val history = setOf("deck-voice-1", "deck-voice-2")
+        val followed = setOf("deck-voice-3")
+        val deck = todayDeck(reciters, taste, history, followed, epochDay = 20_375L, affinities = affinities)
+        assertEquals(10, deck.size)
+        val slugs = deck.map { it.slug }.toSet()
+        assertTrue(slugs.none { it in history })
+        assertTrue(slugs.none { it in followed })
+        assertEquals(slugs.size, deck.size)
+    }
+
+    @Test
+    fun testDeckReasonNonBlank() {
+        for (r in catalog(10)) {
+            assertTrue(deckReason(r).isNotBlank(), "blank reason for ${r.slug}")
+        }
+        val affinities = mapOf("deck-voice-1" to 0.1f, "deck-voice-2" to 0.9f)
+        for (r in catalog(10)) {
+            assertTrue(deckReason(r, affinities).isNotBlank(), "blank reason for ${r.slug}")
+        }
+    }
+
+    @Test
+    fun testLowAffinityReasonIsOutsideUsual() {
+        assertEquals(
+            "Outside your usual",
+            deckReason(voice(1), mapOf("deck-voice-1" to 0.1f))
+        )
+    }
 }

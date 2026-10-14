@@ -63,6 +63,11 @@ import kotlinx.coroutines.launch
  *
  * Presentation + deck-progress state only. Deck construction is [todayDeck];
  * the 30s preview lifecycle is owned by [DeckCard].
+ *
+ * AGENT P7 — additive v2 wiring: [affinities] threads through to [DeckCard]'s
+ * reason line (default empty = v1 rendering), and every follow/skip reports
+ * to [recordDeckOutcome] (currently a no-op stub; coordinator wires P1
+ * SignalStore later).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,7 +76,8 @@ fun DeckSheet(
     photoFor: (String) -> String?,
     onDismiss: () -> Unit,
     onOpenProfile: (String) -> Unit,
-    taste: TasteProfile? = null
+    taste: TasteProfile? = null,
+    affinities: Map<String, Float> = emptyMap()
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var index by remember(deck) { mutableIntStateOf(0) }
@@ -120,13 +126,16 @@ fun DeckSheet(
                     total = deck.size,
                     photoUrl = photoFor(reciter.slug),
                     taste = taste,
+                    affinities = affinities,
                     onSwipeRight = {
                         FollowStore.follow(reciter.slug)
+                        recordDeckOutcome(reciter.slug, followed = true)
                         if (reciter.nameEn !in followedNames) followedNames.add(reciter.nameEn)
                         index++
                         onOpenProfile(reciter.slug)
                     },
                     onSwipeLeft = {
+                        recordDeckOutcome(reciter.slug, followed = false)
                         skippedCount++
                         index++
                     }
@@ -140,6 +149,7 @@ fun DeckSheet(
                     GhostPillButton(
                         text = "Skip",
                         onClick = {
+                            recordDeckOutcome(reciter.slug, followed = false)
                             skippedCount++
                             index++
                         },
@@ -151,6 +161,7 @@ fun DeckSheet(
                             text = "Follow",
                             onClick = {
                                 FollowStore.follow(reciter.slug)
+                                recordDeckOutcome(reciter.slug, followed = true)
                                 if (reciter.nameEn !in followedNames) followedNames.add(reciter.nameEn)
                                 index++
                                 onOpenProfile(reciter.slug)
@@ -184,6 +195,7 @@ private fun DeckSwipeCard(
     total: Int,
     photoUrl: String?,
     taste: TasteProfile?,
+    affinities: Map<String, Float> = emptyMap(),
     onSwipeRight: () -> Unit,
     onSwipeLeft: () -> Unit
 ) {
@@ -224,7 +236,8 @@ private fun DeckSwipeCard(
             position = position,
             total = total,
             photoUrl = photoUrl,
-            taste = taste
+            taste = taste,
+            affinities = affinities
         )
     }
 }
