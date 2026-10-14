@@ -33,7 +33,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,11 +54,25 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.reciterCountryKey
 import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.TrackItem
+import com.ghais.flags.HookFlags
 import com.ghais.player.AudioEngine
+import com.ghais.ui.screens.reciters.deck.DeckEntryCard
+import com.ghais.ui.screens.reciters.deck.DeckSheet
+import com.ghais.ui.screens.reciters.deck.todayDeck
+import com.ghais.ui.screens.reciters.filter.FilterChipsRow
+import com.ghais.ui.screens.reciters.filter.ReciterFilterState
+import com.ghais.ui.screens.reciters.filter.applyFilters
+import com.ghais.ui.screens.reciters.taste.TasteQuizSheet
+import com.ghais.ui.screens.reciters.taste.TasteStore
+import com.ghais.ui.screens.reciters.today.TopQarisRail
+import com.ghais.ui.screens.reciters.today.VoiceOfDayCard
+import com.ghais.ui.screens.reciters.today.currentEpochDay
+import com.ghais.ui.screens.reciters.today.voiceOfDay
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirClickable
@@ -99,13 +115,22 @@ class RecitersScreen : Tab {
         // catalog sync instead of only in search. Reactive to the cache.
         val browseReciters = rememberBrowseReciters()
 
+        // Engagement hooks: taste quiz (A1), filter chips (A2), deck (A4).
+        val taste by TasteStore.taste.collectAsState()
+        var showTasteQuiz by remember { mutableStateOf(!taste.completed) }
+        var filterState by remember { mutableStateOf(ReciterFilterState()) }
+        var deckOpen by remember { mutableStateOf(false) }
+        val filteredReciters = remember(browseReciters, filterState) {
+            applyFilters(browseReciters, filterState)
+        }
+
         // Grouped on the flag-insensitive country key so an admin-created
         // "Saudi Arabia" joins the bundled "Saudi Arabia 🇸🇦" section instead of
         // forming a second, near-identical nation. Nations and the reciters
         // inside them are both alphabetical, and the label keeps the richest
         // raw spelling in the group (the one that still carries its flag).
-        val groups = remember(browseReciters) {
-            browseReciters
+        val groups = remember(filteredReciters) {
+            filteredReciters
                 .groupBy { reciterCountryKey(it.country).ifBlank { "other" } }
                 .map { (key, reciters) ->
                     val label = reciters
@@ -138,6 +163,49 @@ class RecitersScreen : Tab {
                         onClick = { rootNavigator?.push(ReciterSearchScreen()) }
                     )
                     Spacer(Modifier.height(20.dp))
+                }
+
+                // Taste-axis filters (A2) — narrow the reels below.
+                item {
+                    FilterChipsRow(
+                        reciters = browseReciters,
+                        state = filterState,
+                        onStateChange = { filterState = it }
+                    )
+                    Spacer(Modifier.height(16.dp))
+                }
+
+                // Voice of the day + weekly charts (A6).
+                item(key = "noir_voice_of_day") {
+                    val epochDay = remember { currentEpochDay() }
+                    val voice = remember(browseReciters, epochDay) {
+                        voiceOfDay(browseReciters, epochDay)
+                    }
+                    if (voice != null) {
+                        VoiceOfDayCard(
+                            reciter = voice,
+                            onOpenProfile = { slug ->
+                                rootNavigator?.push(ReciterProfileScreen(slug))
+                            },
+                            onOpenPlayer = { deckOpen = true }
+                        )
+                        Spacer(Modifier.height(20.dp))
+                    }
+                }
+                item(key = "noir_top_qaris_rail") {
+                    TopQarisRail(
+                        onReciter = { slug ->
+                            rootNavigator?.push(ReciterProfileScreen(slug))
+                        }
+                    )
+                }
+
+                // "Today's voices" swipe deck entry (A4).
+                if (HookFlags.deckEnabled) {
+                    item {
+                        DeckEntryCard(onOpen = { deckOpen = true })
+                        Spacer(Modifier.height(20.dp))
+                    }
                 }
 
                 if (groups.isEmpty()) {
@@ -187,6 +255,34 @@ class RecitersScreen : Tab {
                         }
                     }
                 }
+            }
+
+            // First-visit taste quiz (A1) — nag-once per launch until done.
+            if (HookFlags.tasteQuizEnabled && showTasteQuiz && !taste.completed) {
+                TasteQuizSheet(onDismiss = { showTasteQuiz = false })
+            }
+
+            // Swipe deck host (A4).
+            if (deckOpen) {
+                val followedSlugs by FollowStore.followedSlugs.collectAsState()
+                val history by UserUsageRepository.history.collectAsState()
+                val deck = remember(browseReciters, followedSlugs, history, taste) {
+                    todayDeck(
+                        reciters = browseReciters,
+                        taste = taste,
+                        history = history.map { it.reciterSlug }.toSet(),
+                        followedSlugs = followedSlugs
+                    )
+                }
+                DeckSheet(
+                    deck = deck,
+                    taste = taste,
+                    photoFor = ::photoForSlug,
+                    onDismiss = { deckOpen = false },
+                    onOpenProfile = { slug ->
+                        rootNavigator?.push(ReciterProfileScreen(slug))
+                    }
+                )
             }
         }
     }

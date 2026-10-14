@@ -73,10 +73,15 @@ import com.ghais.data.repository.EditorialPlaylist
 import com.ghais.data.repository.EditorialRepository
 import com.ghais.data.repository.KhatmaStore
 import com.ghais.data.repository.UserPlaylists
+import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.toTrackItems
 import com.ghais.data.sync.SyncEngine
 import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
+import com.ghais.ui.screens.library.CuratorBadge
+import com.ghais.ui.screens.library.ResurrectionRail
+import com.ghais.ui.screens.library.curatorLevel
+import com.ghais.ui.screens.library.findUnplayed
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
@@ -230,6 +235,49 @@ object LibraryScreen : Tab {
                         NoirDownloadsTile(
                             downloadedCount = downloadedKeys.size,
                             onClick = { rootNavigator?.push(DownloadsScreen()) }
+                        )
+                    }
+
+                    // "Hear what you missed" (hooks A11): saved-but-never-played.
+                    item(span = { GridItemSpan(2) }) {
+                        val history by UserUsageRepository.history.collectAsState()
+                        val savedTracks = remember(userPlaylists) {
+                            userPlaylists.flatMap { it.tracks }
+                        }
+                        val unplayed = remember(savedTracks, history) {
+                            val playedKeys = history.map {
+                                "${it.reciterSlug}:${it.surahId}:0"
+                            }.toSet()
+                            findUnplayed(
+                                savedIds = savedTracks.map {
+                                    UserPlaylists.trackKeyOf(it)
+                                },
+                                playHistory = playedKeys
+                            )
+                        }
+                        val labelById = remember(savedTracks) {
+                            savedTracks.associateBy(
+                                { UserPlaylists.trackKeyOf(it) },
+                                { "${it.surahNameEn} • ${it.reciterName}" }
+                            )
+                        }
+                        ResurrectionRail(
+                            unplayedIds = unplayed,
+                            onPlay = { id ->
+                                val track = savedTracks.firstOrNull {
+                                    UserPlaylists.trackKeyOf(it) == id
+                                }
+                                if (track != null) {
+                                    AudioEngine.playQueue(listOf(track), startIndex = 0)
+                                    rootNavigator?.push(NowPlayingScreen())
+                                }
+                            },
+                            resolveLabel = { labelById[it] ?: it }
+                        )
+                        CuratorBadge(
+                            level = curatorLevel(userPlaylists.size, savedTracks.size),
+                            playlistsCreated = userPlaylists.size,
+                            tracksSaved = savedTracks.size
                         )
                     }
 

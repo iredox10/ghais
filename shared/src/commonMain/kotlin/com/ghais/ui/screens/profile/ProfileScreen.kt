@@ -30,8 +30,18 @@ import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.data.auth.AuthRepository
 import com.ghais.data.repository.BroadcastRepository
+import com.ghais.data.repository.KhatmaStore
+import com.ghais.data.repository.UserUsageRepository
+import com.ghais.data.repository.khatmaIsComplete
+import com.ghais.data.share.ShareSheet
 import com.ghais.data.share.SupportKind
 import com.ghais.data.share.openSupportMail
+import com.ghais.ui.screens.profile.identity.AchievementStats
+import com.ghais.ui.screens.profile.identity.AchievementsShelf
+import com.ghais.ui.screens.profile.identity.IdentityCard
+import com.ghais.ui.screens.profile.identity.buildIdentityMemberSince
+import com.ghais.ui.screens.profile.identity.listenerTitle
+import com.ghais.ui.screens.profile.identity.unlockedAchievements
 import com.ghais.ui.components.noir.NoirGrainOverlay
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirAmbientGlow
@@ -188,6 +198,45 @@ object ProfileScreen : Tab {
                         email = session?.email,
                         isGuest = session == null,
                         onClick = { showEditDialog = true }
+                    )
+                    Spacer(modifier = Modifier.height(18.dp))
+                }
+
+                // -----------------------------------------------------------------
+                // 1b. Listener identity + achievements (hooks A11)
+                // -----------------------------------------------------------------
+                item {
+                    val stats by UserUsageRepository.stats.collectAsState()
+                    val khatmaPlans by KhatmaStore.plans.collectAsState()
+                    val totalMin = stats.totalSecondsListened / 60L
+                    IdentityCard(
+                        displayName = session?.name?.ifBlank { null } ?: userName,
+                        title = listenerTitle(stats.uniqueRecitersCount, totalMin),
+                        memberSince = buildIdentityMemberSince(
+                            firstLaunchMs = 0L,
+                            nowMs = 0L
+                        ),
+                        onClick = { showEditDialog = true }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    AchievementsShelf(
+                        unlocked = unlockedAchievements(
+                            AchievementStats(
+                                hasListened = totalMin > 0,
+                                daysStreak = stats.daysStreak,
+                                uniqueReciters = stats.uniqueRecitersCount,
+                                khatmaCompleted = khatmaPlans.count { khatmaIsComplete(it) },
+                                totalMinutes = totalMin
+                            )
+                        ),
+                        onShare = { def ->
+                            if (ShareSheet.isAvailable()) {
+                                ShareSheet.shareText(
+                                    def.title,
+                                    "I unlocked \"${def.title}\" on Ghaith. ${def.desc}"
+                                )
+                            }
+                        }
                     )
                     Spacer(modifier = Modifier.height(18.dp))
                 }

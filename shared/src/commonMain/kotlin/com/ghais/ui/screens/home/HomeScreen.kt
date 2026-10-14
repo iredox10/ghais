@@ -33,11 +33,18 @@ import com.ghais.data.repository.DevotionalRepository
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.toTrackItems
 import com.ghais.data.seed.JumpBackInItem
+import com.ghais.devotion.DevotionStreak
+import com.ghais.devotion.StreakFlameCard
+import com.ghais.devotion.StreakRestoreHost
 import com.ghais.domain.model.DEVOTIONAL_TRACK_SLUG
 import com.ghais.domain.model.DevotionKind
 import com.ghais.domain.model.DevotionalItem
 import com.ghais.domain.model.TrackItem
+import com.ghais.flags.HookFlags
 import com.ghais.player.AudioEngine
+import com.ghais.ui.screens.home.moments.LocalWallClock
+import com.ghais.ui.screens.home.moments.MomentHeroCard
+import com.ghais.ui.screens.home.moments.WeekRecapShelf
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
@@ -106,6 +113,31 @@ object HomeScreen : Tab {
                         onStatsClick = { rootNavigator?.push(StatsScreen) }
                     )
                     Spacer(Modifier.height(20.dp))
+                }
+
+                // -------------------------------------------------------------
+                // Moment hero + Monday recap + devotion streak (hooks)
+                // -------------------------------------------------------------
+                item {
+                    MomentHeroCard(
+                        hour = LocalWallClock.hourOfDay(),
+                        onOpenPlayer = { rootNavigator?.push(NowPlayingScreen()) }
+                    )
+                    Spacer(Modifier.height(18.dp))
+                }
+                item {
+                    WeekRecapShelf(todayDow = LocalWallClock.mondayBasedDow())
+                }
+                if (HookFlags.streakEnabled) {
+                    item {
+                        StreakFlameCard()
+                        Spacer(Modifier.height(18.dp))
+                    }
+                    item {
+                        StreakRestoreHost(
+                            onBegin = { rootNavigator?.push(NowPlayingScreen()) }
+                        )
+                    }
                 }
 
                 // -------------------------------------------------------------
