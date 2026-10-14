@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -299,7 +300,88 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                 }
                             }
                         )
+                    }
 
+                    // Discovery rail (A5): voices most like this one, above the
+                    // surah list and below the action buttons. Hidden when empty.
+                    // The Start Radio action lives in the hero button row above,
+                    // so it already reads before the 114-surah list.
+                    if (related.isNotEmpty()) {
+                        item(key = "more-like") {
+                            Spacer(modifier = Modifier.height(18.dp))
+                            NoirSectionHeader(
+                                label = "More like ${reciter.nameEn}",
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                items(
+                                    items = related,
+                                    key = { it.slug }
+                                ) { relatedReciter ->
+                                    val relatedPhoto =
+                                        rememberCloudPhoto(relatedReciter.slug)
+                                            ?: photoForSlug(relatedReciter.slug)
+                                    val line = remember(reciter, relatedReciter) {
+                                        whyLine(reciter, relatedReciter)
+                                    }
+                                    Column(
+                                        modifier = Modifier.width(180.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        ReciterReelCard(
+                                            reciter = relatedReciter,
+                                            photoUrl = relatedPhoto,
+                                            onClick = {
+                                                navigator.push(
+                                                    ReciterProfileScreen(relatedReciter.slug)
+                                                )
+                                            },
+                                            onPlayClick = {
+                                                val relatedSurahs =
+                                                    QuranDataRepository.getSurahsForReciter(relatedReciter)
+                                                        .filter { relatedReciter.isSurahAvailable(it.id) }
+                                                val relatedTracks = relatedSurahs.map { surah ->
+                                                    TrackItem(
+                                                        reciterSlug = relatedReciter.slug,
+                                                        reciterName = relatedReciter.nameEn,
+                                                        surahId = surah.id,
+                                                        surahNameEn = surah.nameEn,
+                                                        surahNameAr = surah.nameAr,
+                                                        ayahNo = 0,
+                                                        audioUrl = relatedReciter.getFullSurahUrl(surah.id),
+                                                        textUthmani = "",
+                                                        durationMs = surah.ayahsCount * 15_000L
+                                                    )
+                                                }
+                                                if (relatedTracks.isNotEmpty()) {
+                                                    AudioEngine.playQueue(relatedTracks, startIndex = 0)
+                                                    rootNavigator.push(NowPlayingScreen())
+                                                }
+                                            },
+                                            isFollowing = relatedReciter.slug in followedSlugs,
+                                            onFollowClick = { FollowStore.toggle(relatedReciter.slug) },
+                                            followerCount = followerCounts[relatedReciter.slug]
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = line,
+                                            color = GhaisNoir.TextTertiary,
+                                            fontSize = 12.sp,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    item(key = "recitations-header") {
                         Spacer(modifier = Modifier.height(18.dp))
 
                         NoirSectionHeader(
@@ -365,64 +447,6 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                 }
                             }
                         )
-                    }
-
-                    // Discovery rail: voices most like this one. Hidden when empty.
-                    if (related.isNotEmpty()) {
-                        item(key = "more-like") {
-                            Spacer(modifier = Modifier.height(18.dp))
-                            NoirSectionHeader(
-                                label = "More like ${reciter.nameEn}",
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(14.dp)
-                            ) {
-                                items(
-                                    items = related,
-                                    key = { it.slug }
-                                ) { relatedReciter ->
-                                    val relatedPhoto =
-                                        rememberCloudPhoto(relatedReciter.slug)
-                                            ?: photoForSlug(relatedReciter.slug)
-                                    ReciterReelCard(
-                                        reciter = relatedReciter,
-                                        photoUrl = relatedPhoto,
-                                        onClick = {
-                                            navigator.push(
-                                                ReciterProfileScreen(relatedReciter.slug)
-                                            )
-                                        },
-                                        onPlayClick = {
-                                            val relatedSurahs =
-                                                QuranDataRepository.getSurahsForReciter(relatedReciter)
-                                                    .filter { relatedReciter.isSurahAvailable(it.id) }
-                                            val relatedTracks = relatedSurahs.map { surah ->
-                                                TrackItem(
-                                                    reciterSlug = relatedReciter.slug,
-                                                    reciterName = relatedReciter.nameEn,
-                                                    surahId = surah.id,
-                                                    surahNameEn = surah.nameEn,
-                                                    surahNameAr = surah.nameAr,
-                                                    ayahNo = 0,
-                                                    audioUrl = relatedReciter.getFullSurahUrl(surah.id),
-                                                    textUthmani = "",
-                                                    durationMs = surah.ayahsCount * 15_000L
-                                                )
-                                            }
-                                            if (relatedTracks.isNotEmpty()) {
-                                                AudioEngine.playQueue(relatedTracks, startIndex = 0)
-                                                rootNavigator.push(NowPlayingScreen())
-                                            }
-                                        },
-                                        isFollowing = relatedReciter.slug in followedSlugs,
-                                        onFollowClick = { FollowStore.toggle(relatedReciter.slug) },
-                                        followerCount = followerCounts[relatedReciter.slug]
-                                    )
-                                }
-                            }
-                        }
                     }
                 }
             }
