@@ -1,5 +1,6 @@
 package com.ghais.ui.screens.library
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -21,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.AlertDialog
@@ -34,6 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,19 +44,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.data.repository.KhatmaStore
+import com.ghais.data.repository.PaceStatus
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.catchUpPages
 import com.ghais.data.repository.khatmaAyahCountBetween
 import com.ghais.data.repository.khatmaDaysLeft
 import com.ghais.data.repository.khatmaDoneToday
+import com.ghais.data.repository.khatmaElapsedDays
 import com.ghais.data.repository.khatmaEtaDateMs
 import com.ghais.data.repository.khatmaEtaLabel
 import com.ghais.data.repository.khatmaIsComplete
@@ -64,8 +71,10 @@ import com.ghais.data.repository.khatmaRemainingAyahs
 import com.ghais.data.repository.khatmaShortDate
 import com.ghais.data.repository.khatmaSurahAyahCount
 import com.ghais.data.repository.khatmaTodayPortion
+import com.ghais.data.repository.paceStatus
 import com.ghais.data.repository.KhatmaPortion
 import com.ghais.data.seed.PageJuzIndex
+import com.ghais.data.share.ShareSheet
 import com.ghais.domain.model.KhatmaPlan
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
@@ -95,6 +104,7 @@ object KhatmaScreen : Screen {
         val plans by KhatmaStore.plans.collectAsState()
         val plan = plans.firstOrNull()
         var showCreate by remember { mutableStateOf(false) }
+        var showCertificate by remember { mutableStateOf(false) }
         // Playback reciter: the canonical fallback (Mishary), mirroring
         // ReciterProfileScreen's allTracks TrackItem shape below.
         val reciter = remember { QuranDataRepository.getFallbackReciter() }
@@ -251,6 +261,17 @@ object KhatmaScreen : Screen {
                                 val portion = khatmaTodayPortion(plan, nowMs)
                                 val doneToday = khatmaDoneToday(plan, nowMs)
                                 val complete = khatmaIsComplete(plan)
+                                val pace = paceStatus(plan, nowMs)
+                                val catchUp = catchUpPages(plan, nowMs)
+                                val dayLabel = khatmaDayLabel(plan, nowMs)
+                                val paceLine = khatmaPaceLine(pace, catchUp)
+                                // Certificate surfaces once per completion: the
+                                // effect fires when a plan first reads complete
+                                // (open or finish), dismiss sticks until the
+                                // plan id or completion flips.
+                                LaunchedEffect(plan.id, complete) {
+                                    if (complete) showCertificate = true
+                                }
 
                                 NoirHeroCard(modifier = Modifier.fillMaxWidth()) {
                                     Column(modifier = Modifier.fillMaxWidth()) {
@@ -419,13 +440,52 @@ object KhatmaScreen : Screen {
 
                                 NoirSectionHeader(label = "Journey")
 
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceEvenly
-                                ) {
-                                    StatBox("Streak", "$streak Days", Icons.Filled.LocalFireDepartment, GhaisNoir.TextPrimary)
-                                    StatBox("Remaining", "$daysLeft Days", null, GhaisNoir.TextPrimary)
-                                    StatBox("Est. Finish", khatmaShortDate(etaMs), null, GhaisNoir.TextPrimary)
+                                NoirHeroCard(modifier = Modifier.fillMaxWidth()) {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            KhatmaProgressRing(progress = progress)
+                                            Spacer(modifier = Modifier.width(16.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = dayLabel,
+                                                    color = GhaisNoir.TextPrimary,
+                                                    fontSize = 20.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = paceLine,
+                                                    color = GhaisNoir.TextSecondary,
+                                                    fontSize = 13.sp
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = "$done of $planTotal ayahs • Est. ${khatmaShortDate(etaMs)}",
+                                                    color = GhaisNoir.TextTertiary,
+                                                    fontSize = 12.sp,
+                                                    maxLines = 1
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        if (complete) {
+                                            ChromePillButton(
+                                                text = "View completion certificate",
+                                                onClick = { showCertificate = true },
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        } else if (portion != null) {
+                                            ChromePillButton(
+                                                text = "Play today's portion",
+                                                onClick = {
+                                                    playPortion(plan, portion, record = !doneToday)
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                leadingIcon = Icons.Default.PlayArrow
+                                            )
+                                        }
+                                    }
                                 }
 
                                 Spacer(modifier = Modifier.height(18.dp))
@@ -455,6 +515,75 @@ object KhatmaScreen : Screen {
 
         if (showCreate) {
             KhatmaCreateDialog(onDismiss = { showCreate = false })
+        }
+
+        if (showCertificate && plan != null && khatmaIsComplete(plan)) {
+            val certDone = plan.totalAyahsRead.coerceAtLeast(0)
+            val certTotal = (certDone + khatmaRemainingAyahs(plan)).coerceAtLeast(certDone)
+            val certText = khatmaCompletionShareText(plan)
+            AlertDialog(
+                onDismissRequest = { showCertificate = false },
+                containerColor = GhaisNoir.NoirBlack,
+                title = {
+                    Text(
+                        text = "Khatma complete",
+                        color = GhaisNoir.TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                },
+                text = {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "“${plan.title}”",
+                            color = GhaisNoir.TextSecondary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "$certDone of $certTotal ayahs • ${plan.streak.coerceAtLeast(0)}-day streak",
+                            color = GhaisNoir.TextTertiary,
+                            fontSize = 12.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "May every letter be light on your path.",
+                            color = GhaisNoir.TextSecondary,
+                            fontSize = 13.sp
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = certText,
+                            color = GhaisNoir.TextTertiary,
+                            fontSize = 12.sp
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            if (ShareSheet.isAvailable()) {
+                                ShareSheet.shareText("My Khatma completion", certText)
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = "Share",
+                            color = GhaisNoir.TextPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCertificate = false }) {
+                        Text(
+                            text = "Close",
+                            color = GhaisNoir.TextSecondary
+                        )
+                    }
+                }
+            )
         }
     }
 }
@@ -646,4 +775,92 @@ fun StatBox(label: String, value: String, icon: ImageVector?, iconTint: Color) {
             fontSize = 12.sp
         )
     }
+}
+
+/**
+ * Journey progress ring (AGENT A10): engraved Noir track with a chrome sweep
+ * and a centered percentage. Monochrome only — contrast carries the progress.
+ */
+@Composable
+private fun KhatmaProgressRing(
+    progress: Float,
+    size: Dp = 84.dp,
+    stroke: Dp = 10.dp
+) {
+    val clamped = progress.coerceIn(0f, 1f)
+    Box(
+        modifier = Modifier.size(size),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.size(size)) {
+            val strokePx = stroke.toPx()
+            drawArc(
+                color = GhaisNoir.Fill4,
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                style = Stroke(width = strokePx, cap = StrokeCap.Round)
+            )
+            val sweep = clamped * 360f
+            if (sweep > 0f) {
+                drawArc(
+                    color = GhaisNoir.ChromeTop,
+                    startAngle = -90f,
+                    sweepAngle = sweep,
+                    useCenter = false,
+                    style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                )
+            }
+        }
+        Text(
+            text = "${(clamped * 100).toInt()}%",
+            color = GhaisNoir.TextPrimary,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+/**
+ * "Day X of N" label for [plan] at [todayMs] (pure). Past-target plans read
+ * "Day X · N-day target" instead of an overfull "Day 41 of 30".
+ */
+internal fun khatmaDayLabel(plan: KhatmaPlan, todayMs: Long): String {
+    val target = plan.targetDays.coerceAtLeast(1)
+    val day = khatmaElapsedDays(plan, todayMs) + 1
+    return if (day <= target) {
+        "Day $day of $target"
+    } else {
+        "Day $day · $target-day target"
+    }
+}
+
+/**
+ * Gentle pace line for [status] (pure): encouragement when ahead or on
+ * track, and a shame-free nudge naming the catch-up size when behind.
+ */
+internal fun khatmaPaceLine(status: PaceStatus, catchUp: Int): String = when (status) {
+    PaceStatus.AHEAD -> "Beautifully ahead — your consistency is carrying you."
+    PaceStatus.ON_TRACK -> "Right on track — steady pages, steady heart."
+    PaceStatus.BEHIND -> {
+        val pages = catchUp.coerceAtLeast(1)
+        if (pages == 1) {
+            "Rest days are part of the path — 1 page catches you up."
+        } else {
+            "Rest days are part of the path — $pages pages catch you up."
+        }
+    }
+}
+
+/**
+ * Share text celebrating a completed plan (pure). Counts come from the
+ * plan-aware total so mid-Quran starts report honestly.
+ */
+internal fun khatmaCompletionShareText(plan: KhatmaPlan): String {
+    val read = plan.totalAyahsRead.coerceAtLeast(0)
+    val total = (read + khatmaRemainingAyahs(plan)).coerceAtLeast(read)
+    val streak = plan.streak.coerceAtLeast(0)
+    return "Alhamdulillah — I completed my khatma \"${plan.title}\" " +
+        "($read of $total ayahs, $streak-day streak). " +
+        "May every letter be light. Start your own journey."
 }
