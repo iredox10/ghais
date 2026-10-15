@@ -155,7 +155,7 @@ fun NoirAboutRow(
 
 /** Ghost logout row — muted tertiary, no red in Noir. */
 @Composable
-fun NoirLogoutRow(subtitle: String, onClick: () -> Unit) {
+fun NoirLogoutRow(subtitle: String, onClick: () -> Unit, title: String = "Log out") {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -172,7 +172,7 @@ fun NoirLogoutRow(subtitle: String, onClick: () -> Unit) {
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Log out",
+                text = title,
                 color = GhaisNoir.TextTertiary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,

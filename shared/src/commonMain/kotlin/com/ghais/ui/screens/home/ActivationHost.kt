@@ -190,6 +190,7 @@ fun ActivationHost(
                                 AuthScreen(
                                     onAuthenticated = {
                                         nudgeDismissed = true
+                                        rootNavigator?.pop()
                                     }
                                 )
                             )

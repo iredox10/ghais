@@ -32,6 +32,8 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.data.auth.AuthRepository
 import com.ghais.data.repository.BroadcastRepository
 import com.ghais.data.repository.KhatmaStore
+import com.ghais.data.repository.OnboardingStore
+import com.ghais.ui.screens.auth.AuthScreen
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.khatmaIsComplete
 import com.ghais.data.share.ShareSheet
@@ -378,14 +380,34 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 6. Log out (ghost danger row — muted, no red)
+                // 6. Log out (ghost danger row — muted, no red). Guests get a
+                // sign-in row instead: same slot, opposite direction.
                 // -----------------------------------------------------------------
                 item {
                     GlassCardContainer {
-                        com.ghais.ui.screens.profile.NoirLogoutRow(
-                            subtitle = session?.email ?: "Signed in",
-                            onClick = { scope.launch { AuthRepository.signOut() } }
-                        )
+                        if (session != null) {
+                            com.ghais.ui.screens.profile.NoirLogoutRow(
+                                subtitle = session?.email ?: "Signed in",
+                                onClick = { scope.launch { AuthRepository.signOut() } }
+                            )
+                        } else {
+                            com.ghais.ui.screens.profile.NoirLogoutRow(
+                                subtitle = "Sign in to sync",
+                                title = "Sign in",
+                                onClick = {
+                                    rootNavigator?.push(
+                                        AuthScreen(
+                                            onAuthenticated = { isNewAccount ->
+                                                if (isNewAccount) {
+                                                    OnboardingStore.restartForNewUser()
+                                                }
+                                                rootNavigator?.pop()
+                                            }
+                                        )
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
             }
