@@ -73,6 +73,8 @@ import com.ghais.ui.screens.reciters.personal.weekSeed
 import com.ghais.ui.screens.reciters.personal.weeklyPicks
 import com.ghais.player.AudioEngine
 import com.ghais.ui.screens.reciters.deck.DeckEntryCard
+import com.ghais.ui.screens.reciters.deck.DeckDoneStore
+import com.ghais.ui.screens.reciters.deck.isDone
 import com.ghais.ui.screens.reciters.deck.DeckSheet
 import com.ghais.ui.screens.reciters.deck.todayDeck
 import com.ghais.ui.screens.reciters.filter.FilterChipsRow
@@ -221,11 +223,20 @@ class RecitersScreen : Tab {
 
         // P4 personalized ordering: static slot list replaced by
         // orderSections(...) — SEARCH first, NATIONS last, personalized
-        // rails + deck promotion driven by follows/history/taste.
-        // Deck has no persisted done-state yet, so it stays todo (promoted);
-        // voice is fresh every day by construction (voiceOfDay(epochDay)).
+        // rails + deck promotion driven by follows/history/taste. Deck-done
+        // comes from DeckDoneStore (day-scoped); voice is fresh every day
+        // by construction (voiceOfDay(epochDay)).
+        val deckDoneDay by DeckDoneStore.doneDay.collectAsState()
+        val orderDay = remember { currentEpochDay() }
+        val deckDoneToday = remember(deckDoneDay, orderDay) {
+            try {
+                isDone(deckDoneDay, orderDay)
+            } catch (_: Exception) {
+                false
+            }
+        }
         val sectionOrder = remember(
-            followedSlugs, historySlugs, taste.completed
+            followedSlugs, historySlugs, taste.completed, deckDoneToday
         ) {
             try {
                 orderSections(
@@ -233,7 +244,7 @@ class RecitersScreen : Tab {
                     hasHistory = historySlugs.isNotEmpty(),
                     hasTaste = taste.completed,
                     isNewDay = true,
-                    deckDoneToday = false
+                    deckDoneToday = deckDoneToday
                 )
             } catch (_: Exception) {
                 listOf(

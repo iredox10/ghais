@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -84,6 +85,14 @@ fun DeckSheet(
     val followedNames = remember(deck) { mutableStateListOf<String>() }
     var skippedCount by remember(deck) { mutableIntStateOf(0) }
     val done = index >= deck.size
+    LaunchedEffect(done) {
+        if (done && deck.isNotEmpty()) {
+            try {
+                DeckDoneStore.markDone(todayEpochDay())
+            } catch (_: Exception) {
+            }
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
