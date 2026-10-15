@@ -43,7 +43,6 @@ import com.ghais.domain.model.TrackItem
 import com.ghais.flags.HookFlags
 import com.ghais.player.AudioEngine
 import com.ghais.ui.screens.home.moments.LocalWallClock
-import com.ghais.ui.screens.home.moments.MomentHeroCard
 import com.ghais.ui.screens.home.moments.WeekRecapShelf
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirScreenRoot
@@ -126,15 +125,8 @@ object HomeScreen : Tab {
                 }
 
                 // -------------------------------------------------------------
-                // Moment hero + Monday recap + devotion streak (hooks)
+                // Monday recap + devotion streak (hooks)
                 // -------------------------------------------------------------
-                item {
-                    MomentHeroCard(
-                        hour = LocalWallClock.hourOfDay(),
-                        onOpenPlayer = { rootNavigator?.push(NowPlayingScreen()) }
-                    )
-                    Spacer(Modifier.height(18.dp))
-                }
                 item {
                     WeekRecapShelf(todayDow = LocalWallClock.mondayBasedDow())
                 }
