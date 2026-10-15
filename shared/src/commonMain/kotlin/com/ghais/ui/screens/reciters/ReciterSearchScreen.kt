@@ -65,6 +65,9 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
+import com.ghais.ui.screens.reciters.filter.FilterChipsRow
+import com.ghais.ui.screens.reciters.filter.ReciterFilterState
+import com.ghais.ui.screens.reciters.filter.applyFilters
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import kotlinx.coroutines.delay
@@ -117,13 +120,18 @@ fun currentAffinities(): Map<String, Float> = try {
     emptyMap()
 }
 
-class ReciterSearchScreen : Screen {
+class ReciterSearchScreen(
+    private val initialFilters: ReciterFilterState = ReciterFilterState(),
+) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val rootNavigator = LocalRootNavigator.current ?: navigator.parent ?: navigator
         var query by remember { mutableStateOf("") }
         var debouncedQuery by remember { mutableStateOf("") }
+        // Refinement filters (moved off the browse scroll): docked under
+        // the query field, always visible, combined before ranking.
+        var filterState by remember { mutableStateOf(initialFilters) }
 
         LaunchedEffect(query) {
             delay(300)
@@ -149,14 +157,21 @@ class ReciterSearchScreen : Screen {
                 .distinctBy { it.catalogKey() }
         }
 
-        val results = remember(debouncedQuery, browseReciters, affinities, followedSlugs) {
+        val results = remember(debouncedQuery, browseReciters, affinities, followedSlugs, filterState) {
             val q = debouncedQuery.trim()
-            if (q.isBlank()) emptyList()
-            // One row per human (the raw catalog holds an MP3Quran + an
-            // EveryAyah row for the same reciter, which used to render twice
-            // and crash the list on duplicate keys).
-            else rankReciters(
-                candidates = browseReciters.filter {
+            // Filters first (hard constraint, shrinks the set), then text
+            // match, then affinity ranking — so ForYou badges always agree
+            // with the visible order.
+            val refined = applyFilters(browseReciters, filterState)
+            if (q.isBlank()) {
+                if (!filterState.hasActiveFilters()) emptyList()
+                else rankReciters(
+                    candidates = refined,
+                    affinities = affinities,
+                    followed = followedSlugs,
+                )
+            } else rankReciters(
+                candidates = refined.filter {
                     it.nameEn.contains(q, ignoreCase = true) ||
                         it.nameAr.contains(q, ignoreCase = true) ||
                         it.country.contains(q, ignoreCase = true) ||
@@ -245,7 +260,15 @@ class ReciterSearchScreen : Screen {
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                if (query.isBlank()) {
+                // Refinement lives here, not on the browse scroll.
+                FilterChipsRow(
+                    reciters = browseReciters,
+                    state = filterState,
+                    onStateChange = { filterState = it }
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                if (query.isBlank() && !filterState.hasActiveFilters()) {
                     NoirSectionHeader(
                         label = "Recent searches",
                         actionLabel = "Clear all".takeIf { recentReciters.isNotEmpty() },
@@ -313,7 +336,8 @@ class ReciterSearchScreen : Screen {
                             )
                             Spacer(modifier = Modifier.height(14.dp))
                             Text(
-                                text = "No results for \"$query\"",
+                                text = if (query.isBlank()) "No voices match those filters"
+                                else "No results for \"$query\"",
                                 color = GhaisNoir.TextPrimary,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.SemiBold,
