@@ -149,15 +149,22 @@ object DailyMix {
     }
 
     /** Full-surah playable shape — mirrors `ReciterProfileScreen`'s items. */
-    private fun Surah.toTrackItem(reciter: Reciter): TrackItem = TrackItem(
-        reciterSlug = reciter.slug,
-        reciterName = reciter.nameEn,
-        surahId = id,
-        surahNameEn = nameEn,
-        surahNameAr = nameAr,
-        ayahNo = 0,
-        audioUrl = reciter.getFullSurahUrl(id),
-        textUthmani = "",
-        durationMs = ayahsCount * 15_000L
-    )
+    internal fun Surah.toTrackItem(reciter: Reciter): TrackItem = toFullSurahTrackItem(reciter)
 }
+
+/**
+ * Shared full-surah playable shape (catalog order). Top-level so reels and
+ * discovery rows build byte-identical tracks instead of hand-rolling
+ * `TrackItem(...)` and drifting.
+ */
+internal fun Surah.toFullSurahTrackItem(reciter: Reciter): TrackItem = TrackItem(
+    reciterSlug = reciter.slug,
+    reciterName = reciter.nameEn,
+    surahId = id,
+    surahNameEn = nameEn,
+    surahNameAr = nameAr,
+    ayahNo = 0,
+    audioUrl = reciter.getFullSurahUrl(id),
+    textUthmani = "",
+    durationMs = ayahsCount * 15_000L
+)
