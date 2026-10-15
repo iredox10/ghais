@@ -83,7 +83,10 @@ import com.ghais.ui.screens.reciters.filter.applyFilters
 import com.ghais.ui.screens.reciters.taste.TasteQuizSheet
 import com.ghais.ui.screens.reciters.taste.TasteStore
 import com.ghais.ui.screens.reciters.today.TopQarisRail
+import com.ghais.ui.screens.reciters.today.HeardEntry
 import com.ghais.ui.screens.reciters.today.VoiceOfDayCard
+import com.ghais.ui.screens.reciters.today.YesterdayMostHeardSection
+import com.ghais.ui.screens.reciters.today.yesterdayTopEntries
 import com.ghais.ui.screens.reciters.today.currentEpochDay
 import com.ghais.ui.screens.reciters.today.voiceOfDay
 import com.ghais.ui.components.noir.NoirScreenRoot
@@ -385,16 +388,60 @@ class RecitersScreen : Tab {
                             val voice = remember(browseReciters, epochDay) {
                                 voiceOfDay(browseReciters, epochDay)
                             }
-                            if (voice != null) {
-                                VoiceOfDayCard(
-                                    reciter = voice,
-                                    onOpenProfile = { slug ->
-                                        rootNavigator?.push(ReciterProfileScreen(slug))
-                                    },
-                                    onOpenPlayer = { deckOpen = true }
-                                )
-                                Spacer(Modifier.height(20.dp))
+                            // Yesterday's most heard (device history); falls
+                            // back to the deterministic voice when empty.
+                            val nowMs = remember {
+                                try {
+                                    kotlin.time.Clock.System.now().toEpochMilliseconds()
+                                } catch (_: Exception) {
+                                    epochDay * 86_400_000L
+                                }
                             }
+                            val heardEntries = remember(usageHistory, nowMs, browseReciters) {
+                                try {
+                                    yesterdayTopEntries(usageHistory, nowMs, 5)
+                                        ?.mapNotNull { top ->
+                                            val reciter = shelfBySlug[top.slug]
+                                                ?: shelfBySlug[top.slug.trim().lowercase()]
+                                            if (reciter == null) null
+                                            else HeardEntry(
+                                                slug = reciter.slug,
+                                                nameEn = reciter.nameEn,
+                                                plays = top.plays
+                                            )
+                                        }
+                                        ?.takeIf { it.isNotEmpty() }
+                                        ?: emptyList()
+                                } catch (_: Exception) {
+                                    emptyList()
+                                }
+                            }
+                            val playingTrack by AudioEngine.currentTrack.collectAsState()
+                            val enginePlaying by AudioEngine.isPlaying.collectAsState()
+                            YesterdayMostHeardSection(
+                                entries = heardEntries,
+                                fallbackReciter = voice,
+                                playingSlug = playingTrack?.reciterSlug,
+                                isPlaying = enginePlaying,
+                                onOpenProfile = { slug ->
+                                    rootNavigator?.push(ReciterProfileScreen(slug))
+                                },
+                                onPlay = { slug ->
+                                    val reciter = shelfBySlug[slug] ?: return@YesterdayMostHeardSection
+                                    try {
+                                        com.ghais.analytics.HookAnalytics.track(
+                                            com.ghais.analytics.HookEvents.Event.MOMENT_PLAYED,
+                                            mapOf(
+                                                com.ghais.analytics.HookEvents.Prop.RECITER_SLUG to slug,
+                                                com.ghais.analytics.HookEvents.Prop.SOURCE to "yesterday_top",
+                                            ),
+                                        )
+                                    } catch (_: Exception) {
+                                    }
+                                    playReciterQueue(reciter)
+                                },
+                                onOpenPlayer = { deckOpen = true }
+                            )
                         }
 
                         SectionId.CHARTS -> item(key = "noir_top_qaris_rail") {

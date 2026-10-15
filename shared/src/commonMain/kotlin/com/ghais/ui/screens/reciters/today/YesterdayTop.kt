@@ -24,7 +24,20 @@ fun yesterdayTop(
     history: List<JumpBackInItem>,
     nowMs: Long,
     limit: Int = 5,
-): List<String>? = try {
+): List<String>? = yesterdayTopEntries(history, nowMs, limit)?.map { it.slug }
+
+/** Ranked yesterday entry with play counts. Same contract as [yesterdayTop]. */
+data class YesterdayTopEntry(
+    val slug: String,
+    val plays: Int,
+    val lastPlayedMs: Long,
+)
+
+fun yesterdayTopEntries(
+    history: List<JumpBackInItem>,
+    nowMs: Long,
+    limit: Int = 5,
+): List<YesterdayTopEntry>? = try {
     if (limit <= 0 || history.isEmpty() || nowMs <= 0L) return null
     val todayDay = Math.floorDiv(nowMs, YESTERDAY_MILLIS_PER_DAY)
     val from = (todayDay - 1) * YESTERDAY_MILLIS_PER_DAY
@@ -46,7 +59,7 @@ fun yesterdayTop(
                 .thenByDescending { lastPlayed[it.key] ?: Long.MIN_VALUE }
         )
         .take(limit)
-        .map { it.key }
+        .map { YesterdayTopEntry(it.key, it.value, lastPlayed[it.key] ?: 0L) }
         .takeIf { it.isNotEmpty() }
 } catch (_: Exception) {
     null
