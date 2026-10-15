@@ -34,6 +34,7 @@ import com.ghais.data.repository.BroadcastRepository
 import com.ghais.data.repository.KhatmaStore
 import com.ghais.data.repository.OnboardingStore
 import com.ghais.ui.screens.auth.AuthScreen
+import com.ghais.ui.screens.onboarding.OnboardingScreen
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.khatmaIsComplete
 import com.ghais.data.share.ShareSheet
@@ -398,13 +399,16 @@ object ProfileScreen : Tab {
                                     rootNavigator?.push(
                                         AuthScreen(
                                             onAuthenticated = { isNewAccount ->
-                                                // Fresh account: reset setup state; the
-                                                // App gate replays onboarding for any
-                                                // signed-in user with done=false.
+                                                // Signup-only onboarding: fresh
+                                                // accounts get a pushed setup
+                                                // flow; logins just go home.
                                                 if (isNewAccount) {
                                                     OnboardingStore.restartForNewUser()
                                                 }
                                                 rootNavigator?.pop()
+                                                if (isNewAccount) {
+                                                    rootNavigator?.push(OnboardingScreen)
+                                                }
                                             }
                                         )
                                     )

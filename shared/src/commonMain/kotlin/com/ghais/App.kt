@@ -102,16 +102,13 @@ fun App() {
         // own collector and may still be bound to "local" on this frame —
         // doneForUser doubles as a key so that the first write landing in the
         // wrong namespace is retried once setOwner reports the real value.
-        // A signed-in user with done=false (fresh signup via ANY entry —
-        // auth gate, profile row, Day-2 nudge) replays onboarding instead of
-        // being marked done: this is the single funnel, so push-path signups
-        // only need restartForNewUser() and the gate below picks it up.
+        // Signup-only: only an explicit isNewAccount callback replays
+        // onboarding (showAuth gate's forceOnboarding, or a pushed
+        // OnboardingScreen from profile/nudge signup). A done=false login —
+        // e.g. an existing account on a fresh device — is marked done, never
+        // onboarded: login must never show setup.
         LaunchedEffect(signedInUserId, forceOnboarding, doneForUser) {
-            if (signedInUserId == null || forceOnboarding) return@LaunchedEffect
-            if (!doneForUser) {
-                forceOnboarding = true
-                return@LaunchedEffect
-            }
+            if (signedInUserId == null || forceOnboarding || doneForUser) return@LaunchedEffect
             OnboardingStore.markDoneForCurrentUser()
         }
         // Guest-first activation: auth is deferred, never blocking. Signed-out

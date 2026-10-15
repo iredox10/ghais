@@ -33,6 +33,7 @@ import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.auth.AuthScreen
+import com.ghais.ui.screens.onboarding.OnboardingScreen
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.reciters.taste.TasteQuizSheet
 import com.ghais.ui.screens.reciters.taste.TasteStore
@@ -190,12 +191,15 @@ fun ActivationHost(
                                 AuthScreen(
                                     onAuthenticated = { isNewAccount ->
                                         nudgeDismissed = true
-                                        // Fresh account: the App gate replays
-                                        // onboarding for done=false users.
+                                        // Signup-only onboarding: fresh
+                                        // accounts get a pushed setup flow.
                                         if (isNewAccount) {
                                             OnboardingStore.restartForNewUser()
                                         }
                                         rootNavigator?.pop()
+                                        if (isNewAccount) {
+                                            rootNavigator?.push(OnboardingScreen)
+                                        }
                                     }
                                 )
                             )
