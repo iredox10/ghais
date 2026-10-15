@@ -18,7 +18,11 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -31,6 +35,7 @@ import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.data.repository.DevotionalRepository
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.toTrackItems
 import com.ghais.data.seed.JumpBackInItem
 import com.ghais.devotion.DevotionStreak
@@ -52,13 +57,16 @@ import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.devotional.DevotionListScreen
 import com.ghais.ui.screens.devotional.DevotionPlayerScreen
 import com.ghais.ui.screens.history.HistoryScreen
+import com.ghais.ui.screens.library.DownloadsScreen
 import com.ghais.ui.screens.library.FavoritesScreen
 import com.ghais.ui.screens.library.LibraryScreen
+import com.ghais.ui.screens.mood.MoodScreen
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.playlists.PlaylistDetailsScreen
 import com.ghais.ui.screens.profile.ProfileScreen
 import com.ghais.ui.screens.reciters.FollowedRecitersScreen
 import com.ghais.ui.screens.reciters.ReciterProfileScreen
+import com.ghais.ui.screens.reciters.RecitersScreen
 import com.ghais.ui.screens.search.SearchScreen
 import com.ghais.ui.screens.stats.StatsScreen
 import com.ghais.ui.theme.GhaisNoir
@@ -103,7 +111,9 @@ object HomeScreen : Tab {
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 120.dp)
             ) {
                 // -------------------------------------------------------------
-                // Top bar — actions only (headline removed)
+                // Top bar + search + filter chips + plum hero (redesign).
+                // Search pushes SearchScreen; chips navigate (no dead controls);
+                // the hero resumes the latest history entry into the player.
                 // -------------------------------------------------------------
                 item {
                     HomeTopBar(
@@ -111,7 +121,57 @@ object HomeScreen : Tab {
                         onSearchClick = { rootNavigator?.push(SearchScreen()) },
                         onStatsClick = { rootNavigator?.push(StatsScreen) }
                     )
-                    Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(14.dp))
+                    HomeSearchBar(
+                        onClick = { rootNavigator?.push(SearchScreen()) }
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    var selectedChip by remember { mutableStateOf("all") }
+                    HomeFilterChips(
+                        selectedId = selectedChip,
+                        onSelect = { chip ->
+                            selectedChip = chip.id
+                            when (chip.id) {
+                                "reciters" -> tabNavigator.current = RecitersScreen()
+                                "surahs" -> rootNavigator?.push(SearchScreen())
+                                "moods" -> rootNavigator?.push(MoodScreen())
+                            }
+                        }
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    val history by UserUsageRepository.history.collectAsState()
+                    val latest = history.firstOrNull()
+                    if (latest != null) {
+                        val heroSubtitle = listOf(latest.title, latest.subtitle)
+                            .map { it.trim() }
+                            .filter { it.isNotEmpty() }
+                            .joinToString(" • ")
+                        val heroStats by UserUsageRepository.stats.collectAsState()
+                        HomePlumHero(
+                            eyebrow = "Jump back in +",
+                            title = "Feel every verse.",
+                            subtitle = heroSubtitle,
+                            coverUrl = latest.coverUrl,
+                            monogram = latest.title.firstOrNull { it.isLetter() }?.uppercase() ?: "Q",
+                            ctaLabel = "Play",
+                            onPlay = {
+                                resumeHistoryEntry(
+                                    entry = latest,
+                                    openPlayer = { rootNavigator?.push(NowPlayingScreen()) },
+                                    openDevotion = { itemId ->
+                                        rootNavigator?.push(DevotionPlayerScreen(itemId = itemId))
+                                    }
+                                )
+                            },
+                            onOpen = { rootNavigator?.push(NowPlayingScreen()) },
+                            stats = listOf(
+                                "${heroStats.minutesToday}" to "min today",
+                                "${heroStats.daysStreak}" to "day streak",
+                                "${heroStats.uniqueRecitersCount}" to "qaris"
+                            )
+                        )
+                        Spacer(Modifier.height(20.dp))
+                    }
                 }
 
                 // -------------------------------------------------------------
@@ -173,7 +233,8 @@ object HomeScreen : Tab {
                     HomePlaylistsRow(
                         onFavourites = { rootNavigator?.push(FavoritesScreen) },
                         onFocusWork = { rootNavigator?.push(PlaylistDetailsScreen("focus-work")) },
-                        onNightSleep = { rootNavigator?.push(PlaylistDetailsScreen("sleep-mode")) }
+                        onNightSleep = { rootNavigator?.push(PlaylistDetailsScreen("sleep-mode")) },
+                        onDownloads = { rootNavigator?.push(DownloadsScreen()) }
                     )
                     Spacer(Modifier.height(18.dp))
                 }
@@ -186,7 +247,10 @@ object HomeScreen : Tab {
                         title = "Qari you follow",
                         onSeeAll = { rootNavigator?.push(FollowedRecitersScreen) }
                     )
-                    HomeFollowedRow(onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) })
+                    HomeFollowedRow(
+                        onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) },
+                        onDiscover = { tabNavigator.current = RecitersScreen() }
+                    )
                     Spacer(Modifier.height(18.dp))
                 }
 
@@ -238,10 +302,16 @@ object HomeScreen : Tab {
                 }
 
                 // -------------------------------------------------------------
-                // Devotionals — duas + ruqiyah bento tiles
+                // Devotionals — dua of the day + duas/ruqiyah bento tiles
                 // -------------------------------------------------------------
                 item {
                     HomeSectionHeader(title = "Devotionals", onSeeAll = null)
+                    HomeDuaOfDay(
+                        onOpen = { itemId ->
+                            rootNavigator?.push(DevotionPlayerScreen(itemId = itemId))
+                        }
+                    )
+                    Spacer(Modifier.height(12.dp))
                     HomeDevotionRow(onKind = { kind -> rootNavigator?.push(DevotionListScreen(kind)) })
                     Spacer(Modifier.height(18.dp))
                 }
@@ -495,7 +565,7 @@ private fun HomeDevotionRow(onKind: (DevotionKind) -> Unit) {
                 modifier = Modifier
                     .weight(1f)
                     .height(DevotionTileHeight)
-                    .background(GhaisNoir.cardFill(), GhaisShapes.cardNoir)
+                    .background(GhaisNoir.tintFill(), GhaisShapes.cardNoir)
                     .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardNoir)
                     .topSpecular(inset = 24.dp)
                     .noirClickable { onKind(tile.kind) }

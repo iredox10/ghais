@@ -13,11 +13,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
@@ -25,10 +26,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -39,9 +42,7 @@ import com.ghais.data.repository.prettifySlug
 import com.ghais.data.seed.JumpBackInItem
 import com.ghais.domain.model.Surah
 import com.ghais.player.AudioEngine
-import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.NoirCard
-import com.ghais.ui.components.noir.NoirHeroCard
 import com.ghais.ui.components.noir.NoirSegmentedProgress
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
@@ -94,40 +95,81 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
         return
     }
 
-    val hero = recent.first()
-    val rail = recent.drop(1)
-    val heroActive = isLive(hero, currentTrack?.surahId, currentTrack?.reciterSlug)
-    val heroPhoto = rememberCloudPhoto(hero.reciterSlug)
+    // Stacked deck (lawyer-ref): the selected entry rides front with full
+    // detail + lavender Resume; ghost layers peek from behind for depth.
+    // Prev/next chevrons page the stack; play resumes the front entry.
+    val deck = recent.take(5)
+    var selectedIndex by remember { mutableStateOf(0) }
+    val selected = deck[selectedIndex.coerceIn(deck.indices)]
+    val selectedActive = isLive(selected, currentTrack?.surahId, currentTrack?.reciterSlug)
+    val selectedPhoto = rememberCloudPhoto(selected.reciterSlug)
 
-    NoirHeroCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 26.dp)
+    ) {
+        // Ghost back layers — pure depth, non-interactive.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 28.dp)
+                .height(48.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = (-26).dp)
+                .background(GhaisNoir.cardFillSoft(), GhaisShapes.cardNoir)
+                .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.cardNoir)
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp)
+                .height(48.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = (-13).dp)
+                .background(GhaisNoir.cardFillSoft(), GhaisShapes.cardNoir)
+                .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardNoir)
+        )
+        // Front card.
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(GhaisNoir.cardFill(), GhaisShapes.cardNoir)
+                .border(
+                    1.dp,
+                    if (selectedActive) GhaisNoir.Lavender.copy(alpha = 0.5f) else GhaisNoir.BorderCard,
+                    GhaisShapes.cardNoir
+                )
+                .topSpecular(inset = 30.dp)
+                .padding(16.dp)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (heroPhoto != null) {
+                if (selectedPhoto != null) {
                     NoirArtworkWell(
-                        coverUrl = heroPhoto,
-                        monogram = reciterMonogramOf(hero),
+                        coverUrl = selectedPhoto,
+                        monogram = reciterMonogramOf(selected),
                         shape = CircleShape,
                         size = 76.dp,
                         monogramSize = 26.sp,
                         ring = true,
                         grayscale = false,
                         scrimAlpha = 0f,
-                        errorFallbackUrl = hero.coverUrl
+                        errorFallbackUrl = selected.coverUrl
                     )
                 } else {
                     NoirArtworkWell(
-                        coverUrl = hero.coverUrl,
-                        monogram = monogramOf(hero),
+                        coverUrl = selected.coverUrl,
+                        monogram = monogramOf(selected),
                         shape = RoundedCornerShape(20.dp),
                         size = 76.dp,
                         monogramSize = 26.sp,
-                        ring = heroActive
+                        ring = selectedActive
                     )
                 }
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "LAST PLAYED",
+                        text = "CONTINUE",
                         color = GhaisNoir.TextTertiary,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -136,7 +178,7 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
                     Spacer(Modifier.height(6.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = surahNameOf(hero),
+                            text = surahNameOf(selected),
                             color = GhaisNoir.TextPrimary,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
@@ -144,7 +186,7 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
-                        val arabicName = arabicNameOf(hero)
+                        val arabicName = arabicNameOf(selected)
                         if (arabicName.isNotEmpty()) {
                             Spacer(Modifier.width(8.dp))
                             Text(
@@ -160,11 +202,11 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
                             )
                         }
                     }
-                    val heroMeta = surahMetaOf(hero)
-                    if (heroMeta.isNotEmpty()) {
+                    val selectedMeta = surahMetaOf(selected)
+                    if (selectedMeta.isNotEmpty()) {
                         Spacer(Modifier.height(3.dp))
                         Text(
-                            text = heroMeta,
+                            text = selectedMeta,
                             color = GhaisNoir.TextTertiary,
                             fontSize = 11.sp,
                             maxLines = 1,
@@ -173,10 +215,10 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
                     }
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        text = hero.subtitle,
-                        color = if (heroActive) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
+                        text = selected.subtitle,
+                        color = if (selectedActive) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
                         fontSize = 12.sp,
-                        fontWeight = if (heroActive) FontWeight.SemiBold else FontWeight.Normal,
+                        fontWeight = if (selectedActive) FontWeight.SemiBold else FontWeight.Normal,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -184,19 +226,19 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
             }
 
             Spacer(Modifier.height(16.dp))
-            NoirSegmentedProgress(progress = progressOf(hero), trackHeight = 8.dp)
+            NoirSegmentedProgress(progress = progressOf(selected), trackHeight = 8.dp)
             Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "${(progressOf(hero) * 100).toInt()}% through",
+                    text = "${(progressOf(selected) * 100).toInt()}% through",
                     color = GhaisNoir.TextTertiary,
                     fontSize = 11.sp
                 )
-                val remaining = hero.durationMs - hero.positionMs
-                if (hero.durationMs > 0L && remaining > 0L) {
+                val remaining = selected.durationMs - selected.positionMs
+                if (selected.durationMs > 0L && remaining > 0L) {
                     Text(
                         text = "${formatClock(remaining)} left",
                         color = GhaisNoir.TextTertiary,
@@ -205,143 +247,95 @@ fun HomeContinueListeningRow(onPlay: (JumpBackInItem) -> Unit) {
                 }
             }
             Spacer(Modifier.height(16.dp))
-            ChromePillButton(
-                text = if (heroActive && isEnginePlaying) "Now playing" else "Resume",
-                onClick = { onPlay(hero) },
-                modifier = Modifier.fillMaxWidth(),
-                leadingIcon = if (heroActive && isEnginePlaying) {
-                    Icons.Filled.Pause
-                } else {
-                    Icons.Filled.PlayArrow
-                }
-            )
-        }
-    }
-
-    if (rail.isNotEmpty()) {
-        Spacer(Modifier.height(12.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            itemsIndexed(
-                items = rail,
-                key = { index, item -> "${item.reciterSlug}-${item.surahId}#$index" }
-            ) { _, item ->
-                val active = isLive(item, currentTrack?.surahId, currentTrack?.reciterSlug)
-                NoirRecentPlate(
-                    item = item,
-                    active = active,
-                    playing = active && isEnginePlaying,
-                    onPlay = { onPlay(item) }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(GhaisShapes.pill)
+                    .background(GhaisNoir.lavenderFill())
+                    .noirClickable { onPlay(selected) }
+                    .padding(vertical = 14.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = if (selectedActive && isEnginePlaying) {
+                        Icons.Filled.Pause
+                    } else {
+                        Icons.Filled.PlayArrow
+                    },
+                    contentDescription = null,
+                    tint = GhaisNoir.LavenderInk,
+                    modifier = Modifier.size(20.dp)
                 )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = if (selectedActive && isEnginePlaying) "Now playing" else "Resume",
+                    color = GhaisNoir.LavenderInk,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            if (deck.size > 1) {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    DeckPagerButton(
+                        contentDescription = "Previous in stack",
+                        onClick = {
+                            selectedIndex = (selectedIndex - 1 + deck.size) % deck.size
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ChevronLeft,
+                            contentDescription = null,
+                            tint = GhaisNoir.TextPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Text(
+                        text = "${selectedIndex + 1} / ${deck.size}",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    DeckPagerButton(
+                        contentDescription = "Next in stack",
+                        onClick = {
+                            selectedIndex = (selectedIndex + 1) % deck.size
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ChevronRight,
+                            contentDescription = null,
+                            tint = GhaisNoir.TextPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
             }
         }
     }
 }
 
-/** Compact rail plate: artwork, surah identity, reciter line, engraved progress, state disc. */
+/** 48dp pager well — touch-compliant deck navigation. */
 @Composable
-private fun NoirRecentPlate(
-    item: JumpBackInItem,
-    active: Boolean,
-    playing: Boolean,
-    onPlay: () -> Unit
+private fun DeckPagerButton(
+    contentDescription: String,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
 ) {
-    val reciterPhoto = rememberCloudPhoto(item.reciterSlug)
-
-    Row(
+    Box(
         modifier = Modifier
-            .width(272.dp)
-            .background(
-                if (active) GhaisNoir.cardFillActive() else GhaisNoir.cardFillSoft(),
-                GhaisShapes.row
-            )
-            .border(
-                1.dp,
-                if (active) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
-                GhaisShapes.row
-            )
-            .topSpecular(inset = 22.dp)
-            .noirClickable(onPlay)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (reciterPhoto != null) {
-            NoirArtworkWell(
-                coverUrl = reciterPhoto,
-                monogram = reciterMonogramOf(item),
-                shape = CircleShape,
-                size = 52.dp,
-                monogramSize = 18.sp,
-                ring = true,
-                grayscale = false,
-                scrimAlpha = 0f,
-                errorFallbackUrl = item.coverUrl
-            )
-        } else {
-            NoirArtworkWell(
-                coverUrl = item.coverUrl,
-                monogram = monogramOf(item),
-                shape = RoundedCornerShape(14.dp),
-                size = 52.dp,
-                monogramSize = 18.sp,
-                ring = active
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = surahTitleOf(item),
-                color = GhaisNoir.TextPrimary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            val arabicLine = arabicAyahLineOf(item)
-            if (arabicLine.isNotEmpty()) {
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = arabicLine,
-                    color = GhaisNoir.TextTertiary,
-                    fontSize = 11.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Spacer(Modifier.height(3.dp))
-            Text(
-                text = item.subtitle,
-                color = GhaisNoir.TextSecondary,
-                fontSize = 11.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(8.dp))
-            NoirSegmentedProgress(progress = progressOf(item), trackHeight = 4.dp)
-        }
-        Spacer(Modifier.width(10.dp))
-        // Chromium disc while live, ghost well otherwise — fill carries the state.
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .background(
-                    if (playing) GhaisNoir.chromeFill() else GhaisNoir.wellFill(),
-                    GhaisShapes.well
-                )
-                .border(
-                    1.dp,
-                    if (playing) Color.White.copy(alpha = 0.4f) else GhaisNoir.BorderCard,
-                    GhaisShapes.well
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                contentDescription = if (playing) "Playing" else "Resume",
-                tint = if (playing) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-    }
+            .size(48.dp)
+            .background(GhaisNoir.wellFill(), GhaisShapes.well)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.well)
+            .noirClickable(onClick),
+        contentAlignment = Alignment.Center,
+        content = { content() }
+    )
 }
 
 private fun progressOf(item: JumpBackInItem): Float = item.progress.coerceIn(0f, 1f)
@@ -376,12 +370,6 @@ private fun surahNameOf(item: JumpBackInItem): String {
     return item.title.trim().ifEmpty { "Surah ${item.surahId}" }
 }
 
-/** Ordinal-prefixed house title, e.g. "88. Al-Ghashiyah". */
-private fun surahTitleOf(item: JumpBackInItem): String {
-    val surah = surahOf(item)
-    return if (surah != null) "${surah.id}. ${surah.nameEn}" else surahNameOf(item)
-}
-
 /** "Surah 88 • 26 Ayahs • Meccan"; empty when the catalog has no such surah. */
 private fun surahMetaOf(item: JumpBackInItem): String {
     val surah = surahOf(item) ?: return ""
@@ -389,20 +377,6 @@ private fun surahMetaOf(item: JumpBackInItem): String {
         "Surah ${surah.id}",
         surah.ayahsCount.takeIf { it > 0 }?.let { "$it Ayahs" },
         surah.revelationType.trim().takeIf { it.isNotEmpty() }
-    ).joinToString(" • ")
-}
-
-/**
- * "الغاشية • 26 Ayahs" for the compact rail plate — the house surah line
- * without the ordinal (the title above already carries it) and without the
- * revelation type, which does not fit the plate width. Empty when unresolved,
- * and the caller then omits the row instead of drawing an empty one.
- */
-private fun arabicAyahLineOf(item: JumpBackInItem): String {
-    val surah = surahOf(item) ?: return ""
-    return listOfNotNull(
-        surah.nameAr.trim().takeIf { it.isNotEmpty() }?.let { bidiIsolate(it) },
-        surah.ayahsCount.takeIf { it > 0 }?.let { "$it Ayahs" }
     ).joinToString(" • ")
 }
 

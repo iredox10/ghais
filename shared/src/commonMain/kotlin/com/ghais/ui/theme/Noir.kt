@@ -63,6 +63,28 @@ object GhaisNoir {
     val TextDisabled = Color(0x3DFFFFFF)            // 24%
 
     // ------------------------------------------------------------------
+    // Lavender mist — disciplined accent borrowed from the reference set
+    // (AirPods lavender hero/chips + lawyer booking CTA). Roles are strict:
+    // selected chip, primary CTA fill, active ring — NEVER canvas or body.
+    // ------------------------------------------------------------------
+    val Lavender = Color(0xFFC9BFF2)                 // selected / CTA fill
+    val LavenderDeep = Color(0xFF4A2B8A)             // plum hero base
+    val LavenderInk = Color(0xFF14101F)              // label on lavender
+    val PlumTop = Color(0xFF6B43C9)                 // hero gradient top
+    val PlumBottom = Color(0xFF2E1A5E)              // hero gradient bottom
+    val CardTintTop = Color(0xFF1C1A26)             // tinted grid card top
+    val CardTintBottom = Color(0xFF121118)          // tinted grid card bottom
+
+    /** Plum hero: deep lavender gradient for the feature card only. */
+    fun plumFill(): Brush = Brush.verticalGradient(listOf(PlumTop, PlumBottom))
+
+    /** Tinted grid card: faint lavender wash, still dark enough for AA text. */
+    fun tintFill(): Brush = Brush.verticalGradient(listOf(CardTintTop, CardTintBottom))
+
+    /** Lavender CTA: solid mist fill for primary pills. */
+    fun lavenderFill(): Brush = Brush.verticalGradient(listOf(Lavender, Lavender))
+
+    // ------------------------------------------------------------------
     // Ambient atmosphere
     // ------------------------------------------------------------------
     val AmbientGlow = Color.White.copy(alpha = 0.06f)   // top-center radial light

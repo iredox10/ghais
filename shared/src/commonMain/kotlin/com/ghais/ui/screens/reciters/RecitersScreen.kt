@@ -879,7 +879,7 @@ private fun NoirReciterCard(
                 val playModifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(6.dp)
-                    .size(36.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
                     .then(
                         if (activelyPlaying) Modifier.background(GhaisNoir.chromeFill())
@@ -908,39 +908,35 @@ private fun NoirReciterCard(
                         imageVector = if (activelyPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         contentDescription = if (activelyPlaying) "Pause" else "Play",
                         tint = if (activelyPlaying) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
-                // Follow badge — clay well; following reads via bright glyph +
-                // chromium dot, unfollowed via 38% glyph. No hue anywhere.
+                // Follow badge — lavender fill when following (selected-state
+                // language), clay well otherwise.
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .size(28.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
-                        .background(GhaisNoir.wellFill())
-                        .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                        .background(
+                            brush = if (isFollowing) GhaisNoir.lavenderFill()
+                            else GhaisNoir.wellFill()
+                        )
+                        .border(
+                            1.dp,
+                            if (isFollowing) Color.Transparent else GhaisNoir.BorderCard,
+                            CircleShape
+                        )
                         .noirClickable(onClick = onFollowClick),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = if (isFollowing) Icons.Filled.Check else Icons.Filled.PersonAdd,
-                            contentDescription = if (isFollowing) "Following" else "Follow",
-                            tint = if (isFollowing) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        if (isFollowing) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .size(7.dp)
-                                    .clip(CircleShape)
-                                    .background(GhaisNoir.chromeFill())
-                            )
-                        }
-                    }
+                    Icon(
+                        imageVector = if (isFollowing) Icons.Filled.Check else Icons.Filled.PersonAdd,
+                        contentDescription = if (isFollowing) "Following" else "Follow",
+                        tint = if (isFollowing) GhaisNoir.LavenderInk else GhaisNoir.TextTertiary,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
 
@@ -948,8 +944,9 @@ private fun NoirReciterCard(
             Text(
                 text = reciter.nameEn,
                 color = GhaisNoir.TextPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp,
+                lineHeight = 20.sp,
+                fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -961,6 +958,7 @@ private fun NoirReciterCard(
                 color = GhaisNoir.TextTertiary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
+                letterSpacing = 0.2.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

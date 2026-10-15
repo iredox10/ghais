@@ -1,6 +1,8 @@
 package com.ghais.ui.screens.home
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,14 +10,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.RecordVoiceOver
-import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -23,7 +27,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -34,20 +44,23 @@ import com.ghais.data.repository.ReciterCloudCache
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.prettifySlug
 import com.ghais.data.repository.resolveFollowedQari
-import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.screens.reciters.rememberCloudPhoto
 import com.ghais.ui.theme.GhaisNoir
+import kotlin.time.Clock
 
 /**
- * Phase 4 — "Qari you follow".
+ * Stories rail for followed qaris + discover tile.
  *
- * Portraits render in natural colour inside a clay well, and the followed
- * state is expressed by a chromium specular ring rather than a coloured border.
+ * Portraits render in natural colour inside a lavender→plum gradient ring
+ * (social stories standard); the trailing tile jumps to discovery.
  */
 @Composable
-fun HomeFollowedRow(onReciter: (String) -> Unit) {
+fun HomeFollowedRow(
+    onReciter: (String) -> Unit,
+    onDiscover: () -> Unit,
+) {
     val followedSlugs by FollowStore.followedSlugs.collectAsState()
     // Re-resolve on catalog sync so an admin-uploaded reciter shows up here.
     val cloudCatalog by ReciterCloudCache.cloudReciters.collectAsState()
@@ -89,9 +102,9 @@ fun HomeFollowedRow(onReciter: (String) -> Unit) {
         return
     }
 
+    // Stories rail: gradient-ring portraits (social standard) + a discover
+    // tile that jumps to the Reciters tab. Tapping a story opens the profile.
     LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        // Followed slugs can alias to the same human (mishary/alafasy);
-        // `resolved` is already distinct by slug, so this key is unique.
         items(resolved, key = { it.first }) { (slug, name, photoUrl) ->
             // Cloud portrait first: the admin panel owns reciter photos, and
             // followed qaris outside the small bundled roster have no static
@@ -100,20 +113,38 @@ fun HomeFollowedRow(onReciter: (String) -> Unit) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .width(96.dp)
+                    .width(76.dp)
                     .noirClickable { onReciter(slug) }
             ) {
-                NoirArtworkWell(
-                    coverUrl = cloudPhoto ?: photoUrl,
-                    monogram = name.firstOrNull()?.uppercase() ?: "Q",
-                    shape = CircleShape,
-                    size = 84.dp,
-                    monogramSize = 28.sp,
-                    ring = true,
-                    grayscale = false,
-                    scrimAlpha = 0f
-                )
-                Spacer(Modifier.height(10.dp))
+                // Gradient ring — lavender → plum on near-black.
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    GhaisNoir.Lavender,
+                                    GhaisNoir.PlumTop,
+                                    GhaisNoir.LavenderDeep
+                                )
+                            )
+                        )
+                        .padding(3.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    NoirArtworkWell(
+                        coverUrl = cloudPhoto ?: photoUrl,
+                        monogram = name.firstOrNull()?.uppercase() ?: "Q",
+                        shape = CircleShape,
+                        size = 66.dp,
+                        monogramSize = 22.sp,
+                        ring = false,
+                        grayscale = false,
+                        scrimAlpha = 0f
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
                 Text(
                     text = name,
                     color = GhaisNoir.TextPrimary,
@@ -125,94 +156,209 @@ fun HomeFollowedRow(onReciter: (String) -> Unit) {
                 )
             }
         }
+        item(key = "discover") {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .width(76.dp)
+                    .noirClickable(onClick = onDiscover)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(GhaisNoir.wellFill())
+                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = null,
+                        tint = GhaisNoir.Lavender,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Discover",
+                    color = GhaisNoir.TextSecondary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
+                )
+            }
+        }
     }
 }
 
 /**
- * Phase 4 — "Your stats".
+ * "Your stats" as activity rings + a 7-day chart (2026 standard).
  *
- * The streak / minutes / reciter cells were amber-emerald-violet. They are now
- * three monochrome cells separated by ghost hairlines, so the numbers carry the
- * hierarchy instead of the hues.
+ * Rings read breadth (streak vs 7 days, surahs vs the 114, reciters heard);
+ * the bars read REAL per-day minutes from [UserUsageRepository.dailySeconds]
+ * keyed by epoch day — never seeded, never padded. Silent days render flat,
+ * which is the honest empty state.
  */
+
 @Composable
 fun HomeStatsCard() {
     val stats by UserUsageRepository.stats.collectAsState()
+    val dailySeconds by UserUsageRepository.dailySeconds.collectAsState()
+
+    val todayEpochDay = remember {
+        Clock.System.now().toEpochMilliseconds() / 86_400_000L
+    }
+    // Last 7 epoch days, oldest → newest: (epochDay, minutes, isToday).
+    val week = remember(dailySeconds, todayEpochDay) {
+        (6 downTo 0).map { back ->
+            val day = todayEpochDay - back
+            val minutes = ((dailySeconds[day] ?: 0L) / 60L).toInt().coerceAtLeast(0)
+            Triple(day, minutes, back == 0)
+        }
+    }
+    val maxMinutes = (week.maxOfOrNull { it.second } ?: 0).coerceAtLeast(1)
 
     NoirCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            NoirStatCell(
-                icon = Icons.Filled.LocalFireDepartment,
-                contentDescription = "Days streak",
-                value = stats.daysStreak.toString(),
-                label = if (stats.daysStreak == 1) "day streak" else "days streak",
-                modifier = Modifier.weight(1f)
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StatRings(
+                    streakFrac = (stats.daysStreak.coerceAtMost(7) / 7f).coerceIn(0f, 1f),
+                    surahFrac = (stats.uniqueSurahsCount.coerceAtMost(114) / 114f).coerceIn(0f, 1f),
+                    qariFrac = (stats.uniqueRecitersCount.coerceAtMost(10) / 10f).coerceIn(0f, 1f),
+                    modifier = Modifier.size(112.dp)
+                )
+                Spacer(Modifier.width(16.dp))
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    StatLegendRow(
+                        dot = GhaisNoir.Lavender,
+                        label = if (stats.daysStreak == 1) "day streak" else "days streak",
+                        value = stats.daysStreak.toString()
+                    )
+                    StatLegendRow(
+                        dot = Color.White.copy(alpha = 0.85f),
+                        label = "surahs heard",
+                        value = "${stats.uniqueSurahsCount}/114"
+                    )
+                    StatLegendRow(
+                        dot = Color.White.copy(alpha = 0.4f),
+                        label = if (stats.uniqueRecitersCount == 1) "qari" else "qaris",
+                        value = stats.uniqueRecitersCount.toString()
+                    )
+                }
+            }
+            Spacer(Modifier.height(18.dp))
+            // 7-day minutes chart — flat bars are silent days, never gaps.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                week.forEach { (day, minutes, isToday) ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier.size(width = 24.dp, height = 64.dp),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(
+                                        if (minutes <= 0) 4.dp
+                                        else (8 + (56 * minutes / maxMinutes)).dp
+                                    )
+                                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                    .background(
+                                        brush = if (isToday) GhaisNoir.lavenderFill()
+                                        else Brush.verticalGradient(
+                                            listOf(GhaisNoir.Fill4, GhaisNoir.Fill4)
+                                        )
+                                    )
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = if (isToday) "${minutes}m" else dayLetterOf(day),
+                            color = if (isToday) GhaisNoir.Lavender else GhaisNoir.TextTertiary,
+                            fontSize = 10.sp,
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Three concentric progress rings: streak / surahs / qaris. */
+@Composable
+private fun StatRings(
+    streakFrac: Float,
+    surahFrac: Float,
+    qariFrac: Float,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(modifier = modifier) {
+        drawArc(
+            color = Color.White.copy(alpha = 0.12f),
+            startAngle = -90f,
+            sweepAngle = 360f,
+            useCenter = false,
+            style = Stroke(width = 10.dp.toPx(), cap = StrokeCap.Round)
+        )
+        val rings = listOf(
+            streakFrac to Color(0xFFC9BFF2),
+            surahFrac to Color.White.copy(alpha = 0.85f),
+            qariFrac to Color.White.copy(alpha = 0.4f)
+        )
+        var inset = (5 + 7).dp.toPx()
+        rings.forEach { (frac, color) ->
+            drawArc(
+                color = color,
+                startAngle = -90f,
+                sweepAngle = 359.9f * frac,
+                useCenter = false,
+                topLeft = Offset(inset, inset),
+                size = Size(size.width - inset * 2, size.height - inset * 2),
+                style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
             )
-            NoirStatSeparator()
-            NoirStatCell(
-                icon = Icons.Filled.Timer,
-                contentDescription = "Minutes today",
-                value = stats.minutesToday.toString(),
-                label = "min today",
-                modifier = Modifier.weight(1f)
-            )
-            NoirStatSeparator()
-            NoirStatCell(
-                icon = Icons.Filled.RecordVoiceOver,
-                contentDescription = "Reciters listened",
-                value = stats.uniqueRecitersCount.toString(),
-                label = if (stats.uniqueRecitersCount == 1) "reciter" else "reciters",
-                modifier = Modifier.weight(1f)
-            )
+            inset += 13.dp.toPx()
         }
     }
 }
 
 @Composable
-private fun NoirStatSeparator() {
-    Box(
-        modifier = Modifier
-            .width(1.dp)
-            .height(44.dp)
-            .background(GhaisNoir.BorderGhost)
-    )
-}
-
-@Composable
-private fun NoirStatCell(
-    icon: ImageVector,
-    contentDescription: String,
-    value: String,
-    label: String,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        IconWell(
-            icon = icon,
-            size = 40.dp,
-            iconSize = 20.dp,
-            contentDescription = contentDescription
+private fun StatLegendRow(dot: Color, label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(dot)
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = label,
+            color = GhaisNoir.TextSecondary,
+            fontSize = 12.sp,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
         Text(
             text = value,
             color = GhaisNoir.TextPrimary,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = label,
-            color = GhaisNoir.TextTertiary,
-            fontSize = 11.sp,
-            textAlign = TextAlign.Center
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold
         )
     }
+}
+
+/** Mon..Sun letter for an epoch-day key. Epoch day 0 was a Thursday. */
+private fun dayLetterOf(epochDay: Long): String {
+    val idx = (((epochDay + 3) % 7) + 7) % 7
+    return listOf("M", "T", "W", "T", "F", "S", "S")[idx.toInt()]
 }

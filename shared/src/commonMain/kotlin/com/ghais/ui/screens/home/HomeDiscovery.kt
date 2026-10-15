@@ -15,10 +15,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,6 +29,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,8 +48,6 @@ import com.ghais.data.repository.prettifySlug
 import com.ghais.data.repository.toFullSurahTrackItem
 import com.ghais.domain.model.Reciter
 import com.ghais.player.AudioEngine
-import com.ghais.ui.components.noir.ChromePillButton
-import com.ghais.ui.components.noir.NoirHeroCard
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.screens.reciters.ReciterReelCard
@@ -113,77 +115,152 @@ fun HomeDailyMixShelf(onOpenPlayer: () -> Unit) {
     }
     if (mix.isEmpty()) return
 
-    val first = mix.first()
-    val artUrl = rememberCloudPhoto(first.reciterSlug)
     val qariNames = remember(mix) {
         mix.map { it.reciterName.trim() }.filter { it.isNotEmpty() }.distinct().take(3)
     }
     val monogram = qariNames.firstOrNull()?.firstOrNull { it.isLetter() }?.uppercase() ?: "M"
 
     HomeSectionHeader(title = "Your Daily Mix", onSeeAll = null)
-    NoirHeroCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                NoirArtworkWell(
-                    coverUrl = artUrl.orEmpty(),
-                    monogram = monogram,
-                    shape = CircleShape,
-                    size = 76.dp,
-                    monogramSize = 26.sp,
-                    ring = false,
-                    grayscale = false,
-                    scrimAlpha = 0f
-                )
-                Spacer(Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "DAILY MIX",
-                        color = GhaisNoir.TextTertiary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 1.2.sp
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = "Made for you",
-                        color = GhaisNoir.TextPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.height(3.dp))
-                    Text(
-                        text = "${mix.size} tracks • refreshed daily",
-                        color = GhaisNoir.TextTertiary,
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (qariNames.isNotEmpty()) {
-                        Spacer(Modifier.height(3.dp))
-                        Text(
-                            text = qariNames.joinToString(", "),
-                            color = GhaisNoir.TextSecondary,
-                            fontSize = 12.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+    // Feature card with an inline tracklist: the top-3 rows preview the mix
+    // and each one starts playback from its own index.
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(GhaisNoir.tintFill(), GhaisShapes.cardNoir)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardNoir)
+            .topSpecular(inset = 28.dp)
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Overlapping cover collage from the mix's first qaris.
+            Box(modifier = Modifier.size(76.dp)) {
+                val collageSlugs = remember(mix) { mix.map { it.reciterSlug }.distinct().take(3) }
+                collageSlugs.forEachIndexed { index, slug ->
+                    val collagePhoto = rememberCloudPhoto(slug)
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .align(Alignment.Center)
+                            .offset(x = ((index - 1) * 14).dp)
+                    ) {
+                        NoirArtworkWell(
+                            coverUrl = collagePhoto.orEmpty(),
+                            monogram = monogram,
+                            shape = CircleShape,
+                            size = 52.dp,
+                            monogramSize = 18.sp,
+                            ring = index == 1,
+                            grayscale = false,
+                            scrimAlpha = 0f
                         )
                     }
                 }
             }
-            Spacer(Modifier.height(16.dp))
-            ChromePillButton(
-                text = "Play mix",
-                onClick = {
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "DAILY MIX",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.2.sp
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Made for you",
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    text = "${mix.size} tracks • refreshed daily",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        mix.take(3).forEachIndexed { index, track ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(GhaisShapes.row)
+                    .noirClickable {
+                        try {
+                            AudioEngine.playQueue(mix, startIndex = index)
+                            onOpenPlayer()
+                        } catch (_: Exception) {
+                        }
+                    }
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (index < 9) "0${index + 1}" else "${index + 1}",
+                    color = if (index == 0) GhaisNoir.Lavender else GhaisNoir.TextTertiary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.width(28.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = track.surahNameEn.trim().ifEmpty { "Surah ${track.surahId}" },
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = track.reciterName.trim().ifEmpty { "Unknown qari" },
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = GhaisNoir.TextTertiary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(GhaisShapes.pill)
+                .background(GhaisNoir.lavenderFill())
+                .noirClickable {
                     try {
                         AudioEngine.playQueue(mix, startIndex = 0)
                         onOpenPlayer()
                     } catch (_: Exception) {
                     }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                leadingIcon = Icons.Filled.PlayArrow
+                }
+                .padding(vertical = 14.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Filled.PlayArrow,
+                contentDescription = null,
+                tint = GhaisNoir.LavenderInk,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "Play mix",
+                color = GhaisNoir.LavenderInk,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold
             )
         }
     }
@@ -218,21 +295,43 @@ fun HomeTopQarisShelf(onReciter: (String) -> Unit) {
 
     HomeSectionHeader(title = "Top Qaris this week", onSeeAll = null)
     LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        items(reciters, key = { it.slug }) { reciter ->
+        itemsIndexed(reciters, key = { _, it -> it.slug }) { index, reciter ->
             val photo = rememberCloudPhoto(reciter.slug)
+            val rank = index + 1
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .width(96.dp)
                     .noirClickable { onReciter(reciter.slug) }
             ) {
+                // Chart-rank pill — AirPods-ref chip language on the rail.
+                Box(
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .background(
+                            brush = if (rank == 1) GhaisNoir.lavenderFill()
+                            else Brush.verticalGradient(
+                                listOf(GhaisNoir.Fill2, GhaisNoir.Fill2)
+                            ),
+                            shape = GhaisShapes.pill
+                        )
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "#$rank",
+                        color = if (rank == 1) GhaisNoir.LavenderInk else GhaisNoir.TextSecondary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
                 NoirArtworkWell(
                     coverUrl = photo.orEmpty(),
                     monogram = reciter.nameEn.firstOrNull()?.uppercase() ?: "Q",
                     shape = CircleShape,
-                    size = 84.dp,
-                    monogramSize = 28.sp,
-                    ring = true,
+                    size = 88.dp,
+                    monogramSize = 30.sp,
+                    ring = rank == 1,
                     grayscale = false,
                     scrimAlpha = 0f
                 )
