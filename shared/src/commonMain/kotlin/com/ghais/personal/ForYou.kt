@@ -3,6 +3,7 @@ package com.ghais.personal
 import com.ghais.analytics.HookAnalytics
 import com.ghais.analytics.HookEvents
 import com.ghais.domain.model.Reciter
+import com.ghais.ui.screens.reciters.taste.TasteProfile
 import com.ghais.ui.screens.reciters.taste.TasteStore
 import kotlin.time.Clock
 
@@ -49,12 +50,24 @@ object ForYou {
      * [CACHE_TTL_MS] per catalog identity; empty catalog short-circuits to
      * empty without touching any store. Never throws — any failure returns
      * the last cached map, else empty.
+     *
+     * When [PersonalFlags.tasteV2] is on (default), signal scores are
+     * lifted into attribute space ([buildTasteVector] + [affinityFor]) so
+     * untried voices with the right attributes rank above zero; [quiz]
+     * adds completed-quiz priors (null reads the live [TasteStore]).
+     * Flag off = pure V1 signal scores.
      */
-    fun affinities(catalog: List<Reciter>): Map<String, Float> {
+    fun affinities(catalog: List<Reciter>): Map<String, Float> =
+        affinities(catalog, null)
+
+    fun affinities(
+        catalog: List<Reciter>,
+        quiz: TasteProfile?,
+    ): Map<String, Float> {
         if (catalog.isEmpty()) return emptyMap()
         return try {
             val now = nowMs()
-            val key = catalogKey(catalog)
+            val key = catalogKey(catalog, quiz)
             val hitKey = cachedKey
             val hit = cachedMap
             if (hitKey != null && hitKey == key && now - cachedAtMs < CACHE_TTL_MS) {
@@ -63,7 +76,42 @@ object ForYou {
             val slugs = catalog.map { it.slug.trim() }.filter { it.isNotEmpty() }.toSet()
             if (slugs.isEmpty()) return emptyMap()
             val scores = scoreSignals(SignalStore.exportSnapshot(), SignalStore.currentEpochDay())
-            val filtered = scores.filterKeys { it in slugs }
+            val filtered = if (!PersonalFlags.tasteV2) {
+                scores.filterKeys { it in slugs }
+            } else {
+                // V2 blend that preserves V1 ordering: direct signal scores
+                // stay exactly as scored; attribute-similar untried voices
+                // (vector bonus) slot in strictly below the weakest signaled
+                // voice, so discovery never outranks a direct love signal.
+                val base = scores.filterKeys { it in slugs }
+                try {
+                    val effectiveQuiz = try {
+                        quiz ?: TasteStore.taste.value
+                    } catch (_: Exception) {
+                        null
+                    }
+                    val vector = buildTasteVector(scores, catalog, effectiveQuiz)
+                    val floor = base.values.filter { it > 0f }.minOrNull()?.let { it / 2f } ?: 0.05f
+                    val withDiscovery = base.toMutableMap()
+                    catalog.forEach { reciter ->
+                        val slug = reciter.slug.trim()
+                        // Only voices with NO signal entry qualify: negative
+                        // skip/unfollow penalties are preserved untouched.
+                        if (slug in slugs && !withDiscovery.containsKey(slug)) {
+                            val bonus = try {
+                                val raw = affinityFor(reciter, vector)
+                                if (raw > 0f) (raw / (1f + raw)) * floor else 0f
+                            } catch (_: Exception) {
+                                0f
+                            }
+                            if (bonus > 0f) withDiscovery[slug] = bonus
+                        }
+                    }
+                    withDiscovery.filterValues { it > 0f }
+                } catch (_: Exception) {
+                    base
+                }
+            }
             cachedKey = key
             cachedMap = filtered
             cachedAtMs = now
@@ -165,6 +213,23 @@ object ForYou {
     }
 
     /**
+     * Adopts pre-auth (guest) signals into the newly bound owner's log.
+     * Capture `SignalStore.exportSnapshot()` BEFORE `setOwner(newId)`, then
+     * pass it here. Gated on [PersonalFlags.coldImport]; flag off or empty
+     * input adopts nothing. Invalidates the affinity cache on adoption.
+     *
+     * @return adopted count. Never throws.
+     */
+    fun adoptPreAuthSignals(preAuth: List<ReciterSignal>): Int = try {
+        if (!PersonalFlags.coldImport || preAuth.isEmpty()) return 0
+        val adopted = SignalStore.mergeSnapshot(preAuth)
+        if (adopted > 0) invalidateCache()
+        adopted
+    } catch (_: Exception) {
+        0
+    }
+
+    /**
      * Drops the cached affinity map. Test seam (mirrors the fresh-owner
      * isolation the store tests use); never throws.
      */
@@ -189,9 +254,14 @@ object ForYou {
         false
     }
 
-    private fun catalogKey(catalog: List<Reciter>): String = try {
+    private fun catalogKey(catalog: List<Reciter>, quiz: TasteProfile?): String = try {
         val slugs = catalog.map { it.slug.trim() }.filter { it.isNotEmpty() }.sorted()
-        "${catalog.size}:${slugs.hashCode()}"
+        val quizBits = try {
+            "${quiz?.pace}:${quiz?.mood}:${quiz?.completed}"
+        } catch (_: Exception) {
+            "q?"
+        }
+        "${catalog.size}:${slugs.hashCode()}|v2=${PersonalFlags.tasteV2}|q=$quizBits"
     } catch (_: Exception) {
         "fallback:${catalog.size}"
     }

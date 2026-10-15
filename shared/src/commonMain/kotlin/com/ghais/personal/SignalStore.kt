@@ -195,6 +195,26 @@ object SignalStore {
         }
     }
 
+    /**
+     * Additive merge for cold-start adoption (see `ForYou.adoptPreAuthSignals`):
+     * appends [extra] to the live log instead of replacing it. Normalized
+     * like [importSnapshot], capped at [MAX_SIGNALS] (newest win).
+     *
+     * @return adopted (non-blank) count. Never throws.
+     */
+    fun mergeSnapshot(extra: List<ReciterSignal>): Int = try {
+        if (extra.isEmpty()) return 0
+        val fresh = extra
+            .map { it.copy(slug = it.slug.trim(), epochDay = it.epochDay.coerceAtLeast(0L)) }
+            .filter { it.slug.isNotEmpty() }
+        if (fresh.isEmpty()) return 0
+        _signals.value = (_signals.value + fresh).takeLast(MAX_SIGNALS)
+        save()
+        fresh.size
+    } catch (_: Exception) {
+        0
+    }
+
     private fun load() {
         try {
             val settings = settingsOrNull()
