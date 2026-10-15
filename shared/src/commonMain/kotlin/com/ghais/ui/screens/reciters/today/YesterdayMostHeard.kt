@@ -89,8 +89,16 @@ fun YesterdayMostHeardSection(
 data class HeardEntry(
     val slug: String,
     val nameEn: String,
-    val plays: Int,
+    /** Local play count; null for the global chart (counts stay server-side). */
+    val plays: Int? = null,
 )
+
+/** Row subtitle: global entries have no local count (stays server-side). */
+private fun playsSubtitle(plays: Int?): String {
+    if (plays == null) return "Most heard yesterday"
+    if (plays == 1) return "1 play yesterday"
+    return "$plays plays yesterday"
+}
 
 @Composable
 private fun YesterdayHeardRow(
@@ -140,7 +148,7 @@ private fun YesterdayHeardRow(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = if (entry.plays == 1) "1 play yesterday" else "${entry.plays} plays yesterday",
+                text = playsSubtitle(entry.plays),
                 color = GhaisNoir.TextTertiary,
                 fontSize = 12.sp,
                 maxLines = 1,

@@ -64,6 +64,30 @@ class ChartsRepositoryTest {
     }
 
     @Test
+    fun testYesterdayWindowParsesAndOldPayloadDefaultsEmpty() = runBlocking {
+        ChartsRepository.resetForTest()
+        ChartsRepository.configureHttpClient(HttpClient(engine))
+        engine.payload = """{
+          "${'$'}id": "global",
+          "topQarisYesterday": ["husary", "mishary"],
+          "generated_at": 1759500000000
+        }"""
+        ChartsRepository.refresh()
+        val snap = assertNotNull(ChartsRepository.snapshot.value)
+        assertEquals(listOf("husary", "mishary"), snap.topQarisYesterday)
+
+        // Old server payloads without the window decode to empty, not null.
+        ChartsRepository.resetForTest()
+        ChartsRepository.configureHttpClient(HttpClient(engine))
+        engine.payload = CHARTS_PAYLOAD
+        ChartsRepository.refresh()
+        assertEquals(
+            emptyList(),
+            assertNotNull(ChartsRepository.snapshot.value).topQarisYesterday,
+        )
+    }
+
+    @Test
     fun testRefreshHitsChartsGlobalDocument() = runBlocking {
         ChartsRepository.refresh()
 

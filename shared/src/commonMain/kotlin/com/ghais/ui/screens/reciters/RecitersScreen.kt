@@ -55,6 +55,7 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.ChartsRepository
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.reciterCountryKey
 import com.ghais.data.repository.rememberBrowseReciters
@@ -450,10 +451,41 @@ class RecitersScreen : Tab {
                                     emptyList()
                                 }
                             }
+                            // Global chart first (every listener, not just
+                            // this device); local yesterday; then the
+                            // deterministic voice. The charts rail below
+                            // triggers the cloud refresh; the snapshot flow
+                            // repaints this section when it lands.
+                            val chartsSnapshot by ChartsRepository.snapshot.collectAsState()
+                            val globalEntries = remember(chartsSnapshot, browseReciters) {
+                                try {
+                                    chartsSnapshot?.topQarisYesterday
+                                        ?.take(5)
+                                        ?.mapNotNull { slug ->
+                                            val reciter = try {
+                                                QuranDataRepository.getBrowseReciterBySlug(slug)
+                                            } catch (_: Exception) {
+                                                null
+                                            } ?: shelfBySlug[slug]
+                                            if (reciter == null) null
+                                            else HeardEntry(
+                                                slug = reciter.slug,
+                                                nameEn = reciter.nameEn,
+                                                plays = null
+                                            )
+                                        }
+                                        ?.takeIf { it.isNotEmpty() }
+                                        ?: emptyList()
+                                } catch (_: Exception) {
+                                    emptyList()
+                                }
+                            }
+                            val shownEntries =
+                                if (globalEntries.isNotEmpty()) globalEntries else heardEntries
                             val playingTrack by AudioEngine.currentTrack.collectAsState()
                             val enginePlaying by AudioEngine.isPlaying.collectAsState()
                             YesterdayMostHeardSection(
-                                entries = heardEntries,
+                                entries = shownEntries,
                                 fallbackReciter = voice,
                                 playingSlug = playingTrack?.reciterSlug,
                                 isPlaying = enginePlaying,
