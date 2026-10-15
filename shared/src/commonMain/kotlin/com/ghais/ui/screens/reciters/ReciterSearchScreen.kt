@@ -48,11 +48,13 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.ReciterSearchHistoryStore
 import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.TrackItem
+import com.ghais.personal.rankReciters
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
@@ -91,7 +93,30 @@ import kotlinx.coroutines.delay
  *
  * Owner binding: [com.ghais.data.sync.SyncTriggers] owns store rebinding —
  * this screen never calls setOwner (follow-up).
+ *
+ * AGENT P6 — taste-ranked results: matched candidates are ordered by
+ * [rankReciters] (affinity desc, followed first, then alphabetical) via the
+ * local [currentAffinities] provider, and the top-3 affine hits carry a
+ * small "For you" badge. Filtering, recents, play and open paths are
+ * otherwise unchanged.
  */
+
+/**
+ * AGENT P6 — local affinity provider (slug -> score, higher = more loved).
+ *
+ * Currently unbound (empty = keep catalog order modulo followed/alpha
+ * tiebreaks) until the coordinator wires the real P1/P2 source.
+ *
+ * ONE-LINE SWAP (coordinator): replace the body with the live source, e.g.
+ * `fun currentAffinities(): Map<String, Float> = SignalStore.scores()`
+ * (P1 `scoreSignals` totals keyed by reciter slug).
+ */
+fun currentAffinities(): Map<String, Float> = try {
+    com.ghais.personal.SignalStore.scores()
+} catch (_: Exception) {
+    emptyMap()
+}
+
 class ReciterSearchScreen : Screen {
     @Composable
     override fun Content() {
@@ -106,6 +131,11 @@ class ReciterSearchScreen : Screen {
         }
 
         val recentSlugs by ReciterSearchHistoryStore.recentSlugs.collectAsState()
+        // AGENT P6 — taste inputs for ranking (affinity map + followed set).
+        // Live P1 signal scores; signalTick re-triggers recompute on change.
+        val signalTick by com.ghais.personal.SignalStore.signals.collectAsState()
+        val affinities = remember(signalTick) { currentAffinities() }
+        val followedSlugs by FollowStore.followedSlugs.collectAsState()
         // Reactive cloud-merged catalog: a reciter uploaded from the admin
         // panel becomes searchable (and its history row resolvable) as soon
         // as the catalog syncs, without restarting the app.
@@ -119,19 +149,35 @@ class ReciterSearchScreen : Screen {
                 .distinctBy { it.catalogKey() }
         }
 
-        val results = remember(debouncedQuery, browseReciters) {
+        val results = remember(debouncedQuery, browseReciters, affinities, followedSlugs) {
             val q = debouncedQuery.trim()
             if (q.isBlank()) emptyList()
             // One row per human (the raw catalog holds an MP3Quran + an
             // EveryAyah row for the same reciter, which used to render twice
             // and crash the list on duplicate keys).
-            else browseReciters.filter {
-                it.nameEn.contains(q, ignoreCase = true) ||
-                    it.nameAr.contains(q, ignoreCase = true) ||
-                    it.country.contains(q, ignoreCase = true) ||
-                    it.slug.contains(q, ignoreCase = true) ||
-                    reciterMatchesNormalizedQuery(it, q)
-            }
+            else rankReciters(
+                candidates = browseReciters.filter {
+                    it.nameEn.contains(q, ignoreCase = true) ||
+                        it.nameAr.contains(q, ignoreCase = true) ||
+                        it.country.contains(q, ignoreCase = true) ||
+                        it.slug.contains(q, ignoreCase = true) ||
+                        reciterMatchesNormalizedQuery(it, q)
+                },
+                affinities = affinities,
+                followed = followedSlugs,
+            )
+        }
+
+        // AGENT P6 — "For you" badge set: top-3 ranked hits with positive
+        // affinity (same exact-then-normalized lookup as rankReciters, so the
+        // badge never disagrees with the order).
+        val forYouSlugs = remember(results, affinities) {
+            fun affinityOf(slug: String): Float =
+                affinities[slug] ?: affinities[slug.trim().lowercase()] ?: 0f
+            results.take(3)
+                .filter { affinityOf(it.slug) > 0f }
+                .map { it.slug }
+                .toSet()
         }
 
         // Shared queue builder — mirrors RecitersScreen onPlayReciter.
@@ -299,7 +345,8 @@ class ReciterSearchScreen : Screen {
                             ResultReciterRow(
                                 reciter = reciter,
                                 onOpen = { openProfile(reciter) },
-                                onPlay = { playReciter(reciter) }
+                                onPlay = { playReciter(reciter) },
+                                showForYouBadge = reciter.slug in forYouSlugs,
                             )
                         }
                     }
@@ -570,7 +617,8 @@ private fun RecentReciterRow(
 private fun ResultReciterRow(
     reciter: Reciter,
     onOpen: () -> Unit,
-    onPlay: () -> Unit
+    onPlay: () -> Unit,
+    showForYouBadge: Boolean = false,
 ) {
     Row(
         modifier = Modifier
@@ -614,6 +662,13 @@ private fun ResultReciterRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            // AGENT P6 — taste badge: only on the top-3 affine hits (see
+            // forYouSlugs above); ghost pill, zero hue, matches the Noir
+            // library badge language.
+            if (showForYouBadge) {
+                Spacer(Modifier.height(6.dp))
+                ForYouBadge()
+            }
         }
         Box(
             modifier = Modifier
@@ -630,5 +685,27 @@ private fun ResultReciterRow(
                 modifier = Modifier.size(18.dp)
             )
         }
+    }
+}
+
+/** AGENT P6 — small ghost "FOR YOU" pill marking top taste-ranked hits. */
+@Composable
+private fun ForYouBadge() {
+    Box(
+        modifier = Modifier
+            .clip(GhaisShapes.pill)
+            .background(GhaisNoir.Fill2)
+            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+            .padding(horizontal = 9.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "FOR YOU",
+            color = GhaisNoir.TextSecondary,
+            fontSize = 10.5.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.9.sp,
+            maxLines = 1
+        )
     }
 }
