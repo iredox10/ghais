@@ -438,6 +438,48 @@ fun khatmaTodayPortion(plan: KhatmaPlan, nowMs: Long): KhatmaPortion? {
     return KhatmaPortion(cursor.first, cursor.second, end.first, end.second, todaySize)
 }
 
+/**
+ * Ayah deficit behind schedule for [plan] at [nowMs]: expected-done minus
+ * actually-done (same expected math as [paceStatus]). Returns 0 unless
+ * BEHIND. Pure, never throws.
+ */
+fun khatmaDeficitAyahs(plan: KhatmaPlan, nowMs: Long): Int = try {
+    if (paceStatus(plan, nowMs) != PaceStatus.BEHIND) return 0
+    val done = plan.totalAyahsRead.coerceAtLeast(0)
+    val total = done + khatmaRemainingAyahs(plan)
+    if (total <= 0) return 0
+    val target = plan.targetDays.coerceAtLeast(1)
+    val elapsed = khatmaElapsedDays(plan, nowMs)
+    val expected =
+        (total.toDouble() * elapsed.toDouble() / target.toDouble()).coerceIn(0.0, total.toDouble())
+    (expected - done.toDouble()).toInt().coerceAtLeast(0)
+} catch (_: Exception) {
+    0
+}
+
+/**
+ * Combined catch-up portion for [plan] at [nowMs]: today's portion plus the
+ * behind-schedule deficit, as ONE playable range from the cursor. Equals
+ * [khatmaTodayPortion] when on track; null under the same conditions.
+ * Past-target: the whole remainder (mirrors [khatmaTodayPortion]). Pure,
+ * never throws.
+ */
+fun khatmaCombinedPortion(plan: KhatmaPlan, nowMs: Long): KhatmaPortion? = try {
+    val today = khatmaTodayPortion(plan, nowMs) ?: return null
+    val deficit = khatmaDeficitAyahs(plan, nowMs)
+    if (deficit <= 0) return today
+    val cursor = khatmaCursorOf(plan) ?: return today
+    val combinedSize = today.ayahCount + deficit
+    val end = khatmaAdvanceOrNull(cursor.first, cursor.second, combinedSize) ?: return today
+    KhatmaPortion(cursor.first, cursor.second, end.first, end.second, combinedSize)
+} catch (_: Exception) {
+    try {
+        khatmaTodayPortion(plan, nowMs)
+    } catch (_: Exception) {
+        null
+    }
+}
+
 /** Distinct Madinah pages from the cursor to the end of the Quran. */
 fun khatmaRemainingPages(plan: KhatmaPlan): Int {
     val cursor = khatmaCursorOf(plan) ?: return 0

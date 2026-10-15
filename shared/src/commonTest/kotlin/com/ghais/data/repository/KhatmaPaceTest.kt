@@ -92,4 +92,32 @@ class KhatmaPaceTest {
         assertEquals(PaceStatus.ON_TRACK, paceStatus(p, 3 * KHATMA_DAY_MS))
         assertEquals(0, catchUpPages(p, 3 * KHATMA_DAY_MS))
     }
+
+    @Test
+    fun combinedEqualsTodayWhenOnTrack() {
+        val p = plan(currentAyahNo = 3, lastProgressMs = 1_000L, totalAyahsRead = 3)
+        val nowMs = 3 * KHATMA_DAY_MS
+        assertEquals(0, khatmaDeficitAyahs(p, nowMs))
+        assertEquals(khatmaTodayPortion(p, nowMs), khatmaCombinedPortion(p, nowMs))
+    }
+
+    @Test
+    fun combinedAddsDeficitWhenBehind() {
+        // Day 3 of 6 with 1 read: expected 3, deficit 2.
+        val p = plan(currentAyahNo = 1, lastProgressMs = 1_000L, totalAyahsRead = 1)
+        val nowMs = 3 * KHATMA_DAY_MS
+        assertEquals(2, khatmaDeficitAyahs(p, nowMs))
+        val today = khatmaTodayPortion(p, nowMs)!!
+        val combined = khatmaCombinedPortion(p, nowMs)!!
+        assertEquals(today.ayahCount + 2, combined.ayahCount)
+        assertEquals(today.startSurahId to today.startAyahNo, combined.startSurahId to combined.startAyahNo)
+    }
+
+    @Test
+    fun combinedIsWholeRemainderPastTarget() {
+        val p = plan()
+        val nowMs = 10 * KHATMA_DAY_MS
+        val combined = khatmaCombinedPortion(p, nowMs)!!
+        assertEquals(6, combined.ayahCount)
+    }
 }

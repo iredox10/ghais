@@ -60,6 +60,8 @@ import com.ghais.data.repository.PaceStatus
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.catchUpPages
 import com.ghais.data.repository.khatmaAyahCountBetween
+import com.ghais.data.repository.khatmaCombinedPortion
+import com.ghais.data.repository.khatmaCursorOf
 import com.ghais.data.repository.khatmaDaysLeft
 import com.ghais.data.repository.khatmaDoneToday
 import com.ghais.data.repository.khatmaElapsedDays
@@ -72,6 +74,7 @@ import com.ghais.data.repository.khatmaShortDate
 import com.ghais.data.repository.khatmaSurahAyahCount
 import com.ghais.data.repository.khatmaTodayPortion
 import com.ghais.data.repository.paceStatus
+import com.ghais.data.repository.khatmaRetreatOrFirst
 import com.ghais.data.repository.KhatmaPortion
 import com.ghais.data.seed.PageJuzIndex
 import com.ghais.data.share.ShareSheet
@@ -266,6 +269,21 @@ object KhatmaScreen : Screen {
                                 val catchUp = catchUpPages(plan, nowMs)
                                 val dayLabel = khatmaDayLabel(plan, nowMs)
                                 val paceLine = khatmaPaceLine(pace, catchUp)
+                                // BEHIND catch-up: one combined playable range
+                                // (today + deficit) so a single tap closes the
+                                // gap instead of silently falling further back.
+                                val playTarget = remember(portion, pace, nowMs) {
+                                    try {
+                                        if (pace == PaceStatus.BEHIND && plan != null) {
+                                            khatmaCombinedPortion(plan, nowMs) ?: portion
+                                        } else portion
+                                    } catch (_: Exception) {
+                                        portion
+                                    }
+                                }
+                                val goalLine = remember(plan, progress, complete, portion) {
+                                    khatmaGoalLine(plan, progress, complete)
+                                }
                                 // Certificate surfaces once per completion: the
                                 // effect fires when a plan first reads complete
                                 // (open or finish), dismiss sticks until the
@@ -371,14 +389,15 @@ object KhatmaScreen : Screen {
                                                 fontWeight = FontWeight.Bold
                                             )
                                         } else {
+                                            val shown = playTarget ?: portion
                                             val startName =
-                                                QuranDataRepository.getSurahById(portion.startSurahId)?.nameEn
-                                                    ?: "Surah ${portion.startSurahId}"
+                                                QuranDataRepository.getSurahById(shown.startSurahId)?.nameEn
+                                                    ?: "Surah ${shown.startSurahId}"
                                             val endName =
-                                                QuranDataRepository.getSurahById(portion.endSurahId)?.nameEn
-                                                    ?: "Surah ${portion.endSurahId}"
+                                                QuranDataRepository.getSurahById(shown.endSurahId)?.nameEn
+                                                    ?: "Surah ${shown.endSurahId}"
                                             Text(
-                                                text = "TODAY'S TARGET • ${portion.ayahCount} AYAHS",
+                                                text = "TODAY'S TARGET • ${shown.ayahCount} AYAHS",
                                                 color = GhaisNoir.TextTertiary,
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.SemiBold,
@@ -386,7 +405,7 @@ object KhatmaScreen : Screen {
                                             )
                                             Spacer(modifier = Modifier.height(8.dp))
                                             Text(
-                                                text = if (portion.startSurahId == portion.endSurahId) {
+                                                text = if (shown.startSurahId == shown.endSurahId) {
                                                     "Surah $startName"
                                                 } else {
                                                     "$startName → $endName"
@@ -397,15 +416,24 @@ object KhatmaScreen : Screen {
                                             )
                                             Spacer(modifier = Modifier.height(3.dp))
                                             Text(
-                                                text = if (portion.startSurahId == portion.endSurahId) {
-                                                    "Ayahs ${portion.startAyahNo}–${portion.endAyahNo}"
+                                                text = if (shown.startSurahId == shown.endSurahId) {
+                                                    "Ayahs ${shown.startAyahNo}–${shown.endAyahNo}"
                                                 } else {
-                                                    "${portion.startSurahId}:${portion.startAyahNo} – ${portion.endSurahId}:${portion.endAyahNo}"
+                                                    "${shown.startSurahId}:${shown.startAyahNo} – ${shown.endSurahId}:${shown.endAyahNo}"
                                                 },
                                                 color = GhaisNoir.TextSecondary,
                                                 fontSize = 14.sp,
                                                 fontWeight = FontWeight.Medium
                                             )
+                                            if (pace == PaceStatus.BEHIND && playTarget != null && playTarget.ayahCount > portion.ayahCount) {
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = "Includes +${playTarget.ayahCount - portion.ayahCount} catch-up ayahs",
+                                                    color = GhaisNoir.TextSecondary,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
                                             if (doneToday) {
                                                 Spacer(modifier = Modifier.height(8.dp))
                                                 Text(
@@ -416,9 +444,11 @@ object KhatmaScreen : Screen {
                                             }
                                             Spacer(modifier = Modifier.height(16.dp))
                                             ChromePillButton(
-                                                text = if (doneToday) "Replay Today's Portion" else "Play Today's Portion",
+                                                text = if (doneToday) "Replay Today's Portion"
+                                                else if (pace == PaceStatus.BEHIND && playTarget != null) "Play today + catch up • ${playTarget.ayahCount} ayahs"
+                                                else "Play Today's Portion",
                                                 onClick = {
-                                                    playPortion(plan, portion, record = !doneToday)
+                                                    playPortion(plan, playTarget ?: portion, record = !doneToday)
                                                 },
                                                 modifier = Modifier.fillMaxWidth(),
                                                 leadingIcon = Icons.Default.PlayArrow
@@ -428,7 +458,7 @@ object KhatmaScreen : Screen {
                                                 GhostPillButton(
                                                     text = "Mark as read",
                                                     onClick = {
-                                                        KhatmaStore.recordPortionDone(plan.id, portion)
+                                                        KhatmaStore.recordPortionDone(plan.id, playTarget ?: portion)
                                                     },
                                                     modifier = Modifier.fillMaxWidth()
                                                 )
@@ -463,6 +493,16 @@ object KhatmaScreen : Screen {
                                                     )
                                                     Spacer(modifier = Modifier.height(4.dp))
                                                 }
+                                                goalLine?.let {
+                                                    Text(
+                                                        text = it,
+                                                        color = GhaisNoir.TextPrimary,
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        maxLines = 2
+                                                    )
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                }
                                                 Text(
                                                     text = "$done of $planTotal ayahs • Est. ${khatmaShortDate(etaMs)}",
                                                     color = GhaisNoir.TextTertiary,
@@ -482,7 +522,7 @@ object KhatmaScreen : Screen {
                                             ChromePillButton(
                                                 text = "Play today's portion",
                                                 onClick = {
-                                                    playPortion(plan, portion, record = !doneToday)
+                                                    playPortion(plan, playTarget ?: portion, record = !doneToday)
                                                 },
                                                 modifier = Modifier.fillMaxWidth(),
                                                 leadingIcon = Icons.Default.PlayArrow
@@ -838,6 +878,30 @@ internal fun khatmaDayLabel(plan: KhatmaPlan, todayMs: Long): String {
     } else {
         "Day $day · $target-day target"
     }
+}
+
+/**
+ * Goal-gradient line (pure): when the plan is past 85% and incomplete, name
+ * the Juz finish to pull the last mile. ~60 ayahs ≈ 15 min at 15s/ayah.
+ * Null otherwise (no state, no effect — fires on existing progress).
+ */
+internal fun khatmaGoalLine(plan: KhatmaPlan, progress: Float, complete: Boolean): String? = try {
+    if (complete || progress <= 0.85f) return null
+    val cursor = khatmaCursorOf(plan) ?: return null
+    val juz = PageJuzIndex.juzOf(cursor.first, cursor.second)
+    val nextStart = PageJuzIndex.JUZ_STARTS.getOrNull(juz)
+    val (endSurah, endAyah) = if (nextStart == null) {
+        114 to khatmaSurahAyahCount(114)
+    } else {
+        val prev = khatmaRetreatOrFirst(nextStart.first, nextStart.second, 1)
+        prev
+    }
+    val leftInJuz = khatmaAyahCountBetween(cursor.first, cursor.second, endSurah, endAyah)
+    if (leftInJuz <= 0) return null
+    if (leftInJuz <= 60) "15 min from finishing Juz $juz — close it out."
+    else "Juz $juz almost done — finish strong."
+} catch (_: Exception) {
+    null
 }
 
 /**

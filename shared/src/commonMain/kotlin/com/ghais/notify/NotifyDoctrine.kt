@@ -98,6 +98,30 @@ fun copyFor(channel: String): NotifyCopy = when (channel) {
 }
 
 /**
+ * At-risk variant of [copyFor] for the khatma channel: when [isBehind], the
+ * copy names the catch-up size ([catchUpPages]) without guilt language
+ * (no "missed/lost/broken"). All other channels delegate to [copyFor].
+ * Pure, never throws.
+ */
+fun copyFor(channel: String, isBehind: Boolean, catchUpPages: Int): NotifyCopy = try {
+    if (channel == NotifyChannel.KHATMA_PACE && isBehind) {
+        val pages = catchUpPages.coerceAtLeast(1)
+        NotifyCopy(
+            title = "A gentle catch-up is ready",
+            body = if (pages == 1) {
+                "Rest days are part of the path — 1 page brings you back. Today's portion is ready."
+            } else {
+                "Rest days are part of the path — $pages pages bring you back. Today's portion is ready."
+            },
+        )
+    } else {
+        copyFor(channel)
+    }
+} catch (_: Exception) {
+    copyFor(channel)
+}
+
+/**
  * Frequency cap for one channel: at most [maxPerDay] fires per epoch day,
  * ideally anchored at the user's [habitualHour] (the hour they usually
  * listen — supplied by the caller from usage stats; null = no anchor).
