@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.math.ceil
 import kotlin.time.Clock
 
 /**
@@ -437,6 +438,48 @@ fun khatmaTodayPortion(plan: KhatmaPlan, nowMs: Long): KhatmaPortion? {
     return KhatmaPortion(cursor.first, cursor.second, end.first, end.second, todaySize)
 }
 
+/**
+ * Ayah deficit behind schedule for [plan] at [nowMs]: expected-done minus
+ * actually-done (same expected math as [paceStatus]). Returns 0 unless
+ * BEHIND. Pure, never throws.
+ */
+fun khatmaDeficitAyahs(plan: KhatmaPlan, nowMs: Long): Int = try {
+    if (paceStatus(plan, nowMs) != PaceStatus.BEHIND) return 0
+    val done = plan.totalAyahsRead.coerceAtLeast(0)
+    val total = done + khatmaRemainingAyahs(plan)
+    if (total <= 0) return 0
+    val target = plan.targetDays.coerceAtLeast(1)
+    val elapsed = khatmaElapsedDays(plan, nowMs)
+    val expected =
+        (total.toDouble() * elapsed.toDouble() / target.toDouble()).coerceIn(0.0, total.toDouble())
+    (expected - done.toDouble()).toInt().coerceAtLeast(0)
+} catch (_: Exception) {
+    0
+}
+
+/**
+ * Combined catch-up portion for [plan] at [nowMs]: today's portion plus the
+ * behind-schedule deficit, as ONE playable range from the cursor. Equals
+ * [khatmaTodayPortion] when on track; null under the same conditions.
+ * Past-target: the whole remainder (mirrors [khatmaTodayPortion]). Pure,
+ * never throws.
+ */
+fun khatmaCombinedPortion(plan: KhatmaPlan, nowMs: Long): KhatmaPortion? = try {
+    val today = khatmaTodayPortion(plan, nowMs) ?: return null
+    val deficit = khatmaDeficitAyahs(plan, nowMs)
+    if (deficit <= 0) return today
+    val cursor = khatmaCursorOf(plan) ?: return today
+    val combinedSize = today.ayahCount + deficit
+    val end = khatmaAdvanceOrNull(cursor.first, cursor.second, combinedSize) ?: return today
+    KhatmaPortion(cursor.first, cursor.second, end.first, end.second, combinedSize)
+} catch (_: Exception) {
+    try {
+        khatmaTodayPortion(plan, nowMs)
+    } catch (_: Exception) {
+        null
+    }
+}
+
 /** Distinct Madinah pages from the cursor to the end of the Quran. */
 fun khatmaRemainingPages(plan: KhatmaPlan): Int {
     val cursor = khatmaCursorOf(plan) ?: return 0
@@ -510,4 +553,78 @@ private fun khatmaCivilFromDays(z: Long): Triple<Int, Int, Int> {
     val month = if (monthPrime < 10) monthPrime + 3 else monthPrime - 9
     if (month <= 2) year += 1
     return Triple(year, month, day)
+}
+
+// ---------------------------------------------------------------------------
+// Pace helpers (AGENT A10, additive only). Pure plan-vs-schedule math, no
+// store access; unit-testable without the Settings singleton. Expected
+// reading at [todayMs] is the plan-aware total (read + remaining) spread
+// evenly over the target days; a full day's share of tolerance either way
+// keeps the status gentle — only a day or more off-schedule flips it.
+// ---------------------------------------------------------------------------
+
+/** Journey pace of a plan against its daily schedule. */
+enum class PaceStatus {
+    AHEAD,
+    ON_TRACK,
+    BEHIND,
+}
+
+/**
+ * Pace of [plan] at [todayMs]: compares ayahs read against the even-split
+ * expectation for the elapsed days (clamped to the plan total past-target).
+ * A day's share or more ahead reads [PaceStatus.AHEAD] (finishing early
+ * included); a day's share or more short reads [PaceStatus.BEHIND];
+ * anything within a day reads [PaceStatus.ON_TRACK]. A plan with no
+ * readable total is [PaceStatus.ON_TRACK].
+ */
+fun paceStatus(plan: KhatmaPlan, todayMs: Long): PaceStatus {
+    val done = plan.totalAyahsRead.coerceAtLeast(0)
+    val total = done + khatmaRemainingAyahs(plan)
+    if (total <= 0) return PaceStatus.ON_TRACK
+    val target = plan.targetDays.coerceAtLeast(1)
+    val elapsed = khatmaElapsedDays(plan, todayMs)
+    val expected =
+        (total.toDouble() * elapsed.toDouble() / target.toDouble()).coerceIn(0.0, total.toDouble())
+    val dayShare = total.toDouble() / target.toDouble()
+    val diff = done.toDouble() - expected
+    return when {
+        diff >= dayShare -> PaceStatus.AHEAD
+        diff <= -dayShare -> PaceStatus.BEHIND
+        else -> PaceStatus.ON_TRACK
+    }
+}
+
+/**
+ * Madinah pages needed to catch back up to schedule for [plan] at
+ * [todayMs]: the ayah deficit converted via the plan's global
+ * pages-per-ayah ratio (plan start reconstructed by rewinding the cursor,
+ * same approach as [khatmaPagesPerDay]; ceiling, min 1). Returns 0 unless
+ * [paceStatus] is [PaceStatus.BEHIND].
+ */
+fun catchUpPages(plan: KhatmaPlan, todayMs: Long): Int {
+    if (paceStatus(plan, todayMs) != PaceStatus.BEHIND) return 0
+    val done = plan.totalAyahsRead.coerceAtLeast(0)
+    val total = done + khatmaRemainingAyahs(plan)
+    if (total <= 0) return 0
+    val target = plan.targetDays.coerceAtLeast(1)
+    val elapsed = khatmaElapsedDays(plan, todayMs)
+    val expected =
+        (total.toDouble() * elapsed.toDouble() / target.toDouble()).coerceIn(0.0, total.toDouble())
+    val deficit = (expected - done.toDouble()).coerceAtLeast(0.0)
+    if (deficit <= 0.0) return 0
+    val cursor = khatmaCursorOf(plan)
+    val start = if (cursor == null) {
+        1 to 1
+    } else {
+        khatmaRetreatOrFirst(cursor.first, cursor.second, done)
+    }
+    val lastCount = khatmaSurahAyahCount(114)
+    val totalPages = if (lastCount == 0) {
+        0
+    } else {
+        PageJuzIndex.pageCount(start.first, start.second, 114, lastCount)
+    }
+    if (totalPages <= 0) return 1
+    return ceil(deficit * totalPages.toDouble() / total.toDouble()).toInt().coerceAtLeast(1)
 }

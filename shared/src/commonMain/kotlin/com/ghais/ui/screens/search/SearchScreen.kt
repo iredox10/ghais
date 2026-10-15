@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -41,6 +42,7 @@ import com.ghais.data.repository.ChartsRepository
 import com.ghais.data.repository.DevotionalRepository
 import com.ghais.data.repository.EditorialPlaylist
 import com.ghais.data.repository.EditorialRepository
+import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.SearchHistoryStore
@@ -55,7 +57,9 @@ import com.ghais.domain.model.DevotionalItem
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.Surah
 import com.ghais.domain.model.TrackItem
+import com.ghais.flags.HookFlags
 import com.ghais.player.AudioEngine
+import com.ghais.player.ReciterPreview
 import com.ghais.ui.components.noir.ChromeFab
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
@@ -96,6 +100,26 @@ private const val HUB_NATION_COUNT: Int = 8
 private const val HUB_TOP_ROW_COUNT: Int = 5
 
 /**
+ * A12 exploratory search.
+ *
+ * [EXPLORE_TRY_QUERIES] are the blank-state "Try:" chips — tapping one fills
+ * the query, which flips the screen into results and runs it (plain state
+ * assignment, no separate "run" path). [EXPLORE_FALLBACK_COUNT] caps how many
+ * intent-ordered browse rows may stand in for a group the literal engine
+ * missed, so an exploratory phrase never dumps the whole catalog.
+ */
+private val EXPLORE_TRY_QUERIES: List<String> = listOf(
+    "calm recitation for night",
+    "short powerful surahs",
+    "new voices like Mishary",
+    "rainy-day murattal"
+)
+private const val EXPLORE_FALLBACK_COUNT: Int = 8
+
+/** Followed-qari shortcut chips shown in the hub's taste section. */
+private const val HUB_TASTE_ROW_COUNT: Int = 5
+
+/**
  * Noir Glass — strict monochrome redesign.
  *
  * Canvas #050506 via [NoirScreenRoot] (glow zone -> absolute black + grain).
@@ -117,6 +141,32 @@ class SearchScreen : Screen {
         var selectedFilter by remember { mutableStateOf("All") }
         val filters = listOf("All", "Surahs", "Reciters", "Ayahs", "Duas")
         val recentQueries by SearchHistoryStore.recentQueries.collectAsState()
+
+        // A12 taste-aware shortcuts: the follow set is read-only here — this
+        // screen never follows/unfollows (the reciter profile owns writes).
+        val followedSlugs by FollowStore.followedSlugs.collectAsState()
+
+        // A12 inline 30s preview, via Agent A3's ReciterPreview
+        // (previewUrl/playPreview/stopPreview — Ayat al-Kursi 2:255 sample,
+        // session save/restore, 30s auto-stop all live there). This screen
+        // only observes previewSlug for the row's stop-state and stops the
+        // sample best-effort on navigate-away (restore = false: ending the
+        // sample must never autoplay a session the user already left).
+        // The Unit-keyed DisposableEffect reads through rememberUpdatedState
+        // so it always sees the live slug instead of the first-composition
+        // null it would otherwise capture.
+        val previewSlug by ReciterPreview.previewSlug.collectAsState()
+        val latestPreviewSlug by rememberUpdatedState(previewSlug)
+        DisposableEffect(Unit) {
+            onDispose {
+                if (latestPreviewSlug != null) {
+                    try {
+                        ReciterPreview.stopPreview(restore = false)
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+        }
 
         LaunchedEffect(query) {
             delay(600)
@@ -146,6 +196,46 @@ class SearchScreen : Screen {
         LaunchedEffect(selectedEdition) { AyahSearchIndex.clear() }
 
         val trimmedQuery = query.trim()
+        // A12 exploratory intent: natural phrases ("short powerful surahs")
+        // carry no literal match, so when the engine draws a blank for a
+        // group the intent-ordered browse list stands in (capped) instead of
+        // "No results". Engine hits always win when present — the fallbacks
+        // below are read only in that case.
+        val exploreIntent = if (!HookFlags.exploreEnabled) null
+        else remember(trimmedQuery) { parseExploreIntent(trimmedQuery) }
+        val exploreOutcome = remember(exploreIntent, browseReciters) {
+            val intent = exploreIntent ?: return@remember null
+            applyIntent(
+                reciters = browseReciters.map { r ->
+                    ExploreReciterMeta(
+                        slug = r.slug,
+                        name = r.nameEn,
+                        style = r.style,
+                        tempo = r.tempo,
+                        // The catalog carries no added-at timestamp, so
+                        // NEW_FIRST currently preserves browse order until
+                        // that metadata lands (see ExploreIntents docs).
+                        isNew = false
+                    )
+                },
+                surahs = QuranData.SURAHS.map { s ->
+                    ExploreSurahMeta(id = s.id, ayahsCount = s.ayahsCount)
+                },
+                intent = intent
+            )
+        }
+        val fallbackSurahs = remember(exploreOutcome) {
+            exploreOutcome?.surahIds
+                ?.mapNotNull { id -> QuranData.SURAHS.firstOrNull { it.id == id } }
+                ?.take(EXPLORE_FALLBACK_COUNT)
+                .orEmpty()
+        }
+        val fallbackReciters = remember(exploreOutcome, browseReciters) {
+            exploreOutcome?.reciterSlugs
+                ?.mapNotNull { slug -> browseReciters.firstOrNull { it.slug == slug } }
+                ?.take(EXPLORE_FALLBACK_COUNT)
+                .orEmpty()
+        }
         // Mirrors AyahSearchIndex script routing: any Arabic-script char
         // searches Arabic text; otherwise Latin needs length>=3 to be worth
         // indexing/matching (shorter Latin substrings match everything).
@@ -212,6 +302,17 @@ class SearchScreen : Screen {
             EditorialRepository.newSince(
                 Clock.System.now().toEpochMilliseconds() - NEW_PLAYLIST_WINDOW_MS
             ).take(HUB_TOP_ROW_COUNT)
+        }
+        // A12 taste-aware shortcuts, resolved against the live browse catalog
+        // so cloud-added reciters work the moment they sync. Unresolvable
+        // slugs (removed or cloud-pending rows) are skipped, never crashed on.
+        val followedReciters = remember(followedSlugs, browseReciters) {
+            followedSlugs
+                .mapNotNull { slug ->
+                    browseReciters.firstOrNull { it.slug.equals(slug, ignoreCase = true) }
+                }
+                .distinctBy { it.catalogKey() }
+                .take(HUB_TASTE_ROW_COUNT)
         }
 
         // Shared queue builder — unchanged playback logic, surah entry point varies.
@@ -288,6 +389,20 @@ class SearchScreen : Screen {
             }
         }
 
+        // A12 inline 30s reciter preview toggle, straight through
+        // ReciterPreview (owns the sample URL, session save/restore and the
+        // 30s auto-stop). At most one preview plays: playPreview captures the
+        // session only when not already previewing, and re-tapping the active
+        // row stops it. Errors are swallowed — a preview must never break
+        // search (playPreview already no-ops null on unresolvable URLs).
+        fun toggleSearchPreview(reciter: Reciter) {
+            try {
+                if (previewSlug == reciter.slug) ReciterPreview.stopPreview()
+                else ReciterPreview.playPreview(reciter)
+            } catch (_: Exception) {
+            }
+        }
+
         NoirScreenRoot {
             Column(
                 modifier = Modifier
@@ -360,6 +475,60 @@ class SearchScreen : Screen {
                                     onClick = { query = recentQuery },
                                     onRemove = { SearchHistoryStore.remove(recentQuery) }
                                 )
+                            }
+                        }
+
+                        // A12 exploratory entry points (gated): natural-language
+                        // chips that fill the query and run it — a non-blank
+                        // query flips this screen into results, so plain state
+                        // assignment IS the run path (no separate submit needed).
+                        if (HookFlags.exploreEnabled) {
+                            item(key = "hub-try-gap") { Spacer(Modifier.height(8.dp)) }
+                            item(key = "hub-try-header") {
+                                NoirSectionHeader(label = "Try")
+                            }
+                            item(key = "hub-try-chips") {
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    contentPadding = PaddingValues(vertical = 2.dp)
+                                ) {
+                                    items(EXPLORE_TRY_QUERIES, key = { "hub-try-$it" }) { suggestion ->
+                                        ExploreTryChip(
+                                            label = suggestion,
+                                            onClick = { query = suggestion }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // A12 taste-aware shortcuts (gated), read-only off
+                        // FollowStore: one chip per followed qari, filling the
+                        // query with their name so the results below answer
+                        // it. Hidden when the follow set is empty or
+                        // unresolvable.
+                        if (HookFlags.exploreEnabled && followedReciters.isNotEmpty()) {
+                            item(key = "hub-taste-gap") { Spacer(Modifier.height(8.dp)) }
+                            item(key = "hub-taste-header") {
+                                NoirSectionHeader(
+                                    label = "Because you follow ${followedReciters.first().nameEn}"
+                                )
+                            }
+                            item(key = "hub-taste-chips") {
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    contentPadding = PaddingValues(vertical = 2.dp)
+                                ) {
+                                    items(
+                                        followedReciters,
+                                        key = { "hub-taste-${it.catalogKey()}" }
+                                    ) { reciter ->
+                                        ExploreTryChip(
+                                            label = "More like ${shortReciterName(reciter.nameEn)}",
+                                            onClick = { query = reciter.nameEn }
+                                        )
+                                    }
+                                }
                             }
                         }
 
@@ -460,9 +629,27 @@ class SearchScreen : Screen {
                     // Arabic. Same All/Ayahs filter gating as the card.
                     val showAyahHits = ayahTextHits.isNotEmpty() &&
                         (selectedFilter == "All" || selectedFilter == "Ayahs")
-                    val showSurahs = searchResults.surahs.isNotEmpty() &&
+                    // A12: intent fallbacks fill groups the literal engine
+                    // missed, so "short powerful surahs" still answers. The
+                    // using*Fallback flags feed only the honest-coverage note
+                    // under the header — ranking itself is pure applyIntent.
+                    val effectiveSurahs = if (searchResults.surahs.isNotEmpty()) {
+                        searchResults.surahs
+                    } else {
+                        fallbackSurahs
+                    }
+                    val usingSurahFallback = searchResults.surahs.isEmpty() &&
+                        fallbackSurahs.isNotEmpty()
+                    val effectiveReciters = if (searchResults.reciters.isNotEmpty()) {
+                        searchResults.reciters
+                    } else {
+                        fallbackReciters
+                    }
+                    val usingReciterFallback = searchResults.reciters.isEmpty() &&
+                        fallbackReciters.isNotEmpty()
+                    val showSurahs = effectiveSurahs.isNotEmpty() &&
                         (selectedFilter == "All" || selectedFilter == "Surahs")
-                    val showReciters = searchResults.reciters.isNotEmpty() &&
+                    val showReciters = effectiveReciters.isNotEmpty() &&
                         (selectedFilter == "All" || selectedFilter == "Reciters")
                     // Both devotional kinds live in one group, so the single
                     // "Duas" chip narrows the group rather than selecting one
@@ -542,11 +729,16 @@ class SearchScreen : Screen {
                                 item(key = "header-surahs") {
                                     NoirSectionHeader(
                                         label = "Surahs",
-                                        actionLabel = "${searchResults.surahs.size} shown",
+                                        actionLabel = "${effectiveSurahs.size} shown",
                                         onAction = {}
                                     )
                                 }
-                                items(searchResults.surahs, key = { "surah-${it.id}" }) { surah ->
+                                if (usingSurahFallback) {
+                                    item(key = "surah-explore-note") {
+                                        ExploreFallbackNote(text = "Exploratory picks for \"$query\"")
+                                    }
+                                }
+                                items(effectiveSurahs, key = { "surah-${it.id}" }) { surah ->
                                     SurahNoirRow(
                                         surah = surah,
                                         onOpen = { playWithCurrentReciter(surah.id) },
@@ -559,11 +751,16 @@ class SearchScreen : Screen {
                                 item(key = "header-reciters") {
                                     NoirSectionHeader(
                                         label = "Reciters",
-                                        actionLabel = "${searchResults.reciters.size} shown",
+                                        actionLabel = "${effectiveReciters.size} shown",
                                         onAction = {}
                                     )
                                 }
-                                items(searchResults.reciters, key = { "reciter-${it.catalogKey()}" }) { reciter ->
+                                if (usingReciterFallback) {
+                                    item(key = "reciter-explore-note") {
+                                        ExploreFallbackNote(text = "Exploratory picks for \"$query\"")
+                                    }
+                                }
+                                items(effectiveReciters, key = { "reciter-${it.catalogKey()}" }) { reciter ->
                                     ReciterNoirRow(
                                         reciter = reciter,
                                         onOpen = { navigator.push(ReciterProfileScreen(reciter.slug)) },
@@ -573,7 +770,9 @@ class SearchScreen : Screen {
                                                 reciterSlug = reciter.slug,
                                                 reciterName = reciter.nameEn
                                             )
-                                        }
+                                        },
+                                        previewing = previewSlug == reciter.slug,
+                                        onPreview = { toggleSearchPreview(reciter) }
                                     )
                                 }
                             }
@@ -1018,12 +1217,19 @@ private fun devotionalArabicSnippet(raw: String): String {
  * Reciter result row in the NoirListRow language: color photo well
  * (monogram fallback), dual text, ghost style chip,
  * circular chevron to the profile. Trailing play keeps the queue-start logic.
+ *
+ * A12 adds the inline 30s preview disc (optional, results only — hub callers
+ * omit it and the row renders exactly as before): a "30s" ghost disc that
+ * inverts to a stop disc while its preview plays. Playback itself lives in
+ * ReciterPreview (Agent A3); the row only reflects previewing/onPreview.
  */
 @Composable
 private fun ReciterNoirRow(
     reciter: Reciter,
     onOpen: () -> Unit,
-    onPlay: () -> Unit
+    onPlay: () -> Unit,
+    previewing: Boolean = false,
+    onPreview: (() -> Unit)? = null
 ) {
     val followedPhoto = remember(reciter.slug) {
         resolveFollowedQari(reciter.slug)?.photoUrl
@@ -1111,6 +1317,36 @@ private fun ReciterNoirRow(
                     overflow = TextOverflow.Ellipsis
                 )
             }
+        }
+        if (onPreview != null) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                    .background(
+                        if (previewing) GhaisNoir.TextPrimary else GhaisNoir.Fill2,
+                        CircleShape
+                    )
+                    .noirClickable(onPreview),
+                contentAlignment = Alignment.Center
+            ) {
+                if (previewing) {
+                    Icon(
+                        imageVector = Icons.Default.Stop,
+                        contentDescription = "Stop preview ${reciter.nameEn}",
+                        tint = GhaisNoir.OnChrome,
+                        modifier = Modifier.size(14.dp)
+                    )
+                } else {
+                    Text(
+                        text = "30s",
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
         }
         Box(
             modifier = Modifier
@@ -1277,6 +1513,60 @@ private fun NationHubChip(
             color = GhaisNoir.TextSecondary
         )
     }
+}
+
+/**
+ * A12 exploratory suggestion chip: resting ghost pill, same recipe as
+ * [NationHubChip] minus the count. Used by both the "Try" row and the
+ * "Because you follow" shortcut row — both fill the query on tap.
+ */
+@Composable
+private fun ExploreTryChip(
+    label: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(GhaisShapes.pill)
+            .background(GhaisNoir.Fill2)
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+            .noirClickable(onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = GhaisNoir.TextSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
+ * A12 honest-coverage note under a header served from the intent fallback,
+ * so an exploratory answer never masquerades as a literal match.
+ */
+@Composable
+private fun ExploreFallbackNote(text: String) {
+    Text(
+        text = text,
+        color = GhaisNoir.TextTertiary,
+        fontSize = 12.sp,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
+}
+
+/**
+ * Compact chip label from a display name ("Mishary Rashid Alafasy" ->
+ * "Mishary"). Blank-safe: falls back to the trimmed whole string.
+ */
+private fun shortReciterName(nameEn: String): String {
+    val first = nameEn.trim().substringBefore(' ')
+    return first.takeIf { it.isNotEmpty() } ?: nameEn.trim()
 }
 
 /**

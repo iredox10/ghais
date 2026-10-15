@@ -109,6 +109,7 @@ object FollowStore {
     }
 
     fun toggle(slug: String) {
+        val wasFollowing = _followedSlugs.value.contains(slug)
         _followedSlugs.update { set ->
             if (set.contains(slug)) {
                 set - slug
@@ -118,6 +119,12 @@ object FollowStore {
         }
         save()
         requestCountRefresh(slug)
+        // Personalization signal (P-series): follows are top-weight taste.
+        try {
+            if (wasFollowing) com.ghais.personal.SignalStore.recordUnfollow(slug)
+            else com.ghais.personal.SignalStore.recordFollow(slug)
+        } catch (_: Exception) {
+        }
     }
 
     fun follow(slug: String) {

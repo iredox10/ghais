@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +50,16 @@ import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.EveryAyahReciter
 import com.ghais.data.seed.EveryAyahReciters
+import com.ghais.data.repository.HifzMasteryStore
+import com.ghais.flags.HookFlags
+import com.ghais.analytics.HookAnalytics
+import com.ghais.analytics.HookEvents
+import com.ghais.hifz.quests.QuestRow
+import com.ghais.hifz.quests.HifzXpBadge
+import com.ghais.hifz.quests.HifzXpStore
+import com.ghais.hifz.quests.hifzXpLevel
+import com.ghais.hifz.quests.questsFor
+import kotlin.time.Clock
 import com.ghais.player.AudioEngine
 import com.ghais.player.DownloadKeys
 import com.ghais.player.QuranDownloads
@@ -119,6 +130,44 @@ object MemorizationScreen : Tab {
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 112.dp)
             ) {
+                // Daily quests (hooks A9) — small, completable, varied.
+                if (HookFlags.questsEnabled) {
+                    item {
+                        val mastery by HifzMasteryStore.masteryMap.collectAsState()
+                        val reviewed by HifzMasteryStore.todayReviewedCount.collectAsState()
+                        val goal by HifzMasteryStore.dailyGoalCount.collectAsState()
+                        val epochDay = Clock.System.now().toEpochMilliseconds() / 86_400_000L
+                        val quests = remember(mastery, reviewed, goal, epochDay) {
+                            questsFor(mastery, reviewed, goal, epochDay)
+                        }
+                        var seenQuests by remember(epochDay) { mutableStateOf(emptySet<String>()) }
+                        LaunchedEffect(quests) {
+                            try {
+                                val doneIds = quests.filter { it.done }.map { it.id }.toSet()
+                                (doneIds - seenQuests).forEach { id ->
+                                    HookAnalytics.track(
+                                        HookEvents.Event.QUEST_DONE,
+                                        mapOf(HookEvents.Prop.QUEST_ID to id),
+                                    )
+                                }
+                                seenQuests = doneIds
+                            } catch (_: Exception) {
+                            }
+                        }
+                        val totalXp by HifzXpStore.totalXp.collectAsState()
+                        HifzXpBadge(
+                            level = hifzXpLevel(totalXp),
+                            totalXp = totalXp
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        com.ghais.ui.components.noir.NoirSectionHeader(label = "Today's quests")
+                        quests.forEach { quest ->
+                            QuestRow(quest = quest)
+                            Spacer(Modifier.height(10.dp))
+                        }
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
                 item {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Row(

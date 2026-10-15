@@ -70,6 +70,9 @@ class MainActivity : ComponentActivity() {
         // registerNetworkCallback can throw SecurityException on devices
         // without the network-state permission / OEM-skewed services.
         guardInit("NetworkMonitor") { com.ghais.data.sync.NetworkMonitor.init(this) }
+        // Gentle daily devotion reminder at the habitual hour (create-only,
+        // never overwrites user-edited times).
+        guardInit("NotifyAuto") { NotifyAutoScheduler.ensureDefaults(this) }
         guardInit("ShareSheet") { com.ghais.data.share.ShareSheet.init(this) }
         // Support rows open Gmail directly — the backend needs an Activity.
         guardInit("SupportMail") {

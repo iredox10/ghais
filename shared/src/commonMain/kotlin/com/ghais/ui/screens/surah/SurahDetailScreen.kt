@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlinx.coroutines.delay
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.HifzMasteryStore
 import com.ghais.data.repository.MasteryStatus
@@ -45,6 +46,8 @@ import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
+import com.ghais.hifz.quests.SurahCeremonyDialog
+import com.ghais.hifz.quests.onAyahMastered
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
@@ -79,6 +82,14 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
         var expandedReciterMenu by remember { mutableStateOf(false) }
         var showRangePlaySheet by remember { mutableStateOf(false) }
         var masteryVersion by remember { mutableStateOf(0) }
+        var showCeremony by remember { mutableStateOf(false) }
+        var xpToast by remember { mutableStateOf<String?>(null) }
+        LaunchedEffect(xpToast) {
+            if (xpToast != null) {
+                delay(2_500L)
+                xpToast = null
+            }
+        }
 
         // Generate ayahs for this surah with authentic Uthmani text
         val cacheGen by QuranAyahRepository.cacheGen.collectAsState()
@@ -335,8 +346,23 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                                 isFavorite = favorites.any { it.audioUrl == selectedReciter.getAyahAudioUrl(surah.id, ayah.ayahNo) },
                                 masteryStatus = mastery,
                                 onMasteryClick = {
-                                    HifzMasteryStore.cycleStatus(surah.id, ayah.ayahNo)
+                                    val wasComplete = try {
+                                        HifzMasteryStore.getSurahMasteredPercentage(surah.id) == 1f
+                                    } catch (_: Exception) {
+                                        false
+                                    }
+                                    val next = HifzMasteryStore.cycleStatus(surah.id, ayah.ayahNo)
                                     masteryVersion++
+                                    if (next == MasteryStatus.MASTERED) {
+                                        val outcome = onAyahMastered(surah.id, wasComplete)
+                                        if (outcome.xpAwarded > 0) {
+                                            xpToast = buildString {
+                                                append("+${outcome.xpAwarded} XP")
+                                                outcome.leveledUpTo?.let { append(" • ${it.title} unlocked") }
+                                            }
+                                        }
+                                        if (outcome.surahJustCompleted) showCeremony = true
+                                    }
                                 },
                                 onPlayClick = { onAyahToggle(ayah, index) },
                                 onFavoriteClick = {
@@ -370,6 +396,35 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                         AudioEngine.clearHifzRange()
                         showRangePlaySheet = false
                     }
+                )
+            }
+
+            if (showCeremony) {
+                val masteredCount = remember(masteryVersion) {
+                    try {
+                        HifzMasteryStore.getMasteredCount(surah.id)
+                    } catch (_: Exception) {
+                        surah.ayahsCount
+                    }
+                }
+                SurahCeremonyDialog(
+                    surahName = surah.nameEn,
+                    reciterName = selectedReciter.nameEn,
+                    daysTaken = 1,
+                    masteredCount = masteredCount,
+                    totalAyahs = surah.ayahsCount,
+                    onDismiss = { showCeremony = false }
+                )
+            }
+
+            xpToast?.let { toast ->
+                Text(
+                    text = toast,
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                 )
             }
         }

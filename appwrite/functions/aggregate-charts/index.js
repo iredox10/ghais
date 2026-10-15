@@ -10,6 +10,8 @@
  * per ownerId+reciterSlug+surahId per UTC day (anti-gaming), computes:
  *   - topQaris7d  — top-20 reciter slugs by deduped count, last 7 days
  *   - topQaris30d — top-20 reciter slugs by deduped count, last 30 days
+ *   - topQarisYesterday — top-20 by deduped count in yesterday's UTC day
+ *     (global "Yesterday's most heard", all listeners)
  *   - trending    — top-20 by velocity: 7d share of plays vs 30d baseline share
  * then upserts the single `charts/global` document with generatedAt = now.
  *
@@ -56,6 +58,11 @@ module.exports = async ({ res, log, error }) => {
   const now = new Date();
   const cutoff7 = new Date(now.getTime() - WINDOW_7D_MS);
   const cutoff30 = new Date(now.getTime() - WINDOW_30D_MS);
+  // Yesterday's UTC window [00:00, 00:00): powers the global
+  // "Yesterday's most heard" strip (all listeners, not per-user).
+  const todayStart = new Date(now);
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
 
   // Page the last 30 days of events, oldest first. $createdAt is a system
   // attribute (no declared index possible), so range-page on it directly.
@@ -65,6 +72,7 @@ module.exports = async ({ res, log, error }) => {
   const seen = new Set();
   const count7d = new Map();
   const count30d = new Map();
+  const countYesterday = new Map();
 
   for (;;) {
     const page = await databases.listDocuments(databaseId, PLAY_EVENTS_COLLECTION, [
@@ -97,6 +105,9 @@ module.exports = async ({ res, log, error }) => {
       seen.add(dedupeKey);
       count30d.set(slug, (count30d.get(slug) || 0) + 1);
       if (createdAt >= cutoff7) count7d.set(slug, (count7d.get(slug) || 0) + 1);
+      if (createdAt >= yesterdayStart && createdAt < todayStart) {
+        countYesterday.set(slug, (countYesterday.get(slug) || 0) + 1);
+      }
     }
 
     offset += docs.length;
@@ -105,6 +116,7 @@ module.exports = async ({ res, log, error }) => {
 
   const topQaris7d = topN(count7d, TOP_N);
   const topQaris30d = topN(count30d, TOP_N);
+  const topQarisYesterday = topN(countYesterday, TOP_N);
 
   // Trending by velocity: 7d share of plays minus 30d baseline share.
   // A reciter surging this week scores positive; steady giants score ~0.
@@ -122,6 +134,7 @@ module.exports = async ({ res, log, error }) => {
   const payload = {
     topQaris7d,
     topQaris30d,
+    topQarisYesterday,
     trending,
     generatedAt: now.toISOString(),
   };
@@ -144,9 +157,11 @@ module.exports = async ({ res, log, error }) => {
     deduped: seen.size,
     slugs7d: count7d.size,
     slugs30d: count30d.size,
+    slugsYesterday: countYesterday.size,
     skipped,
     topQaris7d,
     topQaris30d,
+    topQarisYesterday,
     trending,
     generatedAt: payload.generatedAt,
   });

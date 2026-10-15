@@ -31,9 +31,12 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,11 +55,39 @@ import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.ChartsRepository
+import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.reciterCountryKey
 import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.TrackItem
+import com.ghais.flags.HookFlags
+import com.ghais.personal.ForYou
+import com.ghais.personal.PersonalFlags
+import com.ghais.personal.ShelfRow
+import com.ghais.personal.SignalStore
+import com.ghais.personal.buildShelves
+import com.ghais.ui.screens.reciters.personal.ColdStartGate
+import com.ghais.ui.screens.reciters.personal.SectionId
+import com.ghais.ui.screens.reciters.personal.WeeklyRitualRow
+import com.ghais.ui.screens.reciters.personal.orderSections
+import com.ghais.ui.screens.reciters.personal.weekSeed
+import com.ghais.ui.screens.reciters.personal.weeklyPicks
 import com.ghais.player.AudioEngine
+import com.ghais.ui.screens.reciters.deck.DeckEntryCard
+import com.ghais.ui.screens.reciters.deck.DeckDoneStore
+import com.ghais.ui.screens.reciters.deck.isDone
+import com.ghais.ui.screens.reciters.deck.DeckSheet
+import com.ghais.ui.screens.reciters.deck.todayDeck
+import com.ghais.ui.screens.reciters.taste.TasteQuizSheet
+import com.ghais.ui.screens.reciters.taste.TasteStore
+import com.ghais.ui.screens.reciters.today.TopQarisRail
+import com.ghais.ui.screens.reciters.today.HeardEntry
+import com.ghais.ui.screens.reciters.today.VoiceOfDayCard
+import com.ghais.ui.screens.reciters.today.YesterdayMostHeardSection
+import com.ghais.ui.screens.reciters.today.yesterdayTopEntries
+import com.ghais.ui.screens.reciters.today.currentEpochDay
+import com.ghais.ui.screens.reciters.today.voiceOfDay
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirClickable
@@ -99,6 +130,12 @@ class RecitersScreen : Tab {
         // catalog sync instead of only in search. Reactive to the cache.
         val browseReciters = rememberBrowseReciters()
 
+        // Engagement hooks: taste quiz (A1), deck (A4). Refinement filters
+        // live on the search screen; browse here is unfiltered discovery.
+        val taste by TasteStore.taste.collectAsState()
+        var showTasteQuiz by remember { mutableStateOf(!taste.completed) }
+        var deckOpen by remember { mutableStateOf(false) }
+
         // Grouped on the flag-insensitive country key so an admin-created
         // "Saudi Arabia" joins the bundled "Saudi Arabia 🇸🇦" section instead of
         // forming a second, near-identical nation. Nations and the reciters
@@ -120,73 +157,475 @@ class RecitersScreen : Tab {
                 .sortedBy { (label, _) -> reciterCountryKey(label).ifBlank { label.lowercase() } }
         }
 
+        // Browse is unfiltered: collapsed shows top-6 nations by count.
+        var nationsExpanded by remember(browseReciters) { mutableStateOf(false) }
+        val topNations = remember(groups) {
+            groups.sortedByDescending { (_, reciters) -> reciters.size }.take(6)
+        }
+
+        // P-series personalization: signals -> affinities feed every
+        // curated slot below. One collection point; slots remember on it.
+        val signalTick by SignalStore.signals.collectAsState()
+        val affinities = remember(signalTick, browseReciters) {
+            try {
+                ForYou.affinities(browseReciters)
+            } catch (_: Exception) {
+                emptyMap()
+            }
+        }
+        val followedSlugs by FollowStore.followedSlugs.collectAsState()
+        val usageHistory by UserUsageRepository.history.collectAsState()
+        val historySlugs = remember(usageHistory) {
+            usageHistory.map { it.reciterSlug }.toSet()
+        }
+        val shelfEpochDay = remember { currentEpochDay() }
+        val shelfBySlug = remember(browseReciters) {
+            browseReciters.associateBy { it.slug }
+        }
+        // Hoisted: LazyListScope is not @Composable — remember() calls must
+        // live here at Content level; item{} blocks below only render.
+        val shelves = remember(
+            browseReciters, affinities, followedSlugs,
+            historySlugs, shelfEpochDay
+        ) {
+            try {
+                buildShelves(
+                    reciters = browseReciters,
+                    affinities = affinities,
+                    followed = followedSlugs,
+                    history = historySlugs,
+                    epochDay = shelfEpochDay
+                )
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+        val ritualWeek = remember { weekSeed(currentEpochDay()) }
+        val ritual = remember(
+            browseReciters, ritualWeek, affinities,
+            historySlugs, followedSlugs
+        ) {
+            try {
+                weeklyPicks(
+                    reciters = browseReciters,
+                    affinities = affinities,
+                    historySlugs = historySlugs,
+                    followedSlugs = followedSlugs,
+                    weekSeed = ritualWeek
+                )
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+
+        // Fixed editorial top (Spotify Home rule): SEARCH header, DECK
+        // hero, VOICE yesterday-top, CHARTS, then personalized rails,
+        // RITUAL standalone, NATIONS last. Deck-done state only changes
+        // the entry card copy, never the position.
+        val deckDoneDay by DeckDoneStore.doneDay.collectAsState()
+        val orderDay = remember { currentEpochDay() }
+        val deckDoneToday = remember(deckDoneDay, orderDay) {
+            try {
+                isDone(deckDoneDay, orderDay)
+            } catch (_: Exception) {
+                false
+            }
+        }
+        val sectionOrder = remember(
+            followedSlugs, historySlugs, taste.completed
+        ) {
+            try {
+                orderSections(
+                    hasFollows = followedSlugs.isNotEmpty(),
+                    hasHistory = historySlugs.isNotEmpty(),
+                    hasTaste = taste.completed
+                )
+            } catch (_: Exception) {
+                listOf(
+                    SectionId.SEARCH, SectionId.DECK,
+                    SectionId.VOICE_OF_DAY, SectionId.CHARTS,
+                    SectionId.RITUAL, SectionId.NATIONS
+                )
+            }
+        }
+        val yourVoicesShelves = remember(shelves) {
+            shelves.filter { it.id == "your-voices" }
+        }
+        val forYouShelves = remember(shelves) {
+            shelves.filter { it.id != "your-voices" }
+        }
+        // FOR_YOU renders only on real confidence (>3 signals or completed
+        // taste quiz) — history alone isn't enough. orderSections still
+        // decides position; this decides visibility.
+        val forYouConfident = remember(signalTick, taste.completed, historySlugs) {
+            try {
+                ForYou.isPersonalized()
+            } catch (_: Exception) {
+                historySlugs.isNotEmpty() || taste.completed
+            }
+        }
+
+        // Hoisted deck preview: same recipe as the sheet host below, so
+        // the entry card matches the deck that opens. (LazyListScope is
+        // not @Composable — remember() calls live here at Content level.)
+        val deckPreview = remember(
+            browseReciters, followedSlugs, usageHistory, taste, affinities
+        ) {
+            try {
+                todayDeck(
+                    reciters = browseReciters,
+                    taste = taste,
+                    history = historySlugs,
+                    followedSlugs = followedSlugs,
+                    affinities = affinities
+                )
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+        val deckAffinityName = remember(affinities, shelfBySlug, followedSlugs) {
+            try {
+                followedSlugs.firstNotNullOfOrNull { shelfBySlug[it]?.nameEn }
+                    ?: affinities.keys.firstNotNullOfOrNull { shelfBySlug[it]?.nameEn }
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        // Shared play recipe (nation reels + personal shelves + ritual).
+        fun playReciterQueue(reciter: Reciter) {
+            try {
+                SignalStore.recordPlayStarted(reciter.slug)
+            } catch (_: Exception) {
+            }
+            val surahs = QuranDataRepository.getSurahsForReciter(reciter)
+                .filter { reciter.isSurahAvailable(it.id) }
+            val tracks = surahs.map { surah ->
+                TrackItem(
+                    reciterSlug = reciter.slug,
+                    reciterName = reciter.nameEn,
+                    surahId = surah.id,
+                    surahNameEn = surah.nameEn,
+                    surahNameAr = surah.nameAr,
+                    ayahNo = 0,
+                    audioUrl = reciter.getFullSurahUrl(surah.id),
+                    textUthmani = "",
+                    durationMs = surah.ayahsCount * 15_000L
+                )
+            }
+            if (tracks.isNotEmpty()) {
+                AudioEngine.playQueue(tracks, startIndex = 0)
+            }
+        }
+
         NoirScreenRoot {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 112.dp)
             ) {
-                // ---------------------------------------------------------
-                // Editorial header + engraved search
-                // ---------------------------------------------------------
-                item {
-                    NoirRecitersHeader(
-                        totalReciters = browseReciters.size,
-                        nationCount = groups.size
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    NoirRecitersSearch(
-                        onClick = { rootNavigator?.push(ReciterSearchScreen()) }
-                    )
-                    Spacer(Modifier.height(20.dp))
-                }
-
-                if (groups.isEmpty()) {
-                    item {
-                        NoirRecitersEmpty()
-                    }
-                } else {
-                    groups.forEachIndexed { index, (nation, reciters) ->
-                        item(key = "noir_reel_$nation") {
-                            NoirNationReel(
-                                nation = nation,
-                                reciters = reciters,
-                                photoFor = ::photoForSlug,
-                                onSeeAll = { rootNavigator?.push(RegionRecitersScreen(nation)) },
-                                onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) },
-                                onPlayReciter = { reciter ->
-                                    val surahs = QuranDataRepository.getSurahsForReciter(reciter)
-                                        .filter { reciter.isSurahAvailable(it.id) }
-                                    val tracks = surahs.map { surah ->
-                                        TrackItem(
-                                            reciterSlug = reciter.slug,
-                                            reciterName = reciter.nameEn,
-                                            surahId = surah.id,
-                                            surahNameEn = surah.nameEn,
-                                            surahNameAr = surah.nameAr,
-                                            ayahNo = 0,
-                                            audioUrl = reciter.getFullSurahUrl(surah.id),
-                                            textUthmani = "",
-                                            durationMs = surah.ayahsCount * 15_000L
-                                        )
-                                    }
-                                    if (tracks.isNotEmpty()) {
-                                        AudioEngine.playQueue(tracks, startIndex = 0)
-                                    }
-                                }
+                // P4-ordered sections: SEARCH header first, NATIONS last,
+                // everything in between per orderSections(...).
+                sectionOrder.forEach { section ->
+                    when (section) {
+                        SectionId.SEARCH -> item(key = "search_header") {
+                            NoirRecitersHeader(
+                                totalReciters = browseReciters.size,
+                                nationCount = groups.size
                             )
-                            if (index < groups.size - 1) {
-                                Spacer(Modifier.height(20.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(1.dp)
-                                        .background(GhaisNoir.BorderGhost)
+                            Spacer(Modifier.height(16.dp))
+                            NoirRecitersSearch(
+                                onClick = { rootNavigator?.push(ReciterSearchScreen()) }
+                            )
+                            Spacer(Modifier.height(20.dp))
+                        }
+
+                        SectionId.YOUR_VOICES -> if (PersonalFlags.personalShelves) {
+                            yourVoicesShelves.forEach { shelf ->
+                                item(key = "noir_shelf_${shelf.id}") {
+                                    ShelfRow(
+                                        shelf = shelf,
+                                        reciterBySlug = shelfBySlug,
+                                        photoFor = ::photoForSlug,
+                                        followedSlugs = followedSlugs,
+                                        onReciter = { slug ->
+                                            rootNavigator?.push(ReciterProfileScreen(slug))
+                                        },
+                                        onPlayReciter = ::playReciterQueue,
+                                        onToggleFollow = { slug -> FollowStore.toggle(slug) }
+                                    )
+                                    Spacer(Modifier.height(20.dp))
+                                }
+                            }
+                        }
+
+                        SectionId.FOR_YOU -> if (PersonalFlags.personalShelves && forYouConfident) {
+                            forYouShelves.forEach { shelf ->
+                                item(key = "noir_shelf_${shelf.id}") {
+                                    ShelfRow(
+                                        shelf = shelf,
+                                        reciterBySlug = shelfBySlug,
+                                        photoFor = ::photoForSlug,
+                                        followedSlugs = followedSlugs,
+                                        onReciter = { slug ->
+                                            rootNavigator?.push(ReciterProfileScreen(slug))
+                                        },
+                                        onPlayReciter = ::playReciterQueue,
+                                        onToggleFollow = { slug -> FollowStore.toggle(slug) }
+                                    )
+                                    Spacer(Modifier.height(20.dp))
+                                }
+                            }
+                        }
+
+                        // Weekly ritual (P8): standalone section, fresh every
+                        // Monday. Self-hides when its picks are empty.
+                        SectionId.RITUAL -> if (PersonalFlags.weeklyRitual && ritual.isNotEmpty()) {
+                            item(key = "slot_weekly_ritual") {
+                                WeeklyRitualRow(
+                                    reciters = ritual,
+                                    weekSeed = ritualWeek,
+                                    photoFor = ::photoForSlug,
+                                    onOpenReciter = { slug ->
+                                        rootNavigator?.push(ReciterProfileScreen(slug))
+                                    },
+                                    onPlayReciter = ::playReciterQueue,
+                                    isFollowing = { it in followedSlugs },
+                                    onFollowClick = { FollowStore.toggle(it) }
                                 )
                                 Spacer(Modifier.height(20.dp))
                             }
                         }
+
+                        SectionId.DECK -> if (HookFlags.deckEnabled) {
+                            item(key = "slot_deck") {
+                                LaunchedEffect(Unit) {
+                                    try {
+                                        com.ghais.analytics.HookAnalytics.track(
+                                            com.ghais.analytics.HookEvents.Event.DECK_ENTRY_SEEN,
+                                            mapOf(com.ghais.analytics.HookEvents.Prop.SOURCE to "reciters_top"),
+                                        )
+                                    } catch (_: Exception) {
+                                    }
+                                }
+                                DeckEntryCard(
+                                    onOpen = { deckOpen = true },
+                                    preview = deckPreview.take(3),
+                                    totalCount = deckPreview.size,
+                                    affinityLabel = deckAffinityName?.substringBefore(" ")?.takeIf { it.isNotBlank() },
+                                    doneToday = deckDoneToday
+                                )
+                                Spacer(Modifier.height(20.dp))
+                            }
+                        }
+
+                        SectionId.VOICE_OF_DAY -> item(key = "noir_voice_of_day") {
+                            val epochDay = remember { currentEpochDay() }
+                            val voice = remember(browseReciters, epochDay) {
+                                voiceOfDay(browseReciters, epochDay)
+                            }
+                            // Yesterday's most heard (device history); falls
+                            // back to the deterministic voice when empty.
+                            val nowMs = remember {
+                                try {
+                                    kotlin.time.Clock.System.now().toEpochMilliseconds()
+                                } catch (_: Exception) {
+                                    epochDay * 86_400_000L
+                                }
+                            }
+                            val heardEntries = remember(usageHistory, nowMs, browseReciters) {
+                                try {
+                                    yesterdayTopEntries(usageHistory, nowMs, 5)
+                                        ?.mapNotNull { top ->
+                                            val reciter = shelfBySlug[top.slug]
+                                                ?: shelfBySlug[top.slug.trim().lowercase()]
+                                            if (reciter == null) null
+                                            else HeardEntry(
+                                                slug = reciter.slug,
+                                                nameEn = reciter.nameEn,
+                                                plays = top.plays
+                                            )
+                                        }
+                                        ?.takeIf { it.isNotEmpty() }
+                                        ?: emptyList()
+                                } catch (_: Exception) {
+                                    emptyList()
+                                }
+                            }
+                            // Global chart first (every listener, not just
+                            // this device); local yesterday; then the
+                            // deterministic voice. The charts rail below
+                            // triggers the cloud refresh; the snapshot flow
+                            // repaints this section when it lands.
+                            val chartsSnapshot by ChartsRepository.snapshot.collectAsState()
+                            val globalEntries = remember(chartsSnapshot, browseReciters) {
+                                try {
+                                    chartsSnapshot?.topQarisYesterday
+                                        ?.take(5)
+                                        ?.mapNotNull { slug ->
+                                            val reciter = try {
+                                                QuranDataRepository.getBrowseReciterBySlug(slug)
+                                            } catch (_: Exception) {
+                                                null
+                                            } ?: shelfBySlug[slug]
+                                            if (reciter == null) null
+                                            else HeardEntry(
+                                                slug = reciter.slug,
+                                                nameEn = reciter.nameEn,
+                                                plays = null
+                                            )
+                                        }
+                                        ?.takeIf { it.isNotEmpty() }
+                                        ?: emptyList()
+                                } catch (_: Exception) {
+                                    emptyList()
+                                }
+                            }
+                            val shownEntries =
+                                if (globalEntries.isNotEmpty()) globalEntries else heardEntries
+                            val playingTrack by AudioEngine.currentTrack.collectAsState()
+                            val enginePlaying by AudioEngine.isPlaying.collectAsState()
+                            YesterdayMostHeardSection(
+                                entries = shownEntries,
+                                fallbackReciter = voice,
+                                playingSlug = playingTrack?.reciterSlug,
+                                isPlaying = enginePlaying,
+                                onOpenProfile = { slug ->
+                                    rootNavigator?.push(ReciterProfileScreen(slug))
+                                },
+                                onPlay = { slug ->
+                                    val reciter = shelfBySlug[slug] ?: return@YesterdayMostHeardSection
+                                    try {
+                                        com.ghais.analytics.HookAnalytics.track(
+                                            com.ghais.analytics.HookEvents.Event.MOMENT_PLAYED,
+                                            mapOf(
+                                                com.ghais.analytics.HookEvents.Prop.RECITER_SLUG to slug,
+                                                com.ghais.analytics.HookEvents.Prop.SOURCE to "yesterday_top",
+                                            ),
+                                        )
+                                    } catch (_: Exception) {
+                                    }
+                                    playReciterQueue(reciter)
+                                },
+                                onOpenPlayer = { deckOpen = true }
+                            )
+                        }
+
+                        SectionId.CHARTS -> item(key = "noir_top_qaris_rail") {
+                            TopQarisRail(
+                                onReciter = { slug ->
+                                    rootNavigator?.push(ReciterProfileScreen(slug))
+                                }
+                            )
+                            Spacer(Modifier.height(20.dp))
+                        }
+
+                        SectionId.NATIONS -> if (groups.isEmpty()) {
+                            item {
+                                NoirRecitersEmpty()
+                            }
+                        } else {
+                            item(key = "browse_nations_header") {
+                                NoirSectionHeader(
+                                    label = "Browse nations • ${groups.size}",
+                                    actionLabel = if (nationsExpanded) "Show less"
+                                    else "All ${groups.size} nations",
+                                    onAction = { nationsExpanded = !nationsExpanded }
+                                )
+                                Spacer(Modifier.height(12.dp))
+                            }
+                            val visibleGroups = if (nationsExpanded) groups else topNations
+                            visibleGroups.forEachIndexed { index, (nation, reciters) ->
+                                item(key = "noir_reel_$nation") {
+                                    NoirNationReel(
+                                        nation = nation,
+                                        reciters = reciters,
+                                        photoFor = ::photoForSlug,
+                                        onSeeAll = { rootNavigator?.push(RegionRecitersScreen(nation)) },
+                                        onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) },
+                                        onPlayReciter = { reciter ->
+                                            playReciterQueue(reciter)
+                                        }
+                                    )
+                                    if (index < visibleGroups.size - 1) {
+                                        Spacer(Modifier.height(20.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(1.dp)
+                                                .background(GhaisNoir.BorderGhost)
+                                        )
+                                        Spacer(Modifier.height(20.dp))
+                                    }
+                                }
+                            }
+                            if (!nationsExpanded && groups.size > topNations.size) {
+                                item(key = "browse_nations_expander") {
+                                    Spacer(Modifier.height(16.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(GhaisShapes.row)
+                                            .background(GhaisNoir.Fill2)
+                                            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.row)
+                                            .noirClickable { nationsExpanded = true }
+                                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "All ${groups.size} nations",
+                                            color = GhaisNoir.TextPrimary,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
+            }
+
+            // First-visit taste quiz (A1) with cold-start import (P9):
+            // returning users with real history skip the quiz entirely.
+            if (HookFlags.tasteQuizEnabled && showTasteQuiz) {
+                val searchRecents by com.ghais.data.repository.ReciterSearchHistoryStore.recentSlugs.collectAsState()
+                ColdStartGate(
+                    historySlugs = usageHistory.map { it.reciterSlug },
+                    followed = followedSlugs,
+                    searchRecents = searchRecents,
+                    catalog = browseReciters
+                ) { coldStartTaste ->
+                    if (coldStartTaste == null) {
+                        TasteQuizSheet(onDismiss = { showTasteQuiz = false })
+                    } else {
+                        showTasteQuiz = false
+                    }
+                }
+            }
+
+            // Swipe deck host (A4, affinity-aware v2 via P7).
+            if (deckOpen) {
+                val deck = remember(
+                    browseReciters, followedSlugs, usageHistory, taste, affinities
+                ) {
+                    todayDeck(
+                        reciters = browseReciters,
+                        taste = taste,
+                        history = historySlugs,
+                        followedSlugs = followedSlugs,
+                        affinities = affinities
+                    )
+                }
+                DeckSheet(
+                    deck = deck,
+                    taste = taste,
+                    photoFor = ::photoForSlug,
+                    onDismiss = { deckOpen = false },
+                    onOpenProfile = { slug ->
+                        rootNavigator?.push(ReciterProfileScreen(slug))
+                    },
+                    affinities = affinities
+                )
             }
         }
     }

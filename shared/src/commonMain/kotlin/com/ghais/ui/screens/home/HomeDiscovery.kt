@@ -41,6 +41,7 @@ import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.RelatedQaris
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.prettifySlug
+import com.ghais.data.repository.toFullSurahTrackItem
 import com.ghais.domain.model.Reciter
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.ChromePillButton
@@ -423,21 +424,10 @@ fun HomeDiscoverShelf(
  */
 private fun playReciterQueue(reciter: Reciter, openPlayer: () -> Unit) {
     try {
-        val surahs = QuranDataRepository.getSurahsForReciter(reciter)
+        val tracks = QuranDataRepository.getSurahsForReciter(reciter)
             .filter { reciter.isSurahAvailable(it.id) }
-        if (surahs.isEmpty()) return
-        val tracks = surahs.map { surah ->
-            com.ghais.domain.model.TrackItem(
-                reciterSlug = reciter.slug,
-                reciterName = reciter.nameEn,
-                surahId = surah.id,
-                surahNameEn = surah.nameEn,
-                surahNameAr = surah.nameAr,
-                ayahNo = 0,
-                audioUrl = reciter.getFullSurahUrl(surah.id),
-                durationMs = surah.ayahsCount * 15_000L
-            )
-        }
+            .map { it.toFullSurahTrackItem(reciter) }
+        if (tracks.isEmpty()) return
         AudioEngine.playQueue(tracks, startIndex = 0)
         openPlayer()
     } catch (_: Exception) {

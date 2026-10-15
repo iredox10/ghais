@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,8 +31,24 @@ import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.data.auth.AuthRepository
 import com.ghais.data.repository.BroadcastRepository
+import com.ghais.data.repository.KhatmaStore
+import com.ghais.data.repository.OnboardingStore
+import com.ghais.ui.screens.auth.AuthScreen
+import com.ghais.ui.screens.onboarding.OnboardingScreen
+import com.ghais.data.repository.UserUsageRepository
+import com.ghais.data.repository.khatmaIsComplete
+import com.ghais.data.share.ShareSheet
 import com.ghais.data.share.SupportKind
 import com.ghais.data.share.openSupportMail
+import com.ghais.analytics.HookAnalytics
+import com.ghais.analytics.HookEvents
+import com.ghais.flags.HookFlags
+import com.ghais.ui.screens.profile.identity.AchievementStats
+import com.ghais.ui.screens.profile.identity.AchievementsShelf
+import com.ghais.ui.screens.profile.identity.IdentityCard
+import com.ghais.ui.screens.profile.identity.buildIdentityMemberSince
+import com.ghais.ui.screens.profile.identity.listenerTitle
+import com.ghais.ui.screens.profile.identity.unlockedAchievements
 import com.ghais.ui.components.noir.NoirGrainOverlay
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirAmbientGlow
@@ -193,6 +210,71 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
+                // 1b. Listener identity + achievements (hooks A11)
+                // -----------------------------------------------------------------
+                item {
+                    val stats by UserUsageRepository.stats.collectAsState()
+                    val khatmaPlans by KhatmaStore.plans.collectAsState()
+                    val totalMin = stats.totalSecondsListened / 60L
+                    IdentityCard(
+                        displayName = session?.name?.ifBlank { null } ?: userName,
+                        title = listenerTitle(stats.uniqueRecitersCount, totalMin),
+                        memberSince = buildIdentityMemberSince(
+                            firstLaunchMs = 0L,
+                            nowMs = 0L
+                        ),
+                        onClick = { showEditDialog = true }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    if (HookFlags.achievementsEnabled) {
+                        val unlockedIds = remember(totalMin, stats.daysStreak, stats.uniqueRecitersCount, khatmaPlans) {
+                            try {
+                                unlockedAchievements(
+                                    AchievementStats(
+                                        hasListened = totalMin > 0,
+                                        daysStreak = stats.daysStreak,
+                                        uniqueReciters = stats.uniqueRecitersCount,
+                                        khatmaCompleted = khatmaPlans.count { khatmaIsComplete(it) },
+                                        totalMinutes = totalMin
+                                    )
+                                )
+                            } catch (_: Exception) {
+                                emptySet()
+                            }
+                        }
+                        LaunchedEffect(unlockedIds) {
+                            try {
+                                val settings = Settings()
+                                val seen = settings.getString("ghais_ach_seen", "")
+                                    .split(",").filter { it.isNotBlank() }.toSet()
+                                (unlockedIds - seen).forEach { id ->
+                                    HookAnalytics.track(
+                                        HookEvents.Event.ACHIEVEMENT_UNLOCKED,
+                                        mapOf(HookEvents.Prop.ACHIEVEMENT_ID to id),
+                                    )
+                                }
+                                if (unlockedIds != seen) {
+                                    settings.putString("ghais_ach_seen", unlockedIds.joinToString(","))
+                                }
+                            } catch (_: Exception) {
+                            }
+                        }
+                        AchievementsShelf(
+                            unlocked = unlockedIds,
+                            onShare = if (HookFlags.ceremoniesEnabled) { def ->
+                                if (ShareSheet.isAvailable()) {
+                                    ShareSheet.shareText(
+                                        def.title,
+                                        "I unlocked \"${def.title}\" on Ghaith. ${def.desc}"
+                                    )
+                                }
+                            } else null
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(18.dp))
+                }
+
+                // -----------------------------------------------------------------
                 // 2. Recitation schedules
                 // -----------------------------------------------------------------
                 item {
@@ -299,14 +381,40 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 6. Log out (ghost danger row — muted, no red)
+                // 6. Log out (ghost danger row — muted, no red). Guests get a
+                // sign-in row instead: same slot, opposite direction.
                 // -----------------------------------------------------------------
                 item {
                     GlassCardContainer {
-                        com.ghais.ui.screens.profile.NoirLogoutRow(
-                            subtitle = session?.email ?: "Signed in",
-                            onClick = { scope.launch { AuthRepository.signOut() } }
-                        )
+                        if (session != null) {
+                            com.ghais.ui.screens.profile.NoirLogoutRow(
+                                subtitle = session?.email ?: "Signed in",
+                                onClick = { scope.launch { AuthRepository.signOut() } }
+                            )
+                        } else {
+                            com.ghais.ui.screens.profile.NoirLogoutRow(
+                                subtitle = "Sign in to sync",
+                                title = "Sign in",
+                                onClick = {
+                                    rootNavigator?.push(
+                                        AuthScreen(
+                                            onAuthenticated = { isNewAccount ->
+                                                // Signup-only onboarding: fresh
+                                                // accounts get a pushed setup
+                                                // flow; logins just go home.
+                                                if (isNewAccount) {
+                                                    OnboardingStore.restartForNewUser()
+                                                }
+                                                rootNavigator?.pop()
+                                                if (isNewAccount) {
+                                                    rootNavigator?.push(OnboardingScreen)
+                                                }
+                                            }
+                                        )
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
             }

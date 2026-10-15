@@ -120,6 +120,20 @@ class DailyMixTest {
     }
 
     @Test
+    fun testSharedHelperMatchesBuildShape() {
+        // Guards the shared toFullSurahTrackItem helper against drift from
+        // DailyMix.build: same reciter+surah must yield identical tracks.
+        val slugs = largePoolSlugs()
+        val mix = DailyMix.build(slugs, emptySet(), daySeed = 5L, count = 1)
+        assertTrue(mix.isNotEmpty())
+        val built = mix.first()
+        val reciter = QuranDataRepository.getBrowseReciterBySlug(built.reciterSlug)
+            ?: QuranDataRepository.getReciterBySlug(built.reciterSlug)
+        val surah = QuranDataRepository.getSurahById(built.surahId)!!
+        assertEquals(built, surah.toFullSurahTrackItem(reciter))
+    }
+
+    @Test
     fun testTrackShapeIsFullSurahPlayable() {
         val slugs = largePoolSlugs()
         val mix = DailyMix.build(slugs, emptySet(), daySeed = 5L, count = 5)

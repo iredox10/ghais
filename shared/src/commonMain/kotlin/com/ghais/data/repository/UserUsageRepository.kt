@@ -1028,6 +1028,11 @@ object UserUsageRepository {
                 if (isPlaying) {
                     lastRecordedTimeMs = currentTimeMs()
                     ensureStreakUpdatedForToday()
+                    // Devotion streak (hooks): a day with real listening.
+                    try {
+                        com.ghais.devotion.DevotionStreak.recordDevotionDay()
+                    } catch (_: Exception) {
+                    }
                 } else {
                     // Playback stopped: end the history session so a later
                     // resume of the same track stamps a fresh start (once)

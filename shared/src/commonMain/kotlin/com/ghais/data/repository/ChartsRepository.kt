@@ -76,6 +76,10 @@ object ChartsRepository {
         val topQaris30d: List<String> = emptyList(),
         val trending: List<String> = emptyList(),
         val generatedAt: Long = 0L,
+        /** Global yesterday window (all listeners). Empty until the
+         * aggregate-charts deploy that publishes it; missing keys decode
+         * to empty so old caches and old server payloads stay compatible. */
+        val topQarisYesterday: List<String> = emptyList(),
     )
 
     private val _snapshot = MutableStateFlow<ChartsSnapshot?>(null)
@@ -240,6 +244,7 @@ object ChartsRepository {
         ChartsSnapshot(
             topQaris7d = slugList(obj, "topQaris7d", "top_qaris_7d"),
             topQaris30d = slugList(obj, "topQaris30d", "top_qaris_30d"),
+            topQarisYesterday = slugList(obj, "topQarisYesterday", "top_qaris_yesterday"),
             trending = slugList(obj, "trending"),
             generatedAt = parseGeneratedAt(obj),
         )
