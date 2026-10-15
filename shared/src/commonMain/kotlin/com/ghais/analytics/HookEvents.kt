@@ -13,6 +13,7 @@ package com.ghais.analytics
 object HookEvents {
     /** Canonical hook event names (snake_case, stable across client/server). */
     object Event {
+        const val DECK_ENTRY_SEEN = "deck_entry_seen"
         const val PREVIEW_PLAYED = "preview_played"
         const val PREVIEW_FOLLOWED = "preview_followed"
         const val DECK_COMPLETED = "deck_completed"

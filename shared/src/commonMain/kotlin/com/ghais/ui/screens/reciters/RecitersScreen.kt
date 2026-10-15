@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -263,6 +264,33 @@ class RecitersScreen : Tab {
             }
         }
 
+        // Hoisted deck preview: same recipe as the sheet host below, so
+        // the entry card matches the deck that opens. (LazyListScope is
+        // not @Composable — remember() calls live here at Content level.)
+        val deckPreview = remember(
+            browseReciters, followedSlugs, usageHistory, taste, affinities
+        ) {
+            try {
+                todayDeck(
+                    reciters = browseReciters,
+                    taste = taste,
+                    history = historySlugs,
+                    followedSlugs = followedSlugs,
+                    affinities = affinities
+                )
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+        val deckAffinityName = remember(affinities, shelfBySlug, followedSlugs) {
+            try {
+                followedSlugs.firstNotNullOfOrNull { shelfBySlug[it]?.nameEn }
+                    ?: affinities.keys.firstNotNullOfOrNull { shelfBySlug[it]?.nameEn }
+            } catch (_: Exception) {
+                null
+            }
+        }
+
         // Shared play recipe (nation reels + personal shelves + ritual).
         fun playReciterQueue(reciter: Reciter) {
             try {
@@ -369,7 +397,22 @@ class RecitersScreen : Tab {
 
                         SectionId.DECK -> if (HookFlags.deckEnabled) {
                             item(key = "slot_deck") {
-                                DeckEntryCard(onOpen = { deckOpen = true })
+                                LaunchedEffect(Unit) {
+                                    try {
+                                        com.ghais.analytics.HookAnalytics.track(
+                                            com.ghais.analytics.HookEvents.Event.DECK_ENTRY_SEEN,
+                                            mapOf(com.ghais.analytics.HookEvents.Prop.SOURCE to "reciters_top"),
+                                        )
+                                    } catch (_: Exception) {
+                                    }
+                                }
+                                DeckEntryCard(
+                                    onOpen = { deckOpen = true },
+                                    preview = deckPreview.take(3),
+                                    totalCount = deckPreview.size,
+                                    affinityLabel = deckAffinityName?.substringBefore(" ")?.takeIf { it.isNotBlank() },
+                                    doneToday = deckDoneToday
+                                )
                                 Spacer(Modifier.height(20.dp))
                             }
                         }
