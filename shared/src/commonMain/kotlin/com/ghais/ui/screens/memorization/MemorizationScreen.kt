@@ -52,6 +52,9 @@ import com.ghais.data.seed.EveryAyahReciters
 import com.ghais.data.repository.HifzMasteryStore
 import com.ghais.flags.HookFlags
 import com.ghais.hifz.quests.QuestRow
+import com.ghais.hifz.quests.HifzXpBadge
+import com.ghais.hifz.quests.HifzXpStore
+import com.ghais.hifz.quests.hifzXpLevel
 import com.ghais.hifz.quests.questsFor
 import kotlin.time.Clock
 import com.ghais.player.AudioEngine
@@ -134,6 +137,12 @@ object MemorizationScreen : Tab {
                         val quests = remember(mastery, reviewed, goal, epochDay) {
                             questsFor(mastery, reviewed, goal, epochDay)
                         }
+                        val totalXp by HifzXpStore.totalXp.collectAsState()
+                        HifzXpBadge(
+                            level = hifzXpLevel(totalXp),
+                            totalXp = totalXp
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
                         com.ghais.ui.components.noir.NoirSectionHeader(label = "Today's quests")
                         quests.forEach { quest ->
                             QuestRow(quest = quest)

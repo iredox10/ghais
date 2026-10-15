@@ -173,3 +173,44 @@ object HifzXpStore {
     private fun currentEpochDay(): Long =
         Clock.System.now().toEpochMilliseconds() / 86_400_000L
 }
+
+/**
+ * Hifz XP levels (mirrors library CuratorLevels): lifetime-total tiers.
+ * Thresholds scale to the rate card — a full short surah (~20/ayah +
+ * 200 bonus) lands around SILVER, a Juz' of steady review reaches GOLD.
+ */
+enum class HifzXpLevel(val title: String, val minXp: Int) {
+    BRONZE("Hifz I", 0),
+    SILVER("Hifz II", 200),
+    GOLD("Hifz III", 600),
+    PLATINUM("Hifz IV", 1200),
+}
+
+/** Level for [totalXp] (negatives clamp to BRONZE). Never throws. */
+fun hifzXpLevel(totalXp: Int): HifzXpLevel = try {
+    HifzXpLevel.entries
+        .filter { totalXp >= it.minXp }
+        .maxByOrNull { it.minXp }
+        ?: HifzXpLevel.BRONZE
+} catch (_: Exception) {
+    HifzXpLevel.BRONZE
+}
+
+/** Next level above [totalXp], or null at cap. Never throws. */
+fun nextHifzXpLevel(totalXp: Int): HifzXpLevel? = try {
+    HifzXpLevel.entries
+        .filter { it.minXp > totalXp }
+        .minByOrNull { it.minXp }
+} catch (_: Exception) {
+    null
+}
+
+/** Fraction toward the next level (1f at cap / on failure). Never throws. */
+fun hifzXpProgress(totalXp: Int): Float = try {
+    val level = hifzXpLevel(totalXp)
+    val next = nextHifzXpLevel(totalXp) ?: return 1f
+    val span = (next.minXp - level.minXp).coerceAtLeast(1)
+    ((totalXp - level.minXp).toFloat() / span).coerceIn(0f, 1f)
+} catch (_: Exception) {
+    1f
+}
