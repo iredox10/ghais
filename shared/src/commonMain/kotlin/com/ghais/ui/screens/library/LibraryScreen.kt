@@ -76,6 +76,8 @@ import com.ghais.data.repository.UserPlaylists
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.toTrackItems
 import com.ghais.data.sync.SyncEngine
+import com.ghais.analytics.HookAnalytics
+import com.ghais.analytics.HookEvents
 import com.ghais.flags.HookFlags
 import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
@@ -272,6 +274,10 @@ object LibraryScreen : Tab {
                                     if (track != null) {
                                         AudioEngine.playQueue(listOf(track), startIndex = 0)
                                         rootNavigator?.push(NowPlayingScreen())
+                                        HookAnalytics.track(
+                                            HookEvents.Event.RESURRECTION_PLAYED,
+                                            mapOf(HookEvents.Prop.SOURCE to "resurrection"),
+                                        )
                                     }
                                 },
                                 resolveLabel = { labelById[it] ?: it }

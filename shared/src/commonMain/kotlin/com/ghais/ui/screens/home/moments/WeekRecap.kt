@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -16,6 +17,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.UserUsageRepository
+import com.ghais.analytics.HookAnalytics
+import com.ghais.analytics.HookEvents
 import com.ghais.ui.components.noir.NoirHeroCard
 import com.ghais.ui.theme.GhaisNoir
 
@@ -230,6 +233,15 @@ fun WeekRecapShelf(
     modifier: Modifier = Modifier,
 ) {
     if (!shouldShowRecap(todayDow)) return
+    LaunchedEffect(todayDow) {
+        try {
+            HookAnalytics.track(
+                HookEvents.Event.RECAP_VIEWED,
+                mapOf(HookEvents.Prop.SOURCE to "monday_recap"),
+            )
+        } catch (_: Exception) {
+        }
+    }
     val daily by UserUsageRepository.dailySeconds.collectAsState()
     val stats by UserUsageRepository.stats.collectAsState()
     val recap = remember(daily, newVoices, streak, stats.daysStreak) {

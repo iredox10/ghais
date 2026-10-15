@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +37,8 @@ import com.ghais.data.repository.khatmaIsComplete
 import com.ghais.data.share.ShareSheet
 import com.ghais.data.share.SupportKind
 import com.ghais.data.share.openSupportMail
+import com.ghais.analytics.HookAnalytics
+import com.ghais.analytics.HookEvents
 import com.ghais.flags.HookFlags
 import com.ghais.ui.screens.profile.identity.AchievementStats
 import com.ghais.ui.screens.profile.identity.AchievementsShelf
@@ -221,16 +224,40 @@ object ProfileScreen : Tab {
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     if (HookFlags.achievementsEnabled) {
-                        AchievementsShelf(
-                            unlocked = unlockedAchievements(
-                                AchievementStats(
-                                    hasListened = totalMin > 0,
-                                    daysStreak = stats.daysStreak,
-                                    uniqueReciters = stats.uniqueRecitersCount,
-                                    khatmaCompleted = khatmaPlans.count { khatmaIsComplete(it) },
-                                    totalMinutes = totalMin
+                        val unlockedIds = remember(totalMin, stats.daysStreak, stats.uniqueRecitersCount, khatmaPlans) {
+                            try {
+                                unlockedAchievements(
+                                    AchievementStats(
+                                        hasListened = totalMin > 0,
+                                        daysStreak = stats.daysStreak,
+                                        uniqueReciters = stats.uniqueRecitersCount,
+                                        khatmaCompleted = khatmaPlans.count { khatmaIsComplete(it) },
+                                        totalMinutes = totalMin
+                                    )
                                 )
-                            ),
+                            } catch (_: Exception) {
+                                emptySet()
+                            }
+                        }
+                        LaunchedEffect(unlockedIds) {
+                            try {
+                                val settings = Settings()
+                                val seen = settings.getString("ghais_ach_seen", "")
+                                    .split(",").filter { it.isNotBlank() }.toSet()
+                                (unlockedIds - seen).forEach { id ->
+                                    HookAnalytics.track(
+                                        HookEvents.Event.ACHIEVEMENT_UNLOCKED,
+                                        mapOf(HookEvents.Prop.ACHIEVEMENT_ID to id),
+                                    )
+                                }
+                                if (unlockedIds != seen) {
+                                    settings.putString("ghais_ach_seen", unlockedIds.joinToString(","))
+                                }
+                            } catch (_: Exception) {
+                            }
+                        }
+                        AchievementsShelf(
+                            unlocked = unlockedIds,
                             onShare = if (HookFlags.ceremoniesEnabled) { def ->
                                 if (ShareSheet.isAvailable()) {
                                     ShareSheet.shareText(

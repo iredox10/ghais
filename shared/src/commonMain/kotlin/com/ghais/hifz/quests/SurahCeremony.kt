@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.ghais.data.share.ShareSheet
+import com.ghais.analytics.HookAnalytics
+import com.ghais.analytics.HookEvents
 import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.theme.GhaisNoir
@@ -73,6 +75,10 @@ fun SurahCeremonyDialog(
                     ShareSheet.shareText(
                         title = "Ghaith — Surah complete",
                         text = cardText,
+                    )
+                    HookAnalytics.track(
+                        HookEvents.Event.CEREMONY_SHARED,
+                        mapOf(HookEvents.Prop.SOURCE to "surah_ceremony"),
                     )
                 },
             )

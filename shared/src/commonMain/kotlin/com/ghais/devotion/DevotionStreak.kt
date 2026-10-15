@@ -1,6 +1,8 @@
 package com.ghais.devotion
 
 import com.russhwolf.settings.Settings
+import com.ghais.analytics.HookAnalytics
+import com.ghais.analytics.HookEvents
 import kotlin.time.Clock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -279,12 +281,17 @@ object DevotionStreak {
     /** Marks [days] as celebrated so the dialog shows once per milestone. */
     fun markMilestoneCelebrated(days: Int) {
         if (days !in DEVOTION_MILESTONES) return
+        if (_celebratedMilestones.value.contains(days)) return
         val updated = _celebratedMilestones.value + days
         _celebratedMilestones.value = updated
         try {
             settings.putString(scopedKey(KEY_MILESTONES), updated.sorted().joinToString(","))
         } catch (_: Exception) {
         }
+        HookAnalytics.track(
+            HookEvents.Event.STREAK_MILESTONE,
+            mapOf(HookEvents.Prop.STREAK_DAYS to days.toString()),
+        )
     }
 
     /** True while a broken streak is being gently restored. */

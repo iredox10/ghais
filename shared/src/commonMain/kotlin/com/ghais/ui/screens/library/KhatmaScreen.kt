@@ -78,6 +78,8 @@ import com.ghais.data.repository.khatmaRetreatOrFirst
 import com.ghais.data.repository.KhatmaPortion
 import com.ghais.data.seed.PageJuzIndex
 import com.ghais.data.share.ShareSheet
+import com.ghais.analytics.HookAnalytics
+import com.ghais.analytics.HookEvents
 import com.ghais.flags.HookFlags
 import com.ghais.domain.model.KhatmaPlan
 import com.ghais.domain.model.TrackItem
@@ -290,6 +292,15 @@ object KhatmaScreen : Screen {
                                 // plan id or completion flips.
                                 LaunchedEffect(plan.id, complete) {
                                     if (complete) showCertificate = true
+                                }
+                                LaunchedEffect(plan.id, pace) {
+                                    try {
+                                        HookAnalytics.track(
+                                            HookEvents.Event.KHATMA_PACE_VIEWED,
+                                            mapOf(HookEvents.Prop.SOURCE to "khatma_pace"),
+                                        )
+                                    } catch (_: Exception) {
+                                    }
                                 }
 
                                 NoirHeroCard(modifier = Modifier.fillMaxWidth()) {

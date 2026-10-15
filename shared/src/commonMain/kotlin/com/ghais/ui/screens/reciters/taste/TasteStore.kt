@@ -1,6 +1,8 @@
 package com.ghais.ui.screens.reciters.taste
 
 import com.russhwolf.settings.Settings
+import com.ghais.analytics.HookAnalytics
+import com.ghais.analytics.HookEvents
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -90,6 +92,10 @@ object TasteStore {
     fun markCompleted() {
         _taste.update { it.copy(completed = true) }
         save()
+        HookAnalytics.track(
+            HookEvents.Event.TASTE_COMPLETED,
+            mapOf(HookEvents.Prop.SOURCE to "taste_quiz"),
+        )
     }
 
     /** Full replace (e.g. restoring a quiz answer set in one shot). */

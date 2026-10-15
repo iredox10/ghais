@@ -42,6 +42,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.FollowStore
+import com.ghais.analytics.HookAnalytics
+import com.ghais.analytics.HookEvents
 import com.ghais.domain.model.Reciter
 import com.ghais.ui.screens.reciters.taste.TasteProfile
 import com.ghais.ui.components.noir.ChromePillButton
@@ -91,6 +93,10 @@ fun DeckSheet(
                 DeckDoneStore.markDone(todayEpochDay())
             } catch (_: Exception) {
             }
+            HookAnalytics.track(
+                HookEvents.Event.DECK_COMPLETED,
+                mapOf(HookEvents.Prop.SOURCE to "discovery_deck"),
+            )
         }
     }
 

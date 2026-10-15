@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +52,8 @@ import com.ghais.data.seed.EveryAyahReciter
 import com.ghais.data.seed.EveryAyahReciters
 import com.ghais.data.repository.HifzMasteryStore
 import com.ghais.flags.HookFlags
+import com.ghais.analytics.HookAnalytics
+import com.ghais.analytics.HookEvents
 import com.ghais.hifz.quests.QuestRow
 import com.ghais.hifz.quests.HifzXpBadge
 import com.ghais.hifz.quests.HifzXpStore
@@ -136,6 +139,20 @@ object MemorizationScreen : Tab {
                         val epochDay = Clock.System.now().toEpochMilliseconds() / 86_400_000L
                         val quests = remember(mastery, reviewed, goal, epochDay) {
                             questsFor(mastery, reviewed, goal, epochDay)
+                        }
+                        var seenQuests by remember(epochDay) { mutableStateOf(emptySet<String>()) }
+                        LaunchedEffect(quests) {
+                            try {
+                                val doneIds = quests.filter { it.done }.map { it.id }.toSet()
+                                (doneIds - seenQuests).forEach { id ->
+                                    HookAnalytics.track(
+                                        HookEvents.Event.QUEST_DONE,
+                                        mapOf(HookEvents.Prop.QUEST_ID to id),
+                                    )
+                                }
+                                seenQuests = doneIds
+                            } catch (_: Exception) {
+                            }
                         }
                         val totalXp by HifzXpStore.totalXp.collectAsState()
                         HifzXpBadge(
