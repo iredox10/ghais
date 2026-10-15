@@ -10,6 +10,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import com.ghais.data.repository.RecitationSchedule
+import com.ghais.notify.channelForScheduleId
+import com.ghais.notify.copyFor
 import java.util.Locale
 
 /**
@@ -49,9 +51,16 @@ object ScheduleStartNotifier {
                 Log.w(TAG, "time format failed for ${schedule.id}", e)
                 "--:--"
             }
+            // Doctrine channels resolve their gentle per-channel copy; user
+            // schedules keep the legacy fixed words.
+            val copy = try {
+                channelForScheduleId(schedule.id)?.let { copyFor(it) }
+            } catch (_: Exception) {
+                null
+            }
             val builder = Notification.Builder(context, CHANNEL_ID)
-                .setContentTitle("Recitation scheduled")
-                .setContentText("Your recitation is set for $time — open to review")
+                .setContentTitle(copy?.title ?: "Recitation scheduled")
+                .setContentText(if (copy != null) "${copy.body} ($time)" else "Your recitation is set for $time — open to review")
                 .setSmallIcon(R.drawable.ghaith_mark)
                 .setAutoCancel(true)
             launchIntent(context, schedule.id.hashCode())?.let { builder.setContentIntent(it) }

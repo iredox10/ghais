@@ -153,6 +153,55 @@ fun mayFireToday(
 fun channelScheduleId(channel: String): String = "notify-$channel"
 
 /**
+ * Inverse of [channelScheduleId]: the doctrine channel for a schedule id,
+ * or null for user schedules (`sch-*`) and legacy ids. Pure, never throws.
+ */
+fun channelForScheduleId(scheduleId: String): String? = try {
+    val prefix = "notify-"
+    if (!scheduleId.startsWith(prefix)) return null
+    val channel = scheduleId.removePrefix(prefix)
+    if (channel in NotifyChannel.all) channel else null
+} catch (_: Exception) {
+    null
+}
+
+/**
+ * Habitual-hour helpers: histogram over 0..23 open-hours (no clock/TZ —
+ * callers supply hours). [bestHour] max-count wins, ties go earliest,
+ * empty reads null. [autoHour] falls back to [defaultHour] (After-Fajr).
+ * Pure, never throws.
+ */
+fun bestHour(hours: List<Int>): Int? = try {
+    if (hours.isEmpty()) return null
+    val counts = IntArray(24)
+    hours.forEach { h -> if (h in 0..23) counts[h]++ }
+    var best = -1
+    for (h in 0..23) {
+        if (counts[h] > 0 && (best < 0 || counts[h] > counts[best])) best = h
+    }
+    if (best < 0) null else best
+} catch (_: Exception) {
+    null
+}
+
+fun autoHour(hours: List<Int>, defaultHour: Int = 5): Int = try {
+    bestHour(hours) ?: defaultHour.coerceIn(0, 23)
+} catch (_: Exception) {
+    5
+}
+
+/**
+ * Streak-at-risk predicate: a non-zero streak whose last active day is
+ * before today needs today's listen. Same-day semantics as
+ * DevotionStreak.evaluateStreak (SAME_DAY = safe). Pure, never throws.
+ */
+fun isStreakAtRisk(lastActiveEpochDay: Long, todayEpochDay: Long, devotionDays: Int): Boolean = try {
+    devotionDays > 0 && todayEpochDay > lastActiveEpochDay
+} catch (_: Exception) {
+    false
+}
+
+/**
  * Thin scheduler contract. Platform wiring lives in the expect/actual
  * [NotifyScheduler]; app code depends only on this interface.
  */
