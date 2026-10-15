@@ -60,6 +60,15 @@ import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.TrackItem
 import com.ghais.flags.HookFlags
+import com.ghais.personal.ForYou
+import com.ghais.personal.PersonalFlags
+import com.ghais.personal.ShelfRow
+import com.ghais.personal.SignalStore
+import com.ghais.personal.buildShelves
+import com.ghais.ui.screens.reciters.personal.ColdStartGate
+import com.ghais.ui.screens.reciters.personal.WeeklyRitualRow
+import com.ghais.ui.screens.reciters.personal.weekSeed
+import com.ghais.ui.screens.reciters.personal.weeklyPicks
 import com.ghais.player.AudioEngine
 import com.ghais.ui.screens.reciters.deck.DeckEntryCard
 import com.ghais.ui.screens.reciters.deck.DeckSheet
@@ -145,6 +154,95 @@ class RecitersScreen : Tab {
                 .sortedBy { (label, _) -> reciterCountryKey(label).ifBlank { label.lowercase() } }
         }
 
+        // P5 declutter: collapsed browse shows top-6 nations by reciter count.
+        // Expanded shows the full alphabetical wall. Reset on filter change
+        // so a narrowed filter never leaves the section stuck open/empty.
+        var nationsExpanded by remember(filteredReciters) { mutableStateOf(false) }
+        val topNations = remember(groups) {
+            groups.sortedByDescending { (_, reciters) -> reciters.size }.take(6)
+        }
+
+        // P-series personalization: signals -> affinities feed every
+        // curated slot below. One collection point; slots remember on it.
+        val signalTick by SignalStore.signals.collectAsState()
+        val affinities = remember(signalTick, browseReciters) {
+            try {
+                ForYou.affinities(browseReciters)
+            } catch (_: Exception) {
+                emptyMap()
+            }
+        }
+        val followedSlugs by FollowStore.followedSlugs.collectAsState()
+        val usageHistory by UserUsageRepository.history.collectAsState()
+        val historySlugs = remember(usageHistory) {
+            usageHistory.map { it.reciterSlug }.toSet()
+        }
+        val shelfEpochDay = remember { currentEpochDay() }
+        val shelfBySlug = remember(browseReciters) {
+            browseReciters.associateBy { it.slug }
+        }
+        // Hoisted: LazyListScope is not @Composable — remember() calls must
+        // live here at Content level; item{} blocks below only render.
+        val shelves = remember(
+            browseReciters, affinities, followedSlugs,
+            historySlugs, shelfEpochDay
+        ) {
+            try {
+                buildShelves(
+                    reciters = browseReciters,
+                    affinities = affinities,
+                    followed = followedSlugs,
+                    history = historySlugs,
+                    epochDay = shelfEpochDay
+                )
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+        val ritualWeek = remember { weekSeed(currentEpochDay()) }
+        val ritual = remember(
+            browseReciters, ritualWeek, affinities,
+            historySlugs, followedSlugs
+        ) {
+            try {
+                weeklyPicks(
+                    reciters = browseReciters,
+                    affinities = affinities,
+                    historySlugs = historySlugs,
+                    followedSlugs = followedSlugs,
+                    weekSeed = ritualWeek
+                )
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+
+        // Shared play recipe (nation reels + personal shelves + ritual).
+        fun playReciterQueue(reciter: Reciter) {
+            try {
+                SignalStore.recordPlayStarted(reciter.slug)
+            } catch (_: Exception) {
+            }
+            val surahs = QuranDataRepository.getSurahsForReciter(reciter)
+                .filter { reciter.isSurahAvailable(it.id) }
+            val tracks = surahs.map { surah ->
+                TrackItem(
+                    reciterSlug = reciter.slug,
+                    reciterName = reciter.nameEn,
+                    surahId = surah.id,
+                    surahNameEn = surah.nameEn,
+                    surahNameAr = surah.nameAr,
+                    ayahNo = 0,
+                    audioUrl = reciter.getFullSurahUrl(surah.id),
+                    textUthmani = "",
+                    durationMs = surah.ayahsCount * 15_000L
+                )
+            }
+            if (tracks.isNotEmpty()) {
+                AudioEngine.playQueue(tracks, startIndex = 0)
+            }
+        }
+
         NoirScreenRoot {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -165,17 +263,62 @@ class RecitersScreen : Tab {
                     Spacer(Modifier.height(20.dp))
                 }
 
-                // Taste-axis filters (A2) — narrow the reels below.
-                item {
-                    FilterChipsRow(
-                        reciters = browseReciters,
-                        state = filterState,
-                        onStateChange = { filterState = it }
-                    )
-                    Spacer(Modifier.height(16.dp))
+                // ---------------------------------------------------------
+                // P5 static section order (P4 wiring left to coordinator):
+                // search, your-voices-slot, for-you-slot, deck, voice,
+                // charts, filters, browse-nations.
+                // P4 contract (NOT implemented here): shared/.../personal/
+                // SectionOrder.kt -> orderSections(...) returns order.
+                // ---------------------------------------------------------
+
+                // SLOT:YOUR_VOICES + SLOT:FOR_YOU — personalized shelves
+                // (P3) with why-titles, driven by per-user affinities.
+                // Cold users see nothing here (shelves self-hide when empty).
+                if (PersonalFlags.personalShelves) {
+                    shelves.forEach { shelf ->
+                        item(key = "noir_shelf_${shelf.id}") {
+                            ShelfRow(
+                                shelf = shelf,
+                                reciterBySlug = shelfBySlug,
+                                photoFor = ::photoForSlug,
+                                followedSlugs = followedSlugs,
+                                onReciter = { slug ->
+                                    rootNavigator?.push(ReciterProfileScreen(slug))
+                                },
+                                onPlayReciter = ::playReciterQueue,
+                                onToggleFollow = { slug -> FollowStore.toggle(slug) }
+                            )
+                            Spacer(Modifier.height(20.dp))
+                        }
+                    }
+                    // Weekly ritual (P8): fresh-every-Monday picks.
+                    if (PersonalFlags.weeklyRitual) {
+                        item(key = "slot_weekly_ritual") {
+                            WeeklyRitualRow(
+                                reciters = ritual,
+                                weekSeed = ritualWeek,
+                                photoFor = ::photoForSlug,
+                                onOpenReciter = { slug ->
+                                    rootNavigator?.push(ReciterProfileScreen(slug))
+                                },
+                                onPlayReciter = ::playReciterQueue,
+                                isFollowing = { it in followedSlugs },
+                                onFollowClick = { FollowStore.toggle(it) }
+                            )
+                            if (ritual.isNotEmpty()) Spacer(Modifier.height(20.dp))
+                        }
+                    }
                 }
 
-                // Voice of the day + weekly charts (A6).
+                // SLOT:DECK — "Today's voices" swipe deck entry (A4, kept).
+                if (HookFlags.deckEnabled) {
+                    item(key = "slot_deck") {
+                        DeckEntryCard(onOpen = { deckOpen = true })
+                        Spacer(Modifier.height(20.dp))
+                    }
+                }
+
+                // SLOT:VOICE — Voice of the day (A6, kept).
                 item(key = "noir_voice_of_day") {
                     val epochDay = remember { currentEpochDay() }
                     val voice = remember(browseReciters, epochDay) {
@@ -192,28 +335,48 @@ class RecitersScreen : Tab {
                         Spacer(Modifier.height(20.dp))
                     }
                 }
+
+                // SLOT:CHARTS — weekly charts rail (A6, kept).
                 item(key = "noir_top_qaris_rail") {
                     TopQarisRail(
                         onReciter = { slug ->
                             rootNavigator?.push(ReciterProfileScreen(slug))
                         }
                     )
+                    Spacer(Modifier.height(20.dp))
                 }
 
-                // "Today's voices" swipe deck entry (A4).
-                if (HookFlags.deckEnabled) {
-                    item {
-                        DeckEntryCard(onOpen = { deckOpen = true })
-                        Spacer(Modifier.height(20.dp))
-                    }
+                // Taste-axis filters (A2) — narrow the browse-nations reels below.
+                item(key = "reciter_filters") {
+                    FilterChipsRow(
+                        reciters = browseReciters,
+                        state = filterState,
+                        onStateChange = { filterState = it }
+                    )
+                    Spacer(Modifier.height(16.dp))
                 }
 
+                // ---------------------------------------------------------
+                // Browse nations: ONE tidy area replacing the 40-reel wall.
+                // Collapsed = top-6 nations by reciter count + expander.
+                // Expanded = all reels (existing NoirNationReel code, wrapped).
+                // ---------------------------------------------------------
                 if (groups.isEmpty()) {
                     item {
                         NoirRecitersEmpty()
                     }
                 } else {
-                    groups.forEachIndexed { index, (nation, reciters) ->
+                    item(key = "browse_nations_header") {
+                        NoirSectionHeader(
+                            label = "Browse nations • ${groups.size}",
+                            actionLabel = if (nationsExpanded) "Show less"
+                            else "All ${groups.size} nations",
+                            onAction = { nationsExpanded = !nationsExpanded }
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
+                    val visibleGroups = if (nationsExpanded) groups else topNations
+                    visibleGroups.forEachIndexed { index, (nation, reciters) ->
                         item(key = "noir_reel_$nation") {
                             NoirNationReel(
                                 nation = nation,
@@ -222,27 +385,10 @@ class RecitersScreen : Tab {
                                 onSeeAll = { rootNavigator?.push(RegionRecitersScreen(nation)) },
                                 onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) },
                                 onPlayReciter = { reciter ->
-                                    val surahs = QuranDataRepository.getSurahsForReciter(reciter)
-                                        .filter { reciter.isSurahAvailable(it.id) }
-                                    val tracks = surahs.map { surah ->
-                                        TrackItem(
-                                            reciterSlug = reciter.slug,
-                                            reciterName = reciter.nameEn,
-                                            surahId = surah.id,
-                                            surahNameEn = surah.nameEn,
-                                            surahNameAr = surah.nameAr,
-                                            ayahNo = 0,
-                                            audioUrl = reciter.getFullSurahUrl(surah.id),
-                                            textUthmani = "",
-                                            durationMs = surah.ayahsCount * 15_000L
-                                        )
-                                    }
-                                    if (tracks.isNotEmpty()) {
-                                        AudioEngine.playQueue(tracks, startIndex = 0)
-                                    }
+                                    playReciterQueue(reciter)
                                 }
                             )
-                            if (index < groups.size - 1) {
+                            if (index < visibleGroups.size - 1) {
                                 Spacer(Modifier.height(20.dp))
                                 Box(
                                     modifier = Modifier
@@ -254,24 +400,60 @@ class RecitersScreen : Tab {
                             }
                         }
                     }
+                    if (!nationsExpanded && groups.size > topNations.size) {
+                        item(key = "browse_nations_expander") {
+                            Spacer(Modifier.height(16.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(GhaisShapes.row)
+                                    .background(GhaisNoir.Fill2)
+                                    .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.row)
+                                    .noirClickable { nationsExpanded = true }
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "All ${groups.size} nations",
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
-            // First-visit taste quiz (A1) — nag-once per launch until done.
-            if (HookFlags.tasteQuizEnabled && showTasteQuiz && !taste.completed) {
-                TasteQuizSheet(onDismiss = { showTasteQuiz = false })
+            // First-visit taste quiz (A1) with cold-start import (P9):
+            // returning users with real history skip the quiz entirely.
+            if (HookFlags.tasteQuizEnabled && showTasteQuiz) {
+                val searchRecents by com.ghais.data.repository.ReciterSearchHistoryStore.recentSlugs.collectAsState()
+                ColdStartGate(
+                    historySlugs = usageHistory.map { it.reciterSlug },
+                    followed = followedSlugs,
+                    searchRecents = searchRecents,
+                    catalog = browseReciters
+                ) { coldStartTaste ->
+                    if (coldStartTaste == null) {
+                        TasteQuizSheet(onDismiss = { showTasteQuiz = false })
+                    } else {
+                        showTasteQuiz = false
+                    }
+                }
             }
 
-            // Swipe deck host (A4).
+            // Swipe deck host (A4, affinity-aware v2 via P7).
             if (deckOpen) {
-                val followedSlugs by FollowStore.followedSlugs.collectAsState()
-                val history by UserUsageRepository.history.collectAsState()
-                val deck = remember(browseReciters, followedSlugs, history, taste) {
+                val deck = remember(
+                    browseReciters, followedSlugs, usageHistory, taste, affinities
+                ) {
                     todayDeck(
                         reciters = browseReciters,
                         taste = taste,
-                        history = history.map { it.reciterSlug }.toSet(),
-                        followedSlugs = followedSlugs
+                        history = historySlugs,
+                        followedSlugs = followedSlugs,
+                        affinities = affinities
                     )
                 }
                 DeckSheet(
@@ -281,7 +463,8 @@ class RecitersScreen : Tab {
                     onDismiss = { deckOpen = false },
                     onOpenProfile = { slug ->
                         rootNavigator?.push(ReciterProfileScreen(slug))
-                    }
+                    },
+                    affinities = affinities
                 )
             }
         }

@@ -133,6 +133,11 @@ object ReciterPreview {
     fun playPreview(reciter: Reciter, ayahRef: String = DEFAULT_AYAH_REF): String? {
         val track = previewTrack(reciter, ayahRef) ?: return null
         if (!_isPreviewing.value) saveSession()
+        // Personalization signal (P-series): a preview is a taste vote.
+        try {
+            com.ghais.personal.SignalStore.recordPreview(reciter.slug)
+        } catch (_: Exception) {
+        }
         try {
             // Single-ayah queue: AudioEngine routes ayah tracks through
             // playAyah internally (surah-row queue + ayah stream).
