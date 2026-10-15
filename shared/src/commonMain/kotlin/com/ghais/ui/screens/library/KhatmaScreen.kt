@@ -75,6 +75,7 @@ import com.ghais.data.repository.paceStatus
 import com.ghais.data.repository.KhatmaPortion
 import com.ghais.data.seed.PageJuzIndex
 import com.ghais.data.share.ShareSheet
+import com.ghais.flags.HookFlags
 import com.ghais.domain.model.KhatmaPlan
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
@@ -454,12 +455,14 @@ object KhatmaScreen : Screen {
                                                     maxLines = 1
                                                 )
                                                 Spacer(modifier = Modifier.height(4.dp))
-                                                Text(
-                                                    text = paceLine,
-                                                    color = GhaisNoir.TextSecondary,
-                                                    fontSize = 13.sp
-                                                )
-                                                Spacer(modifier = Modifier.height(4.dp))
+                                                if (HookFlags.khatmaPaceEnabled) {
+                                                    Text(
+                                                        text = paceLine,
+                                                        color = GhaisNoir.TextSecondary,
+                                                        fontSize = 13.sp
+                                                    )
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                }
                                                 Text(
                                                     text = "$done of $planTotal ayahs • Est. ${khatmaShortDate(etaMs)}",
                                                     color = GhaisNoir.TextTertiary,
@@ -561,18 +564,20 @@ object KhatmaScreen : Screen {
                     }
                 },
                 confirmButton = {
-                    TextButton(
-                        onClick = {
-                            if (ShareSheet.isAvailable()) {
-                                ShareSheet.shareText("My Khatma completion", certText)
+                    if (HookFlags.ceremoniesEnabled) {
+                        TextButton(
+                            onClick = {
+                                if (ShareSheet.isAvailable()) {
+                                    ShareSheet.shareText("My Khatma completion", certText)
+                                }
                             }
+                        ) {
+                            Text(
+                                text = "Share",
+                                color = GhaisNoir.TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
-                    ) {
-                        Text(
-                            text = "Share",
-                            color = GhaisNoir.TextPrimary,
-                            fontWeight = FontWeight.Bold
-                        )
                     }
                 },
                 dismissButton = {

@@ -76,6 +76,7 @@ import com.ghais.data.repository.UserPlaylists
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.toTrackItems
 import com.ghais.data.sync.SyncEngine
+import com.ghais.flags.HookFlags
 import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.screens.library.CuratorBadge
@@ -261,19 +262,21 @@ object LibraryScreen : Tab {
                                 { "${it.surahNameEn} • ${it.reciterName}" }
                             )
                         }
-                        ResurrectionRail(
-                            unplayedIds = unplayed,
-                            onPlay = { id ->
-                                val track = savedTracks.firstOrNull {
-                                    UserPlaylists.trackKeyOf(it) == id
-                                }
-                                if (track != null) {
-                                    AudioEngine.playQueue(listOf(track), startIndex = 0)
-                                    rootNavigator?.push(NowPlayingScreen())
-                                }
-                            },
-                            resolveLabel = { labelById[it] ?: it }
-                        )
+                        if (HookFlags.resurrectionEnabled) {
+                            ResurrectionRail(
+                                unplayedIds = unplayed,
+                                onPlay = { id ->
+                                    val track = savedTracks.firstOrNull {
+                                        UserPlaylists.trackKeyOf(it) == id
+                                    }
+                                    if (track != null) {
+                                        AudioEngine.playQueue(listOf(track), startIndex = 0)
+                                        rootNavigator?.push(NowPlayingScreen())
+                                    }
+                                },
+                                resolveLabel = { labelById[it] ?: it }
+                            )
+                        }
                         CuratorBadge(
                             level = curatorLevel(userPlaylists.size, savedTracks.size),
                             playlistsCreated = userPlaylists.size,

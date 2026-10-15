@@ -36,6 +36,7 @@ import com.ghais.data.repository.khatmaIsComplete
 import com.ghais.data.share.ShareSheet
 import com.ghais.data.share.SupportKind
 import com.ghais.data.share.openSupportMail
+import com.ghais.flags.HookFlags
 import com.ghais.ui.screens.profile.identity.AchievementStats
 import com.ghais.ui.screens.profile.identity.AchievementsShelf
 import com.ghais.ui.screens.profile.identity.IdentityCard
@@ -219,25 +220,27 @@ object ProfileScreen : Tab {
                         onClick = { showEditDialog = true }
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    AchievementsShelf(
-                        unlocked = unlockedAchievements(
-                            AchievementStats(
-                                hasListened = totalMin > 0,
-                                daysStreak = stats.daysStreak,
-                                uniqueReciters = stats.uniqueRecitersCount,
-                                khatmaCompleted = khatmaPlans.count { khatmaIsComplete(it) },
-                                totalMinutes = totalMin
-                            )
-                        ),
-                        onShare = { def ->
-                            if (ShareSheet.isAvailable()) {
-                                ShareSheet.shareText(
-                                    def.title,
-                                    "I unlocked \"${def.title}\" on Ghaith. ${def.desc}"
+                    if (HookFlags.achievementsEnabled) {
+                        AchievementsShelf(
+                            unlocked = unlockedAchievements(
+                                AchievementStats(
+                                    hasListened = totalMin > 0,
+                                    daysStreak = stats.daysStreak,
+                                    uniqueReciters = stats.uniqueRecitersCount,
+                                    khatmaCompleted = khatmaPlans.count { khatmaIsComplete(it) },
+                                    totalMinutes = totalMin
                                 )
-                            }
-                        }
-                    )
+                            ),
+                            onShare = if (HookFlags.ceremoniesEnabled) { def ->
+                                if (ShareSheet.isAvailable()) {
+                                    ShareSheet.shareText(
+                                        def.title,
+                                        "I unlocked \"${def.title}\" on Ghaith. ${def.desc}"
+                                    )
+                                }
+                            } else null
+                        )
+                    }
                     Spacer(modifier = Modifier.height(18.dp))
                 }
 

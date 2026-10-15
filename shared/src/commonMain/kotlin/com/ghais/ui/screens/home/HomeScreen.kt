@@ -116,6 +116,16 @@ object HomeScreen : Tab {
                 }
 
                 // -------------------------------------------------------------
+                // Activation funnel — Majlis payoff + guest auth nudge.
+                // First content item: cold users meet 1-tap audio, not a grid.
+                // -------------------------------------------------------------
+                item {
+                    ActivationHost(
+                        onOpenPlayer = { rootNavigator?.push(NowPlayingScreen()) }
+                    )
+                }
+
+                // -------------------------------------------------------------
                 // Moment hero + Monday recap + devotion streak (hooks)
                 // -------------------------------------------------------------
                 item {

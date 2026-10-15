@@ -66,7 +66,9 @@ import com.ghais.personal.ShelfRow
 import com.ghais.personal.SignalStore
 import com.ghais.personal.buildShelves
 import com.ghais.ui.screens.reciters.personal.ColdStartGate
+import com.ghais.ui.screens.reciters.personal.SectionId
 import com.ghais.ui.screens.reciters.personal.WeeklyRitualRow
+import com.ghais.ui.screens.reciters.personal.orderSections
 import com.ghais.ui.screens.reciters.personal.weekSeed
 import com.ghais.ui.screens.reciters.personal.weeklyPicks
 import com.ghais.player.AudioEngine
@@ -217,6 +219,37 @@ class RecitersScreen : Tab {
             }
         }
 
+        // P4 personalized ordering: static slot list replaced by
+        // orderSections(...) — SEARCH first, NATIONS last, personalized
+        // rails + deck promotion driven by follows/history/taste.
+        // Deck has no persisted done-state yet, so it stays todo (promoted);
+        // voice is fresh every day by construction (voiceOfDay(epochDay)).
+        val sectionOrder = remember(
+            followedSlugs, historySlugs, taste.completed
+        ) {
+            try {
+                orderSections(
+                    hasFollows = followedSlugs.isNotEmpty(),
+                    hasHistory = historySlugs.isNotEmpty(),
+                    hasTaste = taste.completed,
+                    isNewDay = true,
+                    deckDoneToday = false
+                )
+            } catch (_: Exception) {
+                listOf(
+                    SectionId.SEARCH, SectionId.DECK,
+                    SectionId.VOICE_OF_DAY, SectionId.CHARTS,
+                    SectionId.FILTERS, SectionId.NATIONS
+                )
+            }
+        }
+        val yourVoicesShelves = remember(shelves) {
+            shelves.filter { it.id == "your-voices" }
+        }
+        val forYouShelves = remember(shelves) {
+            shelves.filter { it.id != "your-voices" }
+        }
+
         // Shared play recipe (nation reels + personal shelves + ritual).
         fun playReciterQueue(reciter: Reciter) {
             try {
@@ -248,177 +281,179 @@ class RecitersScreen : Tab {
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 112.dp)
             ) {
-                // ---------------------------------------------------------
-                // Editorial header + engraved search
-                // ---------------------------------------------------------
-                item {
-                    NoirRecitersHeader(
-                        totalReciters = browseReciters.size,
-                        nationCount = groups.size
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    NoirRecitersSearch(
-                        onClick = { rootNavigator?.push(ReciterSearchScreen()) }
-                    )
-                    Spacer(Modifier.height(20.dp))
-                }
-
-                // ---------------------------------------------------------
-                // P5 static section order (P4 wiring left to coordinator):
-                // search, your-voices-slot, for-you-slot, deck, voice,
-                // charts, filters, browse-nations.
-                // P4 contract (NOT implemented here): shared/.../personal/
-                // SectionOrder.kt -> orderSections(...) returns order.
-                // ---------------------------------------------------------
-
-                // SLOT:YOUR_VOICES + SLOT:FOR_YOU — personalized shelves
-                // (P3) with why-titles, driven by per-user affinities.
-                // Cold users see nothing here (shelves self-hide when empty).
-                if (PersonalFlags.personalShelves) {
-                    shelves.forEach { shelf ->
-                        item(key = "noir_shelf_${shelf.id}") {
-                            ShelfRow(
-                                shelf = shelf,
-                                reciterBySlug = shelfBySlug,
-                                photoFor = ::photoForSlug,
-                                followedSlugs = followedSlugs,
-                                onReciter = { slug ->
-                                    rootNavigator?.push(ReciterProfileScreen(slug))
-                                },
-                                onPlayReciter = ::playReciterQueue,
-                                onToggleFollow = { slug -> FollowStore.toggle(slug) }
+                // P4-ordered sections: SEARCH header first, NATIONS last,
+                // everything in between per orderSections(...).
+                sectionOrder.forEach { section ->
+                    when (section) {
+                        SectionId.SEARCH -> item(key = "search_header") {
+                            NoirRecitersHeader(
+                                totalReciters = browseReciters.size,
+                                nationCount = groups.size
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            NoirRecitersSearch(
+                                onClick = { rootNavigator?.push(ReciterSearchScreen()) }
                             )
                             Spacer(Modifier.height(20.dp))
                         }
-                    }
-                    // Weekly ritual (P8): fresh-every-Monday picks.
-                    if (PersonalFlags.weeklyRitual) {
-                        item(key = "slot_weekly_ritual") {
-                            WeeklyRitualRow(
-                                reciters = ritual,
-                                weekSeed = ritualWeek,
-                                photoFor = ::photoForSlug,
-                                onOpenReciter = { slug ->
-                                    rootNavigator?.push(ReciterProfileScreen(slug))
-                                },
-                                onPlayReciter = ::playReciterQueue,
-                                isFollowing = { it in followedSlugs },
-                                onFollowClick = { FollowStore.toggle(it) }
-                            )
-                            if (ritual.isNotEmpty()) Spacer(Modifier.height(20.dp))
-                        }
-                    }
-                }
 
-                // SLOT:DECK — "Today's voices" swipe deck entry (A4, kept).
-                if (HookFlags.deckEnabled) {
-                    item(key = "slot_deck") {
-                        DeckEntryCard(onOpen = { deckOpen = true })
-                        Spacer(Modifier.height(20.dp))
-                    }
-                }
-
-                // SLOT:VOICE — Voice of the day (A6, kept).
-                item(key = "noir_voice_of_day") {
-                    val epochDay = remember { currentEpochDay() }
-                    val voice = remember(browseReciters, epochDay) {
-                        voiceOfDay(browseReciters, epochDay)
-                    }
-                    if (voice != null) {
-                        VoiceOfDayCard(
-                            reciter = voice,
-                            onOpenProfile = { slug ->
-                                rootNavigator?.push(ReciterProfileScreen(slug))
-                            },
-                            onOpenPlayer = { deckOpen = true }
-                        )
-                        Spacer(Modifier.height(20.dp))
-                    }
-                }
-
-                // SLOT:CHARTS — weekly charts rail (A6, kept).
-                item(key = "noir_top_qaris_rail") {
-                    TopQarisRail(
-                        onReciter = { slug ->
-                            rootNavigator?.push(ReciterProfileScreen(slug))
-                        }
-                    )
-                    Spacer(Modifier.height(20.dp))
-                }
-
-                // Taste-axis filters (A2) — narrow the browse-nations reels below.
-                item(key = "reciter_filters") {
-                    FilterChipsRow(
-                        reciters = browseReciters,
-                        state = filterState,
-                        onStateChange = { filterState = it }
-                    )
-                    Spacer(Modifier.height(16.dp))
-                }
-
-                // ---------------------------------------------------------
-                // Browse nations: ONE tidy area replacing the 40-reel wall.
-                // Collapsed = top-6 nations by reciter count + expander.
-                // Expanded = all reels (existing NoirNationReel code, wrapped).
-                // ---------------------------------------------------------
-                if (groups.isEmpty()) {
-                    item {
-                        NoirRecitersEmpty()
-                    }
-                } else {
-                    item(key = "browse_nations_header") {
-                        NoirSectionHeader(
-                            label = "Browse nations • ${groups.size}",
-                            actionLabel = if (nationsExpanded) "Show less"
-                            else "All ${groups.size} nations",
-                            onAction = { nationsExpanded = !nationsExpanded }
-                        )
-                        Spacer(Modifier.height(12.dp))
-                    }
-                    val visibleGroups = if (nationsExpanded) groups else topNations
-                    visibleGroups.forEachIndexed { index, (nation, reciters) ->
-                        item(key = "noir_reel_$nation") {
-                            NoirNationReel(
-                                nation = nation,
-                                reciters = reciters,
-                                photoFor = ::photoForSlug,
-                                onSeeAll = { rootNavigator?.push(RegionRecitersScreen(nation)) },
-                                onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) },
-                                onPlayReciter = { reciter ->
-                                    playReciterQueue(reciter)
+                        SectionId.YOUR_VOICES -> if (PersonalFlags.personalShelves) {
+                            yourVoicesShelves.forEach { shelf ->
+                                item(key = "noir_shelf_${shelf.id}") {
+                                    ShelfRow(
+                                        shelf = shelf,
+                                        reciterBySlug = shelfBySlug,
+                                        photoFor = ::photoForSlug,
+                                        followedSlugs = followedSlugs,
+                                        onReciter = { slug ->
+                                            rootNavigator?.push(ReciterProfileScreen(slug))
+                                        },
+                                        onPlayReciter = ::playReciterQueue,
+                                        onToggleFollow = { slug -> FollowStore.toggle(slug) }
+                                    )
+                                    Spacer(Modifier.height(20.dp))
                                 }
-                            )
-                            if (index < visibleGroups.size - 1) {
+                            }
+                        }
+
+                        SectionId.FOR_YOU -> if (PersonalFlags.personalShelves) {
+                            forYouShelves.forEach { shelf ->
+                                item(key = "noir_shelf_${shelf.id}") {
+                                    ShelfRow(
+                                        shelf = shelf,
+                                        reciterBySlug = shelfBySlug,
+                                        photoFor = ::photoForSlug,
+                                        followedSlugs = followedSlugs,
+                                        onReciter = { slug ->
+                                            rootNavigator?.push(ReciterProfileScreen(slug))
+                                        },
+                                        onPlayReciter = ::playReciterQueue,
+                                        onToggleFollow = { slug -> FollowStore.toggle(slug) }
+                                    )
+                                    Spacer(Modifier.height(20.dp))
+                                }
+                            }
+                            // Weekly ritual (P8) travels with FOR_YOU.
+                            if (PersonalFlags.weeklyRitual) {
+                                item(key = "slot_weekly_ritual") {
+                                    WeeklyRitualRow(
+                                        reciters = ritual,
+                                        weekSeed = ritualWeek,
+                                        photoFor = ::photoForSlug,
+                                        onOpenReciter = { slug ->
+                                            rootNavigator?.push(ReciterProfileScreen(slug))
+                                        },
+                                        onPlayReciter = ::playReciterQueue,
+                                        isFollowing = { it in followedSlugs },
+                                        onFollowClick = { FollowStore.toggle(it) }
+                                    )
+                                    if (ritual.isNotEmpty()) Spacer(Modifier.height(20.dp))
+                                }
+                            }
+                        }
+
+                        SectionId.DECK -> if (HookFlags.deckEnabled) {
+                            item(key = "slot_deck") {
+                                DeckEntryCard(onOpen = { deckOpen = true })
                                 Spacer(Modifier.height(20.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(1.dp)
-                                        .background(GhaisNoir.BorderGhost)
+                            }
+                        }
+
+                        SectionId.VOICE_OF_DAY -> item(key = "noir_voice_of_day") {
+                            val epochDay = remember { currentEpochDay() }
+                            val voice = remember(browseReciters, epochDay) {
+                                voiceOfDay(browseReciters, epochDay)
+                            }
+                            if (voice != null) {
+                                VoiceOfDayCard(
+                                    reciter = voice,
+                                    onOpenProfile = { slug ->
+                                        rootNavigator?.push(ReciterProfileScreen(slug))
+                                    },
+                                    onOpenPlayer = { deckOpen = true }
                                 )
                                 Spacer(Modifier.height(20.dp))
                             }
                         }
-                    }
-                    if (!nationsExpanded && groups.size > topNations.size) {
-                        item(key = "browse_nations_expander") {
+
+                        SectionId.CHARTS -> item(key = "noir_top_qaris_rail") {
+                            TopQarisRail(
+                                onReciter = { slug ->
+                                    rootNavigator?.push(ReciterProfileScreen(slug))
+                                }
+                            )
+                            Spacer(Modifier.height(20.dp))
+                        }
+
+                        SectionId.FILTERS -> item(key = "reciter_filters") {
+                            FilterChipsRow(
+                                reciters = browseReciters,
+                                state = filterState,
+                                onStateChange = { filterState = it }
+                            )
                             Spacer(Modifier.height(16.dp))
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(GhaisShapes.row)
-                                    .background(GhaisNoir.Fill2)
-                                    .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.row)
-                                    .noirClickable { nationsExpanded = true }
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "All ${groups.size} nations",
-                                    color = GhaisNoir.TextPrimary,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold
+                        }
+
+                        SectionId.NATIONS -> if (groups.isEmpty()) {
+                            item {
+                                NoirRecitersEmpty()
+                            }
+                        } else {
+                            item(key = "browse_nations_header") {
+                                NoirSectionHeader(
+                                    label = "Browse nations • ${groups.size}",
+                                    actionLabel = if (nationsExpanded) "Show less"
+                                    else "All ${groups.size} nations",
+                                    onAction = { nationsExpanded = !nationsExpanded }
                                 )
+                                Spacer(Modifier.height(12.dp))
+                            }
+                            val visibleGroups = if (nationsExpanded) groups else topNations
+                            visibleGroups.forEachIndexed { index, (nation, reciters) ->
+                                item(key = "noir_reel_$nation") {
+                                    NoirNationReel(
+                                        nation = nation,
+                                        reciters = reciters,
+                                        photoFor = ::photoForSlug,
+                                        onSeeAll = { rootNavigator?.push(RegionRecitersScreen(nation)) },
+                                        onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) },
+                                        onPlayReciter = { reciter ->
+                                            playReciterQueue(reciter)
+                                        }
+                                    )
+                                    if (index < visibleGroups.size - 1) {
+                                        Spacer(Modifier.height(20.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(1.dp)
+                                                .background(GhaisNoir.BorderGhost)
+                                        )
+                                        Spacer(Modifier.height(20.dp))
+                                    }
+                                }
+                            }
+                            if (!nationsExpanded && groups.size > topNations.size) {
+                                item(key = "browse_nations_expander") {
+                                    Spacer(Modifier.height(16.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(GhaisShapes.row)
+                                            .background(GhaisNoir.Fill2)
+                                            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.row)
+                                            .noirClickable { nationsExpanded = true }
+                                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "All ${groups.size} nations",
+                                            color = GhaisNoir.TextPrimary,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

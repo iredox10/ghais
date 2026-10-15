@@ -57,6 +57,7 @@ import com.ghais.domain.model.DevotionalItem
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.Surah
 import com.ghais.domain.model.TrackItem
+import com.ghais.flags.HookFlags
 import com.ghais.player.AudioEngine
 import com.ghais.player.ReciterPreview
 import com.ghais.ui.components.noir.ChromeFab
@@ -200,7 +201,8 @@ class SearchScreen : Screen {
         // group the intent-ordered browse list stands in (capped) instead of
         // "No results". Engine hits always win when present — the fallbacks
         // below are read only in that case.
-        val exploreIntent = remember(trimmedQuery) { parseExploreIntent(trimmedQuery) }
+        val exploreIntent = if (!HookFlags.exploreEnabled) null
+        else remember(trimmedQuery) { parseExploreIntent(trimmedQuery) }
         val exploreOutcome = remember(exploreIntent, browseReciters) {
             val intent = exploreIntent ?: return@remember null
             applyIntent(
@@ -476,33 +478,36 @@ class SearchScreen : Screen {
                             }
                         }
 
-                        // A12 exploratory entry points: natural-language chips that
-                        // fill the query and run it — a non-blank query flips
-                        // this screen into results, so plain state assignment
-                        // IS the run path (no separate submit needed).
-                        item(key = "hub-try-gap") { Spacer(Modifier.height(8.dp)) }
-                        item(key = "hub-try-header") {
-                            NoirSectionHeader(label = "Try")
-                        }
-                        item(key = "hub-try-chips") {
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                contentPadding = PaddingValues(vertical = 2.dp)
-                            ) {
-                                items(EXPLORE_TRY_QUERIES, key = { "hub-try-$it" }) { suggestion ->
-                                    ExploreTryChip(
-                                        label = suggestion,
-                                        onClick = { query = suggestion }
-                                    )
+                        // A12 exploratory entry points (gated): natural-language
+                        // chips that fill the query and run it — a non-blank
+                        // query flips this screen into results, so plain state
+                        // assignment IS the run path (no separate submit needed).
+                        if (HookFlags.exploreEnabled) {
+                            item(key = "hub-try-gap") { Spacer(Modifier.height(8.dp)) }
+                            item(key = "hub-try-header") {
+                                NoirSectionHeader(label = "Try")
+                            }
+                            item(key = "hub-try-chips") {
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    contentPadding = PaddingValues(vertical = 2.dp)
+                                ) {
+                                    items(EXPLORE_TRY_QUERIES, key = { "hub-try-$it" }) { suggestion ->
+                                        ExploreTryChip(
+                                            label = suggestion,
+                                            onClick = { query = suggestion }
+                                        )
+                                    }
                                 }
                             }
                         }
 
-                        // A12 taste-aware shortcuts, read-only off FollowStore:
-                        // one chip per followed qari, filling the query with
-                        // their name so the results below answer it. Hidden
-                        // when the follow set is empty or unresolvable.
-                        if (followedReciters.isNotEmpty()) {
+                        // A12 taste-aware shortcuts (gated), read-only off
+                        // FollowStore: one chip per followed qari, filling the
+                        // query with their name so the results below answer
+                        // it. Hidden when the follow set is empty or
+                        // unresolvable.
+                        if (HookFlags.exploreEnabled && followedReciters.isNotEmpty()) {
                             item(key = "hub-taste-gap") { Spacer(Modifier.height(8.dp)) }
                             item(key = "hub-taste-header") {
                                 NoirSectionHeader(

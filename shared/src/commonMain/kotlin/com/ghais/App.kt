@@ -41,7 +41,6 @@ import com.ghais.ui.components.MiniPlayer
 import com.ghais.ui.components.isFullScreenPlayer
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.navigation.MainScreen
-import com.ghais.ui.screens.auth.AuthScreen
 import com.ghais.ui.screens.onboarding.OnboardingScreen
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.splash.SplashScreen
@@ -93,29 +92,14 @@ fun App() {
             if (signedInUserId == null || forceOnboarding || doneForUser) return@LaunchedEffect
             OnboardingStore.markDoneForCurrentUser()
         }
-        // Offline gate: no internet → refreshSession fails → session null even
-        // for logged-in users. cachedSession is the last-known user from
-        // persistent storage; when set, enter main content in offline mode
-        // instead of bouncing to the login gate. MainScreen takes no offline
-        // flag (plain object), so entry is normal. SyncEngine stays idle via
-        // its NetworkMonitor gate in SyncTriggers; when connectivity returns
-        // and refresh succeeds, the session flow drives a seamless transition.
-        val offlineMode = checked && session == null && cachedSession != null
+        // Guest-first activation: auth is deferred, never blocking. Signed-out
+        // users (and offline users with no cache) enter main content as
+        // guests; a Day-2 nudge (ActivationHost, after real listening
+        // history) offers sign-in. Guests skip onboarding — the taste quiz
+        // inside ActivationHost already captures voice preference, and the
+        // signed-in effect below marks onboarding done on first auth.
         if (!checked) {
             SplashScreen.Content()
-        } else if (session == null && !offlineMode) {
-            // Full-screen gate above everything; MiniPlayer stays under the gate.
-            // Auth is mandatory — no guest mode. Logged-out never sees onboarding;
-            // returning here (e.g. sign-out) also clears any pending replay.
-            if (forceOnboarding) forceOnboarding = false
-            AuthScreen(
-                onAuthenticated = { isNewAccount ->
-                    if (isNewAccount) {
-                        OnboardingStore.restartForNewUser()
-                        forceOnboarding = true
-                    }
-                },
-            ).Content()
         } else if (forceOnboarding) {
             OnboardingScreen.Content()
         } else {
