@@ -82,7 +82,6 @@ import com.ghais.ui.theme.GhaisTypography
 
 private const val PageCount = 5
 private const val LastPage = PageCount - 1
-private const val MaxOnboardingReciters = 3
 
 object OnboardingScreen : Screen {
     @Composable
@@ -184,9 +183,14 @@ object OnboardingScreen : Screen {
                             reciters = reciters,
                             followed = followed,
                             onPick = { slug ->
+                                // Free toggle: the step shares the global
+                                // FollowStore with browsing, so a guest can
+                                // arrive with more than a fresh handful
+                                // already followed — a hard cap here silently
+                                // swallowed every tap (the "11 of 3" trap).
                                 if (FollowStore.isFollowing(slug)) {
                                     FollowStore.unfollow(slug)
-                                } else if (followed.size < MaxOnboardingReciters) {
+                                } else {
                                     FollowStore.follow(slug)
                                 }
                             },
@@ -433,7 +437,7 @@ private fun ReciterStep(
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = "${followed.size} of $MaxOnboardingReciters",
+                text = "${followed.size} selected",
                 color = GhaisNoir.TextTertiary,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold
@@ -441,7 +445,7 @@ private fun ReciterStep(
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "Pick up to $MaxOnboardingReciters voices to follow — you can change them anytime.",
+            text = "Tap the voices you love — you can change them anytime.",
             color = GhaisNoir.TextTertiary,
             fontSize = 14.sp
         )
@@ -539,7 +543,7 @@ private fun ReciterStep(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "Selected (${followed.size} of $MaxOnboardingReciters): ${names.joinToString(", ")}",
+                        text = "Selected (${followed.size}): ${names.joinToString(", ")}",
                         color = GhaisNoir.TextPrimary,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
