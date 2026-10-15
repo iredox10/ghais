@@ -77,9 +77,6 @@ import com.ghais.ui.screens.reciters.deck.DeckDoneStore
 import com.ghais.ui.screens.reciters.deck.isDone
 import com.ghais.ui.screens.reciters.deck.DeckSheet
 import com.ghais.ui.screens.reciters.deck.todayDeck
-import com.ghais.ui.screens.reciters.filter.FilterChipsRow
-import com.ghais.ui.screens.reciters.filter.ReciterFilterState
-import com.ghais.ui.screens.reciters.filter.applyFilters
 import com.ghais.ui.screens.reciters.taste.TasteQuizSheet
 import com.ghais.ui.screens.reciters.taste.TasteStore
 import com.ghais.ui.screens.reciters.today.TopQarisRail
@@ -131,22 +128,19 @@ class RecitersScreen : Tab {
         // catalog sync instead of only in search. Reactive to the cache.
         val browseReciters = rememberBrowseReciters()
 
-        // Engagement hooks: taste quiz (A1), filter chips (A2), deck (A4).
+        // Engagement hooks: taste quiz (A1), deck (A4). Refinement filters
+        // live on the search screen; browse here is unfiltered discovery.
         val taste by TasteStore.taste.collectAsState()
         var showTasteQuiz by remember { mutableStateOf(!taste.completed) }
-        var filterState by remember { mutableStateOf(ReciterFilterState()) }
         var deckOpen by remember { mutableStateOf(false) }
-        val filteredReciters = remember(browseReciters, filterState) {
-            applyFilters(browseReciters, filterState)
-        }
 
         // Grouped on the flag-insensitive country key so an admin-created
         // "Saudi Arabia" joins the bundled "Saudi Arabia 🇸🇦" section instead of
         // forming a second, near-identical nation. Nations and the reciters
         // inside them are both alphabetical, and the label keeps the richest
         // raw spelling in the group (the one that still carries its flag).
-        val groups = remember(filteredReciters) {
-            filteredReciters
+        val groups = remember(browseReciters) {
+            browseReciters
                 .groupBy { reciterCountryKey(it.country).ifBlank { "other" } }
                 .map { (key, reciters) ->
                     val label = reciters
@@ -161,10 +155,8 @@ class RecitersScreen : Tab {
                 .sortedBy { (label, _) -> reciterCountryKey(label).ifBlank { label.lowercase() } }
         }
 
-        // P5 declutter: collapsed browse shows top-6 nations by reciter count.
-        // Expanded shows the full alphabetical wall. Reset on filter change
-        // so a narrowed filter never leaves the section stuck open/empty.
-        var nationsExpanded by remember(filteredReciters) { mutableStateOf(false) }
+        // Browse is unfiltered: collapsed shows top-6 nations by count.
+        var nationsExpanded by remember(browseReciters) { mutableStateOf(false) }
         val topNations = remember(groups) {
             groups.sortedByDescending { (_, reciters) -> reciters.size }.take(6)
         }
@@ -224,11 +216,10 @@ class RecitersScreen : Tab {
             }
         }
 
-        // P4 personalized ordering: static slot list replaced by
-        // orderSections(...) — SEARCH first, NATIONS last, personalized
-        // rails + deck promotion driven by follows/history/taste. Deck-done
-        // comes from DeckDoneStore (day-scoped); voice is fresh every day
-        // by construction (voiceOfDay(epochDay)).
+        // Fixed editorial top (Spotify Home rule): SEARCH header, DECK
+        // hero, VOICE yesterday-top, CHARTS, then personalized rails,
+        // RITUAL standalone, NATIONS last. Deck-done state only changes
+        // the entry card copy, never the position.
         val deckDoneDay by DeckDoneStore.doneDay.collectAsState()
         val orderDay = remember { currentEpochDay() }
         val deckDoneToday = remember(deckDoneDay, orderDay) {
@@ -239,21 +230,19 @@ class RecitersScreen : Tab {
             }
         }
         val sectionOrder = remember(
-            followedSlugs, historySlugs, taste.completed, deckDoneToday
+            followedSlugs, historySlugs, taste.completed
         ) {
             try {
                 orderSections(
                     hasFollows = followedSlugs.isNotEmpty(),
                     hasHistory = historySlugs.isNotEmpty(),
-                    hasTaste = taste.completed,
-                    isNewDay = true,
-                    deckDoneToday = deckDoneToday
+                    hasTaste = taste.completed
                 )
             } catch (_: Exception) {
                 listOf(
                     SectionId.SEARCH, SectionId.DECK,
                     SectionId.VOICE_OF_DAY, SectionId.CHARTS,
-                    SectionId.FILTERS, SectionId.NATIONS
+                    SectionId.RITUAL, SectionId.NATIONS
                 )
             }
         }
@@ -357,22 +346,24 @@ class RecitersScreen : Tab {
                                     Spacer(Modifier.height(20.dp))
                                 }
                             }
-                            // Weekly ritual (P8) travels with FOR_YOU.
-                            if (PersonalFlags.weeklyRitual) {
-                                item(key = "slot_weekly_ritual") {
-                                    WeeklyRitualRow(
-                                        reciters = ritual,
-                                        weekSeed = ritualWeek,
-                                        photoFor = ::photoForSlug,
-                                        onOpenReciter = { slug ->
-                                            rootNavigator?.push(ReciterProfileScreen(slug))
-                                        },
-                                        onPlayReciter = ::playReciterQueue,
-                                        isFollowing = { it in followedSlugs },
-                                        onFollowClick = { FollowStore.toggle(it) }
-                                    )
-                                    if (ritual.isNotEmpty()) Spacer(Modifier.height(20.dp))
-                                }
+                        }
+
+                        // Weekly ritual (P8): standalone section, fresh every
+                        // Monday. Self-hides when its picks are empty.
+                        SectionId.RITUAL -> if (PersonalFlags.weeklyRitual && ritual.isNotEmpty()) {
+                            item(key = "slot_weekly_ritual") {
+                                WeeklyRitualRow(
+                                    reciters = ritual,
+                                    weekSeed = ritualWeek,
+                                    photoFor = ::photoForSlug,
+                                    onOpenReciter = { slug ->
+                                        rootNavigator?.push(ReciterProfileScreen(slug))
+                                    },
+                                    onPlayReciter = ::playReciterQueue,
+                                    isFollowing = { it in followedSlugs },
+                                    onFollowClick = { FollowStore.toggle(it) }
+                                )
+                                Spacer(Modifier.height(20.dp))
                             }
                         }
 
@@ -451,15 +442,6 @@ class RecitersScreen : Tab {
                                 }
                             )
                             Spacer(Modifier.height(20.dp))
-                        }
-
-                        SectionId.FILTERS -> item(key = "reciter_filters") {
-                            FilterChipsRow(
-                                reciters = browseReciters,
-                                state = filterState,
-                                onStateChange = { filterState = it }
-                            )
-                            Spacer(Modifier.height(16.dp))
                         }
 
                         SectionId.NATIONS -> if (groups.isEmpty()) {
