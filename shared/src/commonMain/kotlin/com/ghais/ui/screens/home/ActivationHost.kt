@@ -23,6 +23,8 @@ import com.ghais.data.auth.AuthRepository
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.OnboardingStore
 import com.ghais.data.repository.UserUsageRepository
+import com.ghais.notify.NotifyChannel
+import com.ghais.notify.NotifyScheduler
 import com.ghais.personal.buildMajlisTracks
 import com.ghais.personal.resolveMajlisReciter
 import com.ghais.player.AudioEngine
@@ -68,6 +70,21 @@ object ActivationStore {
     }
     fun markDone() = try {
         settings.putBoolean(ACTIVATION_DONE_KEY, true)
+    } catch (_: Exception) {
+    }
+}
+
+/** One-shot Day-1 reminder ask (device-level, guest-safe). Never throws. */
+object ReminderAskStore {
+    private const val KEY = "ghais_activation_reminder_asked"
+    private val settings: Settings by lazy { Settings() }
+    fun asked(): Boolean = try {
+        settings.getBoolean(KEY, false)
+    } catch (_: Exception) {
+        false
+    }
+    fun markAsked() = try {
+        settings.putBoolean(KEY, true)
     } catch (_: Exception) {
     }
 }
@@ -183,6 +200,55 @@ fun ActivationHost(
                     GhostPillButton(
                         text = "Later",
                         onClick = { nudgeDismissed = true }
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(18.dp))
+    }
+
+    var reminderAsked by remember { mutableStateOf(ReminderAskStore.asked()) }
+    // Day-1 drip: after the 2nd listen, offer a habitual-hour reminder once.
+    // Guest-safe, opt-in, dismissable forever.
+    val showReminderAsk = !reminderAsked && !isCold && history.size >= 2
+    if (showReminderAsk) {
+        NoirCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "A gentle daily reminder?",
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "One quiet nudge at your listening hour. Never more.",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 13.sp
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ChromePillButton(
+                        text = "Remind me",
+                        onClick = {
+                            try {
+                                NotifyScheduler.scheduleDaily(
+                                    20, 0, NotifyChannel.DEVOTION_REMINDER
+                                )
+                            } catch (_: Exception) {
+                            }
+                            ReminderAskStore.markAsked()
+                            reminderAsked = true
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    GhostPillButton(
+                        text = "No thanks",
+                        onClick = {
+                            ReminderAskStore.markAsked()
+                            reminderAsked = true
+                        }
                     )
                 }
             }
