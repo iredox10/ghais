@@ -188,8 +188,13 @@ fun ActivationHost(
                         onClick = {
                             rootNavigator?.push(
                                 AuthScreen(
-                                    onAuthenticated = {
+                                    onAuthenticated = { isNewAccount ->
                                         nudgeDismissed = true
+                                        // Fresh account: the App gate replays
+                                        // onboarding for done=false users.
+                                        if (isNewAccount) {
+                                            OnboardingStore.restartForNewUser()
+                                        }
                                         rootNavigator?.pop()
                                     }
                                 )

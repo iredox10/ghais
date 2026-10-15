@@ -398,6 +398,9 @@ object ProfileScreen : Tab {
                                     rootNavigator?.push(
                                         AuthScreen(
                                             onAuthenticated = { isNewAccount ->
+                                                // Fresh account: reset setup state; the
+                                                // App gate replays onboarding for any
+                                                // signed-in user with done=false.
                                                 if (isNewAccount) {
                                                     OnboardingStore.restartForNewUser()
                                                 }
