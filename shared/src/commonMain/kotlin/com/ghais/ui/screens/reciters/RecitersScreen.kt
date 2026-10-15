@@ -249,6 +249,16 @@ class RecitersScreen : Tab {
         val forYouShelves = remember(shelves) {
             shelves.filter { it.id != "your-voices" }
         }
+        // FOR_YOU renders only on real confidence (>3 signals or completed
+        // taste quiz) — history alone isn't enough. orderSections still
+        // decides position; this decides visibility.
+        val forYouConfident = remember(signalTick, taste.completed, historySlugs) {
+            try {
+                ForYou.isPersonalized()
+            } catch (_: Exception) {
+                historySlugs.isNotEmpty() || taste.completed
+            }
+        }
 
         // Shared play recipe (nation reels + personal shelves + ritual).
         fun playReciterQueue(reciter: Reciter) {
@@ -316,7 +326,7 @@ class RecitersScreen : Tab {
                             }
                         }
 
-                        SectionId.FOR_YOU -> if (PersonalFlags.personalShelves) {
+                        SectionId.FOR_YOU -> if (PersonalFlags.personalShelves && forYouConfident) {
                             forYouShelves.forEach { shelf ->
                                 item(key = "noir_shelf_${shelf.id}") {
                                     ShelfRow(
