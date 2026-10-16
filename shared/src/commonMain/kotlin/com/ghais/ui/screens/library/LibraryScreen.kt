@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MusicNote
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -58,6 +60,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -76,6 +79,7 @@ import com.ghais.data.repository.UserPlaylists
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.toTrackItems
 import com.ghais.data.sync.SyncEngine
+import com.ghais.domain.model.DevotionKind
 import com.ghais.analytics.HookAnalytics
 import com.ghais.analytics.HookEvents
 import com.ghais.flags.HookFlags
@@ -88,9 +92,11 @@ import com.ghais.ui.screens.library.findUnplayed
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
+import com.ghais.ui.screens.devotional.DevotionListScreen
 import com.ghais.ui.screens.mushaf.MushafScreen
 import com.ghais.ui.screens.playlists.MoodPlaylist
 import com.ghais.ui.screens.playlists.MoodPlaylists
@@ -352,6 +358,26 @@ object LibraryScreen : Tab {
                             )
                         }
                     }
+                    // Devotionals shelf: tinted entry points for Duas + Ruqiyah.
+                    item(span = { GridItemSpan(2) }) {
+                        NoirSectionHeader(label = "Devotionals")
+                    }
+                    item {
+                        NoirDevotionalTile(
+                            title = "Duas",
+                            subtitle = "Supplications",
+                            icon = Icons.Filled.AutoAwesome,
+                            onClick = { rootNavigator?.push(DevotionListScreen(DevotionKind.DUA)) }
+                        )
+                    }
+                    item {
+                        NoirDevotionalTile(
+                            title = "Ruqiyah",
+                            subtitle = "Quranic verses",
+                            icon = Icons.Filled.VerifiedUser,
+                            onClick = { rootNavigator?.push(DevotionListScreen(DevotionKind.RUQIYAH)) }
+                        )
+                    }
                 }
             }
         }
@@ -396,23 +422,8 @@ private fun NoirLibraryHeader(
     visibleCount: Int
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "Your",
-            style = GhaisTypography.displayEditorial,
-            maxLines = 1
-        )
-        Text(
-            text = "Collections",
-            style = GhaisTypography.displayEditorialBold,
-            maxLines = 1
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = "Routines, collections & recitations saved for you",
-            color = GhaisNoir.TextSecondary,
-            fontSize = 13.sp
-        )
-        Spacer(Modifier.height(14.dp))
+        NoirNavBar(title = "Collections")
+        Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             NoirLibraryChip(
                 text = if (totalCount == 1) "1 collection" else "$totalCount collections"
@@ -811,6 +822,56 @@ private fun NoirMushafTile(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 color = GhaisNoir.TextTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Devotionals tile — tinted dark fill + 1px card border + top-only specular,
+ * clay icon-well + label/sub. Tap pushes `DevotionListScreen(kind)` (Duas or
+ * Ruqiyah devotion catalog).
+ */
+@Composable
+private fun NoirDevotionalTile(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(GhaisShapes.cardNoir)
+            .background(GhaisNoir.tintFill())
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardNoir)
+            .topSpecular()
+            .noirClickable(onClick)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            IconWell(icon = icon, size = 44.dp, iconSize = 22.dp)
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = GhaisNoir.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = subtitle,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Normal,
+                color = GhaisNoir.TextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
