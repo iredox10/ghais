@@ -142,6 +142,7 @@ private fun StackedVoicesVisual(preview: List<Reciter>) {
                     .align(Alignment.CenterStart)
                     .offset(x = (index * 24).dp)
                     .zIndex((shown.size - index).toFloat())
+            )
         }
     }
 }
