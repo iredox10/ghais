@@ -127,18 +127,15 @@ object HomeScreen : Tab {
                     val history by UserUsageRepository.history.collectAsState()
                     val latest = history.firstOrNull()
                     if (latest != null) {
-                        val heroSubtitle = listOf(latest.title, latest.subtitle)
-                            .map { it.trim() }
-                            .filter { it.isNotEmpty() }
-                            .joinToString(" • ")
-                        val heroStats by UserUsageRepository.stats.collectAsState()
+                        val heroSubtitle = latest.subtitle.trim()
                         HomePlumHero(
-                            eyebrow = "Jump back in +",
-                            title = "Feel every verse.",
+                            eyebrow = "Jump back in",
+                            title = latest.title,
                             subtitle = heroSubtitle,
                             coverUrl = latest.coverUrl,
                             monogram = latest.title.firstOrNull { it.isLetter() }?.uppercase() ?: "Q",
                             ctaLabel = "Play",
+                            progress = latest.progress.coerceIn(0f, 1f),
                             onPlay = {
                                 resumeHistoryEntry(
                                     entry = latest,
@@ -148,12 +145,7 @@ object HomeScreen : Tab {
                                     }
                                 )
                             },
-                            onOpen = { rootNavigator?.push(NowPlayingScreen()) },
-                            stats = listOf(
-                                "${heroStats.minutesToday}" to "min today",
-                                "${heroStats.daysStreak}" to "day streak",
-                                "${heroStats.uniqueRecitersCount}" to "qaris"
-                            )
+                            onOpen = { rootNavigator?.push(NowPlayingScreen()) }
                         )
                         Spacer(Modifier.height(20.dp))
                     }

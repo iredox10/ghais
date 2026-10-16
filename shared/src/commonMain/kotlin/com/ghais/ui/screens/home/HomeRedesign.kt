@@ -11,33 +11,25 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
-import com.ghais.ui.util.bidiIsolate
-import com.ghais.data.repository.DevotionalRepository
-import com.ghais.domain.model.DevotionKind
-import kotlin.time.Clock
 
 /**
  * Home redesign — "Noir Lavender Grid".
@@ -107,8 +99,8 @@ fun HomeFilterChips(
 }
 
 // ---------------------------------------------------------------------------
-// Plum hero — Ref1 left screen: deep gradient card, eyebrow pill,
-// display headline, pill CTA. Right side floats the mix artwork.
+// Plum hero — audio-first resume card: eyebrow pill, entry title, subtitle,
+// slim resume progress, then Play pill + circular artwork.
 // ---------------------------------------------------------------------------
 @Composable
 fun HomePlumHero(
@@ -121,9 +113,9 @@ fun HomePlumHero(
     onPlay: () -> Unit,
     onOpen: () -> Unit,
     modifier: Modifier = Modifier,
-    /** Lawyer-ref stats row: (value, label) triples in white, e.g. mins/streak/qaris. */
-    stats: List<Pair<String, String>> = emptyList(),
+    progress: Float = 0f,
 ) {
+    val clamped = progress.coerceIn(0f, 1f)
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -133,41 +125,83 @@ fun HomePlumHero(
             .noirClickable(onClick = onOpen)
             .padding(20.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                // Eyebrow pill — Ref1 "New arrivals +".
+        // Eyebrow pill — "Jump back in".
+        Box(
+            modifier = Modifier
+                .clip(GhaisShapes.pill)
+                .background(Color.White.copy(alpha = 0.16f))
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = eyebrow,
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 30.sp,
+            lineHeight = 34.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = subtitle,
+            color = Color.White.copy(alpha = 0.72f),
+            fontSize = 13.sp,
+            maxLines = 2
+        )
+        if (clamped > 0f) {
+            Spacer(Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(GhaisShapes.pill)
+                    .background(Color.White.copy(alpha = 0.25f))
+            ) {
                 Box(
                     modifier = Modifier
+                        .fillMaxWidth(clamped)
+                        .height(4.dp)
                         .clip(GhaisShapes.pill)
-                        .background(Color.White.copy(alpha = 0.16f))
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = eyebrow,
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = title,
-                    color = Color.White,
-                    fontSize = 32.sp,
-                    lineHeight = 36.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = subtitle,
-                    color = Color.White.copy(alpha = 0.72f),
-                    fontSize = 13.sp,
-                    maxLines = 2
+                        .background(Color.White)
                 )
             }
-            Spacer(Modifier.width(12.dp))
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier
+                    .clip(GhaisShapes.pill)
+                    .background(GhaisNoir.lavenderFill())
+                    .noirClickable(onClick = onPlay)
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = GhaisNoir.LavenderInk,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = ctaLabel,
+                    color = GhaisNoir.LavenderInk,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(Modifier.weight(1f))
             NoirArtworkWell(
                 coverUrl = coverUrl,
                 monogram = monogram,
@@ -177,71 +211,6 @@ fun HomePlumHero(
                 ring = true,
                 scrimAlpha = 0f
             )
-        }
-        Spacer(Modifier.height(16.dp))
-        // Primary pill — Ref1 "Add to cart" / Ref2 "Book Appointment".
-        Row(
-            modifier = Modifier
-                .clip(GhaisShapes.pill)
-                .background(GhaisNoir.lavenderFill())
-                .noirClickable(onClick = onPlay)
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = null,
-                tint = GhaisNoir.LavenderInk,
-                modifier = Modifier.size(18.dp)
-            )
-            Text(
-                text = ctaLabel,
-                color = GhaisNoir.LavenderInk,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        // Lawyer-ref stats row: numbers carry the hierarchy.
-        if (stats.isNotEmpty()) {
-            Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(GhaisShapes.cardNoir)
-                    .background(Color.Black.copy(alpha = 0.22f))
-                    .padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                stats.forEachIndexed { index, (value, label) ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            text = value,
-                            color = Color.White,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = label,
-                            color = Color.White.copy(alpha = 0.6f),
-                            fontSize = 10.sp,
-                            maxLines = 1
-                        )
-                    }
-                    if (index < stats.lastIndex) {
-                        Box(
-                            modifier = Modifier
-                                .size(width = 1.dp, height = 32.dp)
-                                .background(Color.White.copy(alpha = 0.18f))
-                        )
-                    }
-                }
-            }
         }
     }
 }
