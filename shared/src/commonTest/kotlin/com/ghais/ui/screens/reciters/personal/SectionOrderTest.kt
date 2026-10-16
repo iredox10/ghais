@@ -6,8 +6,9 @@ import kotlin.test.assertTrue
 
 /**
  * Pins the [orderSections] contract for the Reciters tab: fixed editorial
- * top (SEARCH → DECK → VOICE → CHARTS), personalized rails by signal,
- * standalone RITUAL, NATIONS last. Filters live on the search screen.
+ * top (SEARCH → DECK → VOICE), personalized rails by signal,
+ * standalone RITUAL, NATIONS last. Charts live on Home; filters live on
+ * the search screen.
  */
 class SectionOrderTest {
 
@@ -28,7 +29,6 @@ class SectionOrderTest {
                 SectionId.SEARCH,
                 SectionId.DECK,
                 SectionId.VOICE_OF_DAY,
-                SectionId.CHARTS,
                 SectionId.RITUAL,
                 SectionId.NATIONS,
             ),
@@ -44,16 +44,15 @@ class SectionOrderTest {
     }
 
     @Test
-    fun testHeroBlockIsAlwaysSearchDeckVoiceCharts() {
+    fun testHeroBlockIsAlwaysSearchDeckVoice() {
         val full = order(hasFollows = true, hasHistory = true, hasTaste = true)
         assertEquals(
             listOf(
                 SectionId.SEARCH,
                 SectionId.DECK,
                 SectionId.VOICE_OF_DAY,
-                SectionId.CHARTS,
             ),
-            full.take(4),
+            full.take(3),
             "hero block fixed: $full",
         )
     }

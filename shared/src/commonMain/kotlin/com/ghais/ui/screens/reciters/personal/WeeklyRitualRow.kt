@@ -20,7 +20,7 @@ import com.ghais.ui.theme.GhaisNoir
  * AGENT P8 — "New for you" weekly ritual rail (Noir).
  *
  * Renders NOTHING — including its own spacing — when [reciters] is empty, so
- * the host layout never gaps (same rule as `TopQarisRail`). Cards reuse the
+ * the host layout never gaps. Cards reuse the
  * profile reel-card recipe ([ReciterReelCard]): glass fill + ghost border +
  * chrome play disc, so the ritual shelf reads as family with the nation reels.
  *

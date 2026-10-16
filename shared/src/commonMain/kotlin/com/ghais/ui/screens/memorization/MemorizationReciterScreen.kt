@@ -24,13 +24,8 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -59,6 +54,7 @@ import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirListRow
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSegmentedProgress
 import com.ghais.ui.components.noir.noirClickable
@@ -70,7 +66,6 @@ import com.ghais.ui.util.bidiIsolate
 
 data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -120,41 +115,14 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
         }
 
         NoirScreenRoot {
-            Scaffold(
-                containerColor = Color.Transparent,
-                topBar = {
-                    TopAppBar(
-                        title = {},
-                        navigationIcon = {
-                            IconButton(
-                                onClick = { navigator.pop() },
-                                modifier = Modifier.padding(start = 4.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(GhaisNoir.Fill2)
-                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Back",
-                                        tint = GhaisNoir.TextPrimary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-                    )
-                }
-            ) { paddingValues ->
+            Column(modifier = Modifier.fillMaxSize()) {
+                NoirNavBar(
+                    title = reciter.nameEn,
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    onBack = { navigator.pop() }
+                )
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
+                    modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp)
                 ) {
                     item {

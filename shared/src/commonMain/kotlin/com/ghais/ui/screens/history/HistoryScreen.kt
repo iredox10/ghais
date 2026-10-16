@@ -37,6 +37,7 @@ import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.components.noir.NoirInsetField
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
@@ -214,62 +215,30 @@ object HistoryScreen : Screen {
                     .padding(horizontal = 20.dp)
                     .padding(top = 12.dp)
             ) {
-                // Top bar — IconWell back + title + monochrome count chip.
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier.noirClickable { navigator.pop() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        IconWell(
-                            icon = Icons.AutoMirrored.Filled.ArrowBack,
-                            size = 40.dp,
-                            iconSize = 20.dp,
-                            contentDescription = "Back"
-                        )
+                NoirNavBar(
+                    title = "History",
+                    onBack = { navigator.pop() },
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    actions = {
+                        // Unfiltered 30-day group total, so typing in the
+                        // search box never shrinks it.
+                        Box(
+                            modifier = Modifier
+                                .clip(GhaisShapes.pill)
+                                .background(GhaisNoir.Fill2)
+                                .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                                .padding(horizontal = 10.dp, vertical = 5.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "${groups.size}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = GhaisNoir.TextSecondary
+                            )
+                        }
                     }
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 14.dp)
-                    ) {
-                        Text(
-                            text = "History",
-                            color = GhaisNoir.TextPrimary,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        // Total of the UNFILTERED 30-day group list, so typing in
-                        // the search box never shrinks it. The unit is a grouped
-                        // recent (one surah by one canonical reciter) — one
-                        // surah played by two reciters is 2 entries — so it is
-                        // labelled "in history", not "surahs".
-                        Text(
-                            text = "${groups.size} in history • last 30 days",
-                            color = GhaisNoir.TextTertiary,
-                            fontSize = 12.sp
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(GhaisShapes.pill)
-                            .background(GhaisNoir.Fill2)
-                            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "${groups.size}",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = GhaisNoir.TextSecondary
-                        )
-                    }
-                }
+                )
 
                 Spacer(modifier = Modifier.height(14.dp))
 

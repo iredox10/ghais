@@ -10,11 +10,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -27,16 +27,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.data.auth.AuthRepository
 import com.ghais.data.repository.UserUsageRepository
+import com.ghais.ui.components.noir.NoirNavBar
+import com.ghais.ui.components.noir.NoirNavButton
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.theme.GhaisNoir
-import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
 
 /**
- * Phase 4 — Noir Home header.
- *
- * Home title left; search + analytics wells and the user avatar right (avatar opens
- * the profile tab). Editorial headline below stays untouched.
+ * Standard nav bar: avatar left (profile tab), centered "Home",
+ * search + stats wells right.
  */
 @Composable
 fun HomeTopBar(
@@ -51,50 +50,13 @@ fun HomeTopBar(
         ?: ""
     val monogram = displayName.firstOrNull { it.isLetter() }?.uppercase() ?: "G"
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Home title.
-        Text(
-            text = "Home",
-            color = GhaisNoir.TextPrimary,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1
-        )
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            HomeHeaderWell(
-                contentDescription = "Search",
-                onClick = onSearchClick
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Search,
-                    contentDescription = null,
-                    tint = GhaisNoir.TextPrimary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            HomeHeaderWell(
-                contentDescription = "Listening stats",
-                onClick = onStatsClick
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.BarChart,
-                    contentDescription = null,
-                    tint = GhaisNoir.TextPrimary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+    NoirNavBar(
+        title = "Home",
+        navigation = {
             // User avatar → profile tab.
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
                     .background(GhaisNoir.wellFill())
                     .border(1.dp, GhaisNoir.SpecularTop, CircleShape)
@@ -104,30 +66,25 @@ fun HomeTopBar(
                 Text(
                     text = monogram,
                     color = GhaisNoir.TextPrimary,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
+        },
+        actions = {
+            NoirNavButton(
+                icon = Icons.Filled.Search,
+                contentDescription = "Search",
+                onClick = onSearchClick
+            )
+            Spacer(Modifier.width(8.dp))
+            NoirNavButton(
+                icon = Icons.Filled.BarChart,
+                contentDescription = "Listening stats",
+                onClick = onStatsClick
+            )
         }
-    }
-}
-
-@Composable
-private fun HomeHeaderWell(
-    contentDescription: String,
-    onClick: () -> Unit,
-    content: @Composable () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .background(GhaisNoir.wellFill(), GhaisShapes.well)
-            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.well)
-            .noirClickable(onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        content()
-    }
+    )
 }
 
 /**

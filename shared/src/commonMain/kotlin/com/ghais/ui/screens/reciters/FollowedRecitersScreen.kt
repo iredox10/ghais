@@ -40,6 +40,7 @@ import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.components.noir.NoirInsetField
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
@@ -88,35 +89,14 @@ object FollowedRecitersScreen : Screen {
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                Row(
+                NoirNavBar(
+                    title = "Following",
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconWell(
-                        icon = Icons.AutoMirrored.Filled.ArrowBack,
-                        size = 42.dp,
-                        iconSize = 22.dp,
-                        contentDescription = "Back",
-                        modifier = Modifier.noirClickable { navigator.pop() }
-                    )
-                    Column(modifier = Modifier.padding(start = 12.dp)) {
-                        Text(
-                            text = "Following",
-                            color = GhaisNoir.TextPrimary,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "${filtered.size} following",
-                            color = GhaisNoir.TextTertiary,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
+                    onBack = { navigator.pop() },
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack
+                )
 
                 NoirInsetField(
                     modifier = Modifier

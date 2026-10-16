@@ -52,6 +52,7 @@ import com.ghais.data.share.ShareSheet
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSwitch
 import com.ghais.ui.components.noir.noirClickable
@@ -73,46 +74,12 @@ object MyRoutinesScreen : Screen {
             Column(
                 modifier = Modifier.fillMaxSize().statusBarsPadding()
             ) {
-                // Header: ghost back + dual text + count.
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(GhaisNoir.Fill2)
-                            .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
-                            .noirClickable { navigator.pop() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = GhaisNoir.TextPrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "My Routines",
-                            color = GhaisNoir.TextPrimary,
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = (-0.5).sp
-                        )
-                        Text(
-                            text = if (routines.isEmpty()) "No routines yet"
-                            else "${routines.size} routine${if (routines.size == 1) "" else "s"}",
-                            color = GhaisNoir.TextSecondary,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
+                NoirNavBar(
+                    title = "My Routines",
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    onBack = { navigator.pop() },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                )
 
                 // Chrome "New routine" CTA.
                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {

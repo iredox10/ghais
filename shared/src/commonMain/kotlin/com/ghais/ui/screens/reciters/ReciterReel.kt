@@ -308,7 +308,7 @@ fun ReciterReelCard(
  * Single meta line: "Hafs • murattal • 12.4k". Follower count appended only
  * when known (null = hidden, never a placeholder).
  */
-private fun metaLineOf(reciter: Reciter, followerCount: Long?): String {
+internal fun metaLineOf(reciter: Reciter, followerCount: Long?): String {
     val parts = mutableListOf(reciter.riwayah, reciter.style)
     if (followerCount != null) parts.add(FollowStore.formatFollowerCount(followerCount))
     return parts.map { it.trim() }.filter { it.isNotEmpty() }.joinToString(" • ")

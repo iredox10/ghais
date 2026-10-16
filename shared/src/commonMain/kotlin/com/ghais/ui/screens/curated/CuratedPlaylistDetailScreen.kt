@@ -34,13 +34,10 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -70,6 +67,8 @@ import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.NoirHeroCard
 import com.ghais.ui.components.noir.NoirListRow
+import com.ghais.ui.components.noir.NoirNavBar
+import com.ghais.ui.components.noir.NoirNavButton
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.NoirSegmentedProgress
@@ -131,65 +130,21 @@ data class CuratedPlaylistDetailScreen(val playlistId: String) : Screen {
                 containerColor = Color.Transparent,
                 snackbarHost = { SnackbarHost(snackbarHostState) },
                 topBar = {
-                    TopAppBar(
-                        title = {},
-                        navigationIcon = {
-                            IconButton(
-                                onClick = {
-                                    if (rootNavigator.size > 1) {
-                                        rootNavigator.pop()
-                                    } else {
-                                        navigator.pop()
-                                    }
-                                },
-                                modifier = Modifier.padding(start = 4.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(GhaisNoir.Fill2)
-                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Back",
-                                        tint = GhaisNoir.TextPrimary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        },
+                    NoirNavBar(
+                        title = playlist.title,
+                        backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                        onBack = { navigator.pop() },
                         actions = {
-                            IconButton(
+                            NoirNavButton(
+                                icon = Icons.Filled.Share,
+                                contentDescription = "Share",
                                 onClick = {
                                     coroutineScope.launch {
                                         snackbarHostState.showSnackbar("Collection link copied to clipboard")
                                     }
-                                },
-                                modifier = Modifier.padding(end = 4.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(GhaisNoir.Fill2)
-                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Share,
-                                        contentDescription = "Share",
-                                        tint = GhaisNoir.TextPrimary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
                                 }
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent
-                        )
+                            )
+                        }
                     )
                 }
             ) { paddingValues ->
@@ -206,40 +161,6 @@ data class CuratedPlaylistDetailScreen(val playlistId: String) : Screen {
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp)
                         ) {
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "CURATED COLLECTION",
-                                    color = GhaisNoir.TextTertiary,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = 1.2.sp
-                                )
-                                Text(
-                                    text = "${playlist.tracks.size} tracks",
-                                    color = GhaisNoir.TextTertiary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Normal
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "A moment of",
-                                style = GhaisTypography.displayEditorial,
-                                maxLines = 1
-                            )
-                            Text(
-                                text = playlist.title,
-                                style = GhaisTypography.displayEditorialBold,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = playlist.description.ifEmpty { playlist.subtitle },
                                 style = GhaisTypography.editorialBody,

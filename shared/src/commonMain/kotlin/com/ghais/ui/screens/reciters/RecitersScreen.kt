@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -81,7 +82,6 @@ import com.ghais.ui.screens.reciters.deck.DeckSheet
 import com.ghais.ui.screens.reciters.deck.todayDeck
 import com.ghais.ui.screens.reciters.taste.TasteQuizSheet
 import com.ghais.ui.screens.reciters.taste.TasteStore
-import com.ghais.ui.screens.reciters.today.TopQarisRail
 import com.ghais.ui.screens.reciters.today.HeardEntry
 import com.ghais.ui.screens.reciters.today.VoiceOfDayCard
 import com.ghais.ui.screens.reciters.today.YesterdayMostHeardSection
@@ -90,12 +90,13 @@ import com.ghais.ui.screens.reciters.today.currentEpochDay
 import com.ghais.ui.screens.reciters.today.voiceOfDay
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.NoirNavBar
+import com.ghais.ui.components.noir.NoirNavButton
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
-import com.ghais.ui.theme.GhaisTypography
 
 /**
  * Phase 4 — Noir Reciters.
@@ -218,10 +219,11 @@ class RecitersScreen : Tab {
             }
         }
 
-        // Fixed editorial top (Spotify Home rule): SEARCH header, DECK
-        // hero, VOICE yesterday-top, CHARTS, then personalized rails,
-        // RITUAL standalone, NATIONS last. Deck-done state only changes
-        // the entry card copy, never the position.
+        // Fixed editorial top: SEARCH header, DECK hero, VOICE
+        // yesterday-top, then personalized rails, RITUAL standalone,
+        // NATIONS last. Charts live on Home's Top Qaris shelf — one home
+        // for charts, so this scroll stays lean. Deck-done state only
+        // changes the entry card copy, never the position.
         val deckDoneDay by DeckDoneStore.doneDay.collectAsState()
         val orderDay = remember { currentEpochDay() }
         val deckDoneToday = remember(deckDoneDay, orderDay) {
@@ -243,7 +245,7 @@ class RecitersScreen : Tab {
             } catch (_: Exception) {
                 listOf(
                     SectionId.SEARCH, SectionId.DECK,
-                    SectionId.VOICE_OF_DAY, SectionId.CHARTS,
+                    SectionId.VOICE_OF_DAY,
                     SectionId.RITUAL, SectionId.NATIONS
                 )
             }
@@ -330,7 +332,8 @@ class RecitersScreen : Tab {
                         SectionId.SEARCH -> item(key = "search_header") {
                             NoirRecitersHeader(
                                 totalReciters = browseReciters.size,
-                                nationCount = groups.size
+                                nationCount = groups.size,
+                                onSearch = { rootNavigator?.push(ReciterSearchScreen()) }
                             )
                             Spacer(Modifier.height(16.dp))
                             NoirRecitersSearch(
@@ -510,15 +513,6 @@ class RecitersScreen : Tab {
                             )
                         }
 
-                        SectionId.CHARTS -> item(key = "noir_top_qaris_rail") {
-                            TopQarisRail(
-                                onReciter = { slug ->
-                                    rootNavigator?.push(ReciterProfileScreen(slug))
-                                }
-                            )
-                            Spacer(Modifier.height(20.dp))
-                        }
-
                         SectionId.NATIONS -> if (groups.isEmpty()) {
                             item {
                                 NoirRecitersEmpty()
@@ -632,7 +626,6 @@ class RecitersScreen : Tab {
 }
 
 private val NoirReelCardShape = RoundedCornerShape(28.dp)
-private val NoirAvatarShape = RoundedCornerShape(24.dp)
 
 /**
  * Editorial two-line headline ("Browse" light / "Reciters" bold) matching the
@@ -641,26 +634,21 @@ private val NoirAvatarShape = RoundedCornerShape(24.dp)
 @Composable
 private fun NoirRecitersHeader(
     totalReciters: Int,
-    nationCount: Int
+    nationCount: Int,
+    onSearch: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "Browse",
-            style = GhaisTypography.displayEditorial,
-            maxLines = 1
+        NoirNavBar(
+            title = "Reciters",
+            actions = {
+                NoirNavButton(
+                    icon = Icons.Default.Search,
+                    contentDescription = "Search reciters",
+                    onClick = onSearch
+                )
+            }
         )
-        Text(
-            text = "Reciters",
-            style = GhaisTypography.displayEditorialBold,
-            maxLines = 1
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = "Voices of the revelation",
-            color = GhaisNoir.TextSecondary,
-            fontSize = 13.sp
-        )
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             NoirRecitersChip(
                 text = if (totalReciters == 1) "1 reciter" else "$totalReciters reciters"
@@ -672,14 +660,14 @@ private fun NoirRecitersHeader(
     }
 }
 
-/** Non-interactive ghost count chip — informational, no press affordance. */
+/** Tinted count chip — informational, no press affordance. */
 @Composable
 private fun NoirRecitersChip(text: String) {
     Box(
         modifier = Modifier
             .clip(GhaisShapes.pill)
-            .background(GhaisNoir.Fill2)
-            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+            .background(GhaisNoir.tintFill())
+            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
             .padding(horizontal = 14.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -706,9 +694,9 @@ private fun NoirRecitersSearch(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(GhaisShapes.row)
+            .clip(GhaisShapes.pill)
             .background(GhaisNoir.insetFill())
-            .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.row)
+            .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.pill)
             .noirClickable(onClick)
             .padding(horizontal = 16.dp, vertical = 13.dp)
     ) {
@@ -727,13 +715,13 @@ private fun NoirRecitersSearch(
             readOnly = true,
             textStyle = TextStyle(
                 color = GhaisNoir.TextPrimary,
-                fontSize = 15.sp
+                fontSize = 14.sp
             ),
             decorationBox = {
                 Text(
                     text = "Search reciters…",
-                    color = GhaisNoir.TextDisabled,
-                    fontSize = 15.sp
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 14.sp
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -798,125 +786,71 @@ private fun NoirReciterCard(
     val isCurrentReciter = currentTrack?.reciterSlug == reciter.slug
     val activelyPlaying = isCurrentReciter && isPlaying
 
+    // Full-bleed portrait card — same anatomy as the shared reel card:
+    // photo header, left-aligned identity, lavender FAB + follow badge.
     val fill = if (activelyPlaying) GhaisNoir.cardFillActive() else GhaisNoir.cardFillSoft()
-    val border = if (activelyPlaying) GhaisNoir.SpecularTop else GhaisNoir.BorderCard
+    val border = if (activelyPlaying) GhaisNoir.Lavender else GhaisNoir.BorderCard
 
     Box(
         modifier = Modifier
             .width(180.dp)
-            .height(254.dp)
+            .height(272.dp)
             .clip(NoirReelCardShape)
             .background(fill)
             .border(1.dp, border, NoirReelCardShape)
             .topSpecular()
             .noirClickable(onClick)
     ) {
-        // Sheen sweep + bottom scrim for depth (monochrome only).
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(GhaisNoir.sheen())
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.32f)
+        Column(modifier = Modifier.matchParentSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(158.dp)
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = 28.dp,
+                            topEnd = 28.dp
                         )
                     )
-                )
-        )
-        Column(
-            modifier = Modifier
-                .matchParentSize()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Box(
-                modifier = Modifier.size(128.dp),
-                contentAlignment = Alignment.Center
+                    .background(GhaisNoir.wellFill())
             ) {
                 val cloudPhoto = rememberCloudPhoto(reciter.slug)
                 if (photoUrl != null || cloudPhoto != null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(NoirAvatarShape)
-                            .background(GhaisNoir.wellFill())
-                            .border(1.dp, GhaisNoir.BorderCard, NoirAvatarShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AsyncImage(
-                            model = cloudPhoto ?: photoUrl,
-                            contentDescription = reciter.nameEn,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                    AsyncImage(
+                        model = cloudPhoto ?: photoUrl,
+                        contentDescription = reciter.nameEn,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(NoirAvatarShape)
-                            .background(GhaisNoir.wellFill())
-                            .border(1.dp, GhaisNoir.BorderCard, NoirAvatarShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = reciter.nameEn.take(1),
-                            color = GhaisNoir.TextPrimary,
-                            fontSize = 34.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                // Play / pause pill: chrome when actively playing, smoked glass otherwise.
-                val playModifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(6.dp)
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .then(
-                        if (activelyPlaying) Modifier.background(GhaisNoir.chromeFill())
-                        else Modifier.background(Color.Black.copy(alpha = 0.70f))
+                    Text(
+                        text = reciter.nameEn.take(1),
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 44.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.Center)
                     )
+                }
+                // Bottom scrim — text-zone transition, never a floating edge.
                 Box(
-                    modifier = playModifier
-                        .border(
-                            1.dp,
-                            if (activelyPlaying) Color.White.copy(alpha = 0.35f)
-                            else GhaisNoir.BorderCard,
-                            CircleShape
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.55f)
+                                )
+                            )
                         )
-                        .noirClickable {
-                            if (activelyPlaying) {
-                                AudioEngine.pause()
-                            } else if (isCurrentReciter) {
-                                AudioEngine.resume()
-                            } else {
-                                onPlayClick()
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (activelyPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (activelyPlaying) "Pause" else "Play",
-                        tint = if (activelyPlaying) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                )
 
                 // Follow badge — lavender fill when following (selected-state
                 // language), clay well otherwise.
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
+                        .padding(8.dp)
                         .size(32.dp)
                         .clip(CircleShape)
                         .background(
@@ -940,37 +874,76 @@ private fun NoirReciterCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = reciter.nameEn,
-                color = GhaisNoir.TextPrimary,
-                fontSize = 16.sp,
-                lineHeight = 20.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.heightIn(min = 44.dp)
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "${reciter.riwayah} • ${reciter.style}",
-                color = GhaisNoir.TextTertiary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Normal,
-                letterSpacing = 0.2.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = reciter.nameAr,
-                color = GhaisNoir.TextSecondary,
-                fontSize = 14.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            // Identity block: left-aligned name + arabic + single meta line,
+            // with the lavender FAB riding the photo boundary.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = reciter.nameEn,
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 16.sp,
+                        lineHeight = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.heightIn(min = 40.dp)
+                    )
+                    Text(
+                        text = reciter.nameAr,
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = metaLineOf(reciter, null),
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 11.sp,
+                        letterSpacing = 0.2.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                // Signature FAB: always lavender, pause glyph while playing.
+                Box(
+                    modifier = Modifier
+                        .offset(y = (-26).dp)
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(GhaisNoir.lavenderFill())
+                        .noirClickable {
+                            if (activelyPlaying) {
+                                AudioEngine.pause()
+                            } else if (isCurrentReciter) {
+                                AudioEngine.resume()
+                            } else {
+                                onPlayClick()
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (activelyPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = if (activelyPlaying) "Pause" else "Play",
+                        tint = GhaisNoir.LavenderInk,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
         }
+        // Diagonal glass sheen swept across the finished card.
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(GhaisNoir.sheen())
+        )
     }
 }
 

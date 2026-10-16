@@ -38,6 +38,7 @@ import com.ghais.data.repository.reciterCountryKey
 import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirInsetField
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirClickable
@@ -240,10 +241,10 @@ class AllRecitersScreen : Screen {
                     .padding(horizontal = 20.dp)
                     .padding(top = 12.dp)
             ) {
-                // Top bar — IconWell back + title + monochrome count chip
-                AllRecitersTopBar(
-                    totalCount = filteredReciters.size,
-                    onBackClick = { navigator.pop() }
+                NoirNavBar(
+                    title = "All Reciters",
+                    onBack = { navigator.pop() },
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -303,62 +304,6 @@ class AllRecitersScreen : Screen {
                     }
                 }
             }
-        }
-    }
-}
-
-/**
- * Top bar: clay [IconWell] back affordance, bold white title,
- * monochrome count chip (Fill2 wash + ghost hairline, 62% text).
- */
-@Composable
-private fun AllRecitersTopBar(
-    totalCount: Int,
-    onBackClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier.noirClickable(onClick = onBackClick),
-            contentAlignment = Alignment.Center
-        ) {
-            IconWell(
-                icon = Icons.AutoMirrored.Filled.ArrowBack,
-                size = 40.dp,
-                iconSize = 20.dp,
-                contentDescription = "Back"
-            )
-        }
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        Text(
-            text = "Verified Reciters",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = GhaisNoir.TextPrimary,
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        // Monochrome count chip — informational, no press affordance.
-        Box(
-            modifier = Modifier
-                .clip(GhaisShapes.pill)
-                .background(GhaisNoir.Fill2)
-                .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
-                .padding(horizontal = 10.dp, vertical = 5.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "$totalCount",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = GhaisNoir.TextSecondary
-            )
         }
     }
 }

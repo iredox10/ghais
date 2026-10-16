@@ -44,8 +44,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -76,6 +74,7 @@ import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.NoirHeroCard
 import com.ghais.ui.components.noir.NoirListRow
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.NoirSegmentedProgress
@@ -85,7 +84,6 @@ import com.ghais.ui.screens.home.NoirStatChip
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
-import com.ghais.ui.theme.GhaisTypography
 import com.ghais.ui.util.bidiIsolate
 
 /**
@@ -165,33 +163,10 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
             Scaffold(
                 containerColor = Color.Transparent,
                 topBar = {
-                    TopAppBar(
-                        title = {},
-                        navigationIcon = {
-                            IconButton(
-                                onClick = { navigator.pop() },
-                                modifier = Modifier.padding(start = 4.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(GhaisNoir.Fill2)
-                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Back",
-                                        tint = GhaisNoir.TextPrimary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent
-                        )
+                    NoirNavBar(
+                        title = playlist.title,
+                        backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                        onBack = { navigator.pop() }
                     )
                 }
             ) { paddingValues ->
@@ -208,43 +183,6 @@ data class PlaylistDetailsScreen(val playlistId: String) : Screen {
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp)
                         ) {
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            // Editorial monochrome header (mirrors NoirProfileHeader).
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "CURATED COLLECTION",
-                                    color = GhaisNoir.TextTertiary,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = 1.2.sp
-                                )
-                                Text(
-                                    text = "${surahs.size} surahs",
-                                    color = GhaisNoir.TextTertiary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Normal
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Tonight's",
-                                style = GhaisTypography.displayEditorial,
-                                maxLines = 1
-                            )
-                            Text(
-                                text = playlist.title,
-                                style = GhaisTypography.displayEditorialBold,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-
-                            Spacer(modifier = Modifier.height(14.dp))
-
                             // Hero plate: monochrome cover art + identity + stats +
                             // kept meter + chrome/ghost actions.
                             PlaylistNoirHeroPlate(
@@ -675,33 +613,10 @@ private fun UserPlaylistDetailsContent(
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
-                TopAppBar(
-                    title = {},
-                    navigationIcon = {
-                        IconButton(
-                            onClick = { navigator.pop() },
-                            modifier = Modifier.padding(start = 4.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(GhaisNoir.Fill2)
-                                    .border(1.dp, GhaisNoir.BorderCard, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back",
-                                    tint = GhaisNoir.TextPrimary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent
-                    )
+                NoirNavBar(
+                    title = playlist.name,
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    onBack = { navigator.pop() }
                 )
             }
         ) { paddingValues ->
@@ -717,42 +632,6 @@ private fun UserPlaylistDetailsContent(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
                     ) {
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "YOUR PLAYLIST",
-                                color = GhaisNoir.TextTertiary,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                letterSpacing = 1.2.sp
-                            )
-                            Text(
-                                text = if (tracks.size == 1) "1 track" else "${tracks.size} tracks",
-                                color = GhaisNoir.TextTertiary,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Normal
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Listen to",
-                            style = GhaisTypography.displayEditorial,
-                            maxLines = 1
-                        )
-                        Text(
-                            text = playlist.name,
-                            style = GhaisTypography.displayEditorialBold,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
                         NoirHeroCard(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {

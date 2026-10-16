@@ -8,10 +8,10 @@ package com.ghais.ui.screens.reciters.personal
  * engagement signals. The enum entries themselves are the stable ids — use
  * them (or derived strings) as `LazyColumn` item keys.
  *
- * Editorial top is FIXED (Spotify Home rule: one hero, then ghosts):
- * SEARCH header → DECK (Today's voices hero) → VOICE_OF_DAY (Yesterday's
- * most heard) → CHARTS → personalized rails → NATIONS last. Refinement
- * filters live on the search screen, not in this scroll.
+ * Editorial top is FIXED: SEARCH header → DECK (Today's voices hero) →
+ * VOICE_OF_DAY (Yesterday's most heard) → personalized rails → NATIONS
+ * last. Charts live on Home's Top Qaris shelf (one home for charts).
+ * Refinement filters live on the search screen, not in this scroll.
  *
  * Mapping to [RecitersScreen](com.ghais.ui.screens.reciters.RecitersScreen)
  * (`LazyColumn`, top to bottom):
@@ -21,7 +21,6 @@ package com.ghais.ui.screens.reciters.personal
  * | SEARCH       | Engraved search field (header item)                    |
  * | DECK         | `DeckEntryCard` (gated on `HookFlags.deckEnabled`)     |
  * | VOICE_OF_DAY | `YesterdayMostHeardSection` (+ voice fallback)         |
- * | CHARTS       | `TopQarisRail`                                         |
  * | YOUR_VOICES  | Followed-voices shelf                                  |
  * | FOR_YOU      | Taste/history shelves                                  |
  * | RITUAL       | `WeeklyRitualRow` (own section, was nested in FOR_YOU) |
@@ -34,7 +33,6 @@ enum class SectionId {
     SEARCH,
     DECK,
     VOICE_OF_DAY,
-    CHARTS,
     YOUR_VOICES,
     FOR_YOU,
     RITUAL,
@@ -48,8 +46,8 @@ enum class SectionId {
  *
  * Rules:
  * 1. [SectionId.SEARCH] is always first; [SectionId.NATIONS] is always last.
- * 2. [SectionId.DECK], [SectionId.VOICE_OF_DAY], [SectionId.CHARTS] follow
- *    in that fixed order (the hero block).
+ * 2. [SectionId.DECK], [SectionId.VOICE_OF_DAY] follow in that fixed
+ *    order (the hero block).
  * 3. [SectionId.YOUR_VOICES] appears when the user follows at least one
  *    reciter ([hasFollows]).
  * 4. [SectionId.FOR_YOU] appears when there is personalization confidence:
@@ -58,7 +56,7 @@ enum class SectionId {
  *    are empty); it stands alone instead of nesting inside FOR_YOU so the
  *    weekly ritual survives low-confidence weeks.
  * 6. Cold start (no follows, no history, no taste) is exactly
- *    `SEARCH, DECK, VOICE_OF_DAY, CHARTS, RITUAL, NATIONS`.
+ *    `SEARCH, DECK, VOICE_OF_DAY, RITUAL, NATIONS`.
  *
  * Every section appears at most once; the result always starts with SEARCH
  * and ends with NATIONS.
@@ -71,7 +69,6 @@ fun orderSections(
     val middle = mutableListOf(
         SectionId.DECK,
         SectionId.VOICE_OF_DAY,
-        SectionId.CHARTS,
     )
     if (hasFollows) middle += SectionId.YOUR_VOICES
     if (hasHistory || hasTaste) middle += SectionId.FOR_YOU

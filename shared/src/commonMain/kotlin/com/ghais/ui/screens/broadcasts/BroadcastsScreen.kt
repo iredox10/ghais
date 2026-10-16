@@ -44,6 +44,7 @@ import com.ghais.data.repository.Broadcast
 import com.ghais.data.repository.BroadcastRepository
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
@@ -71,8 +72,6 @@ object BroadcastsScreen : Screen {
             BroadcastRepository.refresh()
         }
 
-        val unread = items.count { it.id !in seen }
-
         NoirScreenRoot {
             Column(
                 modifier = Modifier
@@ -81,56 +80,11 @@ object BroadcastsScreen : Screen {
                     .padding(horizontal = 20.dp)
                     .padding(top = 12.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier.noirClickable { navigator.pop() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        IconWell(
-                            icon = Icons.AutoMirrored.Filled.ArrowBack,
-                            size = 40.dp,
-                            iconSize = 20.dp,
-                            contentDescription = "Back"
-                        )
-                    }
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 14.dp)
-                    ) {
-                        Text(
-                            text = "Inbox",
-                            color = GhaisNoir.TextPrimary,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = if (unread > 0) "$unread unread" else "Announcements",
-                            color = GhaisNoir.TextTertiary,
-                            fontSize = 12.sp
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(GhaisShapes.pill)
-                            .background(GhaisNoir.Fill2)
-                            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "${items.size}",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = GhaisNoir.TextSecondary
-                        )
-                    }
-                }
+                NoirNavBar(
+                    title = "Inbox",
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    onBack = { navigator.pop() }
+                )
 
                 Spacer(modifier = Modifier.height(14.dp))
 

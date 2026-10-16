@@ -54,37 +54,6 @@ import kotlin.time.Clock
  */
 
 // ---------------------------------------------------------------------------
-// Search — Ref1 middle screen + Ref3 discover bar, Noir engraved recipe.
-// ---------------------------------------------------------------------------
-@Composable
-fun HomeSearchBar(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(GhaisNoir.insetFill(), GhaisShapes.pill)
-            .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.pill)
-            .noirClickable(onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Filled.Search,
-            contentDescription = null,
-            tint = GhaisNoir.TextTertiary,
-            modifier = Modifier.size(20.dp)
-        )
-        Text(
-            text = "Search surahs, qaris, moods…",
-            color = GhaisNoir.TextTertiary,
-            fontSize = 14.sp,
-            maxLines = 1,
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Filter chips — Ref1 "All / AirPods / Accessories" pill row.
 // Each chip navigates (no dead controls): All shows everything, the rest
 // jump to their dedicated surface.
@@ -273,99 +242,6 @@ fun HomePlumHero(
                     }
                 }
             }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Dua of the Day — editorial display card (Arabic calligraphy moment).
-// Deterministic daily pick from the duas catalogue; hidden when empty.
-// ---------------------------------------------------------------------------
-@Composable
-fun HomeDuaOfDay(onOpen: (itemId: String) -> Unit, modifier: Modifier = Modifier) {
-    val daySeed = remember { Clock.System.now().toEpochMilliseconds() / 86_400_000L }
-    val dua = remember(daySeed) {
-        try {
-            val duas = DevotionalRepository.all(DevotionKind.DUA)
-            if (duas.isEmpty()) null else duas[(daySeed % duas.size).toInt()]
-        } catch (_: Exception) {
-            null
-        }
-    }
-    if (dua == null) return
-
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(GhaisNoir.tintFill(), GhaisShapes.cardLarge)
-            .border(1.dp, GhaisNoir.Lavender.copy(alpha = 0.25f), GhaisShapes.cardLarge)
-            .topSpecular(inset = 28.dp)
-            .noirClickable { onOpen(dua.id) }
-            .padding(20.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "DUA OF THE DAY",
-                color = GhaisNoir.Lavender,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.2.sp
-            )
-            if (dua.reference.trim().isNotEmpty()) {
-                Text(
-                    text = dua.reference.trim(),
-                    color = GhaisNoir.TextTertiary,
-                    fontSize = 10.sp,
-                    maxLines = 1
-                )
-            }
-        }
-        if (dua.arabic.trim().isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = bidiIsolate(dua.arabic.trim()),
-                color = GhaisNoir.TextPrimary,
-                fontSize = 22.sp,
-                lineHeight = 36.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = dua.title.trim().ifEmpty { "Daily supplication" },
-            color = GhaisNoir.TextSecondary,
-            fontSize = 13.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(Modifier.height(14.dp))
-        Row(
-            modifier = Modifier
-                .clip(GhaisShapes.pill)
-                .background(GhaisNoir.lavenderFill())
-                .noirClickable { onOpen(dua.id) }
-                .padding(horizontal = 20.dp, vertical = 11.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = null,
-                tint = GhaisNoir.LavenderInk,
-                modifier = Modifier.size(18.dp)
-            )
-            Text(
-                text = "Read & listen",
-                color = GhaisNoir.LavenderInk,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
-            )
         }
     }
 }

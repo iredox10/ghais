@@ -9,32 +9,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.screens.profile.glass.GlassDivider
 import com.ghais.ui.theme.GhaisNoir
-import com.ghais.ui.theme.GhaisTypography
 
 /**
  * Phase 3 — Noir Profile sections: editorial header + shared row chrome.
  */
 
-/** Editorial header: "Your • Space" greeting (reference headline). */
+/** Standard nav bar + greeting (reference headline). */
 @Composable
 fun NoirProfileHeader(
     userName: String
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "Your",
-            style = GhaisTypography.displayEditorial,
-            maxLines = 1
-        )
-        Text(
-            text = "Space",
-            style = GhaisTypography.displayEditorialBold,
-            maxLines = 1
-        )
-        Spacer(Modifier.height(6.dp))
+        NoirNavBar(title = "Profile")
+        Spacer(Modifier.height(4.dp))
         Text(
             text = if (userName.isBlank()) "Assalamu alaikum" else "Assalamu alaikum, $userName",
             color = GhaisNoir.TextSecondary,

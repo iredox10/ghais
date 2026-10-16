@@ -2,19 +2,16 @@ package com.ghais.ui.screens.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,6 +19,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,12 +32,11 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 
 /**
- * Redesign — "Collections" as a 2x2 tinted grid (AirPods-ref product tiles).
+ * Redesign — "Collections" as one slim icon strip (minimal).
  *
- * The three tiles used to be hue-coded (blue focus / violet sleep / flat grey),
- * then monochrome glass. They are now lavender-washed plates in a two-column
- * grid with a fourth Downloads tile, so the section fills the width instead of
- * hiding content in a horizontal rail.
+ * Four equal cells (icon well + label + live sub-line) inside a single
+ * tinted plate: ~90dp tall instead of a 348dp tile wall. Same four
+ * destinations, nothing hidden, nothing repeated.
  */
 @Composable
 fun HomePlaylistsRow(
@@ -49,103 +47,86 @@ fun HomePlaylistsRow(
 ) {
     val favorites by FavoritesStore.favoriteTracks.collectAsState()
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            NoirPlaylistTile(
-                label = "Favourites",
-                subtitle = "${favorites.size} saved",
-                onClick = onFavourites,
-                modifier = Modifier.weight(1f),
-                artwork = {
-                    IconWell(
-                        icon = Icons.Filled.Star,
-                        size = 64.dp,
-                        iconSize = 28.dp,
-                        contentDescription = "Favourites"
-                    )
-                }
-            )
-            NoirPlaylistTile(
-                label = "Focus & Work",
-                subtitle = "Deep focus",
-                onClick = onFocusWork,
-                modifier = Modifier.weight(1f),
-                artwork = { NoirEngravedRings(ringSize = 72.dp) }
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            NoirPlaylistTile(
-                label = "Night & Sleep",
-                subtitle = "Sleep well",
-                onClick = onNightSleep,
-                modifier = Modifier.weight(1f),
-                artwork = {
-                    IconWell(
-                        icon = Icons.Filled.Bedtime,
-                        size = 64.dp,
-                        iconSize = 28.dp,
-                        contentDescription = "Night and Sleep"
-                    )
-                }
-            )
-            NoirPlaylistTile(
-                label = "Downloads",
-                subtitle = "Offline",
-                onClick = onDownloads,
-                modifier = Modifier.weight(1f),
-                artwork = {
-                    IconWell(
-                        icon = Icons.Filled.Download,
-                        size = 64.dp,
-                        iconSize = 28.dp,
-                        contentDescription = "Downloads"
-                    )
-                }
-            )
-        }
-    }
-}
-
-/** Tinted grid plate: clay artwork above the label block. */
-@Composable
-private fun NoirPlaylistTile(
-    label: String,
-    subtitle: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    artwork: @Composable BoxScope.() -> Unit
-) {
-    Box(
-        modifier = modifier
-            .height(168.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
             .background(GhaisNoir.tintFill(), GhaisShapes.cardNoir)
             .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardNoir)
             .topSpecular(inset = 24.dp)
-            .noirClickable(onClick)
-            .padding(14.dp)
+            .padding(horizontal = 6.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier.align(Alignment.TopStart),
-            contentAlignment = Alignment.Center,
-            content = artwork
+        NoirCollectionCell(
+            icon = Icons.Filled.Star,
+            contentDescription = "Favourites",
+            label = "Favourites",
+            sub = "${favorites.size} saved",
+            onClick = onFavourites,
+            modifier = Modifier.weight(1f)
         )
-        Column(
-            modifier = Modifier.align(Alignment.BottomStart)
-        ) {
-            Text(
-                text = label,
-                color = GhaisNoir.TextPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                color = GhaisNoir.TextSecondary,
-                fontSize = 11.sp,
-                maxLines = 1
-            )
-        }
+        NoirCollectionCell(
+            icon = Icons.Filled.Headphones,
+            contentDescription = "Focus and Work",
+            label = "Focus",
+            sub = "Deep work",
+            onClick = onFocusWork,
+            modifier = Modifier.weight(1f)
+        )
+        NoirCollectionCell(
+            icon = Icons.Filled.Bedtime,
+            contentDescription = "Night and Sleep",
+            label = "Sleep",
+            sub = "Night",
+            onClick = onNightSleep,
+            modifier = Modifier.weight(1f)
+        )
+        NoirCollectionCell(
+            icon = Icons.Filled.Download,
+            contentDescription = "Downloads",
+            label = "Offline",
+            sub = "Saved",
+            onClick = onDownloads,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+/** Compact strip cell: 44dp icon well, 11sp label, 10sp live sub-line. */
+@Composable
+private fun NoirCollectionCell(
+    icon: ImageVector,
+    contentDescription: String,
+    label: String,
+    sub: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .clip(GhaisShapes.row)
+            .noirClickable(onClick)
+            .padding(vertical = 4.dp)
+    ) {
+        IconWell(
+            icon = icon,
+            size = 44.dp,
+            iconSize = 20.dp,
+            contentDescription = contentDescription
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = label,
+            color = GhaisNoir.TextPrimary,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1
+        )
+        Text(
+            text = sub,
+            color = GhaisNoir.TextTertiary,
+            fontSize = 10.sp,
+            maxLines = 1
+        )
     }
 }

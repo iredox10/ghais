@@ -30,8 +30,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,12 +58,12 @@ import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirHeroCard
 import com.ghais.ui.components.noir.NoirListRow
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.screens.home.NoirStatChip
 import com.ghais.ui.theme.GhaisNoir
-import com.ghais.ui.theme.GhaisTypography
 import kotlinx.coroutines.launch
 
 /**
@@ -104,32 +102,10 @@ class DownloadsScreen : Screen {
             Scaffold(
                 containerColor = Color.Transparent,
                 topBar = {
-                    TopAppBar(
-                        title = {},
-                        navigationIcon = {
-                            IconButton(
-                                onClick = { navigator.pop() },
-                                modifier = Modifier.padding(start = 4.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .background(GhaisNoir.Fill2, CircleShape)
-                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Back",
-                                        tint = GhaisNoir.TextPrimary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent
-                        )
+                    NoirNavBar(
+                        title = "Downloads",
+                        backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                        onBack = { navigator.pop() }
                     )
                 }
             ) { paddingValues ->
@@ -145,26 +121,6 @@ class DownloadsScreen : Screen {
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp)
                         ) {
-                            Text(
-                                text = "COLLECTIONS • OFFLINE",
-                                color = GhaisNoir.TextTertiary,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                letterSpacing = 1.2.sp
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Your",
-                                style = GhaisTypography.displayEditorial,
-                                maxLines = 1
-                            )
-                            Text(
-                                text = "Downloads",
-                                style = GhaisTypography.displayEditorialBold,
-                                maxLines = 1
-                            )
-                            Spacer(modifier = Modifier.height(14.dp))
-
                             NoirHeroCard(modifier = Modifier.fillMaxWidth()) {
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {

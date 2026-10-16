@@ -71,21 +71,12 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 
 /**
- * Phase 4 — Noir Home.
+ * Redesign Home: the plum hero owns resume (latest history entry), filter
+ * chips navigate, then collections / voices / mix / discover / stats.
+ * Devotionals live in Collections; charts live on their own shelf.
  *
- * Sticky-free editorial scroll on the Noir canvas (top glow zone -> absolute
- * black + ambient glow + film grain). Sections keep their original order and
- * navigation targets; only the surface language changed: every accent hue,
- * flat grey card and gradient tile is replaced by alpha-white glass.
- *
- * The former "Listen by routine" tile row is gone. Its Study / Work / Sleep
- * plates were hardcoded to three curated playlist ids, and the same intent
- * already lives in the mood screen, so the row is now [HomeDevotionRow] —
- * duas and ruqiyah, each opening its own catalogue list.
- *
- * Search lives in the top-bar well only, which pushes [SearchScreen] — the one
- * place that resolves ayah references and keeps query history. The scroll
- * itself opens at Continue listening.
+ * Search pushes [SearchScreen] — the one place that resolves ayah
+ * references and keeps query history.
  */
 object HomeScreen : Tab {
     override val options: TabOptions
@@ -472,82 +463,3 @@ private fun TrackItem.belongsToDevotion(item: DevotionalItem): Boolean =
     reciterSlug == DEVOTIONAL_TRACK_SLUG &&
         surahNameEn == item.title.ifBlank { item.kind.label } &&
         textUthmani == item.arabic
-
-private val DevotionTileHeight = 156.dp
-
-/**
- * Identity for one devotional tile.
- *
- * [DevotionKind] carries the visible title ([DevotionKind.label]) and nothing
- * else, so the tile heading can never drift from the list screen it opens.
- */
-private data class DevotionTileSpec(
-    val kind: DevotionKind,
-    val subtitle: String,
-    val icon: ImageVector
-)
-
-/**
- * The devotional tile row — duas and ruqiyah, one glass plate each.
- *
- * Subtitles describe what the collection *is* rather than how many items it
- * holds: a baked-in count would need editing every time the catalogue grows,
- * and the catalogue is the thing most likely to change. "Supplications" and
- * "Quranic verses" also stay true if audio is ever attached to the duas or
- * the ruqiyah set is re-sourced, which a number would not.
- */
-private val devotionTiles = listOf(
-    DevotionTileSpec(
-        kind = DevotionKind.DUA,
-        subtitle = "Supplications",
-        icon = Icons.Filled.AutoAwesome
-    ),
-    DevotionTileSpec(
-        kind = DevotionKind.RUQIYAH,
-        subtitle = "Quranic verses",
-        icon = Icons.Filled.VerifiedUser
-    )
-)
-
-@Composable
-private fun HomeDevotionRow(onKind: (DevotionKind) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        devotionTiles.forEach { tile ->
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(DevotionTileHeight)
-                    .background(GhaisNoir.tintFill(), GhaisShapes.cardNoir)
-                    .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardNoir)
-                    .topSpecular(inset = 24.dp)
-                    .noirClickable { onKind(tile.kind) }
-                    .padding(14.dp)
-            ) {
-                IconWell(
-                    icon = tile.icon,
-                    size = 48.dp,
-                    iconSize = 22.dp,
-                    contentDescription = tile.kind.label,
-                    modifier = Modifier.align(Alignment.TopStart)
-                )
-                Column(modifier = Modifier.align(Alignment.BottomStart)) {
-                    Text(
-                        text = tile.kind.label,
-                        color = GhaisNoir.TextPrimary,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = tile.subtitle,
-                        color = GhaisNoir.TextSecondary,
-                        fontSize = 11.sp
-                    )
-                }
-            }
-        }
-    }
-}

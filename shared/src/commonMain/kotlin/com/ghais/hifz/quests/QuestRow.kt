@@ -30,12 +30,13 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 
 /**
- * AGENT A9 — Noir quest row: chrome checkbox state, engraved progress bar,
- * reward label (`+20 XP`) and a `progress/target` counter.
+ * Minimal quest row: checkbox state, title, slim progress bar, and a single
+ * reward line. Descriptions are gone — the titles ("Review 5 due ayahs")
+ * already say everything, and the extra lines were colliding with the
+ * counters on narrow screens.
  *
  * Stateless: [quest] is a [Quest] snapshot, [onClick] (when given) is the
- * caller's hook to record progress / navigate. Done rows render the active
- * wash with a specular rim; open rows stay on the soft resting fill.
+ * caller's hook to record progress / navigate. Done rows read lavender.
  */
 @Composable
 fun QuestRow(
@@ -50,22 +51,22 @@ fun QuestRow(
         )
         .border(
             1.dp,
-            if (quest.done) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+            if (quest.done) GhaisNoir.Lavender.copy(alpha = 0.4f) else GhaisNoir.BorderCard,
             GhaisShapes.row,
         )
     if (onClick != null) rowModifier = rowModifier.noirClickable(onClick)
 
     Row(
-        modifier = rowModifier.padding(horizontal = 14.dp, vertical = 12.dp),
+        modifier = rowModifier.padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(28.dp)
+                .size(26.dp)
                 .clip(CircleShape)
                 .then(
                     if (quest.done) {
-                        Modifier.background(GhaisNoir.chromeFill())
+                        Modifier.background(GhaisNoir.lavenderFill())
                     } else {
                         Modifier.background(GhaisNoir.Fill2)
                     },
@@ -73,7 +74,7 @@ fun QuestRow(
                 .border(
                     1.dp,
                     if (quest.done) {
-                        Color.White.copy(alpha = 0.4f)
+                        Color.Transparent
                     } else {
                         GhaisNoir.BorderCard
                     },
@@ -85,8 +86,8 @@ fun QuestRow(
                 Icon(
                     imageVector = Icons.Filled.Check,
                     contentDescription = "Quest done",
-                    tint = GhaisNoir.OnChrome,
-                    modifier = Modifier.size(15.dp),
+                    tint = GhaisNoir.LavenderInk,
+                    modifier = Modifier.size(14.dp),
                 )
             }
         }
@@ -102,17 +103,7 @@ fun QuestRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (quest.description.isNotBlank()) {
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = quest.description,
-                    color = GhaisNoir.TextTertiary,
-                    fontSize = 12.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             NoirSegmentedProgress(
                 progress = if (quest.target > 0) {
                     quest.progress.toFloat() / quest.target.toFloat()
@@ -120,6 +111,7 @@ fun QuestRow(
                     0f
                 },
                 trackHeight = 4.dp,
+                lavender = quest.done,
             )
         }
 
@@ -127,12 +119,11 @@ fun QuestRow(
 
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = "+${quest.rewardXp} XP",
-                color = GhaisNoir.TextSecondary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
+                text = "+${quest.rewardXp}",
+                color = if (quest.done) GhaisNoir.Lavender else GhaisNoir.TextSecondary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.height(4.dp))
             Text(
                 text = "${quest.progress}/${quest.target}",
                 color = GhaisNoir.TextTertiary,

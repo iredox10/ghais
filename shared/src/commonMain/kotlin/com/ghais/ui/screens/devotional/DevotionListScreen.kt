@@ -58,6 +58,7 @@ import com.ghais.domain.model.DevotionalItem
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.components.noir.NoirInsetField
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
@@ -151,58 +152,31 @@ data class DevotionListScreen(val kind: DevotionKind) : Screen {
                     .padding(top = 12.dp)
             ) {
                 // ----------------------------------------------------------
-                // Top bar — IconWell back + title/subtitle + count chip.
+                // Top bar — standard nav bar; catalogue count chip kept as a
+                // trailing well, subtitle dropped (title duplicates it).
                 // ----------------------------------------------------------
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier.noirClickable { navigator.pop() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        IconWell(
-                            icon = Icons.AutoMirrored.Filled.ArrowBack,
-                            size = 40.dp,
-                            iconSize = 20.dp,
-                            contentDescription = "Back"
-                        )
+                NoirNavBar(
+                    title = kind.label,
+                    onBack = { navigator.pop() },
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    actions = {
+                        Box(
+                            modifier = Modifier
+                                .clip(GhaisShapes.pill)
+                                .background(GhaisNoir.Fill2)
+                                .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                                .padding(horizontal = 10.dp, vertical = 5.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "${all.size}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = GhaisNoir.TextSecondary
+                            )
+                        }
                     }
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 14.dp)
-                    ) {
-                        Text(
-                            text = kind.label,
-                            color = GhaisNoir.TextPrimary,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "${all.size} ${kind.unitWord}",
-                            color = GhaisNoir.TextTertiary,
-                            fontSize = 12.sp
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(GhaisShapes.pill)
-                            .background(GhaisNoir.Fill2)
-                            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "${all.size}",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = GhaisNoir.TextSecondary
-                        )
-                    }
-                }
+                )
 
                 Spacer(modifier = Modifier.height(14.dp))
 

@@ -28,7 +28,9 @@ import com.ghais.ui.theme.GhaisNoir
 fun NoirSegmentedProgress(
     progress: Float,
     modifier: Modifier = Modifier,
-    trackHeight: Dp = 8.dp
+    trackHeight: Dp = 8.dp,
+    /** Lavender fill (personal progress) instead of chrome (library state). */
+    lavender: Boolean = false,
 ) {
     val clamped = progress.coerceIn(0f, 1f)
     Box(
@@ -45,7 +47,10 @@ fun NoirSegmentedProgress(
                     .fillMaxWidth(clamped)
                     .height(trackHeight)
                     .clip(CircleShape)
-                    .background(GhaisNoir.chromeFill())
+                    .background(
+                        if (lavender) GhaisNoir.lavenderFill()
+                        else GhaisNoir.chromeFill()
+                    )
             )
         }
     }

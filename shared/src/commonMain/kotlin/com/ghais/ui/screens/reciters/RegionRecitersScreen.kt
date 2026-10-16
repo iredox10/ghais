@@ -41,6 +41,7 @@ import com.ghais.data.repository.reciterCountryKey
 import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirClickable
@@ -76,50 +77,15 @@ data class RegionRecitersScreen(val nation: String) : Screen {
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Top bar — back well + nation title + mono count
-                Row(
+                NoirNavBar(
+                    title = nation,
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(GhaisNoir.Fill2)
-                            .border(1.dp, GhaisNoir.BorderCard, CircleShape)
-                            .noirClickable { navigator.pop() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = GhaisNoir.TextPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 12.dp)
-                    ) {
-                        Text(
-                            text = nation,
-                            color = GhaisNoir.TextPrimary,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "${filtered.size} reciters",
-                            color = GhaisNoir.TextTertiary,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
+                    onBack = { navigator.pop() },
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack
+                )
 
                 // Region chip strip — single active chrome pill (selected region).
                 // Single-region contract preserved: no multi-region switching.

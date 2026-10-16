@@ -55,15 +55,13 @@ import com.ghais.flags.HookFlags
 import com.ghais.analytics.HookAnalytics
 import com.ghais.analytics.HookEvents
 import com.ghais.hifz.quests.QuestRow
-import com.ghais.hifz.quests.HifzXpBadge
-import com.ghais.hifz.quests.HifzXpStore
-import com.ghais.hifz.quests.hifzXpLevel
 import com.ghais.hifz.quests.questsFor
 import kotlin.time.Clock
 import com.ghais.player.AudioEngine
 import com.ghais.player.DownloadKeys
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.NoirCard
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSegmentedProgress
 import com.ghais.ui.components.noir.noirClickable
@@ -154,12 +152,8 @@ object MemorizationScreen : Tab {
                             } catch (_: Exception) {
                             }
                         }
-                        val totalXp by HifzXpStore.totalXp.collectAsState()
-                        HifzXpBadge(
-                            level = hifzXpLevel(totalXp),
-                            totalXp = totalXp
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
+                        // Quests list — the hero is gone (minimal): the level
+                        // still accrues XP underneath, rows show the reward.
                         com.ghais.ui.components.noir.NoirSectionHeader(label = "Today's quests")
                         quests.forEach { quest ->
                             QuestRow(quest = quest)
@@ -170,34 +164,29 @@ object MemorizationScreen : Tab {
                 }
                 item {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Hifz",
-                                style = GhaisTypography.displayEditorialBold,
-                                color = GhaisNoir.TextPrimary
-                            )
-                            Text(
-                                text = "${reciters.size} reciters",
-                                color = GhaisNoir.TextTertiary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+                        NoirNavBar(
+                            title = "Hifz",
+                            actions = {
+                                Text(
+                                    text = "${reciters.size} reciters",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Spacer(Modifier.width(4.dp))
+                            }
+                        )
 
                         Spacer(Modifier.height(14.dp))
 
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(44.dp)
+                                .height(48.dp)
                                 .clip(GhaisShapes.pill)
-                                .background(GhaisNoir.Fill2)
-                                .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
-                                .padding(horizontal = 14.dp),
+                                .background(GhaisNoir.insetFill())
+                                .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.pill)
+                                .padding(horizontal = 16.dp),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             Row(
@@ -334,8 +323,8 @@ private fun MemorizationReciterCard(
                 NoirReciterAvatar(
                     photoUrl = photoForSlug(reciter.slug),
                     nameEn = reciter.nameEn,
-                    size = 48.dp,
-                    shape = RoundedCornerShape(14.dp),
+                    size = 52.dp,
+                    shape = RoundedCornerShape(16.dp),
                     ring = isPlaying,
                     slug = reciter.slug,
                     grayscale = false,
@@ -348,7 +337,7 @@ private fun MemorizationReciterCard(
                     Text(
                         text = reciter.nameEn,
                         color = if (isPlaying) Color.White else GhaisNoir.TextPrimary,
-                        fontSize = 14.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -372,6 +361,7 @@ private fun MemorizationReciterCard(
                         text = "${reciter.style} • ${reciter.tempo}",
                         color = GhaisNoir.TextTertiary,
                         fontSize = 11.sp,
+                        letterSpacing = 0.2.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

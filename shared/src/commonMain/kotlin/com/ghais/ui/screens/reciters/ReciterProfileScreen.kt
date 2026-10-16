@@ -11,8 +11,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -31,20 +29,22 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Radio
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,9 +56,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -69,6 +72,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -78,9 +82,12 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.RelatedQaris
+import com.ghais.data.repository.UserUsageRepository
+import com.ghais.data.share.ShareSheet
 import com.ghais.data.seed.GhaisAssets
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.Surah
@@ -88,13 +95,11 @@ import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
 import com.ghais.player.ReciterRadio
-import com.ghais.ui.components.noir.ChromeFab
 import com.ghais.ui.components.noir.NoirListRow
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.NoirSegmentedProgress
 import com.ghais.ui.components.noir.noirClickable
-import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.theme.GhaisNoir
@@ -103,10 +108,12 @@ import com.ghais.ui.theme.GhaisTypography
 import com.ghais.ui.util.bidiIsolate
 import com.ghais.ui.util.realImageUrlOrNull
 
-private val ReciterExpandedHeight = 360.dp
+private val ReciterExpandedHeight = 420.dp
 private val ReciterCollapsedHeight = 64.dp
-private val ReciterArtworkOverscan = 176.dp
-private const val ReciterArtworkOverscanWidth = 1.08f
+// Small overscan purely so the parallax travel never exposes an edge —
+// width stays 1.0x so photo pixels are never upscaled (upscaling blurs).
+private val ReciterArtworkOverscan = 64.dp
+private const val ReciterArtworkOverscanWidth = 1.0f
 
 /**
  * Screen displaying the profile of a verified reciter, their metadata chips,
@@ -234,6 +241,30 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
         }
         val totalDurationText = remember(surahs) { formatTotalDuration(surahs) }
 
+        // Personal progress with this voice: distinct catalog surahs present
+        // in listening history — real identities, never estimates.
+        val history by UserUsageRepository.history.collectAsState()
+        val heardCount = remember(history, reciter.slug, surahs) {
+            val ids = surahs.map { it.id }.toSet()
+            history.filter { it.reciterSlug == reciter.slug }
+                .mapNotNull { it.surahId.takeIf { id -> id in ids } }
+                .toSet().size
+        }
+
+        // In-page surah search: English, Arabic (diacritic-tolerant),
+        // transliteration, meaning, number, revelation type + Makki/Madani
+        // aliases. Filters the recitations list below; playback indexing
+        // stays surahId-based so filtering can never misqueue.
+        var surahQuery by remember { mutableStateOf("") }
+        val visibleSurahs = remember(surahs, surahQuery) {
+            filterSurahs(surahs, surahQuery)
+        }
+        // Top-bar search jumps straight to the surah field: scroll it into
+        // view, then focus so the keyboard opens ready to type.
+        val searchFocus = remember { FocusRequester() }
+        val scope = rememberCoroutineScope()
+        val searchIndex = if (related.isNotEmpty()) 3 else 2
+
         NoirScreenRoot {
             Scaffold(
                 containerColor = Color.Transparent,
@@ -241,7 +272,25 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                     ReciterCollapsingBar(
                         progressProvider = progressProvider,
                         name = reciter.nameEn,
-                        onBack = { navigator.pop() }
+                        onBack = { navigator.pop() },
+                        onSearch = {
+                            scope.launch {
+                                try {
+                                    listState.animateScrollToItem(searchIndex)
+                                } catch (_: Exception) {
+                                }
+                                try {
+                                    searchFocus.requestFocus()
+                                } catch (_: Exception) {
+                                }
+                            }
+                        },
+                        onShare = {
+                            ShareSheet.shareText(
+                                "Listen to ${reciter.nameEn}",
+                                "Listen to ${reciter.nameEn} (${meta.riwayah}) on Quranify — ${surahs.size} surahs."
+                            )
+                        }
                     )
                 }
             ) {
@@ -263,6 +312,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                             followerCount = followerCount,
                             totalDurationText = totalDurationText,
                             playEnabled = playableTracks.isNotEmpty(),
+                            heardCount = heardCount,
                             progressProvider = progressProvider,
                             collapseRangePx = collapseRangePx,
                             onPlayAll = {
@@ -324,9 +374,8 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                     val relatedPhoto =
                                         rememberCloudPhoto(relatedReciter.slug)
                                             ?: photoForSlug(relatedReciter.slug)
-                                    val line = remember(reciter, relatedReciter) {
-                                        whyLine(reciter, relatedReciter)
-                                    }
+                                    // Cards carry their own identity + meta; the
+                                    // similarity caption is dropped for a clean rail.
                                     Column(
                                         modifier = Modifier.width(180.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally
@@ -365,16 +414,6 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                             onFollowClick = { FollowStore.toggle(relatedReciter.slug) },
                                             followerCount = followerCounts[relatedReciter.slug]
                                         )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Text(
-                                            text = line,
-                                            color = GhaisNoir.TextTertiary,
-                                            fontSize = 12.sp,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis,
-                                            textAlign = TextAlign.Center,
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
                                     }
                                 }
                             }
@@ -384,17 +423,42 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                     item(key = "recitations-header") {
                         Spacer(modifier = Modifier.height(18.dp))
 
+                        // Count folded into the label: the old trailing action
+                        // rendered a tappable affordance with a no-op handler.
                         NoirSectionHeader(
-                            label = "Recitations",
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            actionLabel = "${surahs.size} Surahs",
-                            onAction = {}
+                            label = if (surahQuery.isBlank()) "Recitations • ${surahs.size}"
+                            else "Recitations • ${visibleSurahs.size} of ${surahs.size}",
+                            modifier = Modifier.padding(horizontal = 16.dp)
                         )
+                    }
+
+                    item(key = "surah-search") {
+                        SurahSearchField(
+                            query = surahQuery,
+                            onQuery = { surahQuery = it },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            focusRequester = searchFocus
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
+                    if (visibleSurahs.isEmpty()) {
+                        item(key = "surah-empty") {
+                            Text(
+                                text = "No surahs match “${surahQuery.trim()}”.",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 13.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 32.dp, vertical = 24.dp)
+                            )
+                        }
                     }
 
                     // Discography / Surahs list
                     itemsIndexed(
-                        items = surahs,
+                        items = visibleSurahs,
                         key = { _, it -> it.id }
                     ) { index, surah ->
                         val isCurrentSurah =
@@ -458,7 +522,9 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
 private fun ReciterCollapsingBar(
     progressProvider: () -> Float,
     name: String,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onShare: () -> Unit,
+    onSearch: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -503,24 +569,56 @@ private fun ReciterCollapsingBar(
         Box(
             modifier = Modifier
                 .weight(1f)
-                .graphicsLayer {
-                    alpha = smoothStep(0.70f, 0.94f, progressProvider())
-                }
         ) {
             Text(
                 text = name,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
                 color = GhaisNoir.TextPrimary,
+                textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 12.dp)
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+        }
+        // Search — jumps to the surah field and focuses it.
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(GhaisNoir.Fill2)
+                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                .noirClickable(onClick = onSearch),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Search,
+                contentDescription = "Search surahs",
+                tint = GhaisNoir.TextPrimary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        // Share — glass circle over the photo, mirroring the back well.
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.45f))
+                .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+                .noirClickable(onClick = onShare),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Share,
+                contentDescription = "Share",
+                tint = GhaisNoir.TextPrimary,
+                modifier = Modifier.size(18.dp)
             )
         }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ReciterNoirHeroPlate(
     reciter: Reciter,
@@ -534,6 +632,7 @@ private fun ReciterNoirHeroPlate(
     followerCount: Long?,
     totalDurationText: String,
     playEnabled: Boolean,
+    heardCount: Int,
     progressProvider: () -> Float,
     collapseRangePx: Float,
     onPlayAll: () -> Unit,
@@ -547,11 +646,19 @@ private fun ReciterNoirHeroPlate(
     var photoFailed by remember(photoUrl) { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
+        // Clean portrait: square top under the status bar, rounded where the
+        // info begins. No text sits on the photo — the face stays fully
+        // visible (dating-ref detail treatment).
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(ReciterExpandedHeight)
-                .clip(GhaisShapes.cardLarge)
+                .clip(
+                    RoundedCornerShape(
+                        bottomStart = 28.dp,
+                        bottomEnd = 28.dp
+                    )
+                )
                 .background(GhaisNoir.wellFill())
         ) {
             Box(
@@ -562,10 +669,9 @@ private fun ReciterNoirHeroPlate(
                     .graphicsLayer {
                         transformOrigin = TransformOrigin(0.5f, 0f)
                         val progress = progressProvider()
-                        translationY = progress * collapseRangePx * 0.45f
-                        val scale = 1f - 0.02f * progress
-                        scaleX = scale
-                        scaleY = scale
+                        // Translate only — scaling down would resample the
+                        // portrait every frame and soften it.
+                        translationY = progress * collapseRangePx * 0.3f
                     }
             ) {
                 if (!photoUrl.isNullOrBlank() && !photoFailed) {
@@ -597,233 +703,341 @@ private fun ReciterNoirHeroPlate(
 
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            0f to Color.Transparent,
-                            0.4f to GhaisNoir.NoirBlack.copy(alpha = 0.7f),
-                            0.75f to GhaisNoir.NoirBlack.copy(alpha = 0.88f),
-                            1f to GhaisNoir.NoirBlack.copy(alpha = 0.92f)
+                    .matchParentSize()
+                    .border(
+                        1.dp,
+                        GhaisNoir.BorderCard,
+                        RoundedCornerShape(
+                            bottomStart = 28.dp,
+                            bottomEnd = 28.dp
                         )
                     )
             )
 
-            Box(
+            // Floating action rail — dating-ref vertical actions over the
+            // photo's right edge: follow, shuffle, radio, download.
+            Column(
                 modifier = Modifier
-                    .matchParentSize()
-                    .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.cardLarge)
-                    .topSpecular(inset = 30.dp)
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp, vertical = 18.dp),
-                contentAlignment = Alignment.BottomStart
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .graphicsLayer {
-                                alpha = 1f - smoothStep(0.58f, 0.82f, progressProvider())
-                            }
-                    ) {
-                        Text(
-                            text = reciter.nameEn,
-                            style = GhaisTypography.displayEditorialBold,
-                            color = GhaisNoir.TextPrimary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = reciter.nameAr,
-                            style = GhaisTypography.titleMedium.copy(
-                                fontWeight = FontWeight.Medium
-                            ),
-                            color = GhaisNoir.TextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Filled.Place,
-                                    contentDescription = null,
-                                    tint = GhaisNoir.TextTertiary,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = meta.country,
-                                    color = GhaisNoir.TextSecondary,
-                                    fontSize = 12.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                                    contentDescription = null,
-                                    tint = GhaisNoir.TextTertiary,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "$surahCount surahs",
-                                    color = GhaisNoir.TextSecondary,
-                                    fontSize = 12.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Filled.Timer,
-                                    contentDescription = null,
-                                    tint = GhaisNoir.TextTertiary,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = totalDurationText,
-                                    color = GhaisNoir.TextSecondary,
-                                    fontSize = 12.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(14.dp))
-                    ChromeFab(
-                        icon = Icons.Filled.PlayArrow,
-                        onClick = { if (playEnabled) onPlayAll() },
-                        contentDescription = "Play all",
-                        modifier = Modifier.alpha(if (playEnabled) 1f else 0.45f)
+                ReciterRailButton(
+                    icon = if (isFollowing) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = if (isFollowing) "Following" else "Follow",
+                    active = isFollowing,
+                    onClick = onToggleFollow
+                )
+                if (playEnabled) {
+                    ReciterRailButton(
+                        icon = Icons.Filled.Shuffle,
+                        contentDescription = "Shuffle",
+                        onClick = onShuffle
                     )
                 }
+                if (radioEnabled) {
+                    ReciterRailButton(
+                        icon = Icons.Filled.Radio,
+                        contentDescription = "Start radio",
+                        onClick = onStartRadio
+                    )
+                }
+                ReciterRailButton(
+                    icon = if (allDone) Icons.Filled.Check else Icons.Filled.Download,
+                    contentDescription = when {
+                        allDone -> "Downloaded for offline"
+                        downloadingCount > 0 -> "Downloading $downloadingCount of $surahCount"
+                        else -> "Download all"
+                    },
+                    dimmed = allDone || downloadingCount > 0,
+                    onClick = onDownloadAll
+                )
             }
         }
 
-        Row(
+        // Identity lives BELOW the photo on the canvas — nothing covers
+        // the portrait. Deliberately minimal: name, one meta line, CTA.
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(start = 20.dp, end = 20.dp, top = 18.dp)
         ) {
-            ReciterNoirAction(
-                icon = if (isFollowing) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                label = if (isFollowing) "Following" else "Follow",
-                onClick = onToggleFollow,
-                active = isFollowing,
-                modifier = Modifier.weight(1f)
+            Text(
+                text = reciter.nameEn,
+                style = GhaisTypography.displayEditorialBold,
+                color = GhaisNoir.TextPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
-            ReciterNoirAction(
-                icon = Icons.Filled.Shuffle,
-                label = "Shuffle",
-                onClick = onShuffle,
-                enabled = playEnabled,
-                modifier = Modifier.weight(1f)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = reciter.nameAr,
+                style = GhaisTypography.titleMedium.copy(
+                    fontWeight = FontWeight.Medium
+                ),
+                color = GhaisNoir.TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            ReciterNoirAction(
-                icon = Icons.Filled.Radio,
-                label = "Start Radio",
-                onClick = onStartRadio,
-                enabled = radioEnabled,
-                modifier = Modifier.weight(1f)
-            )
-            ReciterNoirAction(
-                icon = if (allDone) Icons.Filled.Check else Icons.Filled.Download,
-                label = when {
-                    allDone -> "Offline"
-                    downloadingCount > 0 -> "Downloading $downloadingCount/$surahCount"
-                    downloadedCount > 0 -> "Download ${surahCount - downloadedCount}"
-                    else -> "Download all"
-                },
-                onClick = onDownloadAll,
-                enabled = !allDone && downloadingCount == 0,
-                modifier = Modifier.weight(1f)
-            )
+            // One quiet meta line replaces the four pills + follower badge:
+            // country • riwayah • style. Count and duration live in the
+            // Play-all CTA below, so nothing repeats.
+            val metaLine = remember(meta) {
+                listOf(meta.country, meta.riwayah, meta.style)
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .joinToString(" • ")
+            }
+            if (metaLine.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = metaLine,
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
 
-        NoirSegmentedProgress(
-            progress = libraryProgress,
-            modifier = Modifier.padding(horizontal = 16.dp),
-            trackHeight = 6.dp
-        )
+        // Signature CTA — dating-ref booking pill: full-width lavender Play all.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(start = 16.dp, end = 16.dp, top = 14.dp)
+                .clip(GhaisShapes.pill)
+                .background(GhaisNoir.lavenderFill())
+                .then(if (playEnabled) Modifier.noirClickable(onClick = onPlayAll) else Modifier)
+                .padding(vertical = 15.dp)
+                .alpha(if (playEnabled) 1f else 0.45f),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "$downloadedCount of $surahCount offline",
-                color = GhaisNoir.TextTertiary,
-                fontSize = 11.sp
+            Icon(
+                imageVector = Icons.Filled.PlayArrow,
+                contentDescription = null,
+                tint = GhaisNoir.LavenderInk,
+                modifier = Modifier.size(20.dp)
             )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "${(libraryProgress * 100).toInt()}% kept",
-                color = GhaisNoir.TextTertiary,
-                fontSize = 11.sp
+                text = "Play all • $surahCount surahs",
+                color = GhaisNoir.LavenderInk,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold
             )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Meters render only when there is something to say: heard progress
+        // once anything was heard, offline state once anything is kept or
+        // in flight. A fresh profile shows neither — pure CTA.
+        if (heardCount > 0) {
+            // Your progress with this voice — heard / recorded, from history.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "You heard $heardCount of $surahCount",
+                    color = GhaisNoir.TextSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "${((heardCount.toFloat() / surahCount.coerceAtLeast(1)) * 100).toInt()}%",
+                    color = GhaisNoir.Lavender,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            NoirSegmentedProgress(
+                progress = heardCount.toFloat() / surahCount.coerceAtLeast(1).toFloat(),
+                modifier = Modifier.padding(horizontal = 16.dp),
+                trackHeight = 4.dp,
+                lavender = true
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        if (downloadedCount > 0 || downloadingCount > 0) {
+            NoirSegmentedProgress(
+                progress = libraryProgress,
+                modifier = Modifier.padding(horizontal = 16.dp),
+                trackHeight = 4.dp
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "$downloadedCount of $surahCount offline",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.sp
+                )
+                Text(
+                    text = "${(libraryProgress * 100).toInt()}% kept",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.sp
+                )
+            }
         }
     }
 }
 
+/**
+ * Editable in-page surah search — engraved pill with a clear button.
+ * Live-filters the recitations list; never navigates, never dead.
+ */
 @Composable
-private fun ReciterNoirAction(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
+private fun SurahSearchField(
+    query: String,
+    onQuery: (String) -> Unit,
     modifier: Modifier = Modifier,
-    active: Boolean = false,
-    enabled: Boolean = true
+    focusRequester: FocusRequester? = null,
 ) {
-    val contentTint = when {
-        active -> GhaisNoir.TextPrimary
-        enabled -> GhaisNoir.TextSecondary
-        else -> GhaisNoir.TextTertiary
-    }
-    Box(
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
-            .height(62.dp)
-            .clip(GhaisShapes.row)
-            .background(if (active) GhaisNoir.Fill4 else GhaisNoir.Fill2)
-            .border(1.dp, if (active) GhaisNoir.SpecularTop else GhaisNoir.BorderCard, GhaisShapes.row)
-            .then(if (enabled) Modifier.noirClickable(onClick) else Modifier),
+            .fillMaxWidth()
+            .clip(GhaisShapes.pill)
+            .background(GhaisNoir.insetFill())
+            .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.pill)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Search,
+            contentDescription = null,
+            tint = GhaisNoir.TextTertiary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        BasicTextField(
+            value = query,
+            onValueChange = onQuery,
+            singleLine = true,
+            textStyle = TextStyle(
+                color = GhaisNoir.TextPrimary,
+                fontSize = 14.sp
+            ),            decorationBox = { inner ->
+                if (query.isEmpty()) {
+                    Text(
+                        text = "Search surahs…",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 14.sp
+                    )
+                }
+                inner()
+            },
+            modifier = Modifier.weight(1f).then(
+                if (focusRequester != null) Modifier.focusRequester(focusRequester)
+                else Modifier
+            )
+        )
+        if (query.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(GhaisNoir.Fill2)
+                    .noirClickable { onQuery("") },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Clear search",
+                    tint = GhaisNoir.TextSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
+
+/** Arabic folding for search: strip diacritics, unify alef forms. */
+private fun arabicFold(s: String): String =
+    s.replace(Regex("[\\u064B-\\u0652\\u0670]"), "")
+        .replace('أ', 'ا')
+        .replace('إ', 'ا')
+        .replace('آ', 'ا')
+
+/**
+ * Matches a query against every surah criterion that matters: English name,
+ * Arabic name (folded), transliteration, meaning, revelation type
+ * (Makki/Madani aliases included), and raw surah number.
+ */
+private fun filterSurahs(surahs: List<Surah>, rawQuery: String): List<Surah> {
+    val q = rawQuery.trim()
+    if (q.isEmpty()) return surahs
+    val folded = arabicFold(q)
+    val number = q.toIntOrNull()
+    // "2" also matches surah 2's number prefix? No — exact number only,
+    // so "1" never floods the list with 10x/11x/100x.
+    val revelation = when (q.lowercase()) {
+        "makki", "makkiy", "makkah", "meccan" -> "Meccan"
+        "madani", "madina", "madinah", "medinan" -> "Medinan"
+        else -> null
+    }
+    return surahs.filter { s ->
+        s.nameEn.contains(q, ignoreCase = true) ||
+            arabicFold(s.nameAr).contains(folded) ||
+            s.transliteration.contains(q, ignoreCase = true) ||
+            s.meaning.contains(q, ignoreCase = true) ||
+            s.revelationType.contains(q, ignoreCase = true) ||
+            (revelation != null && s.revelationType == revelation) ||
+            (number != null && s.id == number)
+    }
+}
+
+/**
+ * Floating rail action — 48dp glass circle over the photo edge, lavender
+ * fill when active (follow), dimmed while its work is done/in-flight.
+ */
+@Composable
+private fun ReciterRailButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    active: Boolean = false,
+    dimmed: Boolean = false,
+) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .background(
+                when {
+                    active -> GhaisNoir.lavenderFill()
+                    else -> Brush.verticalGradient(
+                        listOf(
+                            Color.Black.copy(alpha = 0.45f),
+                            Color.Black.copy(alpha = 0.45f)
+                        )
+                    )
+                }
+            )
+            .border(
+                1.dp,
+                if (active) Color.Transparent else Color.White.copy(alpha = 0.25f),
+                CircleShape
+            )
+            .noirClickable(onClick = onClick)
+            .alpha(if (dimmed && !active) 0.55f else 1f),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = contentTint,
-                modifier = Modifier.size(19.dp)
-            )
-            Text(
-                text = label,
-                color = contentTint,
-                style = GhaisTypography.labelSmall,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = if (active) GhaisNoir.LavenderInk else GhaisNoir.TextPrimary,
+            modifier = Modifier.size(22.dp)
+        )
     }
 }
 

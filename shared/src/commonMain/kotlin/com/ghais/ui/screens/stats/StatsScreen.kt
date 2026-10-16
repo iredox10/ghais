@@ -37,10 +37,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
@@ -58,6 +58,8 @@ import com.ghais.data.seed.JumpBackInItem
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.NoirCard
+import com.ghais.ui.components.noir.NoirNavBar
+import com.ghais.ui.components.noir.NoirNavButton
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.NoirSegmentedProgress
@@ -66,7 +68,7 @@ import com.ghais.ui.screens.home.NoirArtworkWell
 import com.ghais.ui.screens.home.NoirStatChip
 import com.ghais.ui.screens.reciters.rememberReciterPhoto
 import com.ghais.ui.theme.GhaisNoir
-import com.ghais.ui.theme.GhaisTypography
+import com.ghais.ui.theme.GhaisShapes
 import kotlin.time.Clock
 
 private const val DAY_MS = 86_400_000L
@@ -240,34 +242,15 @@ object StatsScreen : Screen {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(CircleShape)
-                                .background(GhaisNoir.Fill2)
-                                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
-                                .noirClickable(onClick = { navigator.pop() }),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = GhaisNoir.TextPrimary,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(CircleShape)
-                                .background(GhaisNoir.Fill2)
-                                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
-                                .noirClickable(onClick = {
+                    NoirNavBar(
+                        title = "Stats",
+                        onBack = { navigator.pop() },
+                        backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                        actions = {
+                            NoirNavButton(
+                                icon = Icons.Filled.Share,
+                                contentDescription = "Share your stats",
+                                onClick = {
                                     ShareSheet.shareText(
                                         title = "Ghaith — My Quran Year",
                                         text = buildWrappedCard(
@@ -279,25 +262,9 @@ object StatsScreen : Screen {
                                             topSurahPlays = topSurahs.firstOrNull()?.third
                                         )
                                     )
-                                }),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Share,
-                                contentDescription = "Share your stats",
-                                tint = GhaisNoir.TextPrimary,
-                                modifier = Modifier.size(20.dp)
+                                }
                             )
                         }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(text = "Your", style = GhaisTypography.displayEditorial)
-                    Text(text = "Stats", style = GhaisTypography.displayEditorialBold)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Track your journey",
-                        color = GhaisNoir.TextTertiary,
-                        fontSize = 13.sp
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -308,97 +275,100 @@ object StatsScreen : Screen {
                 }
 
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    // Hero scorecard: lifetime total + today ring + streak in
+                    // one plum plate (fitness-app summary language).
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(GhaisNoir.plumFill(), GhaisShapes.cardLarge)
+                            .border(
+                                1.dp,
+                                GhaisNoir.Lavender.copy(alpha = 0.35f),
+                                GhaisShapes.cardLarge
+                            )
+                            .padding(20.dp)
                     ) {
-                        NoirCard(modifier = Modifier.weight(1f)) {
-                            Column {
+                        Text(
+                            text = "YOUR QURAN JOURNEY",
+                            color = Color.White.copy(alpha = 0.72f),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 1.2.sp
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = totalHoursText,
-                                    color = GhaisNoir.TextPrimary,
-                                    fontSize = 32.sp,
+                                    color = Color.White,
+                                    fontSize = 44.sp,
+                                    lineHeight = 48.sp,
                                     fontWeight = FontWeight.ExtraBold
                                 )
                                 Text(
-                                    text = "Listening time",
-                                    color = GhaisNoir.TextPrimary,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    text = if (stats.totalSecondsListened > 0L) "total listening"
+                                    else "total • start listening",
+                                    color = Color.White.copy(alpha = 0.72f),
+                                    fontSize = 13.sp
                                 )
-                                Text(
-                                    text = if (stats.totalSecondsListened > 0L) "total" else "total • start listening",
-                                    color = GhaisNoir.TextTertiary,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                        NoirCard(modifier = Modifier.weight(1f)) {
-                            Column {
+                                Spacer(modifier = Modifier.height(10.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "${stats.daysStreak}",
-                                        color = GhaisNoir.TextPrimary,
-                                        fontSize = 32.sp,
-                                        fontWeight = FontWeight.ExtraBold
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
                                     Icon(
                                         imageVector = Icons.Filled.LocalFireDepartment,
                                         contentDescription = null,
-                                        tint = GhaisNoir.TextTertiary,
-                                        modifier = Modifier.size(24.dp)
+                                        tint = GhaisNoir.Lavender,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "${stats.daysStreak}-day streak",
+                                        color = Color.White,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
-                                Text(
-                                    text = "Day streak",
-                                    color = GhaisNoir.TextPrimary,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(text = "days", color = GhaisNoir.TextTertiary, fontSize = 12.sp)
                             }
-                        }
-                    }
-                }
-
-                item {
-                    NoirCard(modifier = Modifier.fillMaxWidth()) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            NoirSectionHeader(label = "Today's goal")
-                            Canvas(modifier = Modifier.size(96.dp)) {
-                                val stroke = 10.dp.toPx()
-                                drawArc(
-                                    color = Color.White.copy(alpha = 0.12f),
-                                    startAngle = -90f,
-                                    sweepAngle = 360f,
-                                    useCenter = false,
-                                    style = Stroke(width = stroke, cap = StrokeCap.Round)
-                                )
-                                if (ringProgress > 0f) {
+                            // Today goal ring with center readout.
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.size(104.dp)
+                            ) {
+                                Canvas(modifier = Modifier.size(104.dp)) {
+                                    val stroke = 10.dp.toPx()
                                     drawArc(
-                                        brush = GhaisNoir.chromeFill(),
+                                        color = Color.White.copy(alpha = 0.22f),
                                         startAngle = -90f,
-                                        sweepAngle = 360f * ringProgress,
+                                        sweepAngle = 360f,
                                         useCenter = false,
                                         style = Stroke(width = stroke, cap = StrokeCap.Round)
                                     )
+                                    if (ringProgress > 0f) {
+                                        drawArc(
+                                            color = Color(0xFFC9BFF2),
+                                            startAngle = -90f,
+                                            sweepAngle = 360f * ringProgress,
+                                            useCenter = false,
+                                            style = Stroke(width = stroke, cap = StrokeCap.Round)
+                                        )
+                                    }
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = "${(ringProgress * 100).toInt()}%",
+                                        color = Color.White,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                    Text(
+                                        text = "${stats.minutesToday}/${goalMin}m",
+                                        color = Color.White.copy(alpha = 0.72f),
+                                        fontSize = 10.sp
+                                    )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "${stats.minutesToday} min",
-                                color = GhaisNoir.TextPrimary,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "of $goalMin min daily goal",
-                                color = GhaisNoir.TextTertiary,
-                                fontSize = 12.sp
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            NoirSegmentedProgress(progress = ringProgress)
                         }
                     }
                 }
@@ -423,17 +393,34 @@ object StatsScreen : Screen {
                 item {
                     NoirCard(modifier = Modifier.fillMaxWidth()) {
                         Column {
-                            Text(
-                                text = range.header,
-                                color = GhaisNoir.TextPrimary,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = range.window,
-                                color = GhaisNoir.TextTertiary,
-                                fontSize = 12.sp
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                Column {
+                                    Text(
+                                        text = range.header,
+                                        color = GhaisNoir.TextPrimary,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = range.window,
+                                        color = GhaisNoir.TextTertiary,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                // Goal tag — the chart's reference line, labeled.
+                                if (range == StatsRange.Today || range == StatsRange.Week) {
+                                    Text(
+                                        text = "goal ${goalMin}m/day",
+                                        color = GhaisNoir.Lavender,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 text = formatCompactMinutes(rangeTotalMin),
@@ -464,34 +451,43 @@ object StatsScreen : Screen {
                                     NoirStatChip(text = "${stats.daysStreak}-day streak")
                                 }
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            val maxVal = (shownBars.maxOrNull() ?: 0f).coerceAtLeast(1f)
-                            Canvas(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(120.dp)
-                            ) {
-                                val barCount = shownBars.size.coerceAtLeast(1)
-                                val gap = (if (barCount > 12) 3.dp else 8.dp).toPx()
-                                val barWidth = (size.width - gap * (barCount - 1)) / barCount
-                                val corner = 6.dp.toPx()
-                                shownBars.forEachIndexed { index, value ->
-                                    val fraction = (value / maxVal).coerceIn(0f, 1f)
-                                    val barHeight = (size.height * fraction)
-                                        .coerceAtLeast(if (value > 0f) 8.dp.toPx() else 4.dp.toPx())
-                                    val left = index * (barWidth + gap)
-                                    val top = size.height - barHeight
-                                    drawRoundRect(
-                                        color = if (index == shownBars.lastIndex) {
-                                            Color.White
-                                        } else {
-                                            Color.White.copy(alpha = 0.28f)
-                                        },
-                                        topLeft = Offset(left, top),
-                                        size = Size(barWidth, barHeight),
-                                        cornerRadius = CornerRadius(corner, corner)
-                                    )
-                                }
+                            Spacer(modifier = Modifier.height(14.dp))
+                            var selectedBar by remember(range) {
+                                mutableStateOf(bestIndex ?: (shownBars.size - 1).coerceAtLeast(0))
+                            }
+                            val weekLabels = remember(range, todayEpochDay) {
+                                if (range == StatsRange.Week) {
+                                    List(7) { i -> weekdayShort(todayEpochDay - (6 - i)) }
+                                } else emptyList()
+                            }
+                            InsightBars(
+                                values = shownBars,
+                                labels = weekLabels,
+                                goalMin = if (range == StatsRange.Today || range == StatsRange.Week) {
+                                    goalMin.toFloat()
+                                } else null,
+                                selected = if (shownBars.isEmpty()) 0 else selectedBar.coerceIn(shownBars.indices),
+                                onSelect = { selectedBar = it }
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            // Selected-bar readout: the chart's one takeaway.
+                            val selIdx = if (shownBars.isEmpty()) 0 else selectedBar.coerceIn(shownBars.indices)
+                            val selLabel = weekLabels.getOrNull(selIdx)
+                                ?: if (range == StatsRange.Today) "Today" else "Day ${selIdx + 1}"
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(GhaisNoir.Lavender)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "$selLabel • ${shownBars.getOrNull(selIdx)?.toInt() ?: 0}m",
+                                    color = GhaisNoir.TextSecondary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                             Spacer(modifier = Modifier.height(12.dp))
                             NoirSegmentedProgress(progress = rangeProgress)
@@ -601,19 +597,34 @@ object StatsScreen : Screen {
                                 )
                             } else {
                                 topSurahs.forEachIndexed { index, entry ->
+                                    val surahRank = index + 1
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(vertical = 6.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            text = "${index + 1}",
-                                            color = GhaisNoir.TextTertiary,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.width(20.dp)
-                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(CircleShape)
+                                                .background(
+                                                    brush = if (surahRank == 1) GhaisNoir.lavenderFill()
+                                                    else Brush.verticalGradient(
+                                                        listOf(GhaisNoir.Fill2, GhaisNoir.Fill2)
+                                                    ),
+                                                    shape = CircleShape
+                                                )
+                                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                                        ) {
+                                            Text(
+                                                text = "#$surahRank",
+                                                color = if (surahRank == 1) GhaisNoir.LavenderInk
+                                                else GhaisNoir.TextSecondary,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
                                         Text(
                                             text = entry.second,
                                             color = GhaisNoir.TextPrimary,
@@ -655,6 +666,56 @@ private fun TopQariRow(
     plays: Int
 ) {
     val photo = rememberReciterPhoto(slug)
+    if (rank == 1) {
+        // Leader row: larger rounded artwork + lavender plays pill.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            NoirArtworkWell(
+                coverUrl = photo.orEmpty(),
+                monogram = name.firstOrNull()?.uppercase() ?: "Q",
+                shape = RoundedCornerShape(16.dp),
+                size = 48.dp,
+                monogramSize = 18.sp,
+                ring = false,
+                grayscale = false,
+                scrimAlpha = 0f
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = name,
+                color = GhaisNoir.TextPrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(GhaisNoir.Lavender.copy(alpha = 0.18f))
+                    .border(
+                        1.dp,
+                        GhaisNoir.Lavender.copy(alpha = 0.4f),
+                        CircleShape
+                    )
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
+            ) {
+                Text(
+                    text = "$plays plays",
+                    color = GhaisNoir.Lavender,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+            }
+        }
+        return
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -773,7 +834,117 @@ private fun weekdayShort(epochDay: Long): String {
     return WEEKDAY_SHORT[idx.toInt()]
 }
 
-/** Range pill: chrome fill when selected, ghost wash otherwise. Zero hue. */
+/**
+ * Interactive insight bars — the 2026 weekly-chart language: native layout
+ * bars (labels align for free), a dashed goal reference line, gradient
+ * best-day fill, and tap-to-inspect selection with a readout below.
+ * Single takeaway per chart: the selected bar's day + minutes.
+ */
+@Composable
+private fun InsightBars(
+    values: List<Float>,
+    labels: List<String>,
+    goalMin: Float?,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (values.isEmpty()) return
+    val maxVal = ((values.maxOrNull() ?: 0f).coerceAtLeast(goalMin ?: 0f)).coerceAtLeast(1f)
+    val bestIdx = values.indices.maxByOrNull { values[it] }
+    val maxH = 110.dp
+    val hasLabels = labels.size == values.size
+    val labelH = if (hasLabels) 20.dp else 0.dp
+    Box(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(maxH + labelH),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            values.forEachIndexed { i, v ->
+                val isSel = i == selected
+                val isBest = i == bestIdx && v > 0f
+                val isToday = hasLabels && i == values.lastIndex
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Bottom,
+                    modifier = Modifier
+                        .weight(1f)
+                        .noirClickable { onSelect(i) }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .height(maxH)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
+                        val barH = if (v <= 0f) 4.dp
+                        else 10.dp + (maxH - 10.dp) * (v / maxVal).coerceIn(0f, 1f)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.55f)
+                                .height(barH)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(
+                                    brush = when {
+                                        isSel -> GhaisNoir.lavenderFill()
+                                        isBest -> Brush.verticalGradient(
+                                            listOf(
+                                                GhaisNoir.Lavender.copy(alpha = 0.55f),
+                                                GhaisNoir.Lavender.copy(alpha = 0.22f)
+                                            )
+                                        )
+                                        isToday -> Brush.verticalGradient(
+                                            listOf(Color.White, Color.White)
+                                        )
+                                        else -> Brush.verticalGradient(
+                                            listOf(
+                                                Color.White.copy(alpha = 0.28f),
+                                                Color.White.copy(alpha = 0.28f)
+                                            )
+                                        )
+                                    }
+                                )
+                        )
+                    }
+                    if (hasLabels) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = labels[i],
+                            color = if (isSel || isToday) GhaisNoir.Lavender else GhaisNoir.TextTertiary,
+                            fontSize = 10.sp,
+                            fontWeight = if (isSel || isToday) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        }
+        // Dashed goal reference line across the bar field.
+        if (goalMin != null && goalMin > 0f) {
+            Canvas(
+                modifier = Modifier
+                    .matchParentSize()
+                    .padding(bottom = labelH)
+            ) {
+                val y = size.height * (1f - (goalMin / maxVal).coerceIn(0f, 1f))
+                drawLine(
+                    color = GhaisNoir.Lavender.copy(alpha = 0.6f),
+                    start = Offset(0f, y),
+                    end = Offset(size.width, y),
+                    strokeWidth = 1.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(
+                        intervals = floatArrayOf(6.dp.toPx(), 6.dp.toPx()),
+                        phase = 0f
+                    )
+                )
+            }
+        }
+    }
+}
+
+/** Range pill: lavender fill when selected, ghost wash otherwise. */
 @Composable
 private fun StatsRangePill(
     label: String,
@@ -784,16 +955,16 @@ private fun StatsRangePill(
     Box(
         modifier = Modifier
             .clip(shape)
-            .then(
-                if (selected) {
-                    Modifier.background(GhaisNoir.chromeFill())
-                } else {
-                    Modifier.background(GhaisNoir.Fill2)
-                }
+            .background(
+                brush = if (selected) GhaisNoir.lavenderFill()
+                else Brush.verticalGradient(
+                    listOf(GhaisNoir.Fill2, GhaisNoir.Fill2)
+                ),
+                shape = shape
             )
             .border(
                 1.dp,
-                if (selected) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                if (selected) Color.Transparent else GhaisNoir.BorderCard,
                 shape
             )
             .noirClickable(onClick = onClick)
@@ -802,9 +973,9 @@ private fun StatsRangePill(
     ) {
         Text(
             text = label,
-            color = if (selected) GhaisNoir.OnChrome else GhaisNoir.TextSecondary,
+            color = if (selected) GhaisNoir.LavenderInk else GhaisNoir.TextSecondary,
             fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold
         )
     }
 }

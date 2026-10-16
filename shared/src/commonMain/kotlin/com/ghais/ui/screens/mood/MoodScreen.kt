@@ -56,6 +56,7 @@ import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
@@ -194,38 +195,14 @@ data class MoodScreen(
 
         NoirScreenRoot {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
+                NoirNavBar(
+                    title = "Mood",
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(GhaisNoir.Fill2)
-                            .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
-                            .noirClickable { navigator.pop() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = GhaisNoir.TextPrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Recitation by Mood",
-                        style = GhaisTypography.titleMedium.copy(
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = GhaisNoir.TextPrimary
-                        )
-                    )
-                }
+                    onBack = { navigator.pop() },
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack
+                )
                 MoodModalContent(
                     initialMoodId = initialMoodId,
                     onClose = { navigator.pop() },

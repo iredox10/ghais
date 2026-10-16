@@ -42,6 +42,7 @@ import com.ghais.data.seed.QuranDataRepository
 import com.ghais.data.seed.GhaisAssets
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirClickable
@@ -50,7 +51,6 @@ import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
-import com.ghais.ui.theme.GhaisTypography
 
 private val NoirPlaylistCardShape = RoundedCornerShape(20.dp)
 private val NoirPlaylistArtShape = RoundedCornerShape(14.dp)
@@ -145,26 +145,14 @@ class AllCuratedPlaylistsScreen : Screen {
                     .padding(horizontal = 20.dp)
                     .padding(top = 12.dp)
             ) {
-                // Top bar — IconWell back + title + monochrome count chip
-                CuratedCollectionsTopBar(
-                    totalCount = filteredPlaylists.size,
-                    onBackClick = { navigator.pop() }
+                NoirNavBar(
+                    title = "Collections",
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    onBack = { navigator.pop() }
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Editorial headline — light / bold two-line rhythm (home + reciters pattern)
-                Text(
-                    text = "Curated",
-                    style = GhaisTypography.displayEditorialSmall,
-                    maxLines = 1
-                )
-                Text(
-                    text = "Collections",
-                    style = GhaisTypography.displayEditorialBold.copy(fontSize = 30.sp, lineHeight = 36.sp),
-                    maxLines = 1
-                )
-                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "Handpicked journeys for every mood",
                     color = GhaisNoir.TextSecondary,

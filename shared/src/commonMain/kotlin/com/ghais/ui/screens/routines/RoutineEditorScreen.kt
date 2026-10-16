@@ -55,6 +55,7 @@ import com.ghais.data.repository.rememberMergedReciters
 import com.ghais.data.repository.RoutineItem
 import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.NoirListRow
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSwitch
 import com.ghais.ui.components.noir.noirClickable
@@ -101,38 +102,12 @@ class RoutineEditorScreen(val routineId: String? = null) : Screen {
 
         NoirScreenRoot {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Header: ghost back + title.
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(GhaisNoir.Fill2)
-                            .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
-                            .noirClickable { navigator.pop() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = GhaisNoir.TextPrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = if (routineId != null) "Edit routine" else "New routine",
-                        color = GhaisNoir.TextPrimary,
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-0.5).sp
-                    )
-                }
+                NoirNavBar(
+                    title = if (routineId != null) "Edit routine" else "New routine",
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    onBack = { navigator.pop() },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                )
 
                 LazyColumn(
                     contentPadding = PaddingValues(

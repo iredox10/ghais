@@ -1,19 +1,11 @@
 package com.ghais.ui.screens.settings
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AlarmOn
@@ -28,8 +20,6 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -38,12 +28,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -59,13 +45,12 @@ import com.ghais.data.share.ShareSheet
 import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.NoirListRow
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.NoirSwitch
-import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.screens.home.NoirStatChip
 import com.ghais.ui.screens.player.TranslationPickerSheet
-import com.ghais.ui.theme.GhaisNoir
 import kotlinx.coroutines.launch
 
 private val SpeedSteps = listOf(1f, 1.25f, 1.5f)
@@ -149,7 +134,11 @@ object AppSettingsScreen : Screen {
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 item {
-                    SettingsTopBar(onBack = { navigator.pop() })
+                    NoirNavBar(
+                        title = "Settings",
+                        backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                        onBack = { navigator.pop() }
+                    )
                 }
 
                 // 1. Playback
@@ -359,45 +348,6 @@ private fun setDailyReminder(enabled: Boolean, followedSlugs: Set<String>) {
     )
     if (!ScheduleEngine.canScheduleExactAlarms()) {
         ScheduleEngine.openExactAlarmSettings()
-    }
-}
-
-@Composable
-private fun SettingsTopBar(onBack: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .clip(CircleShape)
-                .background(GhaisNoir.Fill2)
-                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
-                .noirClickable(onClick = onBack),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                tint = GhaisNoir.TextPrimary,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-        Column(modifier = Modifier.padding(vertical = 2.dp)) {
-            Text(
-                text = "Settings",
-                color = GhaisNoir.TextPrimary,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
-            Text(
-                text = "Playback, downloads & more",
-                color = GhaisNoir.TextTertiary,
-                fontSize = 12.sp
-            )
-        }
     }
 }
 
