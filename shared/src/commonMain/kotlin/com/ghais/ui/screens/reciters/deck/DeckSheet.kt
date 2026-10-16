@@ -298,7 +298,7 @@ fun DeckSheet(
                         color = GhaisNoir.TextDisabled,
                         fontSize = 12.sp,
                         textAlign = TextAlign.Center
-                    }
+                    )
                 }
                 Spacer(Modifier.height(12.dp))
                 DeckDock(
