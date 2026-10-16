@@ -51,6 +51,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
+import com.ghais.ui.screens.home.HomeScreen
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import coil3.compose.AsyncImage
@@ -125,6 +127,7 @@ class RecitersScreen : Tab {
         val rootNavigator = LocalRootNavigator.current
             ?: LocalNavigator.current?.parent
             ?: LocalNavigator.current
+        val tabNavigator = LocalTabNavigator.current
 
         // Cloud-merged catalog (bundled seeds + Appwrite `reciters`), so a
         // reciter uploaded from the admin panel shows up here on the next
@@ -331,8 +334,7 @@ class RecitersScreen : Tab {
                     when (section) {
                         SectionId.SEARCH -> item(key = "search_header") {
                             NoirRecitersHeader(
-                                totalReciters = browseReciters.size,
-                                nationCount = groups.size,
+                                onBack = { tabNavigator.current = HomeScreen },
                                 onSearch = { rootNavigator?.push(ReciterSearchScreen()) }
                             )
                             Spacer(Modifier.height(16.dp))
@@ -628,56 +630,26 @@ class RecitersScreen : Tab {
 private val NoirReelCardShape = RoundedCornerShape(28.dp)
 
 /**
- * Editorial two-line headline ("Browse" light / "Reciters" bold) matching the
- * Home "Return to / Your Quran" treatment, with ghost count chips.
+ * Reciters nav bar: back to Home left, centered title, search right.
+ * Count chips are gone — the search screen owns discovery numbers now.
  */
 @Composable
 private fun NoirRecitersHeader(
-    totalReciters: Int,
-    nationCount: Int,
+    onBack: () -> Unit,
     onSearch: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        NoirNavBar(
-            title = "Reciters",
-            actions = {
-                NoirNavButton(
-                    icon = Icons.Default.Search,
-                    contentDescription = "Search reciters",
-                    onClick = onSearch
-                )
-            }
-        )
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            NoirRecitersChip(
-                text = if (totalReciters == 1) "1 reciter" else "$totalReciters reciters"
-            )
-            NoirRecitersChip(
-                text = if (nationCount == 1) "1 nation" else "$nationCount nations"
+    NoirNavBar(
+        title = "Reciters",
+        onBack = onBack,
+        backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+        actions = {
+            NoirNavButton(
+                icon = Icons.Default.Search,
+                contentDescription = "Search reciters",
+                onClick = onSearch
             )
         }
-    }
-}
-
-/** Tinted count chip — informational, no press affordance. */
-@Composable
-private fun NoirRecitersChip(text: String) {
-    Box(
-        modifier = Modifier
-            .clip(GhaisShapes.pill)
-            .background(GhaisNoir.tintFill())
-            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = GhaisNoir.TextSecondary,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium
-        )
-    }
+    )
 }
 
 /**

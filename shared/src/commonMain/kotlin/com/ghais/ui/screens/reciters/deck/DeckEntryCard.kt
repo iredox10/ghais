@@ -1,5 +1,7 @@
 package com.ghais.ui.screens.reciters.deck
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -16,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -26,7 +30,7 @@ import com.ghais.ui.components.noir.NoirHeroCard
 import com.ghais.ui.screens.reciters.NoirReciterAvatar
 import com.ghais.ui.screens.reciters.photoForSlug
 import com.ghais.ui.theme.GhaisNoir
-import com.ghais.ui.theme.GhaisTypography
+import com.ghais.ui.theme.GhaisShapes
 
 /**
  * Entry card for the "Today's voices" swipe deck: stacked-covers visual
@@ -52,39 +56,44 @@ fun DeckEntryCard(
         modifier = modifier.fillMaxWidth(),
         onClick = onOpen
     ) {
-        Text(
-            text = if (doneToday) "TODAY'S VOICES • DONE"
-            else "TODAY'S VOICES • $totalCount FRESH",
-            color = GhaisNoir.TextTertiary,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 1.2.sp,
-            maxLines = 1
-        )
-        Spacer(Modifier.height(10.dp))
+        Box(
+            modifier = Modifier
+                .clip(GhaisShapes.pill)
+                .background(GhaisNoir.Lavender.copy(alpha = 0.16f))
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = if (doneToday) "TODAY'S VOICES • DONE"
+                else "TODAY'S VOICES • $totalCount FRESH",
+                color = GhaisNoir.Lavender,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.2.sp,
+                maxLines = 1
+            )
+        }
+        Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             StackedVoicesVisual(preview = preview)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = if (doneToday) "Done — fresh tomorrow" else "Swipe the stack",
-                    style = GhaisTypography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 17.sp
-                    ),
                     color = GhaisNoir.TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(3.dp))
                 Text(
                     text = when {
                         doneToday -> "New voices arrive in the morning"
                         affinityLabel != null -> "Because you follow $affinityLabel"
                         else -> "$totalCount new voices in a minute"
                     },
-                    style = GhaisTypography.bodyMedium,
                     color = GhaisNoir.TextSecondary,
+                    fontSize = 13.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -92,13 +101,13 @@ fun DeckEntryCard(
             Icon(
                 imageVector = Icons.Filled.ChevronRight,
                 contentDescription = null,
-                tint = GhaisNoir.TextSecondary
+                tint = GhaisNoir.Lavender
             )
         }
     }
 }
 
-/** Three fanned grayscale avatars (Spotify cover-stack language). */
+/** Three fanned color avatars with separation rims (cover-stack language). */
 @Composable
 private fun StackedVoicesVisual(preview: List<Reciter>) {
     Box(modifier = Modifier.width(104.dp).height(56.dp)) {
@@ -112,7 +121,7 @@ private fun StackedVoicesVisual(preview: List<Reciter>) {
                 monogramSize = 22.sp,
                 ring = false,
                 slug = null,
-                grayscale = true,
+                grayscale = false,
                 scrimAlpha = 0f,
                 modifier = Modifier.align(Alignment.CenterStart)
             )
@@ -127,13 +136,12 @@ private fun StackedVoicesVisual(preview: List<Reciter>) {
                 monogramSize = 22.sp,
                 ring = false,
                 slug = reciter.slug,
-                grayscale = true,
+                grayscale = false,
                 scrimAlpha = 0f,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .offset(x = (index * 24).dp)
                     .zIndex((shown.size - index).toFloat())
-            )
         }
     }
 }

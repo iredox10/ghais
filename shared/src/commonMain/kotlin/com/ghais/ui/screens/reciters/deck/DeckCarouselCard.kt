@@ -27,7 +27,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +50,7 @@ import com.ghais.ui.screens.reciters.monogramForReciter
 import com.ghais.ui.screens.reciters.rememberCloudPhoto
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
+import com.ghais.ui.util.realImageUrlOrNull
 
 private val CarouselPortraitShape = RoundedCornerShape(24.dp)
 
@@ -88,8 +91,13 @@ fun DeckCarouselCard(
     val previewSlug by ReciterPreview.previewSlug.collectAsState()
     val previewing = previewActive && previewSlug == reciter.slug
 
+    // Blank URLs fail the same as missing ones: normalize first, then
+    // fall back to the monogram on null OR load error.
     val cloudPhoto = rememberCloudPhoto(reciter.slug)
-    val artUrl = cloudPhoto ?: photoUrl
+    val artUrl = remember(cloudPhoto, photoUrl) {
+        realImageUrlOrNull(cloudPhoto ?: photoUrl)
+    }
+    var artFailed by remember(artUrl) { mutableStateOf(false) }
     val statusText = if ((affinity ?: 0f) >= 0.5f) "Top pick" else "New voice"
     val isTopPick = statusText == "Top pick"
     val followerText = if (followerCount != null) {
@@ -167,11 +175,16 @@ fun DeckCarouselCard(
                     .border(1.dp, Color.White.copy(alpha = 0.16f), CarouselPortraitShape),
                 contentAlignment = Alignment.Center
             ) {
-                if (artUrl != null) {
+                if (artUrl != null && !artFailed) {
                     AsyncImage(
                         model = artUrl,
                         contentDescription = reciter.nameEn,
                         contentScale = ContentScale.Crop,
+                        onState = { state ->
+                            if (state is coil3.compose.AsyncImagePainter.State.Error) {
+                                artFailed = true
+                            }
+                        },
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
