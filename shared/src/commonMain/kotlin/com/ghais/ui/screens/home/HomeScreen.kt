@@ -39,7 +39,6 @@ import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.toTrackItems
 import com.ghais.data.seed.JumpBackInItem
 import com.ghais.devotion.DevotionStreak
-import com.ghais.devotion.StreakFlameCard
 import com.ghais.devotion.StreakRestoreHost
 import com.ghais.domain.model.DEVOTIONAL_TRACK_SLUG
 import com.ghais.domain.model.DevotionKind
@@ -54,7 +53,6 @@ import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
-import com.ghais.ui.screens.devotional.DevotionListScreen
 import com.ghais.ui.screens.devotional.DevotionPlayerScreen
 import com.ghais.ui.screens.history.HistoryScreen
 import com.ghais.ui.screens.library.DownloadsScreen
@@ -122,10 +120,6 @@ object HomeScreen : Tab {
                         onStatsClick = { rootNavigator?.push(StatsScreen) }
                     )
                     Spacer(Modifier.height(14.dp))
-                    HomeSearchBar(
-                        onClick = { rootNavigator?.push(SearchScreen()) }
-                    )
-                    Spacer(Modifier.height(12.dp))
                     var selectedChip by remember { mutableStateOf("all") }
                     HomeFilterChips(
                         selectedId = selectedChip,
@@ -192,34 +186,10 @@ object HomeScreen : Tab {
                 }
                 if (HookFlags.streakEnabled) {
                     item {
-                        StreakFlameCard()
-                        Spacer(Modifier.height(18.dp))
-                    }
-                    item {
                         StreakRestoreHost(
                             onBegin = { rootNavigator?.push(NowPlayingScreen()) }
                         )
                     }
-                }
-
-                // -------------------------------------------------------------
-                // Continue listening — hero plate + rail
-                // -------------------------------------------------------------
-                item {
-                    HomeSectionHeader(
-                        title = "Continue listening",
-                        onSeeAll = { rootNavigator?.push(HistoryScreen) }
-                    )
-                    HomeContinueListeningRow(onPlay = { entry ->
-                        resumeHistoryEntry(
-                            entry = entry,
-                            openPlayer = { rootNavigator?.push(NowPlayingScreen()) },
-                            openDevotion = { itemId ->
-                                rootNavigator?.push(DevotionPlayerScreen(itemId = itemId))
-                            }
-                        )
-                    })
-                    Spacer(Modifier.height(18.dp))
                 }
 
                 // -------------------------------------------------------------
@@ -299,21 +269,6 @@ object HomeScreen : Tab {
                         onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) },
                         onOpenPlayer = { rootNavigator?.push(NowPlayingScreen()) }
                     )
-                }
-
-                // -------------------------------------------------------------
-                // Devotionals — dua of the day + duas/ruqiyah bento tiles
-                // -------------------------------------------------------------
-                item {
-                    HomeSectionHeader(title = "Devotionals", onSeeAll = null)
-                    HomeDuaOfDay(
-                        onOpen = { itemId ->
-                            rootNavigator?.push(DevotionPlayerScreen(itemId = itemId))
-                        }
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    HomeDevotionRow(onKind = { kind -> rootNavigator?.push(DevotionListScreen(kind)) })
-                    Spacer(Modifier.height(18.dp))
                 }
 
                 // -------------------------------------------------------------
