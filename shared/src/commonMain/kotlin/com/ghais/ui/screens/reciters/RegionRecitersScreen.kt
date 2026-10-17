@@ -88,7 +88,6 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                     title = nation,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     onBack = { navigator.pop() },
                     backIcon = Icons.AutoMirrored.Filled.ArrowBack,

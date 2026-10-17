@@ -373,6 +373,7 @@ class NowPlayingScreen : Screen {
         // Time labels derive from the scrub-aware active position below.
 
         NoirScreenRoot(
+            edgeToEdge = true,
             modifier = Modifier
                 .fillMaxSize()
                 .onSizeChanged { screenHeightPx = it.height.toFloat() }

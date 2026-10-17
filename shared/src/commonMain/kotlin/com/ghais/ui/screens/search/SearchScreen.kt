@@ -407,7 +407,6 @@ class SearchScreen : Screen {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .statusBarsPadding()
                     .padding(horizontal = 20.dp)
                     .padding(top = 12.dp)
             ) {

@@ -258,7 +258,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
             filterSurahs(surahs, surahQuery)
         }
 
-        NoirScreenRoot {
+        NoirScreenRoot(edgeToEdge = true) {
             Scaffold(
                 containerColor = Color.Transparent,
                 topBar = {

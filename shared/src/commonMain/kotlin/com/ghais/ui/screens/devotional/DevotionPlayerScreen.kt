@@ -421,6 +421,7 @@ class DevotionPlayerScreen(private val itemId: String) : Screen {
         }
 
         NoirScreenRoot(
+            edgeToEdge = true,
             modifier = Modifier
                 .fillMaxSize()
                 .onSizeChanged { screenHeightPx = it.height.toFloat() }
