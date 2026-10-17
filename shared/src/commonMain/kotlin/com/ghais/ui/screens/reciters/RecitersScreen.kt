@@ -78,8 +78,8 @@ import com.ghais.player.AudioEngine
 import com.ghais.ui.screens.reciters.taste.TasteQuizSheet
 import com.ghais.ui.screens.reciters.taste.TasteStore
 import com.ghais.ui.screens.reciters.today.HeardEntry
-import com.ghais.ui.screens.reciters.today.YesterdayMostHeardSection
-import com.ghais.ui.screens.reciters.today.yesterdayTopEntries
+import com.ghais.ui.screens.reciters.today.WeeklyMostHeardSection
+import com.ghais.ui.screens.reciters.today.weeklyTopEntries
 import com.ghais.ui.screens.reciters.today.currentEpochDay
 import com.ghais.ui.screens.reciters.today.voiceOfDay
 import com.ghais.ui.components.noir.NoirScreenRoot
@@ -242,7 +242,7 @@ class RecitersScreen : Tab {
         }
 
         // Fixed editorial top: SEARCH header (nav bar with the animated
-        // header search), VOICE yesterday-top, then personalized rails,
+        // header search), VOICE weekly-top, then personalized rails,
         // RITUAL standalone, NATIONS last. Charts live on Home's Top Qaris
         // shelf — one home for charts, so this scroll stays lean. The deck
         // entry card that used to sit second here was removed; the deck
@@ -402,8 +402,9 @@ class RecitersScreen : Tab {
                             val voice = remember(browseReciters, epochDay) {
                                 voiceOfDay(browseReciters, epochDay)
                             }
-                            // Yesterday's most heard (device history); falls
-                            // back to the deterministic voice when empty.
+                            // Weekly most heard (device history, last 7
+                            // days); falls back to the deterministic voice
+                            // when empty.
                             val nowMs = remember {
                                 try {
                                     kotlin.time.Clock.System.now().toEpochMilliseconds()
@@ -413,7 +414,7 @@ class RecitersScreen : Tab {
                             }
                             val heardEntries = remember(usageHistory, nowMs, browseReciters) {
                                 try {
-                                    yesterdayTopEntries(usageHistory, nowMs, 5)
+                                    weeklyTopEntries(usageHistory, nowMs, 5)
                                         ?.mapNotNull { top ->
                                             val reciter = shelfBySlug[top.slug]
                                                 ?: shelfBySlug[top.slug.trim().lowercase()]
@@ -430,15 +431,16 @@ class RecitersScreen : Tab {
                                     emptyList()
                                 }
                             }
-                            // Global chart first (every listener, not just
-                            // this device); local yesterday; then the
-                            // deterministic voice. The charts rail below
-                            // triggers the cloud refresh; the snapshot flow
-                            // repaints this section when it lands.
+                            // Weekly most heard: cloud 7-day chart first
+                            // (every listener, not just this device), then
+                            // the local 7-day device window; both fall back
+                            // to the deterministic voice. The charts rail
+                            // below triggers the cloud refresh; the snapshot
+                            // flow repaints this section when it lands.
                             val chartsSnapshot by ChartsRepository.snapshot.collectAsState()
                             val globalEntries = remember(chartsSnapshot, browseReciters) {
                                 try {
-                                    chartsSnapshot?.topQarisYesterday
+                                    chartsSnapshot?.topQaris7d
                                         ?.take(5)
                                         ?.mapNotNull { slug ->
                                             val reciter = try {
@@ -463,7 +465,7 @@ class RecitersScreen : Tab {
                                 if (globalEntries.isNotEmpty()) globalEntries else heardEntries
                             val playingTrack by AudioEngine.currentTrack.collectAsState()
                             val enginePlaying by AudioEngine.isPlaying.collectAsState()
-                            YesterdayMostHeardSection(
+                            WeeklyMostHeardSection(
                                 entries = shownEntries,
                                 fallbackReciter = voice,
                                 playingSlug = playingTrack?.reciterSlug,
@@ -472,13 +474,18 @@ class RecitersScreen : Tab {
                                     rootNavigator?.push(ReciterProfileScreen(slug))
                                 },
                                 onPlay = { slug ->
-                                    val reciter = shelfBySlug[slug] ?: return@YesterdayMostHeardSection
+                                    val reciter = shelfBySlug[slug] ?: return@WeeklyMostHeardSection
                                     try {
                                         com.ghais.analytics.HookAnalytics.track(
                                             com.ghais.analytics.HookEvents.Event.MOMENT_PLAYED,
                                             mapOf(
                                                 com.ghais.analytics.HookEvents.Prop.RECITER_SLUG to slug,
-                                                com.ghais.analytics.HookEvents.Prop.SOURCE to "yesterday_top",
+                                                // "weekly_top" (was "yesterday_top"): the
+                                                // source tag must follow the section's
+                                                // window so dashboards can tell the
+                                                // 7-day funnel apart from the old
+                                                // single-day one.
+                                                com.ghais.analytics.HookEvents.Prop.SOURCE to "weekly_top",
                                             ),
                                         )
                                     } catch (_: Exception) {

@@ -9,7 +9,7 @@ package com.ghais.ui.screens.reciters.personal
  * them (or derived strings) as `LazyColumn` item keys.
  *
  * Editorial top is FIXED: SEARCH header → DECK (Today's voices hero) →
- * VOICE_OF_DAY (Yesterday's most heard) → personalized rails → NATIONS
+ * VOICE_OF_DAY (Weekly most heard) → personalized rails → NATIONS
  * last. Charts live on Home's Top Qaris shelf (one home for charts).
  * Refinement filters live on the search screen, not in this scroll.
  *
@@ -20,7 +20,7 @@ package com.ghais.ui.screens.reciters.personal
  * |--------------|--------------------------------------------------------|
  * | SEARCH       | Engraved search field (header item)                    |
  * | DECK         | `DeckEntryCard` (gated on `HookFlags.deckEnabled`)     |
- * | VOICE_OF_DAY | `YesterdayMostHeardSection` (+ voice fallback)         |
+ * | VOICE_OF_DAY | `WeeklyMostHeardSection` (+ voice fallback)            |
  * | YOUR_VOICES  | Followed-voices shelf                                  |
  * | FOR_YOU      | Taste/history shelves                                  |
  * | RITUAL       | `WeeklyRitualRow` (own section, was nested in FOR_YOU) |

@@ -37,14 +37,16 @@ import com.ghais.ui.screens.reciters.rememberCloudPhoto
 import com.ghais.ui.theme.GhaisNoir
 
 /**
- * Yesterday's most heard as a top-three podium (2nd • 1st • 3rd):
+ * Weekly most heard as a top-three podium (2nd • 1st • 3rd):
  * trophy over the champion, overlapping rank badges, plays lines.
- * Each slot opens that qari's profile. Falls back to [VoiceOfDayCard]
- * when [entries] is empty but [fallbackReciter] resolves; renders
- * nothing when both are missing.
+ * Ranks the last 7 days of listening (cloud chart or local device
+ * history — the caller decides which window). Each slot opens that
+ * qari's profile. Falls back to [VoiceOfDayCard] when [entries] is
+ * empty but [fallbackReciter] resolves; renders nothing when both
+ * are missing.
  */
 @Composable
-fun YesterdayMostHeardSection(
+fun WeeklyMostHeardSection(
     entries: List<HeardEntry>,
     dateLabel: String = "",
     fallbackReciter: Reciter? = null,
@@ -68,9 +70,16 @@ fun YesterdayMostHeardSection(
         return
     }
     Column(modifier = modifier.fillMaxWidth()) {
+        // WHY the suffix is a fixed window, not a date: the old variant
+        // appended a concrete calendar date ("• <yesterday's date>") because
+        // the section covered exactly one day. A weekly section spans a
+        // relative window, so any non-blank [dateLabel] now toggles the
+        // fixed "• last 7 days" suffix instead — the window's meaning can
+        // drift by a day depending on when it is read, and a hard date would
+        // be wrong somewhere every single day.
         NoirSectionHeader(
-            label = if (dateLabel.isBlank()) "Yesterday's most heard"
-            else "Yesterday's most heard • $dateLabel"
+            label = if (dateLabel.isBlank()) "Weekly most heard"
+            else "Weekly most heard • last 7 days"
         )
         // Top-three podium (leaderboard-ref): 2nd • 1st • 3rd, winner
         // raised center with a trophy. Each taps through to that qari's
@@ -100,7 +109,7 @@ fun YesterdayMostHeardSection(
     }
 }
 
-/** Resolved display row for one yesterday-top slug. */
+/** Resolved display row for one weekly-top slug. */
 data class HeardEntry(
     val slug: String,
     val nameEn: String,
