@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -117,7 +118,7 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
         NoirScreenRoot {
             Column(modifier = Modifier.fillMaxSize()) {
                 NoirNavBar(
-                    title = reciter.nameEn,
+                    title = displayReciterName(reciter),
                     backIcon = Icons.AutoMirrored.Filled.ArrowBack,
                     onBack = { navigator.pop() },
                     titleAlignLeft = true
@@ -127,32 +128,40 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp)
                 ) {
                     item {
+                        // Compact hero: the full "(Teacher)" suffix lives in
+                        // the meta line below, so the name reads clean once
+                        // instead of three times on one screen.
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Text(
                                 text = "Memorize with",
-                                style = GhaisTypography.displayEditorial,
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
                                 maxLines = 1
                             )
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = reciter.nameEn,
-                                style = GhaisTypography.displayEditorialBold,
+                                text = displayReciterName(reciter),
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 28.sp,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = reciter.nameAr,
-                                style = GhaisTypography.arabicBody,
                                 fontFamily = GhaisTypography.quranFont,
-                                fontSize = 20.sp,
-                                lineHeight = 36.sp,
+                                fontSize = 18.sp,
+                                lineHeight = 30.sp,
                                 letterSpacing = 0.sp,
-                                color = GhaisNoir.TextPrimary
+                                color = GhaisNoir.TextSecondary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "${everyAyahMeta?.style ?: reciter.style} • ${everyAyahMeta?.tempo ?: "Steady"}",
-                                color = GhaisNoir.TextSecondary,
+                                color = GhaisNoir.TextTertiary,
                                 fontSize = 12.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -327,3 +336,17 @@ private fun RowScope.HifzSurahTrailing(
         )
     }
 }
+
+/**
+ * Display name without a trailing "(Teacher)"-style role suffix.
+ *
+ * The reciter's role already appears in the hero meta line ("Teacher
+ * (Mu'allim) • Slow & Measured"), so repeating the parenthetical in the
+ * collapsed bar title AND the hero name made the header read like a
+ * form field. Strip only a SUFFIX parenthetical — mid-name parentheses
+ * (rare) stay untouched. Falls back to the raw name if stripping
+ * would leave nothing.
+ */
+internal fun displayReciterName(reciter: Reciter): String =
+    reciter.nameEn.replace(Regex("\\s*\\([^)]*\\)\\s*$"), "").trim()
+        .ifBlank { reciter.nameEn }
