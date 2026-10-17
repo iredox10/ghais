@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -23,7 +24,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.ui.components.noir.noirClickable
@@ -99,19 +103,22 @@ fun HomeFilterChips(
 }
 
 // ---------------------------------------------------------------------------
-// Plum hero — audio-first resume card: eyebrow pill, entry title, subtitle,
-// slim resume progress, then Play pill + circular artwork.
+// Plum hero — minimal resume card per user request: "show the qari image then
+// the progress bar ... make it minimal. add see all". Qari photo + inline
+// title/subtitle/progress sit in one row; progress bar is ALWAYS visible
+// (an empty track at progress 0 is intended, not a bug).
 // ---------------------------------------------------------------------------
 @Composable
 fun HomePlumHero(
     eyebrow: String,
     title: String,
     subtitle: String,
-    coverUrl: String,
+    imageUrl: String,          // the QARI photo (was coverUrl)
     monogram: String,
-    ctaLabel: String,
+    ctaLabel: String,          // "Play" or "Resume" (caller decides)
     onPlay: () -> Unit,
     onOpen: () -> Unit,
+    onSeeAll: () -> Unit,      // NEW — right-aligned history entry point
     modifier: Modifier = Modifier,
     progress: Float = 0f,
 ) {
@@ -123,93 +130,117 @@ fun HomePlumHero(
             .border(1.dp, GhaisNoir.Lavender.copy(alpha = 0.35f), GhaisShapes.cardLarge)
             .topSpecular(inset = 30.dp)
             .noirClickable(onClick = onOpen)
-            .padding(20.dp)
+            .padding(16.dp)
     ) {
-        // Eyebrow pill — "Jump back in".
-        Box(
-            modifier = Modifier
-                .clip(GhaisShapes.pill)
-                .background(Color.White.copy(alpha = 0.16f))
-                .padding(horizontal = 12.dp, vertical = 6.dp)
-        ) {
-            Text(
-                text = eyebrow,
-                color = Color.White,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = title,
-            color = Color.White,
-            fontSize = 30.sp,
-            lineHeight = 34.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = subtitle,
-            color = Color.White.copy(alpha = 0.72f),
-            fontSize = 13.sp,
-            maxLines = 2
-        )
-        if (clamped > 0f) {
-            Spacer(Modifier.height(12.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(GhaisShapes.pill)
-                    .background(Color.White.copy(alpha = 0.25f))
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(clamped)
-                        .height(4.dp)
-                        .clip(GhaisShapes.pill)
-                        .background(Color.White)
-                )
-            }
-        }
-        Spacer(Modifier.height(16.dp))
+        // Eyebrow row: "Jump back in" pill left, "See all" right — the user
+        // asked for an explicit See all; nested click stops at this control,
+        // everything else still opens the card via onOpen.
         Row(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
+            Box(
                 modifier = Modifier
                     .clip(GhaisShapes.pill)
-                    .background(GhaisNoir.lavenderFill())
-                    .noirClickable(onClick = onPlay)
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    .background(Color.White.copy(alpha = 0.16f))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    tint = GhaisNoir.LavenderInk,
-                    modifier = Modifier.size(18.dp)
-                )
                 Text(
-                    text = ctaLabel,
-                    color = GhaisNoir.LavenderInk,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
+                    text = eyebrow,
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
                 )
             }
-            Spacer(Modifier.weight(1f))
+            Text(
+                text = "See all",
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                modifier = Modifier
+                    // semantics, not contentDescription param: Text has none,
+                    // and screen readers need a label distinct from "See all".
+                    .semantics { contentDescription = "See all history" }
+                    .noirClickable(onClick = onSeeAll)
+                    .padding(start = 8.dp) // touch target breathing room
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        // Single content row: qari image first, then text + progress — the
+        // exact order the user described, replacing the stacked display title.
+        Row(verticalAlignment = Alignment.CenterVertically) {
             NoirArtworkWell(
-                coverUrl = coverUrl,
+                coverUrl = imageUrl,
                 monogram = monogram,
                 shape = CircleShape,
-                size = 96.dp,
-                monogramSize = 30.sp,
-                ring = true,
+                size = 56.dp,
+                monogramSize = 18.sp, // scaled to the 56dp well
+                ring = false,
                 scrimAlpha = 0f
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle,
+                    color = Color.White.copy(alpha = 0.72f),
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(4.dp))
+                // Always-visible slim progress: an empty track at 0 keeps the
+                // image → bar rhythm stable instead of popping in later.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .clip(GhaisShapes.pill)
+                        .background(Color.White.copy(alpha = 0.25f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(clamped)
+                            .height(3.dp)
+                            .clip(GhaisShapes.pill)
+                            .background(Color.White)
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        // Compact play pill, left-aligned — no trailing artwork well anymore,
+        // so the weight spacer goes too.
+        Row(
+            modifier = Modifier
+                .clip(GhaisShapes.pill)
+                .background(GhaisNoir.lavenderFill())
+                .noirClickable(onClick = onPlay)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.PlayArrow,
+                contentDescription = null,
+                tint = GhaisNoir.LavenderInk,
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = ctaLabel,
+                color = GhaisNoir.LavenderInk,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
             )
         }
     }
