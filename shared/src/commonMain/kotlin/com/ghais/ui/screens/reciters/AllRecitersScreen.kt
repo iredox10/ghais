@@ -37,6 +37,7 @@ import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.reciterCountryKey
 import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirHeaderSearch
 import com.ghais.ui.components.noir.NoirInsetField
 import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
@@ -165,6 +166,13 @@ class AllRecitersScreen : Screen {
         var searchQuery by remember { mutableStateOf("") }
         var selectedFilter by remember { mutableStateOf("All") }
 
+        // Header search expansion, screen-owned (ReciterProfileScreen
+        // pattern): the collapsed well morphs into the header pill that is
+        // bound to the same `searchQuery` driving `filteredReciters`.
+        // Collapse always clears the query so the list reads unfiltered
+        // once the field is hidden.
+        var searchExpanded by remember { mutableStateOf(false) }
+
         // Real follower counts from the public `reciter_stats` collection.
         // A slug missing from the map is unknown, and renders nothing.
         val followerCounts by FollowStore.followerCounts.collectAsState()
@@ -244,7 +252,20 @@ class AllRecitersScreen : Screen {
                 NoirNavBar(
                     title = "All Reciters",
                     onBack = { navigator.pop() },
-                    backIcon = Icons.AutoMirrored.Filled.ArrowBack
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    actions = {
+                        NoirHeaderSearch(
+                            expanded = searchExpanded,
+                            onExpandedChange = { expanded ->
+                                searchExpanded = expanded
+                                if (!expanded) searchQuery = ""
+                            },
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            placeholder = "Search reciters…"
+                        )
+                    },
+                    titleAlignLeft = true
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))

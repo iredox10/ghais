@@ -83,7 +83,8 @@ object BroadcastsScreen : Screen {
                 NoirNavBar(
                     title = "Inbox",
                     backIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                    onBack = { navigator.pop() }
+                    onBack = { navigator.pop() },
+                    titleAlignLeft = true
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))

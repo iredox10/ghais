@@ -201,7 +201,8 @@ data class MoodScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     onBack = { navigator.pop() },
-                    backIcon = Icons.AutoMirrored.Filled.ArrowBack
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    titleAlignLeft = true
                 )
                 MoodModalContent(
                     initialMoodId = initialMoodId,

@@ -264,7 +264,8 @@ object StatsScreen : Screen {
                                     )
                                 }
                             )
-                        }
+                        },
+                        titleAlignLeft = true
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

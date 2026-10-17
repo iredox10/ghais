@@ -59,6 +59,7 @@ import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.components.noir.NoirInsetField
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirClickable
@@ -75,7 +76,8 @@ import kotlinx.coroutines.delay
 /**
  * Noir reciter search — monochrome chrome with natural-colour portraits.
  *
- * Top: back well + autofocused engraved search field. Blank query shows the
+ * Top: standard pushed header (back well + left-aligned "Search" title); the
+ * autofocused engraved search field lives directly below the header. Blank query shows the
  * "Recent searches" section (rows resolved via [QuranDataRepository.getReciterBySlug],
  * per-item remove, "Clear all" ghost action, ghost-well empty state). Typing
  * shows live results with the same matching as RecitersScreen
@@ -234,29 +236,23 @@ class ReciterSearchScreen(
                     .padding(horizontal = 20.dp)
                     .padding(top = 12.dp)
             ) {
-                // Top bar — IconWell back + autofocused engraved search.
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier.noirClickable { navigator.pop() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        IconWell(
-                            icon = Icons.AutoMirrored.Filled.ArrowBack,
-                            size = 40.dp,
-                            iconSize = 20.dp,
-                            contentDescription = "Back"
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    ReciterSearchField(
-                        query = query,
-                        onQueryChange = { query = it },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                // Top bar — standard pushed header only: circular back well +
+                // left-aligned title. No header search well here (this screen
+                // IS the search; a second well would be a dead/duplicate
+                // affordance). The engraved query field keeps its autofocus
+                // and lives unchanged in the body directly below the header.
+                NoirNavBar(
+                    title = "Search",
+                    onBack = { navigator.pop() },
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    titleAlignLeft = true
+                )
+
+                ReciterSearchField(
+                    query = query,
+                    onQueryChange = { query = it },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 Spacer(modifier = Modifier.height(14.dp))
 

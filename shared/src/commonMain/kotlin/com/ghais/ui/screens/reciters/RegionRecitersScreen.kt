@@ -41,6 +41,7 @@ import com.ghais.data.repository.reciterCountryKey
 import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
+import com.ghais.ui.components.noir.NoirHeaderSearch
 import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
@@ -73,6 +74,12 @@ data class RegionRecitersScreen(val nation: String) : Screen {
             }
         }
 
+        // Header search expansion is screen-owned (ReciterProfileScreen
+        // pattern), wired to the same `searchQuery` that drives `filtered`
+        // and the in-body engraved pill. Collapse always clears the query,
+        // so the list reads unfiltered once the field is hidden.
+        var searchExpanded by remember { mutableStateOf(false) }
+
         NoirScreenRoot {
             Column(
                 modifier = Modifier.fillMaxSize()
@@ -84,7 +91,20 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                         .statusBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     onBack = { navigator.pop() },
-                    backIcon = Icons.AutoMirrored.Filled.ArrowBack
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    actions = {
+                        NoirHeaderSearch(
+                            expanded = searchExpanded,
+                            onExpandedChange = { expanded ->
+                                searchExpanded = expanded
+                                if (!expanded) searchQuery = ""
+                            },
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            placeholder = "Search reciters…"
+                        )
+                    },
+                    titleAlignLeft = true
                 )
 
                 // Region chip strip — single active chrome pill (selected region).

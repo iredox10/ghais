@@ -39,6 +39,7 @@ import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
+import com.ghais.ui.components.noir.NoirHeaderSearch
 import com.ghais.ui.components.noir.NoirInsetField
 import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
@@ -53,6 +54,13 @@ object FollowedRecitersScreen : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         var searchQuery by remember { mutableStateOf("") }
+
+        // Header search expansion, screen-owned (ReciterProfileScreen
+        // pattern): the collapsed well morphs into the header pill that is
+        // bound to the same `searchQuery` driving `filtered`. Collapse
+        // always clears the query so the list reads unfiltered once the
+        // field is hidden.
+        var searchExpanded by remember { mutableStateOf(false) }
         val followedSlugs by FollowStore.followedSlugs.collectAsState()
         // Re-resolve when the cloud catalog changes: a followed slug that only
         // exists in Appwrite (admin upload) resolves once that sync lands.
@@ -95,7 +103,20 @@ object FollowedRecitersScreen : Screen {
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     onBack = { navigator.pop() },
-                    backIcon = Icons.AutoMirrored.Filled.ArrowBack
+                    backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    actions = {
+                        NoirHeaderSearch(
+                            expanded = searchExpanded,
+                            onExpandedChange = { expanded ->
+                                searchExpanded = expanded
+                                if (!expanded) searchQuery = ""
+                            },
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            placeholder = "Search following…"
+                        )
+                    },
+                    titleAlignLeft = true
                 )
 
                 NoirInsetField(

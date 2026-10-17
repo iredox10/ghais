@@ -106,7 +106,8 @@ class RoutineEditorScreen(val routineId: String? = null) : Screen {
                     title = if (routineId != null) "Edit routine" else "New routine",
                     backIcon = Icons.AutoMirrored.Filled.ArrowBack,
                     onBack = { navigator.pop() },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    titleAlignLeft = true
                 )
 
                 LazyColumn(

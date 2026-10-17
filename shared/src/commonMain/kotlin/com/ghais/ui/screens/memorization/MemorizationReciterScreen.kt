@@ -119,7 +119,8 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                 NoirNavBar(
                     title = reciter.nameEn,
                     backIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                    onBack = { navigator.pop() }
+                    onBack = { navigator.pop() },
+                    titleAlignLeft = true
                 )
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),

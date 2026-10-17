@@ -46,6 +46,7 @@ import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.NoirListRow
 import com.ghais.ui.components.noir.NoirNavBar
+import com.ghais.ui.components.noir.NoirNavButton
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.NoirSwitch
@@ -134,10 +135,30 @@ object AppSettingsScreen : Screen {
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 item {
+                    // Standard pushed header: back well + left-aligned title,
+                    // plus a Share well wired to the screen's existing
+                    // "Share Ghaith" ShareSheet handler (same copy, one
+                    // entry point — the row below stays as the label-able
+                    // fallback).
                     NoirNavBar(
                         title = "Settings",
                         backIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                        onBack = { navigator.pop() }
+                        onBack = { navigator.pop() },
+                        actions = {
+                            NoirNavButton(
+                                icon = Icons.Filled.Share,
+                                contentDescription = "Share",
+                                onClick = {
+                                    if (ShareSheet.isAvailable()) {
+                                        ShareSheet.shareText(
+                                            title = "Ghaith — Daily Quran",
+                                            text = "Listen to the Quran every day with Ghaith: $GhaithStoreUrl"
+                                        )
+                                    }
+                                }
+                            )
+                        },
+                        titleAlignLeft = true
                     )
                 }
 

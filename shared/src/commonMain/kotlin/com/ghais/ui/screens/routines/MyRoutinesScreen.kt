@@ -78,7 +78,8 @@ object MyRoutinesScreen : Screen {
                     title = "My Routines",
                     backIcon = Icons.AutoMirrored.Filled.ArrowBack,
                     onBack = { navigator.pop() },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    titleAlignLeft = true
                 )
 
                 // Chrome "New routine" CTA.
