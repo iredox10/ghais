@@ -1197,6 +1197,14 @@
           "note": "Top-20 reciter slugs by velocity: 7d share of plays vs 30d baseline share, rank order."
         },
         {
+          "key": "topQarisYesterday",
+          "type": "string",
+          "size": 64,
+          "required": false,
+          "array": true,
+          "note": "LEGACY: top-20 reciter slugs in yesterday's UTC day, rank order. No longer read by the current app (it uses topQaris7d for 'Weekly most heard'), but the aggregate-charts functions still write it for older clients, so the attribute must stay declared — a payload key absent from the schema makes the whole rollup write fail."
+        },
+        {
           "key": "generatedAt",
           "type": "datetime",
           "required": true,
