@@ -345,74 +345,6 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                         )
                     }
 
-                    // Discovery rail (A5): voices most like this one, above the
-                    // surah list and below the action buttons. Hidden when empty.
-                    // The Start Radio action lives in the hero button row above,
-                    // so it already reads before the 114-surah list.
-                    if (related.isNotEmpty()) {
-                        item(key = "more-like") {
-                            Spacer(modifier = Modifier.height(18.dp))
-                            NoirSectionHeader(
-                                label = "More like ${reciter.nameEn}",
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(14.dp)
-                            ) {
-                                items(
-                                    items = related,
-                                    key = { it.slug }
-                                ) { relatedReciter ->
-                                    val relatedPhoto =
-                                        rememberCloudPhoto(relatedReciter.slug)
-                                            ?: photoForSlug(relatedReciter.slug)
-                                    // Cards carry their own identity + meta; the
-                                    // similarity caption is dropped for a clean rail.
-                                    Column(
-                                        modifier = Modifier.width(180.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        ReciterReelCard(
-                                            reciter = relatedReciter,
-                                            photoUrl = relatedPhoto,
-                                            onClick = {
-                                                navigator.push(
-                                                    ReciterProfileScreen(relatedReciter.slug)
-                                                )
-                                            },
-                                            onPlayClick = {
-                                                val relatedSurahs =
-                                                    QuranDataRepository.getSurahsForReciter(relatedReciter)
-                                                        .filter { relatedReciter.isSurahAvailable(it.id) }
-                                                val relatedTracks = relatedSurahs.map { surah ->
-                                                    TrackItem(
-                                                        reciterSlug = relatedReciter.slug,
-                                                        reciterName = relatedReciter.nameEn,
-                                                        surahId = surah.id,
-                                                        surahNameEn = surah.nameEn,
-                                                        surahNameAr = surah.nameAr,
-                                                        ayahNo = 0,
-                                                        audioUrl = relatedReciter.getFullSurahUrl(surah.id),
-                                                        textUthmani = "",
-                                                        durationMs = surah.ayahsCount * 15_000L
-                                                    )
-                                                }
-                                                if (relatedTracks.isNotEmpty()) {
-                                                    AudioEngine.playQueue(relatedTracks, startIndex = 0)
-                                                    rootNavigator.push(NowPlayingScreen())
-                                                }
-                                            },
-                                            isFollowing = relatedReciter.slug in followedSlugs,
-                                            onFollowClick = { FollowStore.toggle(relatedReciter.slug) },
-                                            followerCount = followerCounts[relatedReciter.slug]
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                     item(key = "recitations-header") {
                         Spacer(modifier = Modifier.height(18.dp))
 
@@ -498,6 +430,77 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                                 }
                             }
                         )
+                    }
+
+                    // Discovery rail (A5), relocated to the BOTTOM: voices most
+                    // like this one render after the full discography instead of
+                    // above it, so the 114-surah list starts right after the hero
+                    // actions. Same content, header, keys and callbacks — moved
+                    // verbatim; the list must be scrolled to reach it now.
+                    // Hidden when empty. The Start Radio action lives in the hero
+                    // rail over the photo, it does not compete with this rail.
+                    if (related.isNotEmpty()) {
+                        item(key = "more-like") {
+                            Spacer(modifier = Modifier.height(18.dp))
+                            NoirSectionHeader(
+                                label = "More like ${reciter.nameEn}",
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                items(
+                                    items = related,
+                                    key = { it.slug }
+                                ) { relatedReciter ->
+                                    val relatedPhoto =
+                                        rememberCloudPhoto(relatedReciter.slug)
+                                            ?: photoForSlug(relatedReciter.slug)
+                                    // Cards carry their own identity + meta; the
+                                    // similarity caption is dropped for a clean rail.
+                                    Column(
+                                        modifier = Modifier.width(180.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        ReciterReelCard(
+                                            reciter = relatedReciter,
+                                            photoUrl = relatedPhoto,
+                                            onClick = {
+                                                navigator.push(
+                                                    ReciterProfileScreen(relatedReciter.slug)
+                                                )
+                                            },
+                                            onPlayClick = {
+                                                val relatedSurahs =
+                                                    QuranDataRepository.getSurahsForReciter(relatedReciter)
+                                                        .filter { relatedReciter.isSurahAvailable(it.id) }
+                                                val relatedTracks = relatedSurahs.map { surah ->
+                                                    TrackItem(
+                                                        reciterSlug = relatedReciter.slug,
+                                                        reciterName = relatedReciter.nameEn,
+                                                        surahId = surah.id,
+                                                        surahNameEn = surah.nameEn,
+                                                        surahNameAr = surah.nameAr,
+                                                        ayahNo = 0,
+                                                        audioUrl = relatedReciter.getFullSurahUrl(surah.id),
+                                                        textUthmani = "",
+                                                        durationMs = surah.ayahsCount * 15_000L
+                                                    )
+                                                }
+                                                if (relatedTracks.isNotEmpty()) {
+                                                    AudioEngine.playQueue(relatedTracks, startIndex = 0)
+                                                    rootNavigator.push(NowPlayingScreen())
+                                                }
+                                            },
+                                            isFollowing = relatedReciter.slug in followedSlugs,
+                                            onFollowClick = { FollowStore.toggle(relatedReciter.slug) },
+                                            followerCount = followerCounts[relatedReciter.slug]
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -826,69 +829,68 @@ private fun ReciterNoirHeroPlate(
             }
         }
 
-        // Signature CTA — dating-ref booking pill: full-width lavender Play all.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 14.dp)
-                .clip(GhaisShapes.pill)
-                .background(GhaisNoir.lavenderFill())
-                .then(if (playEnabled) Modifier.noirClickable(onClick = onPlayAll) else Modifier)
-                .padding(vertical = 15.dp)
-                .alpha(if (playEnabled) 1f else 0.45f),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+        // Minimal CTA — compact auto-width Noir pill in the hero action row:
+        // play glyph + "Play all" only. The "• N surahs" suffix was dropped
+        // because the count already lives in the Recitations header
+        // ("Recitations • N"), and the old "You heard X of Y" caption row +
+        // standalone percentage were pure duplication of the fraction — the
+        // offline meter below keeps its own library read, so the heard story
+        // shrinks to a 2dp hairline under the pill. No new state: the
+        // fraction reuses the same heardCount/surahCount values the caption
+        // was computed from. Click handler, playEnabled gate and disabled
+        // alpha behave exactly as the old pill did.
+        Column(
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp)
+            // Deliberately NO fillMaxWidth: the Column hugs the pill, so the
+            // hairline below inherits exactly the pill's own width.
         ) {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = null,
-                tint = GhaisNoir.LavenderInk,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Play all • $surahCount surahs",
-                color = GhaisNoir.LavenderInk,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Meters render only when there is something to say: heard progress
-        // once anything was heard, offline state once anything is kept or
-        // in flight. A fresh profile shows neither — pure CTA.
-        if (heardCount > 0) {
-            // Your progress with this voice — heard / recorded, from history.
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .clip(GhaisShapes.pill)
+                    .background(GhaisNoir.wellFill())
+                    .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                    .then(if (playEnabled) Modifier.noirClickable(onClick = onPlayAll) else Modifier)
+                    .height(40.dp)
+                    .padding(horizontal = 14.dp)
+                    .alpha(if (playEnabled) 1f else 0.45f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "You heard $heardCount of $surahCount",
-                    color = GhaisNoir.TextSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = GhaisNoir.TextPrimary,
+                    modifier = Modifier.size(16.dp)
                 )
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "${((heardCount.toFloat() / surahCount.coerceAtLeast(1)) * 100).toInt()}%",
-                    color = GhaisNoir.Lavender,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+                    text = "Play all",
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            NoirSegmentedProgress(
-                progress = heardCount.toFloat() / surahCount.coerceAtLeast(1).toFloat(),
-                modifier = Modifier.padding(horizontal = 16.dp),
-                trackHeight = 4.dp,
-                lavender = true
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+            // Heard-progress hairline: only when something was actually heard.
+            // TextSecondary track + lavender fill — the briefest possible echo
+            // of the removed caption, sized to the pill, not the full width.
+            if (heardCount > 0) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .clip(CircleShape)
+                        .background(GhaisNoir.BorderCard)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(heardCount.toFloat() / surahCount.coerceAtLeast(1).toFloat())
+                            .height(2.dp)
+                            .background(GhaisNoir.Lavender)
+                    )
+                }
+            }
         }
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (downloadedCount > 0 || downloadingCount > 0) {
             NoirSegmentedProgress(
