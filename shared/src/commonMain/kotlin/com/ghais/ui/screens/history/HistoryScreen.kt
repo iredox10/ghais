@@ -6,21 +6,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -36,7 +31,7 @@ import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
-import com.ghais.ui.components.noir.NoirInsetField
+import com.ghais.ui.components.noir.NoirHeaderSearch
 import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
@@ -85,7 +80,8 @@ private fun relativeTime(timestampMs: Long): String {
  * Noir Glass — strict monochrome redesign.
  *
  * Canvas #050506 via [NoirScreenRoot] (glow zone -> absolute black + grain).
- * Engraved [NoirInsetField] search (white cursor, 24% hint, ghost clear),
+ * Header search well — [NoirHeaderSearch] morphing well/field in the bar
+ * (the engraved inset field lives in the header now),
  * history rows in the NoirListRow language with natural-colour reciter portraits,
  * ghost-well empty state, and ghost circular replay affordance. Monochrome chrome
  * lets state read through fill elevation, weight and opacity.
@@ -97,6 +93,11 @@ object HistoryScreen : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         var searchQuery by remember { mutableStateOf("") }
+        // Header search expansion (caller-owned per NoirHeaderSearch's
+        // contract): collapse always clears the query too — ReciterProfile
+        // rule, so a filtered subset can't silently persist with no visible
+        // field. The field's own clear circle wipes text and STAYS expanded.
+        var searchExpanded by remember { mutableStateOf(false) }
         val history by UserUsageRepository.history.collectAsState()
         val surahPlays by UserUsageRepository.surahPlays.collectAsState()
 
@@ -219,9 +220,10 @@ object HistoryScreen : Screen {
                     title = "History",
                     onBack = { navigator.pop() },
                     backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    titleAlignLeft = true,
                     actions = {
                         // Unfiltered 30-day group total, so typing in the
-                        // search box never shrinks it.
+                        // search field never shrinks it.
                         Box(
                             modifier = Modifier
                                 .clip(GhaisShapes.pill)
@@ -237,65 +239,22 @@ object HistoryScreen : Screen {
                                 color = GhaisNoir.TextSecondary
                             )
                         }
+                        // Search — header well replacing the engraved inset
+                        // field that used to sit under the bar. Collapse
+                        // clears the query (ReciterProfileScreen rule); the
+                        // count chip above never reacts to the query.
+                        NoirHeaderSearch(
+                            expanded = searchExpanded,
+                            onExpandedChange = { expanded ->
+                                searchExpanded = expanded
+                                if (!expanded) searchQuery = ""
+                            },
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            placeholder = "Search history…"
+                        )
                     }
                 )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Search — engraved inset, white cursor, 24% hint, ghost clear.
-                NoirInsetField(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = "Search",
-                            tint = if (searchQuery.isNotEmpty()) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Box(modifier = Modifier.weight(1f)) {
-                            if (searchQuery.isEmpty()) {
-                                Text(
-                                    text = "Search history...",
-                                    color = GhaisNoir.TextDisabled,
-                                    fontSize = 13.5.sp
-                                )
-                            }
-                            BasicTextField(
-                                value = searchQuery,
-                                onValueChange = { searchQuery = it },
-                                singleLine = true,
-                                textStyle = TextStyle(
-                                    color = GhaisNoir.TextPrimary,
-                                    fontSize = 13.5.sp,
-                                    fontWeight = FontWeight.Medium
-                                ),
-                                cursorBrush = SolidColor(GhaisNoir.TextPrimary),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                        if (searchQuery.isNotEmpty()) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Box(
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
-                                    .background(GhaisNoir.Fill2, CircleShape)
-                                    .noirClickable { searchQuery = "" },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Clear",
-                                    tint = GhaisNoir.TextSecondary,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-                        }
-                    }
-                }
 
                 Spacer(modifier = Modifier.height(14.dp))
 

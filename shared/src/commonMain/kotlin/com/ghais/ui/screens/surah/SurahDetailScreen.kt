@@ -41,6 +41,7 @@ import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.NoirHeroCard
+import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirClickable
@@ -161,83 +162,44 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
             Scaffold(
                 containerColor = Color.Transparent,
                 topBar = {
-                    TopAppBar(
-                        title = {
-                            Column {
-                                Text(
-                                    text = surah.nameEn,
-                                    color = GhaisNoir.TextPrimary,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = "${surah.revelationType} • ${surah.ayahsCount} Ayahs",
-                                    color = GhaisNoir.TextTertiary,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        },
-                        navigationIcon = {
-                            IconButton(
-                                onClick = { navigator.pop() },
-                                modifier = Modifier.padding(start = 4.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(GhaisNoir.Fill2)
-                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Back",
-                                        tint = GhaisNoir.TextPrimary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        },
+                    // App-wide pushed-header pattern: back well, left-aligned
+                    // bold name, trailing wells. The historical two-line title
+                    // and the Arabic-name text have moved (or already lived) in
+                    // the hero plate — the bar only carries the screen name.
+                    NoirNavBar(
+                        title = surah.nameEn,
+                        onBack = { navigator.pop() },
+                        backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                        titleAlignLeft = true,
                         actions = {
-                            IconButton(
-                                onClick = { showRangePlaySheet = true },
-                                modifier = Modifier.padding(end = 4.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(if (isRangeActiveForSurah) GhaisNoir.chromeFill() else GhaisNoir.wellFill())
-                                        .border(
-                                            1.dp,
-                                            if (isRangeActiveForSurah) Color.White.copy(alpha = 0.4f) else GhaisNoir.BorderCard,
-                                            CircleShape
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Repeat,
-                                        contentDescription = "Range Loop Mode",
-                                        tint = if (isRangeActiveForSurah) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
-                                        modifier = Modifier.size(17.dp)
+                            // Range Loop well — same handler as before, kept tappable
+                            // even while a range is live (the RangePlaySheet both sets
+                            // and clears it). State recipe preserved from the old bar:
+                            // chrome fill + bright rim marks a live range, so the 40dp
+                            // well matches the shared circular-nav recipe.
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        if (isRangeActiveForSurah) GhaisNoir.chromeFill() else GhaisNoir.wellFill(),
+                                        CircleShape
                                     )
-                                }
+                                    .border(
+                                        1.dp,
+                                        if (isRangeActiveForSurah) Color.White.copy(alpha = 0.4f) else GhaisNoir.BorderCard,
+                                        CircleShape
+                                    )
+                                    .noirClickable(onClick = { showRangePlaySheet = true }),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Repeat,
+                                    contentDescription = "Range Loop Mode",
+                                    tint = if (isRangeActiveForSurah) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
+                                    modifier = Modifier.size(19.dp)
+                                )
                             }
-                            Text(
-                                text = surah.nameAr,
-                                color = GhaisNoir.TextPrimary,
-                                fontSize = 20.sp,
-                                lineHeight = 36.sp,
-                                letterSpacing = 0.sp,
-                                fontWeight = FontWeight.Normal,
-                                fontFamily = GhaisTypography.quranFont,
-                                modifier = Modifier.padding(end = 16.dp)
-                            )
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                        }
                     )
                 }
             ) { paddingValues ->

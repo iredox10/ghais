@@ -23,6 +23,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -87,6 +88,7 @@ import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.components.noir.NoirHeroCard
 import com.ghais.ui.components.noir.NoirNavBar
+import com.ghais.ui.components.noir.NoirNavButton
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSegmentedProgress
@@ -152,7 +154,30 @@ object KhatmaScreen : Screen {
                     NoirNavBar(
                         title = "Khatma",
                         backIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                        onBack = { navigator.pop() }
+                        onBack = { navigator.pop() },
+                        titleAlignLeft = true,
+                        actions = {
+                            // Share — composed only when a completed plan exists,
+                            // because ShareSheet is called today from exactly one
+                            // place (the completion certificate): an always-on well
+                            // would share completion text for a plan in progress,
+                            // and a well with nothing behind it is prohibited.
+                            // Handler = the certificate's existing call, verbatim.
+                            if (plan != null && khatmaIsComplete(plan)) {
+                                NoirNavButton(
+                                    icon = Icons.Filled.Share,
+                                    contentDescription = "Share",
+                                    onClick = {
+                                        if (ShareSheet.isAvailable()) {
+                                            ShareSheet.shareText(
+                                                "My Khatma completion",
+                                                khatmaCompletionShareText(plan)
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     )
                 }
             ) { paddingValues ->

@@ -11,10 +11,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -25,9 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,6 +38,7 @@ import com.ghais.data.seed.QuranDataRepository
 import com.ghais.data.seed.GhaisAssets
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirHeaderSearch
 import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
@@ -75,6 +72,12 @@ class AllCuratedPlaylistsScreen : Screen {
         val rootNavigator = LocalRootNavigator.current ?: navigator.parent ?: navigator
 
         var searchQuery by remember { mutableStateOf("") }
+        // Header search expansion (caller-owned per NoirHeaderSearch's
+        // contract): the bar's weighted title gets squeezed out while the
+        // pill claims the row. Collapse always clears the query too —
+        // ReciterProfileScreen's rule, so a filtered subset can never
+        // silently persist behind no visible field.
+        var searchExpanded by remember { mutableStateOf(false) }
         var selectedCategory by remember { mutableStateOf("All") }
 
         val categoryOptions = remember {
@@ -145,10 +148,26 @@ class AllCuratedPlaylistsScreen : Screen {
                     .padding(horizontal = 20.dp)
                     .padding(top = 12.dp)
             ) {
+                // Search moved into the header well (the old engraved
+                // full-width field is replaced — same migration RecitersScreen
+                // made): the bar IS the search entry now.
                 NoirNavBar(
                     title = "Collections",
                     backIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                    onBack = { navigator.pop() }
+                    onBack = { navigator.pop() },
+                    titleAlignLeft = true,
+                    actions = {
+                        NoirHeaderSearch(
+                            expanded = searchExpanded,
+                            onExpandedChange = { expanded ->
+                                searchExpanded = expanded
+                                if (!expanded) searchQuery = ""
+                            },
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            placeholder = "Search collections…"
+                        )
+                    }
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -160,14 +179,6 @@ class AllCuratedPlaylistsScreen : Screen {
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
-
-                // Search — engraved inset field
-                CuratedSearchBar(
-                    query = searchQuery,
-                    onQueryChange = { searchQuery = it }
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
 
                 // Category pills — chrome (selected) / ghost (resting)
                 CategoryChipsRow(
@@ -285,77 +296,6 @@ private fun CuratedCollectionsTopBar(
                 fontWeight = FontWeight.SemiBold,
                 color = GhaisNoir.TextSecondary
             )
-        }
-    }
-}
-
-/**
- * Search field in engraved inset style: carved-in recessed surface
- * (black 45% gradient + 5% rim), white cursor, 24% placeholder.
- */
-@Composable
-private fun CuratedSearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(GhaisShapes.row)
-            .background(GhaisNoir.insetFill())
-            .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.row)
-            .padding(horizontal = 16.dp, vertical = 13.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Search,
-            contentDescription = "Search",
-            tint = if (query.isNotEmpty()) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-            modifier = Modifier.size(20.dp)
-        )
-
-        Spacer(modifier = Modifier.width(10.dp))
-
-        Box(modifier = Modifier.weight(1f)) {
-            if (query.isEmpty()) {
-                Text(
-                    text = "Search collections, moods, or tags...",
-                    color = GhaisNoir.TextDisabled,
-                    fontSize = 13.5.sp
-                )
-            }
-            BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                textStyle = TextStyle(
-                    color = GhaisNoir.TextPrimary,
-                    fontSize = 13.5.sp,
-                    fontWeight = FontWeight.Medium
-                ),
-                cursorBrush = SolidColor(GhaisNoir.TextPrimary),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        if (query.isNotEmpty()) {
-            Spacer(modifier = Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .size(22.dp)
-                    .clip(CircleShape)
-                    .background(GhaisNoir.Fill2)
-                    .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
-                    .noirClickable { onQueryChange("") },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Clear",
-                    tint = GhaisNoir.TextSecondary,
-                    modifier = Modifier.size(12.dp)
-                )
-            }
         }
     }
 }

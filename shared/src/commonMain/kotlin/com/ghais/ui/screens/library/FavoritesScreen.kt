@@ -71,7 +71,8 @@ object FavoritesScreen : Screen {
                     NoirNavBar(
                         title = "Liked Songs",
                         backIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                        onBack = { navigator.pop() }
+                        onBack = { navigator.pop() },
+                        titleAlignLeft = true
                     )
                 }
             ) { paddingValues ->

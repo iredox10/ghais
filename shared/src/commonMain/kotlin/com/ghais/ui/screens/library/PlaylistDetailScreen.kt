@@ -78,7 +78,8 @@ data class PlaylistDetailScreen(val playlistId: String) : Screen {
                     NoirNavBar(
                         title = playlist.title,
                         backIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                        onBack = { navigator.pop() }
+                        onBack = { navigator.pop() },
+                        titleAlignLeft = true
                     )
                 }
             ) { paddingValues ->

@@ -105,7 +105,8 @@ class DownloadsScreen : Screen {
                     NoirNavBar(
                         title = "Downloads",
                         backIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                        onBack = { navigator.pop() }
+                        onBack = { navigator.pop() },
+                        titleAlignLeft = true
                     )
                 }
             ) { paddingValues ->

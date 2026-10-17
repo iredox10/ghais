@@ -20,11 +20,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -40,9 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,7 +53,7 @@ import com.ghais.domain.model.DevotionKind
 import com.ghais.domain.model.DevotionalItem
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
-import com.ghais.ui.components.noir.NoirInsetField
+import com.ghais.ui.components.noir.NoirHeaderSearch
 import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
@@ -98,8 +94,8 @@ private val DevotionKind.unitWord: String
  *
  * Visual language is copied, not invented: [NoirScreenRoot] canvas and
  * 20.dp/12.dp screen inset, the 40.dp/20.dp back [IconWell], 20.sp Bold title
- * with a 12.sp tertiary subtitle and a ghost count chip (HistoryScreen /
- * BroadcastsScreen), the engraved [NoirInsetField] search and the
+ * with a ghost count chip (HistoryScreen / BroadcastsScreen), the header
+ * search well ([NoirHeaderSearch]) and the
  * chrome-fill / Fill2-resting pill row (AllCuratedPlaylistsScreen), the
  * ghost-well-in-soft-card empty state (BroadcastsScreen) and the
  * `HistoryNoirRow` card language: `cardFillSoft` + 1.dp [GhaisNoir.BorderCard]
@@ -126,6 +122,11 @@ data class DevotionListScreen(val kind: DevotionKind) : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         var query by remember { mutableStateOf("") }
+        // Header search expansion (caller-owned per NoirHeaderSearch's
+        // contract): collapse always clears the query too — ReciterProfile
+        // rule, so a filtered subset can't silently persist with no visible
+        // field. The field's own clear circle wipes text and STAYS expanded.
+        var searchExpanded by remember { mutableStateOf(false) }
         // null = the "All" chip, i.e. no category narrowing.
         var selectedCategory by remember(kind) { mutableStateOf<String?>(null) }
 
@@ -159,7 +160,10 @@ data class DevotionListScreen(val kind: DevotionKind) : Screen {
                     title = kind.label,
                     onBack = { navigator.pop() },
                     backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                    titleAlignLeft = true,
                     actions = {
+                        // Total of the WHOLE catalogue, so typing and filtering
+                        // never shrink the header (same rule as the history list).
                         Box(
                             modifier = Modifier
                                 .clip(GhaisShapes.pill)
@@ -175,67 +179,21 @@ data class DevotionListScreen(val kind: DevotionKind) : Screen {
                                 color = GhaisNoir.TextSecondary
                             )
                         }
+                        // Search — header well replacing the engraved inset
+                        // field that used to sit under the bar; wired to the
+                        // same [query] that drives DevotionalRepository.search.
+                        NoirHeaderSearch(
+                            expanded = searchExpanded,
+                            onExpandedChange = { expanded ->
+                                searchExpanded = expanded
+                                if (!expanded) query = ""
+                            },
+                            query = query,
+                            onQueryChange = { query = it },
+                            placeholder = "Search ${kind.label.lowercase()}…"
+                        )
                     }
                 )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // ----------------------------------------------------------
-                // Search — engraved inset, white cursor, 24% hint, ghost clear.
-                // ----------------------------------------------------------
-                NoirInsetField(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = "Search",
-                            tint = if (query.isNotEmpty()) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Box(modifier = Modifier.weight(1f)) {
-                            if (query.isEmpty()) {
-                                Text(
-                                    text = "Search ${kind.label.lowercase()}...",
-                                    color = GhaisNoir.TextDisabled,
-                                    fontSize = 13.5.sp
-                                )
-                            }
-                            BasicTextField(
-                                value = query,
-                                onValueChange = { query = it },
-                                singleLine = true,
-                                textStyle = TextStyle(
-                                    color = GhaisNoir.TextPrimary,
-                                    fontSize = 13.5.sp,
-                                    fontWeight = FontWeight.Medium
-                                ),
-                                cursorBrush = SolidColor(GhaisNoir.TextPrimary),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                        if (query.isNotEmpty()) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Box(
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
-                                    .background(GhaisNoir.Fill2, CircleShape)
-                                    .noirClickable { query = "" },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Clear",
-                                    tint = GhaisNoir.TextSecondary,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-                        }
-                    }
-                }
 
                 // ----------------------------------------------------------
                 // Category chips — rendered only when there is something to

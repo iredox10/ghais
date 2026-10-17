@@ -134,6 +134,7 @@ data class CuratedPlaylistDetailScreen(val playlistId: String) : Screen {
                         title = playlist.title,
                         backIcon = Icons.AutoMirrored.Filled.ArrowBack,
                         onBack = { navigator.pop() },
+                        titleAlignLeft = true,
                         actions = {
                             NoirNavButton(
                                 icon = Icons.Filled.Share,
