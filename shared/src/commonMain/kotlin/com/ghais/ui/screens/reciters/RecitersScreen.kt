@@ -21,18 +21,15 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Mosque
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,7 +41,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import com.ghais.ui.screens.home.HomeScreen
+import com.ghais.ui.screens.player.NowPlayingScreen
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
@@ -78,23 +75,17 @@ import com.ghais.ui.screens.reciters.personal.orderSections
 import com.ghais.ui.screens.reciters.personal.weekSeed
 import com.ghais.ui.screens.reciters.personal.weeklyPicks
 import com.ghais.player.AudioEngine
-import com.ghais.ui.screens.reciters.deck.DeckEntryCard
-import com.ghais.ui.screens.reciters.deck.DeckDoneStore
-import com.ghais.ui.screens.reciters.deck.isDone
-import com.ghais.ui.screens.reciters.deck.DeckSheet
-import com.ghais.ui.screens.reciters.deck.todayDeck
 import com.ghais.ui.screens.reciters.taste.TasteQuizSheet
 import com.ghais.ui.screens.reciters.taste.TasteStore
 import com.ghais.ui.screens.reciters.today.HeardEntry
-import com.ghais.ui.screens.reciters.today.VoiceOfDayCard
 import com.ghais.ui.screens.reciters.today.YesterdayMostHeardSection
 import com.ghais.ui.screens.reciters.today.yesterdayTopEntries
 import com.ghais.ui.screens.reciters.today.currentEpochDay
 import com.ghais.ui.screens.reciters.today.voiceOfDay
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
+import com.ghais.ui.components.noir.NoirHeaderSearch
 import com.ghais.ui.components.noir.NoirNavBar
-import com.ghais.ui.components.noir.NoirNavButton
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
@@ -135,11 +126,38 @@ class RecitersScreen : Tab {
         // catalog sync instead of only in search. Reactive to the cache.
         val browseReciters = rememberBrowseReciters()
 
-        // Engagement hooks: taste quiz (A1), deck (A4). Refinement filters
+        // Engagement hook: taste quiz (A1). Refinement filters
         // live on the search screen; browse here is unfiltered discovery.
         val taste by TasteStore.taste.collectAsState()
         var showTasteQuiz by remember { mutableStateOf(!taste.completed) }
-        var deckOpen by remember { mutableStateOf(false) }
+
+        // Header search state. WHY caller-owned: NoirHeaderSearch's contract
+        // puts the expansion boolean (and the query) in the screen so sibling
+        // content can react to it — here that sibling is the weighted
+        // "Reciters" title, which gets squeezed to zero while the pill claims
+        // the nav bar's remaining width.
+        var searchExpanded by remember { mutableStateOf(false) }
+        var searchQuery by remember { mutableStateOf("") }
+
+        /**
+         * ReciterSearchScreen entry. Trigger rules for the animated header
+         * search (documented for the next maintainer):
+         *  - tap the collapsed 40dp search well  -> expand the pill in place
+         *    (280ms morph inside NoirHeaderSearch, auto-focused);
+         *  - first non-blank keystroke OR the IME "Search" action  -> push
+         *    the dedicated search screen, then collapse + clear here. No
+         *    debounce, no inline filtering: the pill is a doorway, not an
+         *    editor, and ReciterSearchScreen owns its own query state (it
+         *    takes no query argument; the user types there instead).
+         *  - trailing Close well with nothing typed -> plain collapse.
+         * The blank check is what keeps NoirHeaderSearch's own clear well
+         * (which reports onQueryChange("")) from re-triggering navigation.
+         */
+        fun openReciterSearch() {
+            searchExpanded = false
+            searchQuery = ""
+            rootNavigator?.push(ReciterSearchScreen())
+        }
 
         // Grouped on the flag-insensitive country key so an admin-created
         // "Saudi Arabia" joins the bundled "Saudi Arabia 🇸🇦" section instead of
@@ -223,20 +241,13 @@ class RecitersScreen : Tab {
             }
         }
 
-        // Fixed editorial top: SEARCH header, DECK hero, VOICE
-        // yesterday-top, then personalized rails, RITUAL standalone,
-        // NATIONS last. Charts live on Home's Top Qaris shelf — one home
-        // for charts, so this scroll stays lean. Deck-done state only
-        // changes the entry card copy, never the position.
-        val deckDoneDay by DeckDoneStore.doneDay.collectAsState()
-        val orderDay = remember { currentEpochDay() }
-        val deckDoneToday = remember(deckDoneDay, orderDay) {
-            try {
-                isDone(deckDoneDay, orderDay)
-            } catch (_: Exception) {
-                false
-            }
-        }
+        // Fixed editorial top: SEARCH header (nav bar with the animated
+        // header search), VOICE yesterday-top, then personalized rails,
+        // RITUAL standalone, NATIONS last. Charts live on Home's Top Qaris
+        // shelf — one home for charts, so this scroll stays lean. The deck
+        // entry card that used to sit second here was removed; the deck
+        // feature no longer owns a section on this screen (orderSections may
+        // still emit SectionId.DECK — see the no-op branch below).
         val sectionOrder = remember(
             followedSlugs, historySlugs, taste.completed
         ) {
@@ -268,33 +279,6 @@ class RecitersScreen : Tab {
                 ForYou.isPersonalized()
             } catch (_: Exception) {
                 historySlugs.isNotEmpty() || taste.completed
-            }
-        }
-
-        // Hoisted deck preview: same recipe as the sheet host below, so
-        // the entry card matches the deck that opens. (LazyListScope is
-        // not @Composable — remember() calls live here at Content level.)
-        val deckPreview = remember(
-            browseReciters, followedSlugs, usageHistory, taste, affinities
-        ) {
-            try {
-                todayDeck(
-                    reciters = browseReciters,
-                    taste = taste,
-                    history = historySlugs,
-                    followedSlugs = followedSlugs,
-                    affinities = affinities
-                )
-            } catch (_: Exception) {
-                emptyList()
-            }
-        }
-        val deckAffinityName = remember(affinities, shelfBySlug, followedSlugs) {
-            try {
-                followedSlugs.firstNotNullOfOrNull { shelfBySlug[it]?.nameEn }
-                    ?: affinities.keys.firstNotNullOfOrNull { shelfBySlug[it]?.nameEn }
-            } catch (_: Exception) {
-                null
             }
         }
 
@@ -334,13 +318,24 @@ class RecitersScreen : Tab {
                 sectionOrder.forEach { section ->
                     when (section) {
                         SectionId.SEARCH -> item(key = "search_header") {
+                            // The nav bar IS the search entry now: the old
+                            // engraved full-width field and the actions-slot
+                            // search button were replaced by NoirHeaderSearch
+                            // living in the bar's trailing slot (single-row
+                            // morph; see NoirRecitersHeader kdoc).
                             NoirRecitersHeader(
                                 onBack = { tabNavigator.current = HomeScreen },
-                                onSearch = { rootNavigator?.push(ReciterSearchScreen()) }
-                            )
-                            Spacer(Modifier.height(16.dp))
-                            NoirRecitersSearch(
-                                onClick = { rootNavigator?.push(ReciterSearchScreen()) }
+                                expanded = searchExpanded,
+                                onExpandedChange = { searchExpanded = it },
+                                query = searchQuery,
+                                onQueryChange = { next ->
+                                    searchQuery = next
+                                    // First non-blank keystroke commits: push
+                                    // straight into the dedicated search screen
+                                    // (see openReciterSearch trigger rules).
+                                    if (next.isNotBlank()) openReciterSearch()
+                                },
+                                onOpenSearch = ::openReciterSearch
                             )
                             Spacer(Modifier.height(20.dp))
                         }
@@ -397,28 +392,6 @@ class RecitersScreen : Tab {
                                     onPlayReciter = ::playReciterQueue,
                                     isFollowing = { it in followedSlugs },
                                     onFollowClick = { FollowStore.toggle(it) }
-                                )
-                                Spacer(Modifier.height(20.dp))
-                            }
-                        }
-
-                        SectionId.DECK -> if (HookFlags.deckEnabled) {
-                            item(key = "slot_deck") {
-                                LaunchedEffect(Unit) {
-                                    try {
-                                        com.ghais.analytics.HookAnalytics.track(
-                                            com.ghais.analytics.HookEvents.Event.DECK_ENTRY_SEEN,
-                                            mapOf(com.ghais.analytics.HookEvents.Prop.SOURCE to "reciters_top"),
-                                        )
-                                    } catch (_: Exception) {
-                                    }
-                                }
-                                DeckEntryCard(
-                                    onOpen = { deckOpen = true },
-                                    preview = deckPreview.take(3),
-                                    totalCount = deckPreview.size,
-                                    affinityLabel = deckAffinityName?.substringBefore(" ")?.takeIf { it.isNotBlank() },
-                                    doneToday = deckDoneToday
                                 )
                                 Spacer(Modifier.height(20.dp))
                             }
@@ -512,7 +485,11 @@ class RecitersScreen : Tab {
                                     }
                                     playReciterQueue(reciter)
                                 },
-                                onOpenPlayer = { deckOpen = true }
+                                // Canonical player wiring (matches HomeScreen):
+                                // "Play now" starts the queue, this pushes the
+                                // since-playing player screen. It used to be
+                                // miswired to open the deck sheet, which is gone.
+                                onOpenPlayer = { rootNavigator?.push(NowPlayingScreen()) }
                             )
                         }
 
@@ -578,6 +555,13 @@ class RecitersScreen : Tab {
                                 }
                             }
                         }
+
+                        // SectionId.DECK (and any other enum entry this
+                        // screen no longer owns) renders nothing here —
+                        // orderSections still emits DECK, and this else-noop
+                        // keeps the when exhaustive-with-else instead of
+                        // ever falling through on an unmatched section.
+                        else -> Unit
                     }
                 }
             }
@@ -599,31 +583,6 @@ class RecitersScreen : Tab {
                     }
                 }
             }
-
-            // Swipe deck host (A4, affinity-aware v2 via P7).
-            if (deckOpen) {
-                val deck = remember(
-                    browseReciters, followedSlugs, usageHistory, taste, affinities
-                ) {
-                    todayDeck(
-                        reciters = browseReciters,
-                        taste = taste,
-                        history = historySlugs,
-                        followedSlugs = followedSlugs,
-                        affinities = affinities
-                    )
-                }
-                DeckSheet(
-                    deck = deck,
-                    taste = taste,
-                    photoFor = ::photoForSlug,
-                    onDismiss = { deckOpen = false },
-                    onOpenProfile = { slug ->
-                        rootNavigator?.push(ReciterProfileScreen(slug))
-                    },
-                    affinities = affinities
-                )
-            }
         }
     }
 }
@@ -631,75 +590,52 @@ class RecitersScreen : Tab {
 private val NoirReelCardShape = RoundedCornerShape(28.dp)
 
 /**
- * Reciters nav bar: back to Home left, centered title, search right.
+ * Reciters nav bar: back to Home left, centered title, header search right.
  * Count chips are gone — the search screen owns discovery numbers now.
+ *
+ * Choreography: SINGLE-ROW MORPH, no crossfade. NoirNavBar is already the
+ * exact 56dp bounded row NoirHeaderSearch's placement contract asks for, so
+ * the collapsed 40dp search well simply replaces the old NoirNavButton in
+ * the trailing `actions` slot. Row measures non-weighted children in order
+ * — so on expansion NoirHeaderSearch claims the full remaining width FIRST,
+ * then the title's weight(1f) is measured last and squeezed to zero: the
+ * pill grows leftward over the title while the well fades out, all driven
+ * by the component's own 280ms staggered morph. This is the exact "Site A"
+ * choreography NoirHeaderSearch was authored for. A Crossfade between two
+ * hand-built bars was rejected: it would duplicate the bar's layout
+ * (drift-prone) and fight the component's built-in well→pill animation.
+ *
+ * The back well stays visible while expanded (rather than hiding with the
+ * title): navigation never disappears mid-search, the collapsed row stays
+ * visually balanced (40dp back well ⟷ 40dp search well), and the pill
+ * grows only as far as the back well — iOS search-and-cancel row style.
+ *
+ * Trigger rules are documented next to `openReciterSearch` in Content.
  */
 @Composable
 private fun NoirRecitersHeader(
     onBack: () -> Unit,
-    onSearch: () -> Unit,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onOpenSearch: () -> Unit,
 ) {
     NoirNavBar(
         title = "Reciters",
         onBack = onBack,
         backIcon = Icons.AutoMirrored.Filled.ArrowBack,
         actions = {
-            NoirNavButton(
-                icon = Icons.Default.Search,
-                contentDescription = "Search reciters",
-                onClick = onSearch
+            NoirHeaderSearch(
+                expanded = expanded,
+                onExpandedChange = onExpandedChange,
+                query = query,
+                onQueryChange = onQueryChange,
+                placeholder = "Search reciters…",
+                onSearch = { onOpenSearch() }
             )
         }
     )
-}
-
-/**
- * Engraved search field — carved-in recessed surface (dark inset fill +
- * ~5% rim), search glyph at 38%, hint at 24%. Read-only affordance:
- * tapping pushes the dedicated [ReciterSearchScreen] instead of filtering
- * inline.
- */
-@Composable
-private fun NoirRecitersSearch(
-    onClick: () -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(GhaisShapes.pill)
-            .background(GhaisNoir.insetFill())
-            .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.pill)
-            .noirClickable(onClick)
-            .padding(horizontal = 16.dp, vertical = 13.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Search,
-            contentDescription = "Search",
-            tint = GhaisNoir.TextTertiary,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        BasicTextField(
-            value = "",
-            onValueChange = {},
-            singleLine = true,
-            enabled = false,
-            readOnly = true,
-            textStyle = TextStyle(
-                color = GhaisNoir.TextPrimary,
-                fontSize = 14.sp
-            ),
-            decorationBox = {
-                Text(
-                    text = "Search reciters…",
-                    color = GhaisNoir.TextTertiary,
-                    fontSize = 14.sp
-                )
-            },
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
 }
 
 @Composable
