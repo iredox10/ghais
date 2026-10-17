@@ -4,7 +4,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -106,17 +109,29 @@ fun Modifier.noirAmbientGlow(): Modifier = drawBehind {
     )
 }
 
-/** Screen root: noir canvas (glow zone -> black) + slot for content. */
+/**
+ * Screen root: noir canvas (glow zone -> black) + slot for content.
+ *
+ * The status-bar inset is handled HERE, once, so no screen repeats the
+ * inset math and a screen can never forget it (the old per-screen
+ * `.statusBarsPadding()` habit produced headers half-covered by the
+ * system clock on every screen that forgot to opt in). Screens that
+ * draw full-bleed behind the status bar — players, collapsing hero
+ * headers that manage their own insets — pass [edgeToEdge] = true and
+ * own the inset themselves.
+ */
 @Composable
 fun NoirScreenRoot(
     modifier: Modifier = Modifier,
     glow: Boolean = true,
     grain: Boolean = true,
+    edgeToEdge: Boolean = false,
     content: @Composable BoxScope.() -> Unit
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
+            .then(if (!edgeToEdge) Modifier.windowInsetsPadding(WindowInsets.statusBars) else Modifier)
             .drawBehind { drawRect(GhaisNoir.canvasFill()) }
             .then(if (glow) Modifier.noirAmbientGlow() else Modifier)
     ) {
