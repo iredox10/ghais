@@ -30,11 +30,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -42,7 +40,6 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Radio
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -56,12 +53,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -72,7 +66,6 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -82,7 +75,6 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
-import kotlinx.coroutines.launch
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.RelatedQaris
@@ -95,6 +87,7 @@ import com.ghais.domain.model.TrackItem
 import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
 import com.ghais.player.ReciterRadio
+import com.ghais.ui.components.noir.NoirHeaderSearch
 import com.ghais.ui.components.noir.NoirListRow
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
@@ -251,19 +244,19 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                 .toSet().size
         }
 
-        // In-page surah search: English, Arabic (diacritic-tolerant),
-        // transliteration, meaning, number, revelation type + Makki/Madani
-        // aliases. Filters the recitations list below; playback indexing
-        // stays surahId-based so filtering can never misqueue.
+        // Surah search lives entirely in the header now: `surahQuery` drives
+        // the same filterSurahs screening it always did; `searchExpanded`
+        // is screen-owned (not component-internal) so the collapsing bar can
+        // choreograph its title / share-well siblings from the same boolean.
+        // English, Arabic (diacritic-tolerant), transliteration, meaning,
+        // number, revelation type + Makki/Madani aliases. Filters the
+        // recitations list below; playback indexing stays surahId-based so
+        // filtering can never misqueue.
         var surahQuery by remember { mutableStateOf("") }
+        var searchExpanded by remember { mutableStateOf(false) }
         val visibleSurahs = remember(surahs, surahQuery) {
             filterSurahs(surahs, surahQuery)
         }
-        // Top-bar search jumps straight to the surah field: scroll it into
-        // view, then focus so the keyboard opens ready to type.
-        val searchFocus = remember { FocusRequester() }
-        val scope = rememberCoroutineScope()
-        val searchIndex = if (related.isNotEmpty()) 3 else 2
 
         NoirScreenRoot {
             Scaffold(
@@ -273,24 +266,24 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                         progressProvider = progressProvider,
                         name = reciter.nameEn,
                         onBack = { navigator.pop() },
-                        onSearch = {
-                            scope.launch {
-                                try {
-                                    listState.animateScrollToItem(searchIndex)
-                                } catch (_: Exception) {
-                                }
-                                try {
-                                    searchFocus.requestFocus()
-                                } catch (_: Exception) {
-                                }
-                            }
-                        },
                         onShare = {
                             ShareSheet.shareText(
                                 "Listen to ${reciter.nameEn}",
                                 "Listen to ${reciter.nameEn} (${meta.riwayah}) on Quranify — ${surahs.size} surahs."
                             )
-                        }
+                        },
+                        // Expansion is screen-owned: the bar only mirrors it.
+                        // Collapse always clears the query too — while collapsed
+                        // the list must read unfiltered, otherwise a filtered
+                        // subset would silently persist with no visible field. The
+                        // field's clear circle wipes text and STAYS expanded instead.
+                        searchExpanded = searchExpanded,
+                        onSearchExpandedChange = { expanded ->
+                            searchExpanded = expanded
+                            if (!expanded) surahQuery = ""
+                        },
+                        searchQuery = surahQuery,
+                        onSearchQueryChange = { surahQuery = it }
                     )
                 }
             ) {
@@ -432,16 +425,10 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                         )
                     }
 
-                    item(key = "surah-search") {
-                        SurahSearchField(
-                            query = surahQuery,
-                            onQuery = { surahQuery = it },
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            focusRequester = searchFocus
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                    }
-
+                    // Search is header-only since the NoirHeaderSearch migration:
+                    // no inline field item. The empty state below still matters —
+                    // while the header search is expanded, live filtering can
+                    // legitimately reduce the list to zero rows.
                     if (visibleSurahs.isEmpty()) {
                         item(key = "surah-empty") {
                             Text(
@@ -518,13 +505,49 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
     }
 }
 
+/**
+ * The reciter's collapsing top bar. Identity row: 38dp back glass well,
+ * weighted centered title, trailing action wells; the drawBehind scrim and
+ * hairline follow the scroll progress inside [progressProvider] exactly as
+ * before.
+ *
+ * Search choreography here: today — while collapsed — the row is unchanged
+ * except that the old 38dp "Search surahs" well is now the collapsed state of
+ * [NoirHeaderSearch] (40dp, its own NoirNavButton-matched well recipe; the 2dp
+ * size drift next to the 38dp siblings is accepted because building a second
+ * well surface to run the component's in-place morph would need the component
+ * to skip its own animation). When [searchExpanded] flips true the component
+ * grows into the remaining row width between the back well and the right
+ * inset; the weighted title is squeezed smoothly to zero by the Row, so it
+ * disappears under the expanding pill rather than popping. The share well and
+ * its spacer are REMOVED while expanded, not faded: Compose measures this
+ * Row's children in child order, so an expanded pill that claims the full
+ * remaining width still leaves the share well measured afterwards to report
+ * its fixed 38dp and overshoot the row edge — collapsing to nothing cleanly
+ * avoids that overlap (share is secondary; the reappear on collapse is a
+ * simple, honest restore). The scrim keeps painting regardless, so the
+ * collapsed↔expanded transition stays visually anchored to the same scroll
+ * progress.
+ *
+ * @param searchExpanded         screen-owned expansion state, mirrored in.
+ * @param onSearchExpandedChange open from the collapsed well, close from the
+ *   component's trailing X. Closing deliberately also clears the query (the
+ *   screen wires that), so a collapsed bar always means an unfiltered list —
+ *   keeping the query across close would leave the recitations subset
+ *   filtered with no visible field, which reads like a bug.
+ * @param searchQuery            live text routed to the screen's filter.
+ * @param onSearchQueryChange    keystroke / clear-circle callback.
+ */
 @Composable
 private fun ReciterCollapsingBar(
     progressProvider: () -> Float,
     name: String,
     onBack: () -> Unit,
     onShare: () -> Unit,
-    onSearch: () -> Unit,
+    searchExpanded: Boolean,
+    onSearchExpandedChange: (Boolean) -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -581,40 +604,42 @@ private fun ReciterCollapsingBar(
                 modifier = Modifier.padding(horizontal = 4.dp)
             )
         }
-        // Search — jumps to the surah field and focuses it.
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .clip(CircleShape)
-                .background(GhaisNoir.Fill2)
-                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
-                .noirClickable(onClick = onSearch),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Search,
-                contentDescription = "Search surahs",
-                tint = GhaisNoir.TextPrimary,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        // Share — glass circle over the photo, mirroring the back well.
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.45f))
-                .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape)
-                .noirClickable(onClick = onShare),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Share,
-                contentDescription = "Share",
-                tint = GhaisNoir.TextPrimary,
-                modifier = Modifier.size(18.dp)
-            )
+        // Search — the header-search component itself, collapsed well + expanded
+        // pill in one morphing surface. Placed per its contract so the Row
+        // measures it before the weighted title: expanded, its pill claims all
+        // remaining width and squeezes the title out; collapsed, it is a 40dp
+        // well — 2dp larger than its 38dp siblings, the accepted trade for not
+        // hand-rolling a second well surface alongside the component's morph.
+        NoirHeaderSearch(
+            expanded = searchExpanded,
+            onExpandedChange = onSearchExpandedChange,
+            query = searchQuery,
+            onQueryChange = onSearchQueryChange,
+            placeholder = "Search surahs…"
+        )
+        // Share — mirrors the back well's glass circle. Only composed while
+        // collapsed: when the search pill owns the row this slot must not be
+        // measured at all, or it would be measured into the consumed space and
+        // overshoot the row edge (see the KDoc above for the full why).
+        if (!searchExpanded) {
+            Spacer(modifier = Modifier.width(8.dp))
+            // Share — glass circle over the photo, mirroring the back well.
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+                    .noirClickable(onClick = onShare),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Share,
+                    contentDescription = "Share",
+                    tint = GhaisNoir.TextPrimary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }
@@ -886,75 +911,6 @@ private fun ReciterNoirHeroPlate(
                     text = "${(libraryProgress * 100).toInt()}% kept",
                     color = GhaisNoir.TextTertiary,
                     fontSize = 11.sp
-                )
-            }
-        }
-    }
-}
-
-/**
- * Editable in-page surah search — engraved pill with a clear button.
- * Live-filters the recitations list; never navigates, never dead.
- */
-@Composable
-private fun SurahSearchField(
-    query: String,
-    onQuery: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    focusRequester: FocusRequester? = null,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(GhaisShapes.pill)
-            .background(GhaisNoir.insetFill())
-            .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.pill)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Filled.Search,
-            contentDescription = null,
-            tint = GhaisNoir.TextTertiary,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        BasicTextField(
-            value = query,
-            onValueChange = onQuery,
-            singleLine = true,
-            textStyle = TextStyle(
-                color = GhaisNoir.TextPrimary,
-                fontSize = 14.sp
-            ),            decorationBox = { inner ->
-                if (query.isEmpty()) {
-                    Text(
-                        text = "Search surahs…",
-                        color = GhaisNoir.TextTertiary,
-                        fontSize = 14.sp
-                    )
-                }
-                inner()
-            },
-            modifier = Modifier.weight(1f).then(
-                if (focusRequester != null) Modifier.focusRequester(focusRequester)
-                else Modifier
-            )
-        )
-        if (query.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(GhaisNoir.Fill2)
-                    .noirClickable { onQuery("") },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Clear search",
-                    tint = GhaisNoir.TextSecondary,
-                    modifier = Modifier.size(16.dp)
                 )
             }
         }
