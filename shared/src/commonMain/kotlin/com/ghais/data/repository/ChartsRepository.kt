@@ -72,13 +72,25 @@ object ChartsRepository {
 
     @Serializable
     data class ChartsSnapshot(
+        /**
+         * Source of the Reciters screen's "Weekly most heard": a global
+         * ranking across every listener over the rolling last-7-days UTC
+         * window, in rank order (most heard first). Empty until the
+         * aggregate-charts deploy publishes it; missing keys decode to
+         * empty so old caches and old server payloads stay compatible.
+         */
         val topQaris7d: List<String> = emptyList(),
         val topQaris30d: List<String> = emptyList(),
         val trending: List<String> = emptyList(),
         val generatedAt: Long = 0L,
-        /** Global yesterday window (all listeners). Empty until the
-         * aggregate-charts deploy that publishes it; missing keys decode
-         * to empty so old caches and old server payloads stay compatible. */
+        /**
+         * LEGACY: global yesterday window (all listeners). Still produced by
+         * the current server function for older clients, but no longer read
+         * by this app — the Reciters screen now uses [topQaris7d] for
+         * "Weekly most heard". Missing keys decode to empty, so nothing
+         * breaks when the server eventually drops the field; kept here only
+         * so old disk caches keep decoding unchanged.
+         */
         val topQarisYesterday: List<String> = emptyList(),
     )
 

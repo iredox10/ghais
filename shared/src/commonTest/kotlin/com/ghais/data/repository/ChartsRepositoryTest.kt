@@ -88,6 +88,50 @@ class ChartsRepositoryTest {
     }
 
     @Test
+    fun testWeeklyWindowParsesAndSurvivesDiskCacheRoundTrip() = runBlocking {
+        ChartsRepository.resetForTest()
+        ChartsRepository.configureHttpClient(HttpClient(engine))
+        engine.payload = CHARTS_PAYLOAD_WEEKLY
+        ChartsRepository.refresh()
+
+        val snap = assertNotNull(
+            ChartsRepository.snapshot.value,
+            "weekly charts/global doc was not adopted",
+        )
+        assertEquals(listOf("mishary", "husary", "al-sudais"), snap.topQaris7d)
+        assertEquals(listOf("mishary"), snap.topQarisYesterday)
+
+        // Disk-cache round-trip: a second refresh inside the TTL serves the
+        // persisted JSON (no new fetch), so the weekly list must survive
+        // encode -> disk -> decode unchanged.
+        ChartsRepository.refresh()
+
+        assertEquals(1, engine.urls.size, "round-trip refresh hit the network")
+        assertEquals(
+            listOf("mishary", "husary", "al-sudais"),
+            assertNotNull(ChartsRepository.snapshot.value).topQaris7d,
+            "topQaris7d did not survive the disk-cache round-trip",
+        )
+    }
+
+    @Test
+    fun testOldPayloadWithoutWeeklyDefaultsEmpty() = runBlocking {
+        ChartsRepository.resetForTest()
+        ChartsRepository.configureHttpClient(HttpClient(engine))
+        engine.payload = CHARTS_PAYLOAD_PRE_WEEKLY
+        ChartsRepository.refresh()
+
+        val snap = assertNotNull(
+            ChartsRepository.snapshot.value,
+            "pre-weekly charts/global doc was not adopted",
+        )
+        // Back-compat: server payloads predating the weekly window decode
+        // to empty, not null — same rule as topQarisYesterday.
+        assertEquals(emptyList(), snap.topQaris7d)
+        assertEquals(listOf("mishary"), snap.trending)
+    }
+
+    @Test
     fun testRefreshHitsChartsGlobalDocument() = runBlocking {
         ChartsRepository.refresh()
 
@@ -287,4 +331,24 @@ private const val CHARTS_PAYLOAD_LIVE_SHAPE = """{
   "topQaris30d": ["al-minshawi"],
   "trending": ["husary"],
   "generatedAt": "2026-10-08T10:00:00.000+00:00"
+}"""
+
+/** Weekly-window payload: camelCase `topQaris7d` plus the legacy yesterday key. */
+private const val CHARTS_PAYLOAD_WEEKLY = """{
+  "${'$'}id": "global",
+  "${'$'}collectionId": "charts",
+  "${'$'}databaseId": "ghais",
+  "topQaris7d": ["mishary", "husary", "al-sudais"],
+  "topQarisYesterday": ["mishary"],
+  "topQaris30d": ["minshawi"],
+  "generatedAt": 1759500000000
+}"""
+
+/** Old server payload from before the weekly window existed: no 7d key at all. */
+private const val CHARTS_PAYLOAD_PRE_WEEKLY = """{
+  "${'$'}id": "global",
+  "${'$'}collectionId": "charts",
+  "${'$'}databaseId": "ghais",
+  "trending": ["mishary"],
+  "generated_at": 1759500000000
 }"""
