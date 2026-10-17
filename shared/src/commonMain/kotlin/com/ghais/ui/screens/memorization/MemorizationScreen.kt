@@ -128,40 +128,6 @@ object MemorizationScreen : Tab {
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 112.dp)
             ) {
-                // Daily quests (hooks A9) — small, completable, varied.
-                if (HookFlags.questsEnabled) {
-                    item {
-                        val mastery by HifzMasteryStore.masteryMap.collectAsState()
-                        val reviewed by HifzMasteryStore.todayReviewedCount.collectAsState()
-                        val goal by HifzMasteryStore.dailyGoalCount.collectAsState()
-                        val epochDay = Clock.System.now().toEpochMilliseconds() / 86_400_000L
-                        val quests = remember(mastery, reviewed, goal, epochDay) {
-                            questsFor(mastery, reviewed, goal, epochDay)
-                        }
-                        var seenQuests by remember(epochDay) { mutableStateOf(emptySet<String>()) }
-                        LaunchedEffect(quests) {
-                            try {
-                                val doneIds = quests.filter { it.done }.map { it.id }.toSet()
-                                (doneIds - seenQuests).forEach { id ->
-                                    HookAnalytics.track(
-                                        HookEvents.Event.QUEST_DONE,
-                                        mapOf(HookEvents.Prop.QUEST_ID to id),
-                                    )
-                                }
-                                seenQuests = doneIds
-                            } catch (_: Exception) {
-                            }
-                        }
-                        // Quests list — the hero is gone (minimal): the level
-                        // still accrues XP underneath, rows show the reward.
-                        com.ghais.ui.components.noir.NoirSectionHeader(label = "Today's quests")
-                        quests.forEach { quest ->
-                            QuestRow(quest = quest)
-                            Spacer(Modifier.height(10.dp))
-                        }
-                        Spacer(Modifier.height(12.dp))
-                    }
-                }
                 item {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         NoirNavBar(
