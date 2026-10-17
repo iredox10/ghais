@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -53,8 +52,8 @@ import kotlin.time.Clock
 /**
  * Stories rail for followed qaris + discover tile.
  *
- * Portraits render in natural colour inside a lavender→plum gradient ring
- * (social stories standard); the trailing tile jumps to discovery.
+ * Portraits render in natural colour as plain circles (no ring); the trailing
+ * tile jumps to discovery.
  */
 @Composable
 fun HomeFollowedRow(
@@ -102,8 +101,8 @@ fun HomeFollowedRow(
         return
     }
 
-    // Stories rail: gradient-ring portraits (social standard) + a discover
-    // tile that jumps to the Reciters tab. Tapping a story opens the profile.
+    // Stories rail: circular portraits (no ring) + a discover tile that
+    // jumps to the Reciters tab. Tapping a story opens the profile.
     LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         items(resolved, key = { it.first }) { (slug, name, photoUrl) ->
             // Cloud portrait first: the admin panel owns reciter photos, and
@@ -116,34 +115,17 @@ fun HomeFollowedRow(
                     .width(76.dp)
                     .noirClickable { onReciter(slug) }
             ) {
-                // Gradient ring — lavender → plum on near-black.
-                Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    GhaisNoir.Lavender,
-                                    GhaisNoir.PlumTop,
-                                    GhaisNoir.LavenderDeep
-                                )
-                            )
-                        )
-                        .padding(3.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    NoirArtworkWell(
-                        coverUrl = cloudPhoto ?: photoUrl,
-                        monogram = name.firstOrNull()?.uppercase() ?: "Q",
-                        shape = CircleShape,
-                        size = 66.dp,
-                        monogramSize = 22.sp,
-                        ring = false,
-                        grayscale = false,
-                        scrimAlpha = 0f
-                    )
-                }
+                // Border color removed per user request — plain circular photo.
+                NoirArtworkWell(
+                    coverUrl = cloudPhoto ?: photoUrl,
+                    monogram = name.firstOrNull()?.uppercase() ?: "Q",
+                    shape = CircleShape,
+                    size = 72.dp,
+                    monogramSize = 24.sp,
+                    ring = false,
+                    grayscale = false,
+                    scrimAlpha = 0f
+                )
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = name,
