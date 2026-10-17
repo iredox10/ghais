@@ -1178,7 +1178,7 @@
           "size": 64,
           "required": true,
           "array": true,
-          "note": "Top-20 reciter slugs by deduped play count over the last 7 days, rank order. Element size 64 matches reciter_slug. Collection is read(\"any\") with no create/update/delete, mirroring reciter_stats: clients are read-only and the aggregate-charts function writes via its API key, which bypasses collection permissions."
+          "note": "Top-20 reciter slugs by deduped play count over the last 7 days, rank order. Powers the app's Reciters \"Weekly most heard\" section. Element size 64 matches reciter_slug. Collection is read(\"any\") with no create/update/delete, mirroring reciter_stats: clients are read-only and the aggregate-charts function writes via its API key, which bypasses collection permissions."
         },
         {
           "key": "topQaris30d",

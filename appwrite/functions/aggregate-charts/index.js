@@ -8,10 +8,14 @@
  *
  * Reads the `play_events` collection for the last 30 days, dedupes to one count
  * per ownerId+reciterSlug+surahId per UTC day (anti-gaming), computes:
- *   - topQaris7d  — top-20 reciter slugs by deduped count, last 7 days
+ *   - topQaris7d  — top-20 reciter slugs by deduped count, last 7 days.
+ *     The app's Reciters screen reads this as the global "Weekly most heard"
+ *     strip (all listeners).
  *   - topQaris30d — top-20 reciter slugs by deduped count, last 30 days
- *   - topQarisYesterday — top-20 by deduped count in yesterday's UTC day
- *     (global "Yesterday's most heard", all listeners)
+ *   - topQarisYesterday — top-20 by deduped count in yesterday's UTC day.
+ *     LEGACY: kept only for backward compatibility with older app versions
+ *     that still read it as the "Yesterday's most heard" strip; current
+ *     clients use topQaris7d instead.
  *   - trending    — top-20 by velocity: 7d share of plays vs 30d baseline share
  * then upserts the single `charts/global` document with generatedAt = now.
  *
@@ -58,8 +62,9 @@ module.exports = async ({ res, log, error }) => {
   const now = new Date();
   const cutoff7 = new Date(now.getTime() - WINDOW_7D_MS);
   const cutoff30 = new Date(now.getTime() - WINDOW_30D_MS);
-  // Yesterday's UTC window [00:00, 00:00): powers the global
-  // "Yesterday's most heard" strip (all listeners, not per-user).
+  // Yesterday's UTC window [00:00, 00:00): powers topQarisYesterday, kept
+  // only for backward compatibility with older app versions (current
+  // clients read topQaris7d as "Weekly most heard").
   const todayStart = new Date(now);
   todayStart.setUTCHours(0, 0, 0, 0);
   const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
