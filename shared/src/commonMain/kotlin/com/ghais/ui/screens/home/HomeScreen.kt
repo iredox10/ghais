@@ -65,6 +65,10 @@ import com.ghais.ui.screens.profile.ProfileScreen
 import com.ghais.ui.screens.reciters.FollowedRecitersScreen
 import com.ghais.ui.screens.reciters.ReciterProfileScreen
 import com.ghais.ui.screens.reciters.RecitersScreen
+// Hero shows the QARI's photo (not the surah artwork) — same cloud-first
+// resolution HomeSocial/MiniPlayer already use for avatars.
+import com.ghais.ui.screens.reciters.photoForSlug
+import com.ghais.ui.screens.reciters.rememberCloudPhoto
 import com.ghais.ui.screens.search.SearchScreen
 import com.ghais.ui.screens.stats.StatsScreen
 import com.ghais.ui.theme.GhaisNoir
@@ -132,9 +136,15 @@ object HomeScreen : Tab {
                             eyebrow = "Jump back in",
                             title = latest.title,
                             subtitle = heroSubtitle,
-                            coverUrl = latest.coverUrl,
+                            // Redesigned hero features the reciter's portrait;
+                            // cover art only survives as the never-blank fallback.
+                            imageUrl = rememberJumpBackInHeroImage(latest),
                             monogram = latest.title.firstOrNull { it.isLetter() }?.uppercase() ?: "Q",
-                            ctaLabel = "Play",
+                            // Label mirrors what onPlay already does (resumes from
+                            // the saved position); purely cosmetic — the wiring is
+                            // untouched. No saved position means nothing to resume,
+                            // so the plain "Play" is the honest word.
+                            ctaLabel = if (latest.positionMs > 0L) "Resume" else "Play",
                             progress = latest.progress.coerceIn(0f, 1f),
                             onPlay = {
                                 resumeHistoryEntry(
@@ -145,7 +155,8 @@ object HomeScreen : Tab {
                                     }
                                 )
                             },
-                            onOpen = { rootNavigator?.push(NowPlayingScreen()) }
+                            onOpen = { rootNavigator?.push(NowPlayingScreen()) },
+                            onSeeAll = { rootNavigator?.push(HistoryScreen) }
                         )
                         Spacer(Modifier.height(20.dp))
                     }
@@ -264,6 +275,28 @@ object HomeScreen : Tab {
             }
         }
     }
+}
+
+/**
+ * Photo for the "Jump back in" hero — the reciter's portrait, not the surah
+ * artwork, so the card keeps the person-first identity the redesign wants.
+ *
+ * Resolution order: the cloud photo (`rememberCloudPhoto` — admin-uploaded,
+ * reactive to cache updates), then the static bundled portrait
+ * ([photoForSlug]) for offline / un-cached reciters, then the entry's own
+ * cover art. Cover art is last on purpose: a blank hero card is the one
+ * outcome we can never show.
+ *
+ * Devotional rows (`reciterSlug == DEVOTIONAL_TRACK_SLUG`) have no reciter at
+ * all — any portrait we resolved for that sentinel slug would be a lie — so
+ * they skip the chain and keep their cover art directly.
+ */
+@Composable
+private fun rememberJumpBackInHeroImage(entry: JumpBackInItem): String {
+    if (entry.reciterSlug == DEVOTIONAL_TRACK_SLUG) return entry.coverUrl
+    return rememberCloudPhoto(entry.reciterSlug)
+        ?: photoForSlug(entry.reciterSlug)
+        ?: entry.coverUrl
 }
 
 /**
