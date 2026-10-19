@@ -745,10 +745,14 @@ private fun SchedEditorSheet(
     // Offline mode's own picker instance (own state, so the two pickers never
     // collide). Picking a qari resets the selection to that qari's FULL
     // download set — a sane starting point, not a leftover scoped to the
-    // previously chosen qari.
+    // previously chosen qari. The list is restricted to qaris that actually
+    // have downloads: the shelf is the whole picker's universe here.
     ReciterPickerSheet(
         visible = showOfflineReciterSheet,
         selectedSlug = offlineSlug,
+        restrictToSlugs = remember(offlineOptions) {
+            offlineOptions.map { it.substringBefore("/") }.toSet()
+        },
         onSelect = { slug ->
             offlineSlug = slug
             selectedKeys = offlineOptions.filter { it.substringBefore("/") == slug }.toSet()

@@ -62,6 +62,10 @@ import com.ghais.ui.theme.GhaisShapes
  * [NoirReciterAvatar], nameEn primary + nameAr/riwayah secondary text, and a
  * chrome check disc when selected. Tap selects and dismisses; an empty-result
  * ghost well covers the no-match state. Zero hue, Noir tokens only.
+ *
+ * When [restrictToSlugs] is set, the list only offers those reciters — the
+ * schedule editor's offline mode passes its downloaded qari slugs so the
+ * sheet never offers a reciter with nothing on the offline shelf.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,18 +73,23 @@ fun ReciterPickerSheet(
     visible: Boolean,
     selectedSlug: String,
     onSelect: (slug: String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    restrictToSlugs: Set<String>? = null
 ) {
     if (!visible) return
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val reciters = rememberBrowseReciters()
+    // Restriction first (the picker's universe), then search on what remains.
+    val base = remember(reciters, restrictToSlugs) {
+        restrictToSlugs?.let { slugs -> reciters.filter { it.slug in slugs } } ?: reciters
+    }
     var query by remember { mutableStateOf("") }
 
-    val filtered = remember(query, reciters) {
+    val filtered = remember(query, base) {
         val q = query.trim()
-        if (q.isBlank()) reciters
-        else reciters.filter {
+        if (q.isBlank()) base
+        else base.filter {
             it.nameEn.contains(q, ignoreCase = true) ||
                 it.nameAr.contains(q, ignoreCase = true)
         }
@@ -123,7 +132,7 @@ fun ReciterPickerSheet(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "${filtered.size} of ${reciters.size} reciters",
+                            text = "${filtered.size} of ${base.size} reciters",
                             color = GhaisNoir.TextSecondary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
@@ -222,13 +231,15 @@ fun ReciterPickerSheet(
                             tint = GhaisNoir.TextTertiary
                         )
                         Text(
-                            text = "No reciters found",
+                            text = if (restrictToSlugs != null) "No downloaded reciters"
+                            else "No reciters found",
                             color = GhaisNoir.TextPrimary,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "Try a different name",
+                            text = if (restrictToSlugs != null) "Download a surah first"
+                            else "Try a different name",
                             color = GhaisNoir.TextSecondary,
                             fontSize = 13.sp
                         )
