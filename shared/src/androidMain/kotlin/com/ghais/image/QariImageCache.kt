@@ -9,6 +9,7 @@ import coil3.disk.directory
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.ReciterCloudCache
 import com.ghais.data.sync.NetworkMonitor
 import com.ghais.ui.screens.reciters.ALL_VERIFIED_RECITERS
 import com.ghais.ui.screens.reciters.resolveReciterPhoto
@@ -16,19 +17,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Offline image cache for qari photos — Telegram-style: pre-warm while
+ * Persistent cache for qari photos — Telegram-style: pre-warm while
  * online, serve from cache after.
  *
- * Coil 3's default singleton has no disk cache at all, so reciter photos
- * re-downloaded every session and collapsed into monograms when offline.
- * [install] replaces it with a loader that keeps a persistent LRU disk cache
- * under `cacheDir/qari_photos`; [QariPhotoPreheater] then proactively fills
- * that cache while the device is online, so avatars and heroes keep
- * rendering even with no connection.
+ * [QariImageCache] configures a shared image loader with a persistent LRU
+ * disk cache; [QariPhotoPreheater] watches both connectivity
+ * ([NetworkMonitor.isOnline]) and the cloud reciter catalog
+ * ([ReciterCloudCache.cloudReciters]) and proactively fills that cache so
+ * avatars and heroes keep rendering even with no connection.
  */
 object QariImageCache {
 
@@ -82,7 +83,14 @@ object QariPhotoPreheater {
         started = true
         val appCtx = context.applicationContext
         scope.launch {
-            NetworkMonitor.isOnline.collectLatest { online ->
+            // Two retrigger sources, one pass: connectivity (the first
+            // launch, Wi-Fi/data returning mid-session) AND the cloud
+            // reciter catalog (loads async after launch — without this the
+            // first window only resolves locally-seeded photos and
+            // cloud-only reciters would never preheat until a later flap).
+            combine(NetworkMonitor.isOnline, ReciterCloudCache.cloudReciters) { online, _ ->
+                online
+            }.collectLatest { online ->
                 if (online) preheat(appCtx)
             }
         }
