@@ -67,8 +67,10 @@ import com.ghais.ui.theme.GhaisNoir
 import kotlinx.coroutines.launch
 
 /**
- * Downloads manager: every offline key from [QuranDownloads.downloadedKeys]
- * with per-item delete, plus [QuranDownloads.failedKeys] with retry.
+ * Downloads manager: every offline key from [QuranDownloads.downloadedKeys],
+ * grouped per qari — each qari is a section with a "Listen" action that
+ * queues its downloaded surahs in surah order — plus per-item delete behind a
+ * confirm dialog, and [QuranDownloads.failedKeys] with retry.
  *
  * Key shapes (see DownloadKeys): `"<slug>/<surahId>"` for full surahs and
  * `"<slug>/<surahId>/<ayahNo>"` for single-ayah clips.
@@ -91,11 +93,30 @@ class DownloadsScreen : Screen {
         }
 
         var showClearConfirm by remember { mutableStateOf(false) }
+        // Row-level delete asks first: the trash icon only queues the key
+        // here, the dialog below commits it — an accidental tap must not
+        // silently remove a saved surah from the device.
+        var pendingDeleteKey by remember { mutableStateOf<String?>(null) }
 
         val downloaded = remember(downloadedKeys) { downloadedKeys.sorted() }
         // A finished key is never shown as failed, even if a stale entry lingers.
         val failed = remember(failedKeys, downloadedKeys) {
             failedKeys.filterNot { it in downloadedKeys }.sorted()
+        }
+        // The shelf grouped by qari (display-name order): each group is one
+        // reciter's section, numerically surah-ordered — the old flat list
+        // sorted raw key strings, which shuffled 2 between 10 and 11.
+        val qariGroups = remember(downloaded) {
+            downloaded.groupBy { it.substringBefore("/") }
+                .map { (slug, keys) ->
+                    QariDownloadGroup(
+                        slug = slug,
+                        name = reciterDisplayName(slug),
+                        keys = keys.sortedBy { it.split("/").getOrNull(1)?.toIntOrNull() ?: 0 },
+                        fullSurahCount = keys.count { it.split("/").size == 2 }
+                    )
+                }
+                .sortedBy { it.name.lowercase() }
         }
 
         NoirScreenRoot {
@@ -230,44 +251,57 @@ class DownloadsScreen : Screen {
                         }
                     } else {
                         if (downloaded.isNotEmpty()) {
-                            item {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp)
-                                ) {
-                                    NoirSectionHeader(
-                                        label = "Downloaded",
-                                        actionLabel = "${downloaded.size} items",
-                                        onAction = {}
-                                    )
-                                }
-                            }
-                            items(downloaded, key = { "dl_$it" }) { key ->
-                                val entry = remember(key) { parseDownloadKey(key) }
-                                val itemProgress = progress[key]
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 5.dp)
-                                ) {
-                                    NoirListRow(
-                                        title = entry.title,
-                                        subtitle = downloadSubtitle(entry, itemProgress),
-                                        icon = Icons.Default.Download,
-                                        chevron = false,
-                                        onClick = {
-                                            playDownloaded(entry)
-                                            navigator.push(NowPlayingScreen())
-                                        },
-                                        trailing = {
-                                            DownloadRowTrailing(
-                                                onDelete = {
-                                                    scope.launch { deleteDownloadKey(key) }
+                            // Per-qari sections: "Listen" queues that qari's
+                            // downloaded surahs in order; tapping a row still
+                            // starts at that surah with the whole shelf as
+                            // Up Next.
+                            qariGroups.forEach { group ->
+                                item(key = "grphdr_${group.slug}", contentType = "qari_header") {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp)
+                                    ) {
+                                        NoirSectionHeader(
+                                            label = group.name,
+                                            actionLabel = if (group.fullSurahCount > 0) "Listen" else null,
+                                            onAction = if (group.fullSurahCount > 0) {
+                                                {
+                                                    playQariDownloaded(group.slug)
+                                                    navigator.push(NowPlayingScreen())
                                                 }
-                                            )
-                                        }
-                                    )
+                                            } else null
+                                        )
+                                    }
+                                }
+                                items(
+                                    group.keys,
+                                    key = { "dl_$it" },
+                                    contentType = { "download_row" }
+                                ) { key ->
+                                    val entry = remember(key) { parseDownloadKey(key) }
+                                    val itemProgress = progress[key]
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 5.dp)
+                                    ) {
+                                        NoirListRow(
+                                            title = entry.title,
+                                            subtitle = downloadSubtitle(entry, itemProgress),
+                                            icon = Icons.Default.Download,
+                                            chevron = false,
+                                            onClick = {
+                                                playDownloaded(entry)
+                                                navigator.push(NowPlayingScreen())
+                                            },
+                                            trailing = {
+                                                DownloadRowTrailing(
+                                                    onDelete = { pendingDeleteKey = key }
+                                                )
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -303,7 +337,7 @@ class DownloadsScreen : Screen {
                                         trailing = {
                                             RetryRowTrailing(
                                                 onRetry = { scope.launch { retryDownloadKey(key) } },
-                                                onDelete = { scope.launch { deleteDownloadKey(key) } }
+                                                onDelete = { pendingDeleteKey = key }
                                             )
                                         }
                                     )
@@ -333,6 +367,27 @@ class DownloadsScreen : Screen {
                 }
             )
         }
+        // Single delete guard: this dialog commits what a row's trash icon
+        // queued, so the surah only leaves the device after an explicit tap.
+        pendingDeleteKey?.let { key ->
+            val entry = remember(key) { parseDownloadKey(key) }
+            AlertDialog(
+                onDismissRequest = { pendingDeleteKey = null },
+                title = { Text("Delete download?") },
+                text = { Text("This removes \"${entry.title}\" from this device.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            pendingDeleteKey = null
+                            scope.launch { deleteDownloadKey(key) }
+                        }
+                    ) { Text("Delete") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingDeleteKey = null }) { Text("Cancel") }
+                }
+            )
+        }
     }
 }
 
@@ -344,6 +399,19 @@ private data class DownloadEntry(
     val subtitle: String
 )
 
+/** One qari's section of the downloads shelf. */
+private data class QariDownloadGroup(
+    val slug: String,
+    val name: String,
+    val keys: List<String>,
+    /** Keys shaped `"<slug>/<surahId>"` — the queueable full-surah downloads. */
+    val fullSurahCount: Int
+)
+
+private fun reciterDisplayName(slug: String): String =
+    QuranDataRepository.getBrowseReciterBySlug(slug)?.nameEn
+        ?.takeIf { it.isNotBlank() } ?: slug.ifBlank { "Unknown reciter" }
+
 private fun parseDownloadKey(key: String): DownloadEntry {
     val parts = key.split("/")
     val slug = parts.getOrNull(0).orEmpty()
@@ -354,8 +422,7 @@ private fun parseDownloadKey(key: String): DownloadEntry {
     val surahName = surah?.nameEn?.ifBlank { null }
         ?: surah?.transliteration?.ifBlank { null }
         ?: if (surahId > 0) "Surah $surahId" else "Unknown surah"
-    val reciterName = QuranDataRepository.getBrowseReciterBySlug(slug)?.nameEn
-        ?.takeIf { it.isNotBlank() } ?: slug.ifBlank { "Unknown reciter" }
+    val reciterName = reciterDisplayName(slug)
 
     return if (ayahNo != null && ayahNo > 0) {
         DownloadEntry(
@@ -410,6 +477,26 @@ private fun playDownloaded(entry: DownloadEntry) {
         it.reciterSlug == entry.slug && it.surahId == entry.surahId
     }.takeIf { it >= 0 } ?: 0
     AudioEngine.playQueue(tracks, startIndex = startIndex)
+}
+
+/**
+ * Queues one qari's downloaded full surahs (surah order) — the downloads
+ * screen's per-qari "Listen" action. Clips can't anchor a queue, so a
+ * clip-only shelf plays nothing (the action is hidden there).
+ */
+private fun playQariDownloaded(slug: String) {
+    if (slug.isBlank()) return
+    val keys = QuranDownloads.downloadedKeys.value
+    val qariKeys = keys.filter { it.substringBefore("/") == slug }.toSet()
+    if (qariKeys.none { it.split("/").size == 2 }) return
+    val tracks = ScheduleTracks.buildOfflineTracks(
+        keys,
+        QuranDataRepository.getReciters(),
+        QuranDataRepository.getSurahs(),
+        qariKeys
+    )
+    if (tracks.isEmpty()) return
+    AudioEngine.playQueue(tracks, startIndex = 0)
 }
 
 private fun deleteDownloadKey(key: String) {    val parts = key.split("/")
