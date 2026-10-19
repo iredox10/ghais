@@ -12,8 +12,11 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -52,7 +55,15 @@ object MainScreen : Screen {
                 val currentTrack by AudioEngine.currentTrack.collectAsState()
             
             Scaffold(
-                containerColor = GhaisColors.Background
+                containerColor = GhaisColors.Background,
+                // Top inset ownership belongs to each screen's NoirScreenRoot
+                // (single source of truth app-wide). The Scaffold must NOT also
+                // claim the status-bar top or tab headers get a doubled gap.
+                // Bottom + horizontal stay so the floating dock keeps its
+                // navigation-bar clearance (see the innerPadding comment below).
+                contentWindowInsets = ScaffoldDefaults.contentWindowInsets.only(
+                    WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
+                )
             ) { innerPadding ->
                 Box(
                     modifier = Modifier

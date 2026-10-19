@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
@@ -178,13 +179,18 @@ object ProfileScreen : Tab {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                // Profile owns its root canvas (not NoirScreenRoot), so it
+                // carries the status-bar inset itself — same clearance every
+                // NoirScreenRoot screen gets; the tab Scaffold no longer
+                // applies a top inset.
+                .statusBarsPadding()
                 .background(GhaisNoir.NoirBlack)
                 .noirAmbientGlow()
         ) {
             AuroraBackdrop()
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 120.dp)
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 120.dp)
             ) {
                 // -----------------------------------------------------------------
                 // 0. Noir header — editorial greeting
