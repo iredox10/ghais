@@ -46,16 +46,12 @@ import com.ghais.analytics.HookEvents
 import com.ghais.flags.HookFlags
 import com.ghais.ui.screens.profile.identity.AchievementStats
 import com.ghais.ui.screens.profile.identity.AchievementsShelf
-import com.ghais.ui.screens.profile.identity.IdentityCard
-import com.ghais.ui.screens.profile.identity.buildIdentityMemberSince
-import com.ghais.ui.screens.profile.identity.listenerTitle
 import com.ghais.ui.screens.profile.identity.unlockedAchievements
 import com.ghais.ui.components.noir.NoirGrainOverlay
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirAmbientGlow
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.profile.glass.AuroraBackdrop
-import com.ghais.ui.screens.profile.glass.EditProfileDialogGlass
 import com.ghais.ui.screens.profile.glass.GlassCardContainer
 import com.ghais.ui.screens.profile.glass.ProfileIdentityPill
 import com.ghais.ui.screens.profile.glass.ProtonSwitchRow
@@ -169,7 +165,6 @@ object ProfileScreen : Tab {
         var userBio by remember {
             mutableStateOf(settings.migratedProfileString(PREF_USER_BIO, "Seeking peace & closeness to Allah through the Quran"))
         }
-        var showEditDialog by remember { mutableStateOf(false) }
 
         // Spiritual reminder master toggle
         var dailyDhikrReminder by remember {
@@ -203,35 +198,24 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 1. Identity pill (tap to edit profile)
+                // 1. Identity pill
                 // -----------------------------------------------------------------
                 item {
                     ProfileIdentityPill(
                         displayName = session?.name?.ifBlank { null } ?: userName,
                         email = session?.email,
-                        isGuest = session == null,
-                        onClick = { showEditDialog = true }
+                        isGuest = session == null
                     )
                     Spacer(modifier = Modifier.height(18.dp))
                 }
 
                 // -----------------------------------------------------------------
-                // 1b. Listener identity + achievements (hooks A11)
+                // 1b. Achievements (hooks A11)
                 // -----------------------------------------------------------------
                 item {
                     val stats by UserUsageRepository.stats.collectAsState()
                     val khatmaPlans by KhatmaStore.plans.collectAsState()
                     val totalMin = stats.totalSecondsListened / 60L
-                    IdentityCard(
-                        displayName = session?.name?.ifBlank { null } ?: userName,
-                        title = listenerTitle(stats.uniqueRecitersCount, totalMin),
-                        memberSince = buildIdentityMemberSince(
-                            firstLaunchMs = 0L,
-                            nowMs = 0L
-                        ),
-                        onClick = { showEditDialog = true }
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
                     if (HookFlags.achievementsEnabled) {
                         val unlockedIds = remember(totalMin, stats.daysStreak, stats.uniqueRecitersCount, khatmaPlans) {
                             try {
@@ -426,28 +410,6 @@ object ProfileScreen : Tab {
             }
             // Film grain over everything (last = on top).
             NoirGrainOverlay()
-        }
-
-        // ---------------------------------------------------------------------
-        // Edit Profile Dialog
-        // ---------------------------------------------------------------------
-        if (showEditDialog) {
-            EditProfileDialogGlass(
-                initialName = userName,
-                initialBio = userBio,
-                onSave = { n, b ->
-                    if (n.isNotBlank()) {
-                        userName = n
-                        settings.putString(PREF_USER_NAME, n)
-                    }
-                    if (b.isNotBlank()) {
-                        userBio = b
-                        settings.putString(PREF_USER_BIO, b)
-                    }
-                    showEditDialog = false
-                },
-                onDismiss = { showEditDialog = false }
-            )
         }
     }
 }

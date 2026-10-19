@@ -29,15 +29,16 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 
 /**
- * Phase 3 — Noir identity pill: avatar clay-well + name/email + Edit chrome chip.
- * Tap anywhere to edit; the chip is the affordance (reference "Enable" pill).
+ * Phase 3 — Noir identity pill: avatar clay-well + name/email. Renders the
+ * chrome "Edit" chip (the tap affordance) only when [onClick] is provided;
+ * otherwise it is a static identity display.
  */
 @Composable
 fun ProfileIdentityPill(
     displayName: String,
     email: String?,
     isGuest: Boolean,
-    onClick: () -> Unit
+    onClick: (() -> Unit)? = null
 ) {
     val subtitle = email?.takeIf { it.isNotBlank() } ?: "Guest mode"
 
@@ -90,22 +91,24 @@ fun ProfileIdentityPill(
             )
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        if (onClick != null) {
+            Spacer(modifier = Modifier.width(8.dp))
 
-        // Chrome "Edit" affordance chip (reference Enable pill, compact).
-        Box(
-            modifier = Modifier
-                .background(GhaisNoir.chromeFill(), GhaisShapes.pill)
-                .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
-                .noirClickable(onClick)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Text(
-                text = "Edit",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = GhaisNoir.OnChrome
-            )
+            // Chrome "Edit" affordance chip (reference Enable pill, compact).
+            Box(
+                modifier = Modifier
+                    .background(GhaisNoir.chromeFill(), GhaisShapes.pill)
+                    .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                    .noirClickable(onClick)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "Edit",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = GhaisNoir.OnChrome
+                )
+            }
         }
     }
 }
