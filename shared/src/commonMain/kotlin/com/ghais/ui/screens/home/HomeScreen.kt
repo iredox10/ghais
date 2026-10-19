@@ -20,9 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -58,7 +56,6 @@ import com.ghais.ui.screens.history.HistoryScreen
 import com.ghais.ui.screens.library.DownloadsScreen
 import com.ghais.ui.screens.library.FavoritesScreen
 import com.ghais.ui.screens.library.LibraryScreen
-import com.ghais.ui.screens.mood.MoodScreen
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.playlists.PlaylistDetailsScreen
 import com.ghais.ui.screens.profile.ProfileScreen
@@ -75,8 +72,8 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 
 /**
- * Redesign Home: the plum hero owns resume (latest history entry), filter
- * chips navigate, then collections / voices / mix / discover / stats.
+ * Redesign Home: the plum hero owns resume (latest history entry), then
+ * collections / voices / mix / discover / stats.
  * Devotionals live in Collections; charts live on their own shelf.
  *
  * Search pushes [SearchScreen] — the one place that resolves ayah
@@ -104,8 +101,7 @@ object HomeScreen : Tab {
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 120.dp)
             ) {
                 // -------------------------------------------------------------
-                // Top bar + search + filter chips + plum hero (redesign).
-                // Search pushes SearchScreen; chips navigate (no dead controls);
+                // Top bar + plum hero (redesign). Search pushes SearchScreen;
                 // the hero resumes the latest history entry into the player.
                 // -------------------------------------------------------------
                 item {
@@ -113,19 +109,6 @@ object HomeScreen : Tab {
                         onProfileClick = { tabNavigator.current = ProfileScreen },
                         onSearchClick = { rootNavigator?.push(SearchScreen()) },
                         onStatsClick = { rootNavigator?.push(StatsScreen) }
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    var selectedChip by remember { mutableStateOf("all") }
-                    HomeFilterChips(
-                        selectedId = selectedChip,
-                        onSelect = { chip ->
-                            selectedChip = chip.id
-                            when (chip.id) {
-                                "reciters" -> tabNavigator.current = RecitersScreen()
-                                "surahs" -> rootNavigator?.push(SearchScreen())
-                                "moods" -> rootNavigator?.push(MoodScreen())
-                            }
-                        }
                     )
                     Spacer(Modifier.height(16.dp))
                     val history by UserUsageRepository.history.collectAsState()

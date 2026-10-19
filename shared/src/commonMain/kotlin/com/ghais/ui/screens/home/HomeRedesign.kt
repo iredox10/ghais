@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
@@ -40,7 +38,7 @@ import com.ghais.ui.theme.GhaisShapes
  *
  * Reference synthesis (user set):
  * - AirPods lavender set: deep plum hero with display headline + pill CTA,
- *   2-col tinted grid, pill filter chips, search + avatar top, price-pill CTA.
+ *   2-col tinted grid, search + avatar top, price-pill CTA.
  * - Lawyer dark set: near-black canvas, stats row, stacked deck, lavender
  *   selected states, rounded bottom dock.
  * - Discover set: 2-col image grid with scrim overlay + heart action,
@@ -48,59 +46,6 @@ import com.ghais.ui.theme.GhaisShapes
  *
  * Roles are strict: black canvas stays; lavender is selected/CTA/hero only.
  */
-
-// ---------------------------------------------------------------------------
-// Filter chips — Ref1 "All / AirPods / Accessories" pill row.
-// Each chip navigates (no dead controls): All shows everything, the rest
-// jump to their dedicated surface.
-// ---------------------------------------------------------------------------
-data class HomeChip(val id: String, val label: String)
-
-val HomeChips = listOf(
-    HomeChip("all", "All"),
-    HomeChip("reciters", "Qaris"),
-    HomeChip("surahs", "Surahs"),
-    HomeChip("moods", "Moods"),
-)
-
-@Composable
-fun HomeFilterChips(
-    selectedId: String,
-    onSelect: (HomeChip) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    LazyRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(HomeChips, key = { it.id }) { chip ->
-            val selected = chip.id == selectedId
-            Box(
-                modifier = Modifier
-                    .clip(GhaisShapes.pill)
-                    .background(
-                        if (selected) GhaisNoir.lavenderFill() else GhaisNoir.cardFillSoft()
-                    )
-                    .border(
-                        1.dp,
-                        if (selected) Color.Transparent else GhaisNoir.BorderCard,
-                        GhaisShapes.pill
-                    )
-                    .noirClickable { onSelect(chip) }
-                    .padding(horizontal = 18.dp, vertical = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = chip.label,
-                    color = if (selected) GhaisNoir.LavenderInk else GhaisNoir.TextSecondary,
-                    fontSize = 13.sp,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                    maxLines = 1
-                )
-            }
-        }
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Plum hero — minimal resume card per user request: "show the qari image then
