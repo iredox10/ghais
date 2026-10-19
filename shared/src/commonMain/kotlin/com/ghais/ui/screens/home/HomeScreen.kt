@@ -101,7 +101,7 @@ object HomeScreen : Tab {
         NoirScreenRoot {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 120.dp)
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 120.dp)
             ) {
                 // -------------------------------------------------------------
                 // Top bar + search + filter chips + plum hero (redesign).

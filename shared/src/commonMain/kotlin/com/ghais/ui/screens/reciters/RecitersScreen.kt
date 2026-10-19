@@ -311,7 +311,7 @@ class RecitersScreen : Tab {
         NoirScreenRoot {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 112.dp)
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 112.dp)
             ) {
                 // P4-ordered sections: SEARCH header first, NATIONS last,
                 // everything in between per orderSections(...).
