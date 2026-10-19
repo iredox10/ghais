@@ -49,6 +49,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Must precede any Coil use (first AsyncImage compose): replaces the
+        // default singleton (no disk cache) with a persistent one, so qari
+        // photos fetched while online keep rendering offline.
+        guardInit("QariImageCache") { com.ghais.image.QariImageCache.install(this) }
         // ExoPlayer builders touch audio service + codecs: can throw on
         // devices with broken media stacks — must not kill the launch.
         guardInit("PlayerBridge") { com.ghais.player.PlayerBridge.init(this) }
@@ -73,6 +77,10 @@ class MainActivity : ComponentActivity() {
         // registerNetworkCallback can throw SecurityException on devices
         // without the network-state permission / OEM-skewed services.
         guardInit("NetworkMonitor") { com.ghais.data.sync.NetworkMonitor.init(this) }
+        // Download-and-cache qari photos on every online window so avatars
+        // survive offline. Needs NetworkMonitor initialised (above) to see
+        // real connectivity instead of the fail-open default.
+        guardInit("QariPhotoPreheater") { com.ghais.image.QariPhotoPreheater.start(this) }
         // Gentle daily devotion reminder at the habitual hour (create-only,
         // never overwrites user-edited times).
         guardInit("NotifyAuto") { NotifyAutoScheduler.ensureDefaults(this) }
