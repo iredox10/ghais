@@ -61,6 +61,13 @@ actual object PlayerBridge {
     @Volatile
     private var ducked = false
 
+    /**
+     * True only inside [pauseForFocusLoss] — tells the player listener that
+     * the pause it observes is our focus pause, not a user pause.
+     */
+    @Volatile
+    private var inFocusPause = false
+
     @Volatile
     private var hasFocus = false
 
@@ -82,18 +89,12 @@ actual object PlayerBridge {
             android.media.AudioManager.AUDIOFOCUS_LOSS -> {
                 ducked = false
                 applyVolume()
-                val wasPlaying = AudioEngine.isPlaying.value
-                AudioEngine.pause()
-                focusPausedByUs = wasPlaying
-                resumeOnFocusGain = false
+                pauseForFocusLoss(resumeOnGain = false)
             }
             android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 ducked = false
                 applyVolume()
-                val wasPlaying = AudioEngine.isPlaying.value
-                AudioEngine.pause()
-                focusPausedByUs = wasPlaying
-                resumeOnFocusGain = wasPlaying
+                pauseForFocusLoss(resumeOnGain = AudioEngine.isPlaying.value)
             }
             android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                 if (AudioEngine.isPlaying.value) {
@@ -115,6 +116,30 @@ actual object PlayerBridge {
                     focusPausedByUs = false
                 }
             }
+        }
+    }
+
+    /**
+     * Telegram-style interruption bookkeeping: the resume markers are
+     * written BEFORE the pause and the pause bypasses the flag-clearing
+     * public [pause] path inside an [inFocusPause] guard, so the
+     * interruption state survives no matter what order ExoPlayer delivers
+     * its callbacks in (and no matter what the service mirror observes
+     * mid-pause). Previously the flags were set AFTER AudioEngine.pause()
+     * and only stayed valid because listeners happened to deliver
+     * synchronously on one thread.
+     */
+    private fun pauseForFocusLoss(resumeOnGain: Boolean) {
+        val wasPlaying = AudioEngine.isPlaying.value
+        focusPausedByUs = wasPlaying
+        resumeOnFocusGain = resumeOnGain
+        if (!wasPlaying) return
+        inFocusPause = true
+        try {
+            // Same effect as the public pause() minus the flag clearing.
+            try { exoPlayer?.pause() } catch (_: Exception) { }
+        } finally {
+            inFocusPause = false
         }
     }
 
@@ -203,9 +228,11 @@ actual object PlayerBridge {
         ) {
             // User/app pause (anything but a focus loss) cancels a pending
             // focus resume — e.g. pausing mid-interruption must stay paused.
-            // Our own focus handler sets its flags AFTER calling
-            // AudioEngine.pause(), so this never clobbers a fresh
-            // focus-driven pause.
+            // While our own focus handler is pausing, this callback fires
+            // with a non-focus reason (ExoPlayer's internal focus handling
+            // is off); inFocusPause keeps the fresh interruption markers
+            // intact regardless of callback ordering.
+            if (inFocusPause) return
             if (!playWhenReady &&
                 reason != androidx.media3.common.Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS
             ) {
