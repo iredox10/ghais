@@ -53,6 +53,8 @@ import kotlin.time.Clock
 // Sibling APIs (same package `glass`, created in parallel):
 // - ScheduleTimeField(hour24, minute, onChange) + formatScheduleTime(h, m) — ScheduleTimeField.kt
 // - ReciterPickerSheet(visible, selectedSlug, onSelect, onDismiss) — ReciterPickerSheet.kt
+//   (opened twice in the editor — stream's reciter AND the offline qari — each
+//   with its own state so the two modes never collide)
 // - SurahPickerSheet(visible, title, selectedId, onSelect, onDismiss) — SurahPickerSheet.kt
 // - ScheduleRowCard(schedule, reciterName, onToggle, onEdit, onDelete) — ScheduleRows.kt
 
@@ -177,8 +179,14 @@ fun SchedulesProtonSection() {
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             )
                         }
+                        // Offline rows resolve the saved slug into the qari's
+                        // display name; "Offline downloads" stays only as the
+                        // fallback for legacy schedules whose slug doesn't
+                        // resolve to a reciter.
                         val reciterName = if (schedule.isOffline) {
-                            "Offline downloads"
+                            runCatching {
+                                QuranDataRepository.getReciterBySlug(schedule.reciterSlug).nameEn
+                            }.getOrNull()?.takeIf { it.isNotBlank() } ?: "Offline downloads"
                         } else {
                             runCatching {
                                 QuranDataRepository.getReciterBySlug(schedule.reciterSlug).nameEn
@@ -260,21 +268,40 @@ private fun SchedEditorSheet(
     var minutes by remember(initial) { mutableStateOf(initial?.durationMin?.coerceIn(5, 180) ?: 30) }
     var autoStart by remember(initial) { mutableStateOf(initial?.autoStart ?: true) }
     var showReciterSheet by remember { mutableStateOf(false) }
+    // Offline's own picker state — a second ReciterPickerSheet instance that
+    // never collides with the stream picker's.
+    var showOfflineReciterSheet by remember { mutableStateOf(false) }
     var showFromSheet by remember { mutableStateOf(false) }
     var showToSheet by remember { mutableStateOf(false) }
     // Audio source: streamed reciter range, or the user's offline shelf.
+    // Offline now mirrors the stream UX — pick ONE qari first (its own slug,
+    // so the two modes never fight over `reciterSlug`), then that qari's
+    // downloaded surahs become the pick list.
     var useOffline by remember(initial) { mutableStateOf(initial?.isOffline == true) }
     val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
     // Full-surah download keys only (clips can't anchor a schedule).
     val offlineOptions = remember(downloadedKeys) {
         downloadedKeys.filter { it.split("/").size == 2 }.sorted()
     }
-    // Offline options grouped by reciter (slug → keys), groups ordered by
-    // reciter display name so a full downloaded qari reads as one block with
-    // a one-tap select-all header.
+    // Offline qaris (slug → keys), groups ordered by reciter display name —
+    // that ordering also picks the default qari for a fresh offline schedule.
     val offlineGroups = remember(offlineOptions) {
         offlineOptions.groupBy { it.substringBefore("/") }.toList()
             .sortedBy { (slug, _) -> offlineReciterName(slug).lowercase() }
+    }
+    // Offline mode's own qari: the edited schedule's slug when that slug still
+    // has downloads, else the first qari per display-name order, else "" on an
+    // empty shelf. Distinct from `reciterSlug`, which is stream-only.
+    var offlineSlug by remember(initial) {
+        mutableStateOf(
+            initial?.reciterSlug
+                ?.takeIf { slug ->
+                    initial?.isOffline == true &&
+                        offlineOptions.any { k -> k.substringBefore("/") == slug }
+                }
+                ?: offlineGroups.firstOrNull()?.first
+                ?: ""
+        )
     }
     // Saved selection, or everything (the pre-select behaviour) when creating
     // new or editing an "all downloads" schedule.
@@ -284,9 +311,17 @@ private fun SchedEditorSheet(
                 ?: downloadedKeys.filter { it.split("/").size == 2 }.toSet()
         )
     }
-    // Deleted-since files drop out of the effective selection.
-    val effectiveSelection = remember(selectedKeys, downloadedKeys) {
+    // Effective selection: deleted-since files drop out, and the rest is
+    // scoped to the chosen qari — legacy cross-qari keys neither display,
+    // count, nor survive a save.
+    val effectiveSelection = remember(selectedKeys, downloadedKeys, offlineSlug) {
         selectedKeys.intersect(downloadedKeys.toSet())
+            .filter { it.substringBefore("/") == offlineSlug }
+            .toSet()
+    }
+    // Only the chosen qari's downloads — the offline pick list is one group.
+    val offlineQariKeys = remember(offlineOptions, offlineSlug) {
+        offlineOptions.filter { it.substringBefore("/") == offlineSlug }
     }
     val offlineSurahCount = offlineOptions.size
 
@@ -304,7 +339,8 @@ private fun SchedEditorSheet(
     }
 
     // Validation: range mode requires from <= to; duration mode forces toSurah = 114 on save.
-    // Offline mode ignores reciter/range entirely and needs ≥1 downloaded surah.
+    // Offline mode ignores the range but is anchored to a qari — it needs ≥1
+    // of THAT qari's downloaded surahs.
     val rangeValid = useMinutes || fromSurah <= toSurah
     // Availability: the reciter must have audio for at least one surah of the
     // effective range, else the alarm fires and ScheduleTracks builds 0 tracks.
@@ -357,8 +393,8 @@ private fun SchedEditorSheet(
             }
 
             // Audio source: streamed reciter range, or the offline shelf.
-            // Offline plays whatever the user has downloaded — no network
-            // needed when the alarm fires.
+            // Offline plays downloads the alarm already has on disk — one
+            // picked qari's surahs, no network needed when it fires.
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -375,28 +411,45 @@ private fun SchedEditorSheet(
                 Text(
                     text = if (useOffline) {
                         val n = effectiveSelection.size
-                        if (offlineOptions.isEmpty()) "No downloads yet — download a surah first"
-                        else if (n == 0) "Uncheck: pick at least one download below"
-                        else if (n == 1) "Plays your 1 picked surah"
-                        else "Plays your $n picked surahs in order"
+                        when {
+                            // The chosen qari has nothing downloaded yet — the
+                            // pick list below stays hidden.
+                            offlineQariKeys.isEmpty() ->
+                                "No downloads for this qari — download a surah first"
+                            n == 0 -> "Uncheck: pick at least one download below"
+                            n == 1 -> "Plays your 1 picked surah"
+                            else -> "Plays your $n picked surahs in order"
+                        }
                     } else "Stream a reciter's range as usual",
                     color = GhaisNoir.TextTertiary,
                     fontSize = 12.sp
                 )
             }
 
-            // Offline pick list: which downloads this schedule plays,
-            // grouped by reciter so a full downloaded qari is one block.
-            if (useOffline && offlineOptions.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(text = "Downloads to play", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
-                    offlineGroups.forEach { (slug, keys) ->
-                        val reciterName = remember(slug) { offlineReciterName(slug) }
-                        val pickedInGroup = keys.count { it in effectiveSelection }
-                        val allPicked = pickedInGroup == keys.size
+            // Offline mode: pick ONE qari first — the same reciter-row UX as
+            // stream mode — then that qari's downloads are the pick list. The
+            // old all-qaris multi-group dump is gone.
+            if (useOffline) {
+                val qariName = remember(offlineSlug) { offlineReciterName(offlineSlug) }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(text = "Reciter", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
+                    ReciterSelectorRow(
+                        value = qariName,
+                        onClick = { showOfflineReciterSheet = true }
+                    )
+                }
+
+                // Only the chosen qari's downloads. Hidden entirely when the
+                // qari has nothing on disk — the sub-line under the switch
+                // already explains that state.
+                if (offlineQariKeys.isNotEmpty()) {
+                    val pickedInQari = offlineQariKeys.count { it in effectiveSelection }
+                    val allPicked = pickedInQari == offlineQariKeys.size
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(text = "Downloads to play", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            // Qari header: name + x/y picked, tap selects or
-                            // clears the whole reciter.
+                            // Select-all header: name + x/y picked, tap picks
+                            // or clears the whole qari.
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -411,9 +464,9 @@ private fun SchedEditorSheet(
                                     )
                                     .noirClickable {
                                         selectedKeys = if (allPicked) {
-                                            selectedKeys - keys.toSet()
+                                            selectedKeys - offlineQariKeys.toSet()
                                         } else {
-                                            selectedKeys + keys.toSet()
+                                            selectedKeys + offlineQariKeys.toSet()
                                         }
                                     }
                                     .padding(horizontal = 14.dp, vertical = 10.dp),
@@ -439,7 +492,7 @@ private fun SchedEditorSheet(
                                 }
                                 Spacer(Modifier.width(12.dp))
                                 Text(
-                                    text = reciterName,
+                                    text = qariName,
                                     color = GhaisNoir.TextPrimary,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold,
@@ -448,13 +501,13 @@ private fun SchedEditorSheet(
                                     modifier = Modifier.weight(1f)
                                 )
                                 Text(
-                                    text = "$pickedInGroup/${keys.size}",
+                                    text = "$pickedInQari/${offlineQariKeys.size}",
                                     color = GhaisNoir.TextTertiary,
                                     fontSize = 12.sp
                                 )
                             }
                             // That qari's downloaded surahs.
-                            keys.forEach { key ->
+                            offlineQariKeys.forEach { key ->
                                 val (title, _) = remember(key) { offlineKeyLabel(key) }
                                 val checked = key in effectiveSelection
                                 Row(
@@ -519,49 +572,8 @@ private fun SchedEditorSheet(
             // Reciter selector row → modal.
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(text = "Reciter", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(GhaisNoir.Fill2, com.ghais.ui.theme.GhaisShapes.cardNoir)
-                        .border(
-                            1.dp,
-                            GhaisNoir.BorderCard,
-                            com.ghais.ui.theme.GhaisShapes.cardNoir
-                        )
-                        .noirClickable { showReciterSheet = true }
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .background(GhaisNoir.Fill4, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = reciterName.firstOrNull()?.uppercase() ?: "?",
-                            color = GhaisNoir.TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = reciterName,
-                        color = GhaisNoir.TextPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Icon(
-                        imageVector = Icons.Filled.ChevronRight,
-                        contentDescription = null,
-                        tint = GhaisNoir.TextTertiary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                // Extracted so the offline mode renders the exact same row.
+                ReciterSelectorRow(value = reciterName, onClick = { showReciterSheet = true })
             }
 
             // From / to surah selector rows → modals.
@@ -670,7 +682,10 @@ private fun SchedEditorSheet(
                                             ?: ("sch-" + Clock.System.now().toEpochMilliseconds()),
                                         hour = h,
                                         minute = m,
-                                        reciterSlug = reciterSlug,
+                                        // Offline schedules carry the OFFLINE
+                                        // qari's slug — `reciterSlug` is
+                                        // stream-only and stays untouched.
+                                        reciterSlug = if (useOffline) offlineSlug else reciterSlug,
                                         fromSurah = f,
                                         toSurah = t,
                                         durationMin = if (useMinutes) minutes.coerceIn(5, 180) else null,
@@ -682,6 +697,10 @@ private fun SchedEditorSheet(
                                             RecitationSchedule.SOURCE_STREAM
                                         },
                                         offlineKeys = if (useOffline) {
+                                            // effectiveSelection is already
+                                            // scoped to offlineSlug: only keys
+                                            // of the picked qari survive a save
+                                            // — legacy cross-qari keys drop.
                                             effectiveSelection.sorted()
                                         } else {
                                             initial?.offlineKeys ?: emptyList()
@@ -721,6 +740,21 @@ private fun SchedEditorSheet(
             showReciterSheet = false
         },
         onDismiss = { showReciterSheet = false }
+    )
+
+    // Offline mode's own picker instance (own state, so the two pickers never
+    // collide). Picking a qari resets the selection to that qari's FULL
+    // download set — a sane starting point, not a leftover scoped to the
+    // previously chosen qari.
+    ReciterPickerSheet(
+        visible = showOfflineReciterSheet,
+        selectedSlug = offlineSlug,
+        onSelect = { slug ->
+            offlineSlug = slug
+            selectedKeys = offlineOptions.filter { it.substringBefore("/") == slug }.toSet()
+            showOfflineReciterSheet = false
+        },
+        onDismiss = { showOfflineReciterSheet = false }
     )
     SurahPickerSheet(
         visible = showFromSheet,
@@ -776,6 +810,57 @@ private fun SurahSelectorRow(
             overflow = TextOverflow.Ellipsis
         )
         Spacer(Modifier.width(6.dp))
+        Icon(
+            imageVector = Icons.Filled.ChevronRight,
+            contentDescription = null,
+            tint = GhaisNoir.TextTertiary,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+/**
+ * Reciter selector row — the exact chrome BOTH stream and offline modes render
+ * (label comes from the caller): letter avatar + name + chevron. Extracted so
+ * the offline qari row is byte-for-byte the same style as the stream one.
+ */
+@Composable
+private fun ReciterSelectorRow(
+    value: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(GhaisNoir.Fill2, com.ghais.ui.theme.GhaisShapes.cardNoir)
+            .border(1.dp, GhaisNoir.BorderCard, com.ghais.ui.theme.GhaisShapes.cardNoir)
+            .noirClickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .background(GhaisNoir.Fill4, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = value.firstOrNull()?.uppercase() ?: "?",
+                color = GhaisNoir.TextPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text = value,
+            color = GhaisNoir.TextPrimary,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
         Icon(
             imageVector = Icons.Filled.ChevronRight,
             contentDescription = null,

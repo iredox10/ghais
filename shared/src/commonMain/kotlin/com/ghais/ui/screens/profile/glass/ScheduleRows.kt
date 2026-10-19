@@ -76,10 +76,11 @@ fun ScheduleRowCard(
     val range = if (schedule.fromSurah == schedule.toSurah) fromName else "$fromName → $toName"
     val subtitle = buildString {
         // Offline schedules play the downloads shelf: reciter + range are
-        // not applicable, so label the source (and the pick count, if any)
-        // instead.
+        // not applicable, so label the chosen qari (the caller resolves the
+        // saved slug, or passes "Offline downloads" for legacy rows) plus
+        // the pick count, if any.
         if (schedule.isOffline) {
-            append("Offline downloads")
+            append(reciterName)
             if (schedule.offlineKeys.isNotEmpty()) {
                 append(" • ")
                 append(schedule.offlineKeys.size)
