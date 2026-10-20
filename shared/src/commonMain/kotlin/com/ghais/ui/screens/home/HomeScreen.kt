@@ -44,8 +44,6 @@ import com.ghais.domain.model.DevotionalItem
 import com.ghais.domain.model.TrackItem
 import com.ghais.flags.HookFlags
 import com.ghais.player.AudioEngine
-import com.ghais.ui.screens.home.moments.LocalWallClock
-import com.ghais.ui.screens.home.moments.WeekRecapShelf
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.noirClickable
@@ -156,11 +154,9 @@ object HomeScreen : Tab {
                 }
 
                 // -------------------------------------------------------------
-                // Monday recap + devotion streak (hooks)
+                // Devotion streak (hooks). The Monday weekly recap shelf moved
+                // to the Stats screen — the recap is listening-metrics copy.
                 // -------------------------------------------------------------
-                item {
-                    WeekRecapShelf(todayDow = LocalWallClock.mondayBasedDow())
-                }
                 if (HookFlags.streakEnabled) {
                     item {
                         StreakRestoreHost(

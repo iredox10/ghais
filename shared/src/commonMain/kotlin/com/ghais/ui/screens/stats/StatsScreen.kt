@@ -65,6 +65,8 @@ import com.ghais.ui.components.noir.NoirSegmentedProgress
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.screens.home.NoirArtworkWell
 import com.ghais.ui.screens.home.NoirStatChip
+import com.ghais.ui.screens.home.moments.LocalWallClock
+import com.ghais.ui.screens.home.moments.WeekRecapShelf
 import com.ghais.ui.screens.reciters.rememberReciterPhoto
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
@@ -371,6 +373,13 @@ object StatsScreen : Screen {
                             }
                         }
                     }
+                }
+
+                item {
+                    // Monday weekly recap shelf (moved from Home): listening-
+                    // metrics copy belongs with the stats. Renders nothing
+                    // off-Monday, so the layout cost is zero.
+                    WeekRecapShelf(todayDow = LocalWallClock.mondayBasedDow())
                 }
 
                 item {
