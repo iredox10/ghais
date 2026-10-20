@@ -1,7 +1,11 @@
 package com.ghais.ui.screens.player
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,9 +26,8 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +47,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,6 +64,7 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
+import kotlin.math.roundToInt
 
 /**
  * Noir Glass queue sheet: CanvasTop chrome + Scrim, IconWell header,
@@ -64,7 +73,9 @@ import com.ghais.ui.theme.GhaisShapes
  * (cardFillActive + specular-bright rim + bold white title) — zero hue.
  *
  * Queue / audio logic (collects, skipToIndex, removeFromQueue, clear,
- * duration resolution) is preserved verbatim.
+ * duration resolution) is preserved verbatim. Reordering is drag-based: a
+ * 32dp handle per row, preview shifts drawn in-place, one engine move on
+ * drop (see the grip comment block for the full ruleset).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,6 +112,40 @@ fun QueueSheet(
                 onDismiss()
             }
         }
+    }
+
+    // ── Drag-to-reorder state ────────────────────────────────────────────
+    // Queue rows are uniform-height (fixed 40dp well, one title line, one
+    // subtitle line), so the whole model is one measured stride plus the
+    // finger's offset. The engine is touched ONCE, on drag end, with the
+    // final (from, to) pair — QueueManager.move walks currentIndex the same
+    // way the removed chevrons did — so mid-drag the queue can never
+    // desync under a playing track, and one gesture never stacks moves.
+    var dragIndex by remember { mutableStateOf<Int?>(null) }
+    var dragOffsetPx by remember { mutableStateOf(0f) }
+    // Row height + the LazyColumn spacing (8.dp) — measured on first item.
+    var rowStridePx by remember { mutableStateOf(0f) }
+    val density = LocalDensity.current
+    val listSpacingPx = with(density) { 8.dp.toPx() }
+
+    // Integer-grid derivation: shift targets (and recomposition) only change
+    // when the finger crosses a row boundary, not per pixel — the dragged
+    // row itself tracks the finger from raw offset inside its graphics layer.
+    val dragTarget by remember {
+        derivedStateOf {
+            val from = dragIndex ?: return@derivedStateOf -1
+            val crossed = if (rowStridePx > 0f) (dragOffsetPx / rowStridePx).roundToInt() else 0
+            (from + crossed).coerceIn(0, queue.size - 1)
+        }
+    }
+    // Dragging needs a contiguous queue for the index arithmetic to hold:
+    // while a search filter is on, the visible slice skips rows, so grips
+    // hide and the existing tap-to-play stays the only action. One row = no-op.
+    val dragEnabled = queue.size > 1 && normalizedQuery.isBlank()
+
+    fun resetDragState() {
+        dragIndex = null
+        dragOffsetPx = 0f
     }
 
     ModalBottomSheet(
@@ -324,6 +369,24 @@ fun QueueSheet(
                             else -> "Unknown Surah"
                         }
 
+                        val isDraggingRow = dragIndex == index
+                        // Slot displacement while a drag crosses boundaries:
+                        // rows between the dragged origin and the current
+                        // target slide one stride in the opposite direction.
+                        // (`di` capture: delegated state can't smart-cast.)
+                        val di = dragIndex
+                        val neighborShift = when {
+                            di == null || isDraggingRow -> 0f
+                            di < index && index <= dragTarget -> -rowStridePx
+                            di > index && index >= dragTarget -> rowStridePx
+                            else -> 0f
+                        }
+                        val neighborShiftAnim by animateFloatAsState(
+                            targetValue = neighborShift,
+                            animationSpec = tween(160, easing = FastOutSlowInEasing),
+                            label = "queueRowShift"
+                        )
+
                         // NoirListRow recipe: soft fill (+ active wash when playing),
                         // 1px card border (specular-bright when active), top specular.
                         // TrackItem carries no artwork (imageUrl is always null), so the
@@ -331,6 +394,26 @@ fun QueueSheet(
                         // explore SurahNoirRow.
                         Row(
                             modifier = Modifier
+                                // Reorder visuals live on ONE layer: the dragged row
+                                // follows the finger 1:1 (offset read inside the layer,
+                                // so drag frames never hit the recomposer), while crossed
+                                // neighbours ease to their displaced slot. Layer first so
+                                // the clip + fill travel with the translation.
+                                .graphicsLayer {
+                                    translationY = if (isDraggingRow) dragOffsetPx else neighborShiftAnim
+                                    if (isDraggingRow) {
+                                        scaleX = 1.02f
+                                        scaleY = 1.02f
+                                        shape = GhaisShapes.row
+                                        shadowElevation = with(density) { 8.dp.toPx() }
+                                    }
+                                }
+                                .onSizeChanged {
+                                    // Uniform rows: one stride covers every slot hop
+                                    // (row height + the list's 8dp spacing).
+                                    val measured = it.height + listSpacingPx
+                                    if (rowStridePx != measured) rowStridePx = measured
+                                }
                                 .fillMaxWidth()
                                 .clip(GhaisShapes.row)
                                 .background(
@@ -430,52 +513,60 @@ fun QueueSheet(
                                     )
                                 }
                             }
-                            // Reorder: plain up/down chevrons calling
-                            // AudioEngine.moveInQueue (QueueManager.move) instead of
-                            // long-press drag. Deliberate: no new dependency (no
-                            // reorderable-lazy-list lib), no gesture conflict with the
-                            // sheet's swipe-to-dismiss, and chevrons are accessible.
-                            // Indices are the ORIGINAL queue positions (entry.index),
-                            // so moves stay correct while a search filter is active.
-                            // The inner wells consume the tap — row skipToIndex does
-                            // not fire. remove/clear/skip paths are untouched.
+                            // Reorder affordance: a drag grip replaces the old
+                            // up/down chevron wells. Rules of the gesture:
+                            // 1. vertical drags are owned ONLY by this 32dp grip —
+                            //    row taps and list scrolling elsewhere are untouched;
+                            // 2. the shifted preview is visual-only, and the engine
+                            //    reorders ONCE at drag end with the final (from, to),
+                            //    reusing QueueManager.move (current-track remap intact);
+                            // 3. the grip hides while a search filter is on — the
+                            //    filtered slice is non-contiguous, so drag arithmetic
+                            //    would move the wrong rows.
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                val canMoveUp = index > 0
-                                val canMoveDown = index < queue.size - 1
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(GhaisNoir.Fill1)
-                                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
-                                        .noirClickable { if (canMoveUp) AudioEngine.moveInQueue(index, index - 1) },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.KeyboardArrowUp,
-                                        contentDescription = "Move up in queue",
-                                        tint = if (canMoveUp) GhaisNoir.TextTertiary else GhaisNoir.TextDisabled,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(GhaisNoir.Fill1)
-                                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
-                                        .noirClickable { if (canMoveDown) AudioEngine.moveInQueue(index, index + 1) },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.KeyboardArrowDown,
-                                        contentDescription = "Move down in queue",
-                                        tint = if (canMoveDown) GhaisNoir.TextTertiary else GhaisNoir.TextDisabled,
-                                        modifier = Modifier.size(18.dp)
-                                    )
+                                if (dragEnabled) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (isDraggingRow) GhaisNoir.Fill2 else GhaisNoir.Fill1
+                                            )
+                                            .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                                            .pointerInput(Unit) {
+                                                detectVerticalDragGestures(
+                                                    onDragStart = {
+                                                        dragIndex = index
+                                                        dragOffsetPx = 0f
+                                                    },
+                                                    onVerticalDrag = { _, dragAmount ->
+                                                        dragOffsetPx += dragAmount
+                                                    },
+                                                    onDragEnd = {
+                                                        val from = dragIndex
+                                                        if (from != null) {
+                                                            val to = dragTarget
+                                                            resetDragState()
+                                                            if (to != from) {
+                                                                AudioEngine.moveInQueue(from, to)
+                                                            }
+                                                        }
+                                                    },
+                                                    onDragCancel = { resetDragState() }
+                                                )
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.DragHandle,
+                                            contentDescription = "Drag to reorder in queue",
+                                            tint = if (isDraggingRow) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
                                 Box(
                                     modifier = Modifier
