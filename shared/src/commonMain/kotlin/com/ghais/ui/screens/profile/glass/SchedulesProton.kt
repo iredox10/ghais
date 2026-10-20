@@ -2,6 +2,8 @@ package com.ghais.ui.screens.profile.glass
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -363,6 +365,11 @@ private fun SchedEditorSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                // Scrollable: on short screens with many downloaded surahs
+                // listed (offline mode) or all stream fields visible, the
+                // Save/Cancel row used to fall off-screen with no way to
+                // reach it — the most confusing tile of the app.
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
