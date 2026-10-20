@@ -141,24 +141,26 @@ fun MiniPlayer(
     // already say what is playing and how far in.
     val subtitleText = track.reciterName
 
-    // Glassmorphic black background
+    // Frosted glass instead of an opaque slab: the app's starfield shimmer
+    // through the bar keeps it visually quiet. Alpha stays high enough that
+    // the white titles read over any content sliding underneath (≥ 0.68).
     val glassGradient = Brush.verticalGradient(
         colors = listOf(
-            Color(0xFF1A1A1C),
-            Color(0xFF101012)
+            Color(0xFF1A1A1C).copy(alpha = 0.80f),
+            Color(0xFF101012).copy(alpha = 0.68f)
         )
     )
 
     // Subtle white glass border
     val glassBorder = BorderStroke(
         width = 1.dp,
-        color = Color.White.copy(alpha = 0.12f)
+        color = Color.White.copy(alpha = 0.18f)
     )
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, bottom = 6.dp, top = 2.dp),
+            .padding(start = 16.dp, end = 16.dp, bottom = 4.dp, top = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         Surface(
@@ -168,7 +170,8 @@ fun MiniPlayer(
             shape = GhaisShapes.playerBar,
             color = Color.Transparent,
             border = glassBorder,
-            shadowElevation = 10.dp,
+            // Soft float: a heavy shadow under a see-through slab reads muddy.
+            shadowElevation = 5.dp,
             tonalElevation = 0.dp
         ) {
             Box(
@@ -231,7 +234,7 @@ fun MiniPlayer(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Left: reciter photo thumbnail
@@ -251,18 +254,18 @@ fun MiniPlayer(
                             Text(
                                 text = displayTitle,
                                 color = Color.White,
-                                fontSize = 13.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
 
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(1.dp))
 
                             Text(
                                 text = subtitleText,
                                 color = Color(0xFF9A9AA0),
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -281,38 +284,38 @@ fun MiniPlayer(
                             // "next" it never needs disabling.
                             IconButton(
                                 onClick = { AudioEngine.skipPrevious() },
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SkipPrevious,
                                     contentDescription = "Previous",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+
+                            IconButton(
+                                onClick = { AudioEngine.togglePlayPause() },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = if (isPlaying) "Pause" else "Play",
                                     tint = Color.White,
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
 
                             IconButton(
-                                onClick = { AudioEngine.togglePlayPause() },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                    contentDescription = if (isPlaying) "Pause" else "Play",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(26.dp)
-                                )
-                            }
-
-                            IconButton(
                                 onClick = { AudioEngine.skipNext() },
                                 enabled = canSkipNext,
-                                modifier = Modifier.size(40.dp)
+                                modifier = Modifier.size(36.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SkipNext,
                                     contentDescription = "Skip Next",
                                     tint = if (canSkipNext) Color.White else Color.White.copy(alpha = 0.35f),
-                                    modifier = Modifier.size(26.dp)
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
@@ -334,8 +337,8 @@ private fun MiniPlayerPhoto(
 
     Box(
         modifier = modifier
-            .size(42.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .size(36.dp)
+            .clip(RoundedCornerShape(9.dp))
             .background(Color(0xFF242426)),
         contentAlignment = Alignment.Center
     ) {
@@ -353,7 +356,7 @@ private fun MiniPlayerPhoto(
             Text(
                 text = miniPlayerMonogram(reciterName),
                 color = GhaisNoir.TextPrimary,
-                fontSize = 22.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
         }
