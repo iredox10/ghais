@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
@@ -94,6 +95,7 @@ import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.TranslationCatalog
 import com.ghais.data.repository.TranslationPrefs
+import com.ghais.domain.model.DEVOTIONAL_TRACK_SLUG
 import com.ghais.domain.model.RepeatMode
 import com.ghais.player.AmbientMixer
 import com.ghais.player.AudioEngine
@@ -108,6 +110,7 @@ import com.ghais.ui.screens.home.NoirStatChip
 import com.ghais.ui.screens.player.components.NowPlayingLyricsCard
 import com.ghais.ui.screens.player.components.NowPlayingVolumePanel
 import com.ghais.ui.screens.reciters.NoirReciterAvatar
+import com.ghais.ui.screens.reciters.ReciterProfileScreen
 import com.ghais.ui.screens.reciters.photoForSlug
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
@@ -116,7 +119,10 @@ import com.ghais.ui.theme.GhaisShapes
  * Now Playing — strict Noir Glass monochrome.
  *
  * Presentation only. Screen signature, drag-to-dismiss, AudioEngine / queue /
- * repeat / sleep / favorite wiring, sheet wiring and navigation are untouched.
+ * repeat / sleep / favorite wiring and sheet wiring are untouched. The two
+ * behaviors beyond pure presentation: the qari avatar/name tap pushes
+ * ReciterProfileScreen (reciterSlug, the reciter shelves' push convention),
+ * and the art-mode toggle hides everything except the core transport.
  * Zero hue: canvas #050506 + glow + grain, natural-colour artwork with scrim and
  * chromium ring, chrome/ghost controls, NoirSegmentedProgress meter language,
  * text ladder 100 / 62 / 38 / 24%.
@@ -274,7 +280,9 @@ class NowPlayingScreen : Screen {
 
         // Cinematic idle fade — mirrors Media3's controllerShowTimeoutMs: 10s
         // without interaction melts every chrome block; the ambient video, the
-        // ayah card and the dismiss handle are the only things that stay.
+        // ayah card, the dismiss handle and the always-mounted core transport
+        // (prev/play/next stay visible so the screen stays a working player)
+        // are the only things that stay.
         //
         // Three different things end the clock, deliberately not one:
         // pressing any chrome control pokes the timer; a canvas tap does NOT
@@ -341,6 +349,22 @@ class NowPlayingScreen : Screen {
         val title = track?.surahNameEn ?: "Ar-Rahman"
         val surahNameAr = track?.surahNameAr ?: "الرحمن"
         val reciterName = track?.reciterName ?: "Mishary Rashid Alafasy"
+        // Qari tap → reciter profile, pushed exactly like the reciter shelves:
+        // rootNavigator.push(ReciterProfileScreen(slug)). A devotional track
+        // rides the "__devotional" sentinel slug — a dua/ruqiyah has no reciter,
+        // the monogram fallback name is decorative — and track==null has no
+        // identity at all, so both tap targets stay inert in those cases; no
+        // existence lookup is needed because ReciterProfileScreen itself
+        // resolves any slug to the fallback reciter.
+        val canOpenReciterProfile = track != null &&
+            track.reciterSlug.isNotBlank() &&
+            track.reciterSlug != DEVOTIONAL_TRACK_SLUG
+        val openReciterProfile: () -> Unit = {
+            val slug = track?.reciterSlug
+            if (!slug.isNullOrBlank() && slug != DEVOTIONAL_TRACK_SLUG) {
+                rootNavigator?.push(ReciterProfileScreen(slug))
+            }
+        }
         val isFav = track?.let { t -> favorites.any { it.audioUrl == t.audioUrl } } == true
 
         val canSkipNext = remember(queue, currentIndex, repeatMode, track, isAyahMode) {
@@ -385,13 +409,13 @@ class NowPlayingScreen : Screen {
                 // laggy. rememberUpdatedState keeps the closure reading current
                 // state without re-keying the pointer input on every flip.
                 // The chrome toggle, mirrored for assistive tech. TalkBack cannot
-                // perform a raw canvas tap, and once the chrome melts the
-                // play/pause/next row leaves the composition with it — so a
-                // screen-reader user would lose the only pause control on this
-                // screen, permanently, with no node left to focus and no way to
-                // summon it. A custom action (not an onClick) is deliberate: it
-                // describes the gesture without turning the whole screen into one
-                // giant click target that would swallow every child's touch.
+                // perform a raw canvas tap, so a screen-reader user needs a
+                // dedicated action to summon the chrome out of art mode (the
+                // transport now stays mounted, but a pause tap should never be
+                // the only lever for showing controls again). A custom action
+                // (not an onClick) is deliberate: it describes the gesture
+                // without turning the whole screen into one giant click target
+                // that would swallow every child's touch.
                 .semantics {
                     stateDescription = if (controlsVisible) "Player controls shown" else "Player controls hidden"
                     customActions = listOf(
@@ -648,10 +672,14 @@ class NowPlayingScreen : Screen {
                 // elasticity decouples them.
                 // At 800dp tall (2400px) the text top lands ≈131dp (≈16% of the
                 // screen) with the controls up and ≈165dp (≈21%) once they have
-                // faded: a ~5% drift instead of a ~70dp jump. The height the fade
-                // hands back is not wasted on air — it flows into the card
-                // (fill = true below), so a long ayah gains ~350dp of viewport
-                // instead of the verse sliding away from where the eye was.
+                // faded — a pre-transport-always-on figure; the transport row
+                // below the card now stays mounted in art mode, so today's
+                // drift is a shade smaller. A ~5% drift instead of a ~70dp
+                // jump. The height the fade hands back (minus that transport
+                // row) is not wasted on air — it flows into the card
+                // (fill = true below), so a long ayah still gains the freed
+                // viewport instead of the verse sliding away from where the
+                // eye was.
                 if (isAyahMode) {
                     Spacer(modifier = Modifier.height(28.dp))
                     Spacer(modifier = Modifier.weight(0.10f))
@@ -715,9 +743,27 @@ class NowPlayingScreen : Screen {
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
+                    // Qari identity — the avatar and the name line are both tap
+                    // targets for ReciterProfileScreen (same push the reciter
+                    // shelves use). Inert on devotional/null tracks (see
+                    // canOpenReciterProfile); the like well stays its own
+                    // target and the row itself is deliberately NOT clickable
+                    // (the surah title is track identity, not reciter).
                     NoirReciterAvatar(
                         photoUrl = track?.let { photoForSlug(it.reciterSlug) },
                         nameEn = reciterName,
+                        modifier = if (canOpenReciterProfile) {
+                            // semantics first, noirClickable second — the same
+                            // order as the home "See all" pattern: the artwork
+                            // is silent (NoirArtworkWell's image has
+                            // contentDescription = null) so the reciter name is
+                            // the label a screen reader gets here.
+                            Modifier
+                                .semantics { contentDescription = reciterName }
+                                .noirClickable { openReciterProfile() }
+                        } else {
+                            Modifier
+                        },
                         size = 46.dp,
                         shape = CircleShape,
                          monogramSize = 20.sp,
@@ -749,13 +795,21 @@ class NowPlayingScreen : Screen {
                                 )
                             }
                         }
+                        // The name line itself is trigger #2 for the same
+                        // push; no extra semantics needed — the text is its
+                        // own label for screen readers.
                         Text(
                             text = reciterName,
                             color = GhaisNoir.TextTertiary,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Normal,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = if (canOpenReciterProfile) {
+                                Modifier.noirClickable { openReciterProfile() }
+                            } else {
+                                Modifier
+                            }
                         )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
@@ -823,18 +877,14 @@ class NowPlayingScreen : Screen {
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Core transport melts with the rest of the chrome. It used to
-                // be the one block that stayed, because a player with no way to
-                // pause looked broken — but a canvas tap can no longer mean
-                // "show me the transport" on its own, and a permanently visible
-                // transport is a permanent 68dp column of chrome sitting between
-                // the verse and the bottom of the screen. The tap gives it back
-                // in one gesture, so there is nothing left to guard.
-                AnimatedVisibility(
-                    visible = controlsVisible,
-                    enter = fadeIn(tween(350)) + slideInVertically(tween(350)) { it / 2 },
-                    exit = fadeOut(tween(350)) + slideOutVertically(tween(350)) { it / 2 }
-                ) {
+                // Core transport — the one block that never melts. Art mode hides
+                // every other chrome block, but a player with no way to pause
+                // looks broken and a screen-reader user would be left with no
+                // pause/skip node to focus, so prev/play/next stay mounted and
+                // functional in hidden mode: they run the live engine handlers
+                // (AudioEngine.previous / togglePlayPause / next) and poke() the
+                // idle timer exactly like every chrome control. Everything
+                // above and below still hides as before.
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
@@ -862,7 +912,6 @@ class NowPlayingScreen : Screen {
                         onClick = { poke(); AudioEngine.next() },
                         iconSize = 26.dp
                     )
-                }
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -1044,7 +1093,8 @@ class NowPlayingScreen : Screen {
                 Spacer(modifier = Modifier.height(22.dp))
 
                 // Overflow: speed, volume (expandable), ayah mode, queue, sleep, repeat.
-                // Melts away with the idle fade, same as the transport above it.
+                // Melts away with the idle fade (the transport above it is the
+                // one block that stays mounted).
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(
                         8.dp,
