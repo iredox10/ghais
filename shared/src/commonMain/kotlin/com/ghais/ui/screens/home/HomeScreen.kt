@@ -111,8 +111,19 @@ object HomeScreen : Tab {
                     Spacer(Modifier.height(16.dp))
                     val history by UserUsageRepository.history.collectAsState()
                     val latest = history.firstOrNull()
+                    // Live playback state, collected so the CTA label flips
+                    // in real time with the player.
+                    val isPlaying by AudioEngine.isPlaying.collectAsState()
+                    val playingTrack by AudioEngine.currentTrack.collectAsState()
                     if (latest != null) {
                         val heroSubtitle = latest.subtitle.trim()
+                        // Same identity rule as resumeHistoryEntry below:
+                        // compare the canonical reciter slug, not the
+                        // (possibly aliased) stored one.
+                        val heroReciter = QuranDataRepository.getReciterBySlug(latest.reciterSlug)
+                        val heroPlaying = isPlaying &&
+                            playingTrack?.surahId == latest.surahId &&
+                            playingTrack?.reciterSlug == (heroReciter?.slug ?: latest.reciterSlug)
                         HomePlumHero(
                             eyebrow = "Jump back in",
                             title = latest.title,
@@ -121,11 +132,14 @@ object HomeScreen : Tab {
                             // cover art only survives as the never-blank fallback.
                             imageUrl = rememberJumpBackInHeroImage(latest),
                             monogram = latest.title.firstOrNull { it.isLetter() }?.uppercase() ?: "Q",
-                            // Label mirrors what onPlay already does (resumes from
-                            // the saved position); purely cosmetic — the wiring is
-                            // untouched. No saved position means nothing to resume,
-                            // so the plain "Play" is the honest word.
-                            ctaLabel = if (latest.positionMs > 0L) "Resume" else "Play",
+                            // Live CTA: "Playing" only while THIS exact
+                            // qari+surah is actively playing; "Resume" when
+                            // paused with a saved position; "Play" otherwise.
+                            ctaLabel = when {
+                                heroPlaying -> "Playing"
+                                latest.positionMs > 0L -> "Resume"
+                                else -> "Play"
+                            },
                             progress = latest.progress.coerceIn(0f, 1f),
                             onPlay = {
                                 resumeHistoryEntry(
