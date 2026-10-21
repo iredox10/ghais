@@ -41,6 +41,8 @@ import com.ghais.data.repository.SchedulesStore
 import com.ghais.data.repository.TranslationCatalog
 import com.ghais.data.repository.TranslationPrefs
 import com.ghais.data.share.ShareSheet
+import com.ghais.data.share.appVersionName
+import com.ghais.data.share.openUrl
 import com.ghais.player.AudioEngine
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.NoirListRow
@@ -275,23 +277,25 @@ object AppSettingsScreen : Screen {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         NoirSectionHeader(label = "About")
+                        // Real value from packageInfo via the SupportMail
+                        // platform plumbing (expect appVersionName) — same
+                        // string the bug-report footer uses.
                         NoirListRow(
                             icon = Icons.Filled.Info,
                             title = "Version",
-                            subtitle = "Ghaith 1.0",
+                            subtitle = appVersionName(),
                             chevron = false
                         )
                         NoirListRow(
                             icon = Icons.Filled.Star,
                             title = "Rate Ghaith",
-                            subtitle = "Not wired yet",
-                            // No-op: no common URL-opener expect exists (only
-                            // ShareSheet.shareText plus the auth-scoped
-                            // CustomTabs fallback in GoogleWebAuth), so the
-                            // Play Store listing cannot be opened from
-                            // commonMain without a new platform API — left for
-                            // a follow-up; see the task report.
-                            onClick = { }
+                            subtitle = "On Google Play",
+                            // openUrl (data/share/UrlOpener.kt): the Play
+                            // Store app claims play.google.com links on GMS
+                            // devices, browser shows the page otherwise. The
+                            // listing is the future one (GhaithStoreUrl) —
+                            // live once the app is published.
+                            onClick = { openUrl(GhaithStoreUrl) }
                         )
                         NoirListRow(
                             icon = Icons.Filled.Share,

@@ -10,13 +10,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -312,32 +310,7 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 4. About (ghost value chips)
-                // -----------------------------------------------------------------
-                item {
-                    NoirSectionHeader(label = "About")
-                    GlassCardContainer {
-                        com.ghais.ui.screens.profile.NoirAboutRow(
-                            icon = Icons.Filled.Language,
-                            title = "App Version",
-                            subtitle = "Production release channel",
-                            value = "v1.0.0 (Build 2026.1)"
-                        )
-
-                        NoirRowDivider()
-
-                        com.ghais.ui.screens.profile.NoirAboutRow(
-                            icon = Icons.Filled.VerifiedUser,
-                            title = "Audio Sources",
-                            subtitle = "MP3Quran (242 reciters), Tanzil & EveryAyah",
-                            value = "Verified"
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(18.dp))
-                }
-
-                // -----------------------------------------------------------------
-                // 5. Support — each row opens Gmail compose, pre-filled
+                // 4. Support — each row opens Gmail compose, pre-filled
                 // -----------------------------------------------------------------
                 item {
                     NoirSectionHeader(label = "Support")
@@ -371,7 +344,7 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 6. Log out (ghost danger row — muted, no red). Guests get a
+                // 5. Log out (ghost danger row — muted, no red). Guests get a
                 // sign-in row instead: same slot, opposite direction.
                 // -----------------------------------------------------------------
                 item {

@@ -25,7 +25,6 @@ import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.screens.profile.glass.NoirBadgeDot
 import com.ghais.ui.screens.profile.glass.NoirChevronRing
-import com.ghais.ui.screens.profile.glass.NoirValueChip
 import com.ghais.ui.theme.GhaisNoir
 
 /** Library badge row (well + dual text + chrome badge + ring). */
@@ -109,47 +108,6 @@ fun NoirSettingsRow(
         }
         Spacer(modifier = Modifier.width(8.dp))
         NoirChevronRing()
-    }
-}
-
-/** About row with ghost value chip. */
-@Composable
-fun NoirAboutRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    value: String
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconWell(icon = icon, size = 40.dp, iconSize = 20.dp)
-        Spacer(modifier = Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                color = GhaisNoir.TextPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                color = GhaisNoir.TextSecondary,
-                fontSize = 12.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        if (value.isNotEmpty()) {
-            Spacer(modifier = Modifier.width(12.dp))
-            NoirValueChip(value)
-        }
     }
 }
 
