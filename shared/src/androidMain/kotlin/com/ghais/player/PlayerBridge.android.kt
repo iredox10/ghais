@@ -119,21 +119,22 @@ actual object PlayerBridge {
                 // (focus back when it ends) resumes playback. Permanent
                 // losses OUTSIDE a call (another music app took over)
                 // keep the standard no-auto-resume behaviour.
+                logFocus("LOSS callShaped=${isCallShapedLoss()} latch=$resumeOnFocusGain")
                 pauseForFocusLoss(resumeOnGain = isCallShapedLoss())
+                scheduleCallLatchCheck()
             }
             android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 ducked = false
                 applyVolume()
                 // Latch the resume intent across the whole interruption: an
-                // incoming call typically arrives as TWO transient losses
-                // (ring, then the answered call grabbing focus). Re-reading
-                // isPlaying after the first pause would flip the resume
-                // decision off and leave the recitation stopped once the
-                // call ends — the exact "doesn't resume after a call"
-                // behaviour this guards against. The latch stays
-                // interruption-scoped: public pause (user pressed pause)
-                // and permanent LOSS both clear it.
+                // incoming call typically arrives as TWO losses (the ring,
+                // then the answered call grabbing focus — the second often
+                // as a permanent LOSS which used to demote both markers in
+                // pauseForFocusLoss; the markers are sticky now and survive
+                // the pair). User pause still clears them at once.
+                logFocus("LOSS_TRANSIENT latch=$resumeOnFocusGain")
                 pauseForFocusLoss(resumeOnGain = resumeOnFocusGain || AudioEngine.isPlaying.value)
+                scheduleCallLatchCheck()
             }
             android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                 if (AudioEngine.isPlaying.value) {
@@ -144,6 +145,8 @@ actual object PlayerBridge {
             android.media.AudioManager.AUDIOFOCUS_GAIN -> {
                 ducked = false
                 applyVolume()
+                cancelCallLatchCheck()
+                logFocus("GAIN latch=$resumeOnFocusGain pausedByUs=$focusPausedByUs")
                 if (resumeOnFocusGain && focusPausedByUs) {
                     resumeOnFocusGain = false
                     focusPausedByUs = false
@@ -152,7 +155,11 @@ actual object PlayerBridge {
                     } catch (_: Exception) {
                     }
                 } else {
+                    // Interruption closed without our pause-marker: drop a
+                    // stale latch so it can never fire for a later,
+                    // unrelated interruption.
                     focusPausedByUs = false
+                    resumeOnFocusGain = false
                 }
             }
         }
@@ -170,8 +177,15 @@ actual object PlayerBridge {
      */
     private fun pauseForFocusLoss(resumeOnGain: Boolean) {
         val wasPlaying = AudioEngine.isPlaying.value
-        focusPausedByUs = wasPlaying
-        resumeOnFocusGain = resumeOnGain
+        // Interruption bookkeeping is STICKY within one interruption: the
+        // ring phase may latch (LOSS_TRANSIENT) and the ANSWERED call then
+        // arrives as a second, permanent LOSS while we are already paused —
+        // re-reading wasPlaying=false here used to demote both markers, so
+        // the recitation stayed paused for the entire call ("doesn't resume
+        // after a call"). A user pause/stop clears them immediately, so the
+        // stickiness can never override an explicit user decision.
+        focusPausedByUs = focusPausedByUs || wasPlaying
+        resumeOnFocusGain = resumeOnFocusGain || resumeOnGain
         if (!wasPlaying) return
         inFocusPause = true
         try {
@@ -179,6 +193,55 @@ actual object PlayerBridge {
             try { exoPlayer?.pause() } catch (_: Exception) { }
         } finally {
             inFocusPause = false
+        }
+    }
+
+    private val focusLatchHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var callLatchCheck: Runnable? = null
+
+    /**
+     * The focus LOSS callback races the audio-mode flip: some dialers
+     * (com.sh.smart.caller here) still run MODE_NORMAL at the instant the
+     * permanent LOSS is delivered, so the immediate isCallShapedLoss()
+     * check misses the call. A short delayed re-check — after the HAL has
+     * settled into ring/call/communication mode — arms the latch late. It
+     * only ever ARMS (never demotes), only for an actual focus pause
+     * (marker set, still paused), and a user pause cancels it outright.
+     */
+    private fun scheduleCallLatchCheck() {
+        callLatchCheck?.let { focusLatchHandler.removeCallbacks(it) }
+        val run = Runnable {
+            callLatchCheck = null
+            try {
+                if (resumeOnFocusGain || !focusPausedByUs) return@Runnable
+                if (try { AudioEngine.isPlaying.value } catch (_: Exception) { true }) return@Runnable
+                if (!isCallShapedLoss()) return@Runnable
+                resumeOnFocusGain = true
+                logFocus("latch armed late (mode settled call)")
+            } catch (_: Exception) {
+            }
+        }
+        callLatchCheck = run
+        focusLatchHandler.postDelayed(run, 1600L)
+    }
+
+    private fun cancelCallLatchCheck() {
+        callLatchCheck?.let { focusLatchHandler.removeCallbacks(it) }
+        callLatchCheck = null
+    }
+
+    /**
+     * Release-safe interruption telemetry: plain adb logcat survives the
+     * whole session, so a real call taken WITHOUT the cable attached can
+     * still be diagnosed afterwards (`adb logcat -d -s GhaithFocus`).
+     */
+    private fun logFocus(detail: String) {
+        try {
+            android.util.Log.d(
+                "GhaithFocus",
+                detail + " playing=" + try { AudioEngine.isPlaying.value } catch (_: Exception) { null },
+            )
+        } catch (_: Exception) {
         }
     }
 
@@ -550,9 +613,11 @@ actual object PlayerBridge {
     }
 
     actual fun pause() {
-        // Explicit pause wins over any pending focus resume.
+        // Explicit pause wins over any pending focus resume — including the
+        // delayed call-latch check that might still be scheduled.
         resumeOnFocusGain = false
         focusPausedByUs = false
+        try { cancelCallLatchCheck() } catch (_: Exception) { }
         try { exoPlayer?.pause() } catch (_: Exception) { }
     }
 
@@ -568,6 +633,7 @@ actual object PlayerBridge {
         resumeOnFocusGain = false
         focusPausedByUs = false
         ducked = false
+        try { cancelCallLatchCheck() } catch (_: Exception) { }
         try { abandonFocus() } catch (_: Exception) { }
         try {
             exoPlayer?.stop()

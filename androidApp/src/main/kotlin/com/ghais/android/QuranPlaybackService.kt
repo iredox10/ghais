@@ -329,6 +329,21 @@ class QuranPlaybackService : MediaSessionService() {
         } catch (_: Exception) {
             false
         }
+        // Forensic trail for the "media card vanishes on pause" report:
+        // every Media3 notification decision lands in logcat history
+        // (survives even when the cable was unplugged during the repro).
+        try {
+            android.util.Log.d(
+                "GhaithNotif",
+                "update keep=$keepPosted playing=" +
+                    try { session.player.isPlaying } catch (_: Exception) { null } +
+                    " state=" +
+                    try { session.player.playbackState } catch (_: Exception) { -1 } +
+                    " items=" +
+                    try { session.player.mediaItemCount } catch (_: Exception) { -1 } +
+                    " fgReq=$startInForegroundRequired",
+            )
+        } catch (_: Exception) { }
         // Both super calls can throw from the framework side
         // (ForegroundServiceDidNotStartInTime, SecurityException on stale
         // foreground state); an uncaught throw here kills the service and
@@ -347,6 +362,13 @@ class QuranPlaybackService : MediaSessionService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Forensic trail: which intents reach the service while paused.
+        try {
+            android.util.Log.d(
+                "GhaithNotif",
+                "onStartCommand action=" + (intent?.action ?: "null"),
+            )
+        } catch (_: Exception) { }
         // Idle explicit start (e.g. legacy warm-start): no media -> no notification
         // within 10s -> system kills the app. Stop immediately instead.
         // Guard fires ONLY on action == null, so explicit actions — including
@@ -407,6 +429,17 @@ class QuranPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        try {
+            android.util.Log.w(
+                "GhaithNotif",
+                "onDestroy state=" +
+                    try { player?.playbackState } catch (_: Exception) { -1 } +
+                    " playing=" +
+                    try { player?.isPlaying } catch (_: Exception) { null } +
+                    " items=" +
+                    try { player?.mediaItemCount } catch (_: Exception) { -1 },
+            )
+        } catch (_: Exception) { }
         try { serviceScope.cancel() } catch (_: Exception) { }
         mediaSession?.let {
             try { removeSession(it) } catch (_: Exception) { }
