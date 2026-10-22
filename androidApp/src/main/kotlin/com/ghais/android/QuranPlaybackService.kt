@@ -517,6 +517,10 @@ class QuranPlaybackService : MediaSessionService() {
                         MediaMetadata.Builder()
                             .setTitle(title)
                             .setArtist(artist)
+                            // Remote-controller resume path has no artwork
+                            // pipeline: pin the branded fallback so the
+                            // shade never renders without Ghaith art.
+                            .setArtworkUri(fallbackArtworkUri())
                             .build(),
                     )
                     .build()

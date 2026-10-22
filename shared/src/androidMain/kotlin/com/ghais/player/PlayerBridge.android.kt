@@ -84,17 +84,56 @@ actual object PlayerBridge {
         null
     }
 
+    /**
+     * True while the audio HAL is in ring / call / communication mode —
+     * i.e. a ringing or ongoing call owns the device right now. Used to
+     * classify a focus LOSS as call-shaped: those losses are interruptions
+     * the user expects playback to continue after, unlike a permanent loss
+     * from another media app.
+     */
+    private fun isCallShapedLoss(): Boolean = try {
+        val am = audioManagerOf() ?: return false
+        when (am.mode) {
+            android.media.AudioManager.MODE_RINGTONE,
+            android.media.AudioManager.MODE_IN_CALL,
+            android.media.AudioManager.MODE_IN_COMMUNICATION,
+            -> true
+            else -> false
+        }
+    } catch (_: Exception) {
+        false
+    }
+
     private val audioFocusListener = android.media.AudioManager.OnAudioFocusChangeListener { change ->
         when (change) {
             android.media.AudioManager.AUDIOFOCUS_LOSS -> {
                 ducked = false
                 applyVolume()
-                pauseForFocusLoss(resumeOnGain = false)
+                // Calls on this device arrive as a PERMANENT loss: dialer/
+                // telephony holds plain AUDIOFOCUS_GAIN while a call is up,
+                // so the platform reports LOSS (never LOSS_TRANSIENT) and
+                // the stock "never auto-resume a permanent loss" rule kept
+                // the recitation stopped after every call. When the loss
+                // happens while the audio HAL is in ring/call mode it is
+                // call-shaped: latch the resume intent so the call's GAIN
+                // (focus back when it ends) resumes playback. Permanent
+                // losses OUTSIDE a call (another music app took over)
+                // keep the standard no-auto-resume behaviour.
+                pauseForFocusLoss(resumeOnGain = isCallShapedLoss())
             }
             android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 ducked = false
                 applyVolume()
-                pauseForFocusLoss(resumeOnGain = AudioEngine.isPlaying.value)
+                // Latch the resume intent across the whole interruption: an
+                // incoming call typically arrives as TWO transient losses
+                // (ring, then the answered call grabbing focus). Re-reading
+                // isPlaying after the first pause would flip the resume
+                // decision off and leave the recitation stopped once the
+                // call ends — the exact "doesn't resume after a call"
+                // behaviour this guards against. The latch stays
+                // interruption-scoped: public pause (user pressed pause)
+                // and permanent LOSS both clear it.
+                pauseForFocusLoss(resumeOnGain = resumeOnFocusGain || AudioEngine.isPlaying.value)
             }
             android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                 if (AudioEngine.isPlaying.value) {
@@ -149,6 +188,13 @@ actual object PlayerBridge {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 var req = audioFocusRequest
                 if (req == null) {
+                    // handleAudioFocus=false everywhere: this single listener
+                    // owns pause/resume/duck. willPauseWhenDucked(false) keeps
+                    // the default duck-ask: speech players are exempt from the
+                    // system's automatic ducking anyway, so the listener
+                    // receives LOSS_TRANSIENT_CAN_DUCK and ducks itself
+                    // (0.2x) instead of pausing — message sounds, WhatsApp
+                    // video clips etc. never stop the recitation.
                     req = android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
                         .setAudioAttributes(
                             android.media.AudioAttributes.Builder()
@@ -156,6 +202,7 @@ actual object PlayerBridge {
                                 .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
                                 .build()
                         )
+                        .setWillPauseWhenDucked(false)
                         .setOnAudioFocusChangeListener(audioFocusListener)
                         .build()
                     audioFocusRequest = req
@@ -417,7 +464,7 @@ actual object PlayerBridge {
                     val a = pendingArtist ?: artist
                     if (!t.isNullOrBlank()) setTitle(t) else setTitle("Ghais")
                     if (!a.isNullOrBlank()) setArtist(a)
-                    val artwork = pendingArtworkUri
+                    val artwork = pendingArtworkUri ?: brandedFallbackArtUri()
                     if (!artwork.isNullOrBlank()) {
                         try { setArtworkUri(android.net.Uri.parse(artwork)) } catch (_: Exception) { }
                     }
@@ -468,7 +515,7 @@ actual object PlayerBridge {
                     val a = pendingArtist ?: artist
                     if (!t.isNullOrBlank()) setTitle(t) else setTitle("Ghais")
                     if (!a.isNullOrBlank()) setArtist(a)
-                    val artwork = pendingArtworkUri
+                    val artwork = pendingArtworkUri ?: brandedFallbackArtUri()
                     if (!artwork.isNullOrBlank()) {
                         try { setArtworkUri(android.net.Uri.parse(artwork)) } catch (_: Exception) { }
                     }
@@ -486,6 +533,20 @@ actual object PlayerBridge {
             _isBuffering.value = false
             _errorMessage.value = e.message ?: "Unable to load playback"
         }
+    }
+
+    /**
+     * Branded shade fallback when a reciter has no portrait (cloud or local):
+     * the app's own ghaith art. Resolved by name via getIdentifier because
+     * shared/androidMain cannot see the app module's R class. Never throws;
+     * null keeps the metadata artwork-free (system app icon fallback).
+     */
+    private fun brandedFallbackArtUri(): String? = try {
+        val ctx = appContext ?: return null
+        val id = ctx.resources.getIdentifier("ghaith_art", "drawable", ctx.packageName)
+        if (id != 0) "android.resource://${ctx.packageName}/$id" else null
+    } catch (_: Exception) {
+        null
     }
 
     actual fun pause() {

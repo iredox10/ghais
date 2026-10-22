@@ -5,6 +5,8 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.extractor.mp3.Mp3Extractor
 
 /**
  * Single place where the app's ExoPlayer network + buffering policy lives.
@@ -45,8 +47,20 @@ object QuranPlayerFactory {
         // the HTTP factory directly would force LOCAL files through HTTP
         // and crash with ClassCastException (FileURLConnection is not an
         // HttpURLConnection) — breaking all offline playback.
-        return DefaultMediaSourceFactory(app)
-            .setDataSourceFactory(DefaultDataSource.Factory(app, httpFactory()))
+        //
+        // FLAG_DISABLE_ID3_METADATA: the recitation files carry promotional
+        // ID3 artwork (the mp3quran.net logo) and tag titles baked in by the
+        // source host. Stream tags override MediaItem-level metadata for the
+        // media session, so the shade intermittently showed that raw logo
+        // instead of our branded reciter art. We own all metadata (title,
+        // artist, artworkUri) at the MediaItem level — ID3 parsing is dead
+        // weight here, so it's disabled (seek tables like Xing are not
+        // affected; duration/seeking keep working).
+        return DefaultMediaSourceFactory(
+            /* dataSourceFactory = */ DefaultDataSource.Factory(app, httpFactory()),
+            /* extractorsFactory = */ DefaultExtractorsFactory()
+                .setMp3ExtractorFlags(Mp3Extractor.FLAG_DISABLE_ID3_METADATA),
+        )
     }
 
     fun loadControl(): DefaultLoadControl =
