@@ -92,14 +92,32 @@ actual object PlayerBridge {
      * from another media app.
      */
     private fun isCallShapedLoss(): Boolean = try {
-        val am = audioManagerOf() ?: return false
+        val am = audioManagerOf() ?: return telecomIsInCall()
         when (am.mode) {
             android.media.AudioManager.MODE_RINGTONE,
             android.media.AudioManager.MODE_IN_CALL,
             android.media.AudioManager.MODE_IN_COMMUNICATION,
             -> true
-            else -> false
+            else -> telecomIsInCall()
         }
+    } catch (_: Exception) {
+        telecomIsInCall()
+    }
+
+    /**
+     * Telecom doesn't always own the audio mode immediately: dialing apps
+     * (this device's com.sh.smart.caller among them) grab media focus while
+     * the HAL may still be MODE_NORMAL, and chime/alert interleaves can
+     * settle the mode back to NORMAL mid-ring. isInCall() reads telecom
+     * state directly and counts ring/dial/active periods as call-y even
+     * when the mode sample misses them. Wrapped: no permission path throws
+     * on some OEM builds — the audio-mode check then carries the verdict.
+     */
+    private fun telecomIsInCall(): Boolean = try {
+        val tm = appContext?.applicationContext
+            ?.getSystemService(android.content.Context.TELECOM_SERVICE)
+            as? android.telecom.TelecomManager
+        tm?.isInCall == true
     } catch (_: Exception) {
         false
     }
@@ -197,37 +215,44 @@ actual object PlayerBridge {
     }
 
     private val focusLatchHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private var callLatchCheck: Runnable? = null
+    private var callLatchChecks: List<Runnable> = emptyList()
 
     /**
      * The focus LOSS callback races the audio-mode flip: some dialers
      * (com.sh.smart.caller here) still run MODE_NORMAL at the instant the
      * permanent LOSS is delivered, so the immediate isCallShapedLoss()
-     * check misses the call. A short delayed re-check — after the HAL has
-     * settled into ring/call/communication mode — arms the latch late. It
-     * only ever ARMS (never demotes), only for an actual focus pause
-     * (marker set, still paused), and a user pause cancels it outright.
+     * check misses the call. ROLLING re-checks — 0.6s through 5s after the
+     * pause — sample the call signals after the HAL/telecom have settled
+     * (and across chime gaps that momentarily return the mode to NORMAL).
+     * They only ever ARM (never demote), only for an actual focus pause
+     * (marker set, still paused, not playing), and a user pause cancels
+     * them all outright.
      */
     private fun scheduleCallLatchCheck() {
-        callLatchCheck?.let { focusLatchHandler.removeCallbacks(it) }
-        val run = Runnable {
-            callLatchCheck = null
-            try {
-                if (resumeOnFocusGain || !focusPausedByUs) return@Runnable
-                if (try { AudioEngine.isPlaying.value } catch (_: Exception) { true }) return@Runnable
-                if (!isCallShapedLoss()) return@Runnable
-                resumeOnFocusGain = true
-                logFocus("latch armed late (mode settled call)")
-            } catch (_: Exception) {
-            }
+        callLatchChecks.forEach {
+            try { focusLatchHandler.removeCallbacks(it) } catch (_: Exception) { }
         }
-        callLatchCheck = run
-        focusLatchHandler.postDelayed(run, 1600L)
+        callLatchChecks = listOf(600L, 1500L, 3000L, 5000L).map { delayMs ->
+            val run = Runnable {
+                try {
+                    if (resumeOnFocusGain || !focusPausedByUs) return@Runnable
+                    if (try { AudioEngine.isPlaying.value } catch (_: Exception) { true }) return@Runnable
+                    if (!isCallShapedLoss()) return@Runnable
+                    resumeOnFocusGain = true
+                    logFocus("latch armed late (call signal +" + delayMs + "ms)")
+                } catch (_: Exception) {
+                }
+            }
+            try { focusLatchHandler.postDelayed(run, delayMs) } catch (_: Exception) { }
+            run
+        }
     }
 
     private fun cancelCallLatchCheck() {
-        callLatchCheck?.let { focusLatchHandler.removeCallbacks(it) }
-        callLatchCheck = null
+        callLatchChecks.forEach {
+            try { focusLatchHandler.removeCallbacks(it) } catch (_: Exception) { }
+        }
+        callLatchChecks = emptyList()
     }
 
     /**
