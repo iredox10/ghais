@@ -316,6 +316,14 @@ object AudioEngine {
                                 // with no track and kills the notification.
                                 SleepTimer.onQueueEnded()
                                 PlayerBridge.pause()
+                                if (consecutiveErrors == 1) {
+                                    // First error of the wave: lift the errored
+                                    // player out of STATE_IDLE (pause() alone
+                                    // can't — see PlayerBridge.reprepareInPlace
+                                    // doc). Once per wave so a dead network
+                                    // can't drive an endless reprepare loop.
+                                    try { PlayerBridge.reprepareInPlace() } catch (_: Exception) { }
+                                }
                                 _engineError.value = "Couldn't play this recitation"
                             }
                         }
@@ -326,6 +334,10 @@ object AudioEngine {
                             // Too many consecutive source errors in full-surah mode:
                             // same graceful landing — keep session, friendly error.
                             PlayerBridge.pause()
+                            if (consecutiveErrors == 1) {
+                                // Same STATE_IDLE lift as the exhausted lane.
+                                try { PlayerBridge.reprepareInPlace() } catch (_: Exception) { }
+                            }
                             _engineError.value = "Couldn't play this recitation"
                         }
                     }

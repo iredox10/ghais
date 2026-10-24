@@ -646,6 +646,30 @@ actual object PlayerBridge {
         try { exoPlayer?.pause() } catch (_: Exception) { }
     }
 
+    /**
+     * Recover an errored (STATE_IDLE) player WITHOUT a new prepare cycle of
+     * the whole track from zero. ExoPlayer keeps timeline + position through
+     * a playback error but parks forever in STATE_IDLE, and Media3's media
+     * card rules treat that controller state as "no media notification" —
+     * the shade card disappears even though the playlist is loaded. That is
+     * the "pausing kills the notification player" report on flaky networks:
+     * the buffered-ahead stream dies while paused (ExoPlayer keeps loading
+     * ahead when paused), the engine's landing pauses an already-IDLE
+     * player, and the session never re-enters a card-worthy state.
+     * prepare() retries the SAME item at the SAME position; playWhenReady
+     * stays false, so the session returns to a paused/buffering state the
+     * media card can represent and one tap resumes cleanly.
+     */
+    actual fun reprepareInPlace() {
+        try {
+            val p = exoPlayer ?: return
+            if (p.playbackState == androidx.media3.common.Player.STATE_IDLE) {
+                p.prepare()
+            }
+        } catch (_: Exception) {
+        }
+    }
+
     actual fun resume() {
         try { onPlayRequested?.invoke() } catch (_: Exception) { }
         try { requestFocus() } catch (_: Exception) { }

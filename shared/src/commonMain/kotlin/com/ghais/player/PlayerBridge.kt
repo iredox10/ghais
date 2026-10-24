@@ -46,6 +46,13 @@ expect object PlayerBridge {
     fun pause()
     fun resume()
     fun stop()
+    /**
+     * Recover an errored (STATE_IDLE on Android) player in place — same
+     * item, same position, still paused — so the media session returns to
+     * a card-worthy state (see the android actual for the full rationale).
+     * No-op where the concept doesn't apply.
+     */
+    fun reprepareInPlace()
     fun seekTo(positionMs: Long)
     fun setSpeed(speed: Float)
     fun setVolume(volume: Float)

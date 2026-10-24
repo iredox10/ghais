@@ -225,6 +225,10 @@ actual object PlayerBridge {
         _isBuffering.value = false
     }
 
+    /** Android-only recovery concept (see common expect doc); no-op on iOS. */
+    actual fun reprepareInPlace() {
+    }
+
     actual fun seekTo(positionMs: Long) {
         try {
             val seconds = positionMs.coerceAtLeast(0L) / 1000.0
