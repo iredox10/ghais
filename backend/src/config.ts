@@ -13,4 +13,6 @@ export const config = {
     .map((s) => s.trim())
     .filter(Boolean),
   isProd: (process.env.NODE_ENV ?? 'production') === 'production',
+  /** Bearer token guarding admin/job routes (e.g. Render CronJob hits). */
+  adminToken: process.env.ADMIN_TOKEN ?? '',
 };
