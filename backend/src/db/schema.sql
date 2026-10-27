@@ -1,0 +1,2 @@
+-- Unit 2 fills: full DDL for users + every ghais collection table.
+-- Kept idempotent (CREATE TABLE IF NOT EXISTS) — migrate re-runs safely.
