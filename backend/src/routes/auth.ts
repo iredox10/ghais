@@ -9,6 +9,7 @@ import {
   rotateRefreshToken,
   findUserById,
   verifyAccessToken,
+  revokeAllUserTokens,
   type TokenPair,
   type UserRow,
 } from '../tokens.js';
@@ -98,5 +99,18 @@ export default async function authRoutes(app: FastifyInstance) {
       return reply.code(401).send({ message: 'Account no longer exists.' });
     }
     return { userId: user.id, email: user.email, name: user.name, provider: user.provider };
+  });
+
+  // Sign-out hook: revoke every refresh token of the bearer (best-effort from
+  // the client; access tokens expire on their own within minutes).
+  app.delete('/refresh', async (req, reply) => {
+    const header = req.headers.authorization ?? '';
+    const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+    const claims = token ? await verifyAccessToken(token) : null;
+    if (!claims) {
+      return reply.code(401).send({ message: 'Unauthorized.' });
+    }
+    await revokeAllUserTokens(claims.userId);
+    return reply.code(204).send();
   });
 }

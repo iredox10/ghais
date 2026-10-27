@@ -44,7 +44,8 @@ BEGIN
     'likes','playback_state','follows','listening_stats','schedules',
     'history','reciter_stats','routine_backups','user_prefs','khatma_plans',
     'broadcasts','play_events','playlists','playlist_items','charts','reciters',
-    'devotion','leagues','friendships','global_charts','achievements'
+    'devotion','leagues','friendships','global_charts','achievements',
+    'hifz_mastery','search_history'
   ] LOOP
     EXECUTE format(
       'CREATE TABLE IF NOT EXISTS %I (

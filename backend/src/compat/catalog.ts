@@ -42,6 +42,11 @@ export const CATALOG: Record<string, CollectionDef> = {
   ),
   broadcasts: { access: 'public', ownerAttrs: [], numeric: [] },
   play_events: userCollection(['ownerId'], ['ms']),
+  hifz_mastery: userCollection(
+    ['user_id'],
+    ['surah_id', 'ayah_no', 'daily_goal_count', 'streak_days', 'today_reviewed_count'],
+  ),
+  search_history: userCollection(['user_id']),
   playlists: { access: 'catalog', ownerAttrs: ['owner_id'], numeric: ['publishedAt', 'published_at'] },
   playlist_items: { access: 'catalog', ownerAttrs: ['playlist_id'], numeric: ['position', 'surah_id', 'ayah_from', 'ayah_to'] },
   charts: { access: 'public', ownerAttrs: [], numeric: [] },
