@@ -1,9 +1,0 @@
-build:
-  docker:
-    web: backend/Dockerfile
-release:
-  image: web
-  command:
-    - cd backend && npm run migrate
-run:
-  web: node backend/dist/index.js
