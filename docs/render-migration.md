@@ -1,6 +1,6 @@
 # Appwrite to Heroku migration
 
-Branch: `feature/render-migration`, based on `main` at `b3bfac8`.
+The migration is published to `main`, with the backend deployed to Heroku.
 
 The app now targets a custom Fastify API and PostgreSQL on Heroku. The document URL and JSON shapes remain compatible with existing data; the app uses its own shared Ktor transport instead of the Appwrite SDK.
 
@@ -25,13 +25,14 @@ Historical `appwrite://likes/...` values remain recognized as local placeholders
 
 ## Operational steps still required
 
-- [ ] Restore Heroku and GitHub authentication and verify the deployed release, environment, and database configuration.
-- [ ] Publish the committed work and configure automatic Heroku deployment if desired; the scheduled chart workflow must be on the default branch and use `HEROKU_ADMIN_TOKEN`.
+- [x] Verify the deployed release, environment, and database configuration.
+- [x] Publish the migration and daily chart workflow to `main` with `HEROKU_ADMIN_TOKEN` configured.
 - [x] Use the existing Heroku catalog and bundled app data; Appwrite reads are blocked, so old cloud accounts and private documents are unavailable for this cutover.
-- [ ] Test registration, login, Google login, logout, offline restart, sync, catalog, and jobs against the deployed service.
-- [ ] Retire Appwrite only after validating the cutover.
+- [x] Verify email registration, login, logout, token rotation, document ownership, catalog access, and chart job against the deployed service.
+- [ ] Verify Google sign-in, offline restart, and end-to-end app synchronization on a real device.
+- [ ] Configure automatic GitHub-to-Heroku deployment if desired, and distribute a signed app release.
 
-The Heroku deployment notes report an existing app and database; this does not establish that the current local commits are deployed. Existing Appwrite cookie sessions cannot authenticate to the new API. The importer does not import accounts or passwords. Private documents retain their original owner IDs, so importing them requires an account migration preserving those IDs; re-registering with a new ID does not attach old cloud data. Catalog-only imports do not have this requirement.
+Existing Appwrite cookie sessions cannot authenticate to the new API. The importer does not import accounts or passwords. Private documents retain their original owner IDs, so importing them requires an account migration preserving those IDs; re-registering with a new ID does not attach old cloud data. Catalog-only imports do not have this requirement.
 
 ## iOS
 
@@ -44,7 +45,8 @@ Social collections are available through the backend; local/feature-flagged soci
 - Android debug APK build passed.
 - Shared Kotlin metadata compilation passed; portable replacements preserve the existing cache, sort, filter, and ranking behavior.
 - 812 shared/Android unit tests passed, including five backend-client regression tests.
-- Backend TypeScript build and seven backend regression tests passed.
+- Backend TypeScript build, eight backend regression tests, and the GitHub PostgreSQL HTTP smoke suite passed.
+- Heroku registration, login, ownership isolation, refresh, logout, catalog access, and chart rollup passed using temporary test data that was removed afterward.
 - Export/import scripts passed JavaScript syntax checks.
 
-These checks do not exercise a deployed PostgreSQL service or an iOS host app.
+These checks do not verify Google login, offline restart, full on-device synchronization, or an iOS host app.
