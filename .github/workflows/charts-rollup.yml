@@ -1,0 +1,18 @@
+name: Refresh Quran charts
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+jobs:
+  rollup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refresh charts and reciter statistics
+        env:
+          API_URL: ${{ vars.HEROKU_API_URL || 'https://ghaith-c77c2426ed4d.herokuapp.com' }}
+          ADMIN_TOKEN: ${{ secrets.HEROKU_ADMIN_TOKEN }}
+        run: |
+          test -n "$ADMIN_TOKEN" || { echo 'Set the HEROKU_ADMIN_TOKEN repository secret.'; exit 1; }
+          curl --fail-with-body --silent --show-error --retry 3 --max-time 120 \
+            --request POST --header "Authorization: Bearer $ADMIN_TOKEN" \
+            "$API_URL/v1/jobs/charts-rollup"

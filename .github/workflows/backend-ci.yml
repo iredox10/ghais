@@ -1,0 +1,65 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, feature/render-migration]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Build and verify backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
+      PORT: '18080'
+      DATABASE_URL: postgres://ghais:ci_database_only@127.0.0.1:5432/ghais
+      JWT_SECRET: ci-only-signing-key-never-used-in-production
+      ADMIN_TOKEN: ci-only-admin-token
+      LOCAL_API_URL: http://127.0.0.1:18080
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql
+          sudo systemctl start postgresql
+          sudo -u postgres psql -c "CREATE USER ghais WITH PASSWORD 'ci_database_only'"
+          sudo -u postgres createdb -O ghais ghais
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npm run migrate
+      - name: Start API and wait for readiness
+        run: |
+          node dist/index.js > "$RUNNER_TEMP/ghais-api.log" 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18080/healthz > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/ghais-api.log"
+          exit 1
+      - name: Test real HTTP and database operations
+        run: npm run smoke:local
+      - name: Include API log on failure
+        if: failure()
+        run: cat "$RUNNER_TEMP/ghais-api.log" 2>/dev/null || true
