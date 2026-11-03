@@ -125,7 +125,7 @@ fun deriveFilterOptions(reciters: List<Reciter>): ReciterFilterOptions {
         for (raw in values) {
             val trimmed = raw.trim()
             if (trimmed.isEmpty()) continue
-            seen.putIfAbsent(trimmed.lowercase(), trimmed)
+            if (trimmed.lowercase() !in seen) seen[trimmed.lowercase()] = trimmed
         }
         return seen.values.sortedBy { it.lowercase() }
     }

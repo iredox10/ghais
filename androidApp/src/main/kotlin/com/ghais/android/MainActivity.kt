@@ -70,10 +70,10 @@ class MainActivity : ComponentActivity() {
         } catch (_: Exception) { }
         // SharedPreferences read on the main thread: small but I/O — a
         // corrupted prefs file throws instead of returning defaults.
-        guardInit("AuthRepository") { com.ghais.data.auth.AuthRepository.init(this) }
+        guardInit("AuthRepository") { com.ghais.data.auth.AuthRepository.init() }
         guardInit("ActivityHolder") { com.ghais.data.auth.ActivityHolder.register(this) }
         // Starts the listening-push heartbeat loop + wires cloud fetchers.
-        guardInit("SyncEngine") { com.ghais.data.sync.SyncEngine.init(this) }
+        guardInit("SyncEngine") { com.ghais.data.sync.SyncEngine.init() }
         // registerNetworkCallback can throw SecurityException on devices
         // without the network-state permission / OEM-skewed services.
         guardInit("NetworkMonitor") { com.ghais.data.sync.NetworkMonitor.init(this) }
@@ -130,14 +130,6 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        // Malformed deep links / a wedged OAuth handshake must never take
-        // down the activity: the redirect completes a Deferred that may
-        // already be settled.
-        try {
-            com.ghais.data.auth.GoogleWebAuth.onRedirect(intent.data)
-        } catch (_: Exception) { }
-        // App-link / static-shortcut routing, alongside the OAuth redirect.
-        // OAuth URIs (appwrite-callback-*) parse as null and are ignored here.
         handleDeepLink(intent)
     }
 
@@ -156,11 +148,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Resolves a pending browser OAuth handshake as cancelled when the
-        // user backed out of the tab without completing the redirect.
-        try {
-            com.ghais.data.auth.GoogleWebAuth.onReturnedToApp()
-        } catch (_: Exception) { }
         if (!askedOnce) {
             askedOnce = true
             requestNotificationPermission()

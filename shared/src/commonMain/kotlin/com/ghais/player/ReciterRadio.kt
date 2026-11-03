@@ -64,7 +64,7 @@ object ReciterRadio {
             val tracks = tracksBySlug.getValue(reciter.slug)
             if (tracks.isEmpty()) continue
             val previous = out.lastOrNull()
-            var index = cursors.getOrDefault(reciter.slug, 0)
+            var index = (cursors[reciter.slug] ?: 0)
             var candidate: TrackItem? = null
             var attempts = 0
             while (attempts < tracks.size) {

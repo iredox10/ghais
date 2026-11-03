@@ -1,6 +1,6 @@
 package com.ghais.data.repository
 
-import com.ghais.data.auth.AppwriteConfig
+import com.ghais.data.auth.BackendConfig
 import com.ghais.data.sync.DB_ID
 import com.russhwolf.settings.Settings
 import io.ktor.client.HttpClient
@@ -146,7 +146,7 @@ object ChartsRepository {
     internal var nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() }
 
     private val documentUrl =
-        "${AppwriteConfig.ENDPOINT}/databases/$DB_ID/collections/$CHARTS_COLLECTION/documents/$CHARTS_DOC_ID"
+        "${BackendConfig.ENDPOINT}/databases/$DB_ID/collections/$CHARTS_COLLECTION/documents/$CHARTS_DOC_ID"
 
     init {
         // Serve disk cache instantly so the first collector paints without
@@ -168,7 +168,7 @@ object ChartsRepository {
             mutex.withLock {
                 val cached = loadCached()
                 if (cached != null) _snapshot.value = cached.snapshot
-                if (!AppwriteConfig.isConfigured()) {
+                if (!BackendConfig.isConfigured()) {
                     // Fail-closed on placeholder config: serve the disk cache
                     // only, never hit the network (commonMain has no Log, so
                     // println is the warning channel on both platforms).
@@ -227,7 +227,6 @@ object ChartsRepository {
     private suspend fun fetchRemote(): ChartsSnapshot? = try {
         val client = httpClient ?: return null
         val response = client.get(documentUrl) {
-            header("X-Appwrite-Project", AppwriteConfig.PROJECT_ID)
         }
         if (!response.status.isSuccess()) return null
         parseChartsPayload(response.bodyAsText())

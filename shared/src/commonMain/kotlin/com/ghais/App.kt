@@ -84,6 +84,7 @@ fun App() {
         }
         LaunchedEffect(Unit) {
             try {
+                com.ghais.data.sync.SyncEngine.init()
                 SyncTriggers.start(this)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

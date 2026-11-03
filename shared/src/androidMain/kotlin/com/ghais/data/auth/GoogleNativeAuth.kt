@@ -51,20 +51,20 @@ internal object GoogleNativeAuth {
             return try {
                 GoogleIdTokenCredential.createFrom(result.credential.data).idToken
             } catch (e: IllegalArgumentException) {
-                throw Exception("Google returned an unexpected credential. Log in with email instead.", e)
+                throw AuthUserException("Google returned an unexpected credential. Log in with email instead.")
             } catch (e: GoogleIdTokenParsingException) {
-                throw Exception("Google returned an unexpected credential. Log in with email instead.", e)
+                throw AuthUserException("Google returned an unexpected credential. Log in with email instead.")
             }
         } catch (e: GetCredentialCancellationException) {
             throw e
         } catch (_: NoCredentialException) {
-            throw Exception("No Google accounts on this device. Add one in Settings, or log in with email.")
+            throw AuthUserException("No Google accounts on this device. Add one in Settings, or log in with email.")
         } catch (e: GetCredentialException) {
             // Backend detail (e.g. error 28444 when the SHA-1 is not
             // registered for the OAuth client) stays in logcat, never in
             // the user-facing box. Console checklist lives in KDoc above.
             android.util.Log.w("GoogleNativeAuth", "getCredential failed", e)
-            throw Exception("Google sign-in is unavailable right now. Log in with email instead.")
+            throw AuthUserException("Google sign-in is unavailable right now. Log in with email instead.")
         }
     }
 }

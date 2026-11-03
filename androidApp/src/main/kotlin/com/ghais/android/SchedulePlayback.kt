@@ -61,7 +61,7 @@ object SchedulePlayback {
                 Log.w(TAG, "ScheduleEngine.init failed", e)
             }
             try {
-                AuthRepository.init(appContext)
+                AuthRepository.init()
             } catch (e: Exception) {
                 Log.w(TAG, "AuthRepository.init failed", e)
             }

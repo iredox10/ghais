@@ -38,7 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
-import com.ghais.data.auth.AppwriteConfig
+import com.ghais.data.auth.BackendConfig
 import com.ghais.data.auth.AuthRepository
 import com.ghais.data.sync.NetworkMonitor
 import com.ghais.ui.components.noir.ChromePillButton
@@ -100,7 +100,7 @@ fun AuthScreenContent(
 
     val isOnline by NetworkMonitor.isOnline.collectAsState()
 
-    val configured = AppwriteConfig.isConfigured()
+    val configured = BackendConfig.isConfigured()
 
     NoirScreenRoot(modifier = modifier) {
         Column(

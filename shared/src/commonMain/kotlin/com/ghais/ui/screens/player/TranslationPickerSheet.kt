@@ -99,7 +99,7 @@ fun TranslationPickerSheet(
                 .mapValues { (_, entries) ->
                     entries.sortedWith(compareBy({ it.languageName }, { it.englishName }))
                 }
-                .toSortedMap()
+                .entries.sortedBy { it.key }.associate { it.key to it.value }
         }
     }
     val groups = grouped.entries.toList()

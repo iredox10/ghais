@@ -20,7 +20,7 @@ import com.ghais.data.repository.SchedulesStore
  * id — flagged as a follow-up for that file's owner (A8 is new-files-only).
  */
 actual object NotifyScheduler : Notifier {
-    override fun scheduleDaily(hour: Int, minute: Int, channel: String) {
+    actual override fun scheduleDaily(hour: Int, minute: Int, channel: String) {
         try {
             val id = channelScheduleId(channel)
             val existing = try {
@@ -45,7 +45,7 @@ actual object NotifyScheduler : Notifier {
         }
     }
 
-    override fun cancel(channel: String) {
+    actual override fun cancel(channel: String) {
         try {
             SchedulesStore.remove(channelScheduleId(channel))
         } catch (_: Exception) {

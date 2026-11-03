@@ -13,11 +13,16 @@ package com.ghais.player
 object PreviewCache {
     const val MAX_SIZE: Int = 50
 
-    private val map = LinkedHashMap<String, String>(64, 0.75f, true)
+    private val map = LinkedHashMap<String, String>(64)
 
-    fun get(key: String): String? = map[key]
+    fun get(key: String): String? {
+        val url = map.remove(key) ?: return null
+        map[key] = url
+        return url
+    }
 
     fun put(key: String, url: String) {
+        map.remove(key)
         map[key] = url
         while (map.size > MAX_SIZE) {
             val eldest = map.keys.firstOrNull() ?: break

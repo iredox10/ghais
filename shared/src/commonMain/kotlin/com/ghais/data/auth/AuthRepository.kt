@@ -1,58 +1,109 @@
 package com.ghais.data.auth
 
-import kotlinx.coroutines.flow.StateFlow
+import com.ghais.data.backend.BackendException
+import com.ghais.data.backend.BackendHttp
+import com.ghais.data.backend.BackendPlatform
+import com.ghais.data.backend.TokenBundle
+import io.ktor.http.HttpMethod
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.json.*
 
-/**
- * Currently signed-in user, as last confirmed by Appwrite (`account.get()`).
- */
-data class AuthSession(
-    val userId: String,
-    val email: String,
-    val name: String,
-)
+internal class AuthUserException(message: String) : Exception(message)
 
-/**
- * Email+password and Google-OAuth authentication against Appwrite Cloud.
- *
- * Platform notes: the official Appwrite Kotlin SDK (`io.appwrite:sdk-for-kotlin`)
- * is JVM-only, so the live implementation lives in `androidMain` ([actual]
- * below) while iOS is a stub until a Native HTTP path lands. UI talks only to
- * this contract. Configure endpoint + project id in [AppwriteConfig]; all calls
- * fail with a clear message while unconfigured.
- */
-expect object AuthRepository {
-    /** Observable signed-in user; `null` = signed out (or not yet checked). */
-    val session: StateFlow<AuthSession?>
+data class AuthSession(val userId: String, val email: String, val name: String)
 
-    /** True once refreshSession() has completed at least once (session may still be null = signed out). False = restore not yet attempted; UI must show splash, never the auth gate. */
-    val authChecked: StateFlow<Boolean>
+/** Shared Render authentication, including persistent offline identity. */
+object AuthRepository {
+    private val _session = MutableStateFlow<AuthSession?>(null)
+    val session = _session.asStateFlow()
+    private val _cachedSession = MutableStateFlow<AuthSession?>(null)
+    val cachedSession = _cachedSession.asStateFlow()
+    private val _authChecked = MutableStateFlow(false)
+    val authChecked = _authChecked.asStateFlow()
 
-    /**
-     * Last-known signed-in user from persistent storage (survives restarts),
-     * independent of the last network refresh. Non-null while a login has not
-     * been explicitly signed out — lets the UI enter main content in offline
-     * mode when [session] is null only because the refresh failed without
-     * connectivity. Never null on a fresh install / after sign-out.
-     */
-    val cachedSession: StateFlow<AuthSession?>
+    fun init() {
+        BackendHttp.onSessionExpired = {
+            _session.value = null
+            _cachedSession.value = null
+        }
+        BackendHttp.init()
+        _cachedSession.value = BackendHttp.tokens.value?.asSession()
+    }
 
-    /** Registers a new account and immediately signs the user in. */
-    suspend fun signUp(email: String, name: String, password: String): Result<Unit>
+    private fun TokenBundle.asSession() = AuthSession(userId, email, name)
+    private suspend fun authenticate(path: String, fields: Map<String, String>): Result<Unit> = safe {
+        val pair = BackendHttp.authenticate(path, fields)
+        BackendHttp.adopt(pair)
+        _cachedSession.value = pair.asSession()
+        _session.value = pair.asSession()
+        _authChecked.value = true
+    }
 
-    /** Signs in with an existing email+password account. */
-    suspend fun signIn(email: String, password: String): Result<Unit>
+    suspend fun signUp(email: String, name: String, password: String): Result<Unit> {
+        if (name.isBlank()) return Result.failure(Exception("Enter your name."))
+        if (password.length < 8) return Result.failure(Exception("Password must be at least 8 characters."))
+        return authenticate("/auth/register", mapOf("email" to email.trim(), "name" to name, "password" to password))
+    }
+    suspend fun signIn(email: String, password: String) =
+        authenticate("/auth/login", mapOf("email" to email.trim(), "password" to password))
 
-    /**
-     * Starts Google OAuth (opens the provider page in the system browser;
-     * completes via the `ghais://auth` redirect). Console setup required:
-     * Google provider enabled, native platforms registered, redirect URL
-     * allow-listed (see KDoc on the android actual).
-     */
-    suspend fun signInWithGoogle(): Result<Unit>
+    suspend fun signInWithGoogle(): Result<Unit> {
+        val token = safe { BackendPlatform.googleIdToken() }
+        return token.fold(
+            onSuccess = { authenticate("/auth/google", mapOf("idToken" to it)) },
+            onFailure = { Result.failure(it) },
+        )
+    }
 
-    /** Signs out (local state always cleared, even if the network call fails). */
-    suspend fun signOut(): Result<Unit>
+    suspend fun signOut(): Result<Unit> {
+        try {
+            BackendHttp.request(HttpMethod.Delete, "/auth/refresh")
+        } catch (e: CancellationException) { throw e
+        } catch (_: Exception) {
+            // Offline logout must still clear local identity.
+        } finally {
+            BackendHttp.adopt(null)
+            _session.value = null
+            _cachedSession.value = null
+            _authChecked.value = true
+        }
+        return Result.success(Unit)
+    }
 
-    /** Re-checks the current user (call on app launch). */
-    suspend fun refreshSession()
+    suspend fun refreshSession() {
+        init()
+        try {
+            if (BackendHttp.tokens.value == null) { _session.value = null; return }
+            val obj = Json.parseToJsonElement(BackendHttp.request(HttpMethod.Get, "/auth/me")).jsonObject
+            val current = BackendHttp.tokens.value ?: return
+            val user = AuthSession(obj.getValue("userId").jsonPrimitive.content,
+                obj.getValue("email").jsonPrimitive.content, obj.getValue("name").jsonPrimitive.content)
+            if (current.userId == user.userId) {
+                BackendHttp.adopt(current.copy(email = user.email, name = user.name))
+                _session.value = user
+                _cachedSession.value = user
+            }
+        } catch (e: CancellationException) { throw e
+        } catch (e: Exception) {
+            _session.value = null
+            if (e is BackendException && e.code == 401) BackendHttp.adopt(null)
+            _cachedSession.value = BackendHttp.tokens.value?.asSession()
+        } finally { _authChecked.value = true }
+    }
+
+    private suspend fun <T> safe(block: suspend () -> T): Result<T> = try {
+        Result.success(block())
+    } catch (e: CancellationException) { throw e
+    } catch (e: Exception) {
+        val message = if (e is AuthUserException) e.message ?: "Sign-in failed. Please retry." else if (e is BackendException) when (e.code) {
+            400 -> "Check your details and try again."
+            401 -> "Invalid email or password."
+            409 -> "An account with this email already exists. Log in instead."
+            429 -> "Too many attempts. Please wait and try again."
+            else -> "Service unavailable. Try again later."
+        } else "Unable to connect. Check your connection and try again."
+        Result.failure(Exception(message))
+    }
 }

@@ -9,7 +9,6 @@ kotlinx-coroutines = "1.10.2"
 coil = "3.1.0"
 voyager = "1.1.0-beta03"
 multiplatform-settings = "1.3.0"
-appwrite = "22.0.0"
 androidx-credentials = "1.3.0"
 play-services-auth = "21.2.0"
 googleid = "1.1.1"
@@ -53,7 +52,6 @@ coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version
 multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatform-settings" }
 multiplatform-settings-no-arg = { module = "com.russhwolf:multiplatform-settings-no-arg", version.ref = "multiplatform-settings" }
 
-appwrite-sdk-kotlin = { module = "io.appwrite:sdk-for-kotlin", version.ref = "appwrite" }
 
 androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "androidx-credentials" }
 androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "androidx-credentials" }

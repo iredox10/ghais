@@ -1,3 +1,5 @@
+import java.net.URI
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
@@ -60,9 +62,6 @@ kotlin {
         }
         
         androidMain.dependencies {
-            // Appwrite Kotlin SDK is JVM-only: Android gets the live SDK,
-            // iOS uses a stub until a Native HTTP path lands.
-            implementation(libs.appwrite.sdk.kotlin)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.koin.android)
             implementation(libs.androidx.activity.compose)
@@ -86,8 +85,23 @@ kotlin {
 android {
     namespace = "com.ghais.shared"
     compileSdk = 37
+    buildFeatures { buildConfig = true }
     defaultConfig {
         minSdk = 26
+        buildConfigField("String", "BACKEND_ENDPOINT", "\"\"")
+    }
+    buildTypes {
+        getByName("debug") {
+            val localEndpoint = providers.gradleProperty("ghais.backendUrl").orNull
+            if (localEndpoint != null) {
+                val url = URI(localEndpoint)
+                require(url.scheme in listOf("http", "https") && url.host in listOf("localhost", "127.0.0.1", "10.0.2.2") &&
+                    url.userInfo == null && url.query == null && url.fragment == null && url.path == "/v1") {
+                    "ghais.backendUrl must be a local API URL ending in /v1"
+                }
+                buildConfigField("String", "BACKEND_ENDPOINT", "\"$localEndpoint\"")
+            }
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

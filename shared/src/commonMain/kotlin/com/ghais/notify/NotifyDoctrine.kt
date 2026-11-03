@@ -226,4 +226,7 @@ interface Notifier {
  *   `ScheduleEngine.ios` (iOS needs BGTask + notification infra, out of
  *   scope — same documented boundary).
  */
-expect object NotifyScheduler : Notifier
+expect object NotifyScheduler : Notifier {
+    override fun scheduleDaily(hour: Int, minute: Int, channel: String)
+    override fun cancel(channel: String)
+}

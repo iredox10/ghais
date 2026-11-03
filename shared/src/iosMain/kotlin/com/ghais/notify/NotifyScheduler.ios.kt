@@ -9,11 +9,11 @@ package com.ghais.notify
  * platform branches.
  */
 actual object NotifyScheduler : Notifier {
-    override fun scheduleDaily(hour: Int, minute: Int, channel: String) {
+    actual override fun scheduleDaily(hour: Int, minute: Int, channel: String) {
         // No-op on iOS (see above).
     }
 
-    override fun cancel(channel: String) {
+    actual override fun cancel(channel: String) {
         // No-op on iOS (see above).
     }
 }

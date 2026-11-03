@@ -42,7 +42,7 @@ class ScheduleAlarmReceiver : BroadcastReceiver() {
         try {
             val appContext = context.applicationContext
             ScheduleEngine.init(appContext)
-            com.ghais.data.auth.AuthRepository.init(appContext)
+            com.ghais.data.auth.AuthRepository.init()
             if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
                 intent.action == AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED
             ) {

@@ -39,7 +39,7 @@ fun yesterdayTopEntries(
     limit: Int = 5,
 ): List<YesterdayTopEntry>? = try {
     if (limit <= 0 || history.isEmpty() || nowMs <= 0L) return null
-    val todayDay = Math.floorDiv(nowMs, YESTERDAY_MILLIS_PER_DAY)
+    val todayDay = (nowMs / YESTERDAY_MILLIS_PER_DAY)
     val from = (todayDay - 1) * YESTERDAY_MILLIS_PER_DAY
     val to = todayDay * YESTERDAY_MILLIS_PER_DAY
     val counts = HashMap<String, Int>()

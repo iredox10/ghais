@@ -76,7 +76,7 @@ object TranslationCatalog {
             .mapValues { (_, items) ->
                 items.sortedWith(compareBy({ it.languageName }, { it.englishName }))
             }
-            .toSortedMap()
+            .entries.sortedBy { it.key }.associate { it.key to it.value }
 
     // ---------------------------------------------------------------------
 
