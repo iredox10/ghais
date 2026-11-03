@@ -10,7 +10,7 @@ backend/
   src/index.ts            server entry (healthz + route registration)
   src/config.ts           env settings (DATABASE_URL, JWT_SECRET, GOOGLE_*…)
   src/db.ts               pg pool
-  src/db/schema.sql       full DDL (users + 21 document tables) — idempotent
+  src/db/schema.sql       full DDL (users + 24 document tables) — idempotent
   src/tokens.ts           access JWT (jose) + rotating refresh tokens
   src/routes/auth.ts      /v1/auth/{register,login,refresh}
   src/routes/google.ts    /v1/auth/google (on-device Google ID token verify)
@@ -51,34 +51,41 @@ Same paths/shapes as Appwrite document REST, in database `ghais`:
 | Access class | Collections | Client rules |
 |---|---|---|
 | `public` | charts, broadcasts, reciters, reciter_stats, global_charts | anon read; writes admin-only |
-| `user` | likes, playback_state, follows, listening_stats, schedules, history, routine_backups, user_prefs, khatma_plans, play_events | Bearer; owner-forced |
+| `user` | likes, playback_state, follows, listening_stats, schedules, history, routine_backups, user_prefs, khatma_plans, play_events, hifz_mastery, search_history, telemetry | Bearer; owner-forced |
 | `catalog` | playlists, playlist_items | anon read; owner-scoped writes |
 | `social` | devotion, leagues, friendships, achievements | auth read-any; write-own/member |
 
 Document payloads live verbatim in JSONB (`doc`), so attribute naming drift
 (snake_case vs camelCase) is preserved exactly as the app writes it.
 
-## Deploy on Render
+## Deploy on Heroku
 
-1. Render dashboard -> "New" -> "Blueprint" -> point at `iredox10/ghais`
-   (branch with render.yaml). It creates `ghais-api` (web) + `ghais-db` (postgres).
-2. Set env vars on the web service: `JWT_SECRET` (generated), `ADMIN_TOKEN`
-   (anything strong), `GOOGLE_WEB_CLIENT_ID`
-   (`674819710970-0daleci989c7jfgoppplppm29i8md1of.apps.googleusercontent.com`).
-3. First build runs `npm run migrate` automatically.
-4. Optional data import: run `scripts/export-appwrite.mjs` locally with an
-   Appwrite server key, then `DATABASE_URL=<render db> node scripts/seed.mjs`.
-5. **Postgres plan**: the Render `free` database expires after ~30 days; switch
-   the DB to a paid plan (or export + re-seed) before then. Web `free` plan
-   spins down when idle (cold starts ~30s) — upgrade if latency matters.
-6. Charts refresh: create a Render CronJob (or any scheduler) hitting
-   `POST /v1/jobs/charts-rollup` with `Authorization: Bearer <ADMIN_TOKEN>` daily.
+The root `package.json` installs and builds this backend with the Node buildpack. The root `Procfile` runs the database migration in the release phase and starts the web process. See [Heroku deployment](../docs/heroku-deployment.md) for configuration and cutover steps. Configure `DATABASE_SSL_CA=backend/certs/rds-global-bundle.pem` for Heroku Postgres certificate verification. The importer accepts the same environment variable; use the correct path relative to its working directory.
 
-## Decommissioning Appwrite
+## Application client and scheduled jobs
 
-1. Point the app's endpoint at this API (the app-side change replaces
-   `AppwriteConfig.ENDPOINT`; repositories stay untouched thanks to the shim).
-2. After a release window with no green traffic: close the Appwrite Cloud
-   project (`Settings` -> delete) and drop `io.appwrite` from the Gradle
-   version catalog (keep it ONLY while `SyncEngine` still uses the SDK's
-   Databases REST client to speak to the shim).
+The app uses shared Ktor HTTP code for auth and document sync on Android and iOS. It no longer includes the Appwrite SDK. `BackendConfig.ENDPOINT` points at this API; document paths/shapes remain compatible. iOS Google UI is supplied by the native host through `IosGoogleSignIn.idTokenProvider`.
+
+Copy Heroku’s `ADMIN_TOKEN` into GitHub Actions secret `HEROKU_ADMIN_TOKEN` to enable `.github/workflows/charts-rollup.yml` (daily at 03:00 UTC, plus manual dispatch). Set repository variable `HEROKU_API_URL` if the API uses a different host. The job refreshes both charts and reciter follower/like counts. It replaces the legacy `appwrite/functions/aggregate-charts` function, including per-owner/surah/day deduplication and velocity trending. Play-event `ms` is listened duration, not an event timestamp; chart windows use the server `created_at` timestamp.
+
+## Tests
+
+```bash
+npm run build
+npm test
+```
+
+The backend regression suite substitutes database I/O to verify document ownership, membership, guest catalog access, query validation, migration collection coverage, token consumption, and aggregation. It does not replace a deployment smoke test against real PostgreSQL.
+
+## Data cutover
+
+The export/import scripts cover all 24 document collections. Both accept an optional collection allowlist. For a catalog-only transfer:
+
+```bash
+node scripts/export-appwrite.mjs charts broadcasts playlists playlist_items reciters reciter_stats global_charts
+node scripts/seed.mjs charts broadcasts playlists playlist_items reciters reciter_stats global_charts
+```
+
+Provide Appwrite operator credentials only to the exporter and `DATABASE_URL` only to the importer. Existing Appwrite sessions and account passwords are not imported. Private documents preserve their owner IDs: importing them requires matching accounts with the same IDs; a newly registered account receives a new ID and cannot read the previous owner's documents. Do not treat a private-document export as a complete account migration.
+
+After validating the deployed app and any required account/data transfer, retire the Appwrite project. Legacy schema/function files remain as migration references and are not called by the app.

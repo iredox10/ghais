@@ -1,49 +1,50 @@
-# Render Migration — Ghaith backend off Appwrite Cloud
+# Appwrite to Heroku migration
 
-Branch: `feature/render-migration` (base `main` @ `b3bfac8`)
-Strategy: **one custom Fastify/Node API + Render Postgres** replaces Appwrite Cloud
-(project `tikitakatalk`, region `fra`, DB `ghais`). Self-hosting Appwrite on Render
-was evaluated and rejected (multi-container, unsupported).
+Branch: `feature/render-migration`, based on `main` at `b3bfac8`.
 
-Key constraint driving the design: the app speaks raw Appwrite REST over Ktor
-(`X-Appwrite-Project` header, `/v1/databases/{db}/collections/{c}/documents`).
-We keep those call sites UNCHANGED by serving a **document-compat shim** on the
-new API. Auth is rewritten to tokens (Appwrite cookie sessions don't map).
+The app now targets a custom Fastify API and PostgreSQL on Heroku. The document URL and JSON shapes remain compatible with existing data; the app uses its own shared Ktor transport instead of the Appwrite SDK.
 
-## Phase 0 — Inventory (done during planning)
-- [x] Transport: raw Appwrite REST over Ktor (commonMain repositories)
-- [x] Auth: `io.appwrite:sdk-for-kotlin` 22.0.0 in androidMain; email+password + Google ID-token exchange (`/account/sessions/id-token`, persistent cookie jar); iOS actual mirrors
-- [x] Collections (DB `ghais`): charts, broadcasts, editorial (+playlist_items), reciters (+visibility), reciter_stats, followed_reciters, devotion, leagues, friendships, global_charts, achievements, favorites, play_events (+ per-store: hifz_mastery, schedules, custom_routines, onboarding, user_playlists, users)
-- [x] No Appwrite Functions, no Storage buckets → document DB + auth is the full surface
-- [x] Deep link: `appwrite-callback-tikitakatalk` scheme in manifest (OAuth bounce) — replaced by `ghais://auth` only if a browser dance remains needed; native ID-token flow needs no bounce
+## Implemented
 
-## Phase 1 — Backend scaffold (`/backend`)
-- [ ] Fastify + TypeScript + `pg`, ESM, tsx dev, tsc build; `/healthz`
-- [ ] `render.yaml` blueprint (web service + postgres, build runs `migrate`)
-- [ ] Deps pre-installed for all later units: pg, jose, bcryptjs, zod, cors
-- [ ] Stub route modules pre-registered in `src/index.ts` (agents fill files, never touch index.ts)
+- [x] Fastify API, health check, PostgreSQL schema, Heroku release configuration
+- [x] Email/password registration and login, Google ID-token verification
+- [x] Access JWTs, persistent refresh tokens, atomic refresh-token consumption, logout revocation
+- [x] Shared Android/iOS auth and document HTTP transport, serialized refresh and single retry on 401
+- [x] Preserve offline identity on transient refresh failures; clear identity on rejected refresh
+- [x] Shared sync engine: favorites, follows, playback, stats, history, schedules, Khatma, Hifz mastery, search history, routines, preferences, play events, and telemetry
+- [x] Public catalog, reciter images/statistics, broadcasts, editorial playlists, and charts
+- [x] Remove Appwrite SDK, cookie jar, browser OAuth callback, and Cloud endpoint from application code
+- [x] All 24 document collections covered by SQL schema and export/import scripts
+- [x] User-scoped ownership, social membership checks, playlist item ownership, anonymous catalog document reads
+- [x] Chart aggregation parity: UTC-day dedupe, correct yesterday window, 7d/30d rankings, velocity-based trending
+- [x] Reciter follower/like count aggregation
+- [x] Daily GitHub Actions job, guarded by `HEROKU_ADMIN_TOKEN`
+- [x] Regression tests for backend contracts and shared HTTP/token behavior
 
-## Phase 2 — Server units (parallel subagents)
-- [ ] **U2 Schema**: `src/db/schema.sql` + `migrate.ts` — typed columns per collection + owner/`created_at`/`updated_at`, users table
-- [ ] **U3 Auth**: email+password register/login, bcrypt, access JWT (jose) + revocable refresh (hashed in DB), `/v1/auth/*`
-- [ ] **U4 Google**: `POST /v1/auth/google` verifying on-device Google ID token via JWKS (audience = web client ID set), user upsert/link — no client secret needed
-- [ ] **U5 Compat shim**: Appwrite document REST shape → SQL; `X-Appwrite-Project` gate; public vs user-scoped collections; Bearer JWT scoping
-- [ ] **U6 Public data**: tables/seed for charts, broadcasts, editorial, reciters (+visibility, reciter_stats), charts-rollup job route
-- [ ] **U7 Query DSL**: Appwrite `queries[]` JSON → SQL translation for every query pattern the stores use (test script)
-- [ ] **U8 Social**: devotion/leagues/friendships/global_charts/achievements shape fit + server helpers (`SocialContracts` reuse)
+Historical `appwrite://likes/...` values remain recognized as local placeholders so existing favorites can be restored. They do not make network calls.
 
-## Phase 3 — App side
-- [ ] **U9**: `BackendConfig` (endpoint), AuthRepository rewrite to token flow (Android + iOS actuals, no SDK, no cookie jar), settings-based token storage, manifest scheme swap, drop `io.appwrite` dependency
-- [ ] Build app (`assembleDebug`/`assembleRelease`) green on the branch
-- [ ] **U10**: Appwrite export/seed script for editorial/catalog content + decommission notes
+## Operational steps still required
 
-## Phase 4 — Cutover & decommission
-- [ ] Manual: user connects repo to Render (blueprint), flips plans (free Postgres expires ~30 days), sets secrets
-- [ ] Push branch → PR → merge → deploy
-- [ ] One-shot data carry-over only if user wants anything from Appwrite (default: start clean)
-- [ ] Remove `AppwriteConfig` remnants; close Appwrite project
+- [ ] Restore Heroku and GitHub authentication and verify the deployed release, environment, and database configuration.
+- [ ] Publish the committed work and configure automatic Heroku deployment if desired; the scheduled chart workflow must be on the default branch and use `HEROKU_ADMIN_TOKEN`.
+- [ ] Decide which existing documents to transfer; run export/import with operator credentials if needed.
+- [ ] Test registration, login, Google login, logout, offline restart, sync, catalog, and jobs against the deployed service.
+- [ ] Retire Appwrite only after validating the cutover.
 
-## Rules
-- Coordinator builds + commits (micro commit per unit); subagents never run git
-- Never commit `androidApp/build.gradle.kts` (user's local file)
-- File ownership is disjoint per unit; `src/index.ts`/`package.json` frozen after U1
+The Heroku deployment notes report an existing app and database; this does not establish that the current local commits are deployed. Existing Appwrite cookie sessions cannot authenticate to the new API. The importer does not import accounts or passwords. Private documents retain their original owner IDs, so importing them requires an account migration preserving those IDs; re-registering with a new ID does not attach old cloud data. Catalog-only imports do not have this requirement.
+
+## iOS
+
+Authentication (email/password), token refresh, and sync now share the backend implementation with Android. There is no iOS host/Xcode project in this repository, so iOS build/runtime verification requires a macOS host project. Native Google UI must provide a Google ID token through `IosGoogleSignIn.idTokenProvider`; without it, users receive an explicit email-sign-in fallback message. Other pre-existing iOS features, such as scheduling and voice recording, are separate platform work.
+
+Social collections are available through the backend; local/feature-flagged social functionality is not expanded by this migration.
+
+## Verification
+
+- Android debug APK build passed.
+- Shared Kotlin metadata compilation passed; portable replacements preserve the existing cache, sort, filter, and ranking behavior.
+- 812 shared/Android unit tests passed, including five backend-client regression tests.
+- Backend TypeScript build and seven backend regression tests passed.
+- Export/import scripts passed JavaScript syntax checks.
+
+These checks do not exercise a deployed PostgreSQL service or an iOS host app.

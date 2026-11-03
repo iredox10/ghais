@@ -1,6 +1,6 @@
 package com.ghais.data.auth
 
-/** Render API settings. No server secret is shipped in the app. */
+/** Backend API settings. No server secret is shipped in the app. */
 object BackendConfig {
     const val PRODUCTION_ENDPOINT = "https://ghaith-c77c2426ed4d.herokuapp.com/v1"
     val ENDPOINT: String get() = com.ghais.data.backend.BackendPlatform.apiEndpoint
