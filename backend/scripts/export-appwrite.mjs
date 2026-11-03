@@ -38,6 +38,9 @@ const ALL = [
   'friendships',
   'global_charts',
   'achievements',
+  'hifz_mastery',
+  'search_history',
+  'telemetry',
 ];
 
 const pages = 100;
@@ -49,10 +52,12 @@ async function pull(collection) {
   let offset = 0;
   for (;;) {
     const queries = [
-      { method: 'limit', value: pages },
-      { method: 'offset', value: offset },
+      JSON.stringify({ method: 'limit', values: [pages] }),
+      JSON.stringify({ method: 'offset', values: [offset] }),
     ];
-    const url = `${ENDPOINT}/databases/ghais/collections/${collection}/documents?queries=${encodeURIComponent(JSON.stringify(queries))}`;
+    const params = new URLSearchParams();
+    queries.forEach(q => params.append('queries[]', q));
+    const url = `${ENDPOINT}/databases/ghais/collections/${collection}/documents?${params}`;
     const res = await fetch(url, {
       headers: { 'X-Appwrite-Project': PROJECT, 'X-Appwrite-Key': API_KEY },
     });
@@ -72,6 +77,9 @@ async function pull(collection) {
 
 const wanted = process.argv.slice(2);
 const targets = wanted.length > 0 ? wanted : ALL;
+for (const collection of targets) {
+  if (!ALL.includes(collection)) throw new Error(`Unknown collection: ${collection}`);
+}
 let failures = 0;
 for (const collection of targets) {
   try {

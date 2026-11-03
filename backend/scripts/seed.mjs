@@ -40,6 +40,9 @@ const ALL = [
   'friendships',
   'global_charts',
   'achievements',
+  'hifz_mastery',
+  'search_history',
+  'telemetry',
 ];
 
 /** Appwrite Document JSON -> (id, owner, doc) insertion triple. */
@@ -53,7 +56,7 @@ function rowOf(collection, document) {
   delete data.$createdAt;
   delete data.$updatedAt;
   const owner =
-    data.user_id ?? data.userId ?? data.ownerId ?? (collection === 'reciters' || collection === 'broadcasts' ? null : null);
+    data.user_id ?? data.userId ?? data.ownerId ?? data.owner_id ?? null;
   const ownerColumn = typeof owner === 'string' && owner ? owner : null;
   // createdAt/updatedAt are preserved as columns.
   const createdAt = document.$createdAt ? new Date(document.$createdAt) : new Date();
@@ -64,6 +67,9 @@ function rowOf(collection, document) {
 const pool = new Pool({ connectionString: DATABASE_URL });
 const wanted = process.argv.slice(2);
 const targets = wanted.length > 0 ? wanted : ALL;
+for (const collection of targets) {
+  if (!ALL.includes(collection)) throw new Error(`Unknown collection: ${collection}`);
+}
 const exportDir = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'export');
 let failures = 0;
 
@@ -85,12 +91,17 @@ for (const collection of targets) {
     for (const raw of documents) {
       const { id, owner, doc, createdAt, updatedAt } = rowOf(collection, raw);
       if (!id || id === 'unique()') continue; // server-generated ids already resolved in the export
+      // Item documents carry a playlist ID, not a user ID. Inherit the
+      // parent's owner so imported routines remain editable by their owner.
+      const resolvedOwner = collection === 'playlist_items'
+        ? (await client.query('SELECT owner FROM playlists WHERE id = $1', [doc.playlist_id])).rows[0]?.owner ?? owner
+        : owner;
       await client.query(
         `INSERT INTO ${collection}(id, owner, doc, created_at, updated_at)
          VALUES ($1,$2,$3,$4,$5)
          ON CONFLICT (id) DO UPDATE SET doc = EXCLUDED.doc, owner = COALESCE(${collection}.owner, EXCLUDED.owner),
            created_at = ${collection}.created_at, updated_at = EXCLUDED.updated_at`,
-        [id, owner, doc, createdAt, updatedAt],
+        [id, resolvedOwner, doc, createdAt, updatedAt],
       );
     }
     await client.query('COMMIT');
