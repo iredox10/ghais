@@ -7,6 +7,7 @@
 // `users` are intentionally NOT seeded (Appwrite password hashes are
 // non-portable; users re-register, per the start-clean decision).
 import { readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
 
@@ -64,7 +65,10 @@ function rowOf(collection, document) {
   return { id, owner: ownerColumn, doc: data, createdAt, updatedAt };
 }
 
-const pool = new Pool({ connectionString: DATABASE_URL });
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: process.env.DATABASE_SSL_CA ? { ca: readFileSync(process.env.DATABASE_SSL_CA, 'utf8') } : undefined,
+});
 const wanted = process.argv.slice(2);
 const targets = wanted.length > 0 ? wanted : ALL;
 for (const collection of targets) {
