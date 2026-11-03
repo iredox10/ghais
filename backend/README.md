@@ -60,7 +60,7 @@ Document payloads live verbatim in JSONB (`doc`), so attribute naming drift
 
 ## Deploy on Heroku
 
-The root `package.json` installs and builds this backend with the Node buildpack. The root `Procfile` runs the database migration in the release phase and starts the web process. See [Heroku deployment](../docs/heroku-deployment.md) for configuration and cutover steps. Configure `DATABASE_SSL_CA=backend/certs/rds-global-bundle.pem` for Heroku Postgres certificate verification. The importer accepts the same environment variable; use the correct path relative to its working directory.
+The root `package.json` installs and builds this backend with the Node buildpack. The root `Procfile` runs the database migration in the release phase and starts the web process. See [Heroku deployment](../docs/heroku-deployment.md) for configuration and cutover steps. Configure `DATABASE_SSL_CA=/app/backend/certs/rds-global-bundle.pem` for Heroku Postgres certificate verification. The importer accepts the same environment variable; when running locally, use the absolute path to the local certificate file instead.
 
 ## Application client and scheduled jobs
 
