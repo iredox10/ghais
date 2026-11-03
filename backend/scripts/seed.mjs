@@ -81,11 +81,17 @@ for (const collection of targets) {
   let documents;
   try {
     documents = JSON.parse(await readFile(path.join(exportDir, `${collection}.json`), 'utf8'));
-  } catch {
-    console.warn(`${collection}: no export file, skipped.`);
+  } catch (error) {
+    failures++;
+    console.error(`${collection}: could not read export: ${error.message}`);
     continue;
   }
-  if (!Array.isArray(documents) || documents.length === 0) {
+  if (!Array.isArray(documents)) {
+    failures++;
+    console.error(`${collection}: export must be a JSON array.`);
+    continue;
+  }
+  if (documents.length === 0) {
     console.log(`${collection}: empty export, skipped.`);
     continue;
   }
