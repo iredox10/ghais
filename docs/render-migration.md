@@ -27,7 +27,7 @@ Historical `appwrite://likes/...` values remain recognized as local placeholders
 
 - [ ] Restore Heroku and GitHub authentication and verify the deployed release, environment, and database configuration.
 - [ ] Publish the committed work and configure automatic Heroku deployment if desired; the scheduled chart workflow must be on the default branch and use `HEROKU_ADMIN_TOKEN`.
-- [ ] Decide which existing documents to transfer; run export/import with operator credentials if needed.
+- [x] Use the existing Heroku catalog and bundled app data; Appwrite reads are blocked, so old cloud accounts and private documents are unavailable for this cutover.
 - [ ] Test registration, login, Google login, logout, offline restart, sync, catalog, and jobs against the deployed service.
 - [ ] Retire Appwrite only after validating the cutover.
 
