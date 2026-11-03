@@ -6,4 +6,4 @@ The Android production endpoint targets the Heroku API. A debug APK was built an
 
 The Appwrite data export has not run. Add a server key with `databases.read` permission to `APPWRITE_API_KEY` in the private, Git-ignored `backend/.env.heroku`. Existing Appwrite accounts and private documents need an identity-preserving migration; importing documents alone does not migrate passwords or reconnect accounts.
 
-The currently active resources are one Basic web dyno and one Essential-0 PostgreSQL database.
+On 2026-11-03, a read-only check found the app healthy, one Basic web dyno and one Essential-0 PostgreSQL database. The database contained 242 reciter records, one chart record, and no users, playlists, or play events. This is a snapshot, not proof that all catalog data has been migrated. The deployed release was v10 from 2026-10-29; later local commits still need deployment. The required database, signing, admin, and Google configuration keys were present; their secret values were not displayed.
