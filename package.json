@@ -1,0 +1,11 @@
+{
+  "name": "ghaith-heroku",
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "heroku-postbuild": "npm --prefix backend ci --include=dev && npm --prefix backend run build",
+    "start": "node backend/dist/index.js"
+  }
+}
