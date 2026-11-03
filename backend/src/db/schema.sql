@@ -45,7 +45,7 @@ BEGIN
     'history','reciter_stats','routine_backups','user_prefs','khatma_plans',
     'broadcasts','play_events','playlists','playlist_items','charts','reciters',
     'devotion','leagues','friendships','global_charts','achievements',
-    'hifz_mastery','search_history'
+    'hifz_mastery','search_history','telemetry'
   ] LOOP
     EXECUTE format(
       'CREATE TABLE IF NOT EXISTS %I (

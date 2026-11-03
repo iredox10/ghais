@@ -57,12 +57,11 @@ export async function issueRefreshToken(userId: string): Promise<string> {
 export async function rotateRefreshToken(raw: string): Promise<{ userId: string } | null> {
   const hash = sha256(raw);
   const { rows } = await query<{ user_id: string; expires_at: Date }>(
-    'SELECT user_id, expires_at FROM refresh_tokens WHERE token_hash = $1',
+    'DELETE FROM refresh_tokens WHERE token_hash = $1 RETURNING user_id, expires_at',
     [hash],
   );
   if (rows.length === 0) return null;
   const row = rows[0];
-  await query('DELETE FROM refresh_tokens WHERE token_hash = $1', [hash]);
   if (row.expires_at.getTime() < Date.now()) return null;
   return { userId: row.user_id };
 }

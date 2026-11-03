@@ -61,7 +61,7 @@ export default async function compatRoutes(app: FastifyInstance) {
   app.get('/:db/collections/:collection/documents', async (req: Req, reply) => {
     const { db, collection } = req.params as Record<string, string>;
     if (!assertDb(db)) { notFound(reply, `Database '${db}' not found.`); return reply; }
-    const defs = CATALOG[collection];
+    const defs = Object.hasOwn(CATALOG, collection) ? CATALOG[collection] : undefined;
     if (!defs) { notFound(reply, `Collection '${collection}' not found.`); return reply; }
 
     let userId: string | null = null;
@@ -80,7 +80,10 @@ export default async function compatRoutes(app: FastifyInstance) {
     else if (typeof qs.queries === 'string') queryValues.push(qs.queries);
     else if (qs.queries !== undefined) queryValues.push(qs.queries);
     for (const [key, value] of Object.entries(qs)) {
-      if (/^queries\[\d*\]$/.test(key) && typeof value === 'string') queryValues.push(value);
+      if (/^queries\[\d*\]$/.test(key)) {
+        if (typeof value === 'string') queryValues.push(value);
+        else if (Array.isArray(value)) queryValues.push(...value);
+      }
     }
 
     const whereOwner = defs.access === 'user' ? 'owner = $1' : null;
@@ -113,7 +116,7 @@ export default async function compatRoutes(app: FastifyInstance) {
   app.post('/:db/collections/:collection/documents', async (req: Req, reply) => {
     const { db, collection } = req.params as Record<string, string>;
     if (!assertDb(db)) { notFound(reply, `Database '${db}' not found.`); return reply; }
-    const defs = CATALOG[collection];
+    const defs = Object.hasOwn(CATALOG, collection) ? CATALOG[collection] : undefined;
     if (!defs) { notFound(reply, `Collection '${collection}' not found.`); return reply; }
     if (defs.access === 'public') {
       cannotWrite(reply, `'${collection}' is read-only for clients.`); return reply;
@@ -124,8 +127,20 @@ export default async function compatRoutes(app: FastifyInstance) {
     const body = (req.body ?? {}) as { documentId?: unknown; data?: unknown };
     const rawId = typeof body.documentId === 'string' ? body.documentId.trim() : '';
     const id = !rawId || rawId === 'unique()' ? genId() : rawId;
-    if (id.length > 36) { awError(reply, 400, 'document_invalid_structure', 'Document id too long.'); return reply; }
+    if (id.length > 256) { awError(reply, 400, 'document_invalid_structure', 'Document id too long (maximum 256 characters).'); return reply; }
     const data = sanitizeData(body.data);
+    if (defs.access === 'user' || collection === 'playlists') {
+      for (const attr of defs.ownerAttrs) data[attr] = userId;
+    }
+    if (defs.access === 'social' && !socialCanWrite(defs, { owner: null, doc: data } as Row, userId)) {
+      cannotWrite(reply, 'You must be a document member.'); return reply;
+    }
+    if (collection === 'playlist_items') {
+      const parent = await query<Row>('SELECT owner FROM playlists WHERE id = $1', [data.playlist_id]);
+      if (parent.rows[0]?.owner !== userId) {
+        cannotWrite(reply, 'You do not own this playlist.'); return reply;
+      }
+    }
 
     try {
       const { rows } = await query<Row>(
@@ -150,11 +165,11 @@ export default async function compatRoutes(app: FastifyInstance) {
   app.get('/:db/collections/:collection/documents/:id', async (req: Req, reply) => {
     const { db, collection, id } = req.params as Record<string, string>;
     if (!assertDb(db)) { notFound(reply, `Database '${db}' not found.`); return reply; }
-    const defs = CATALOG[collection];
+    const defs = Object.hasOwn(CATALOG, collection) ? CATALOG[collection] : undefined;
     if (!defs) { notFound(reply, `Collection '${collection}' not found.`); return reply; }
 
     let userId: string | null = null;
-    if (defs.access !== 'public') {
+    if (defs.access === 'user' || defs.access === 'social') {
       userId = await bearerUserId(req);
       if (!userId) { awError(reply, 401, 'user_unauthorized', 'Unauthorized.'); return reply; }
     }
@@ -176,7 +191,7 @@ export default async function compatRoutes(app: FastifyInstance) {
   app.patch('/:db/collections/:collection/documents/:id', async (req: Req, reply) => {
     const { db, collection, id } = req.params as Record<string, string>;
     if (!assertDb(db)) { notFound(reply, `Database '${db}' not found.`); return reply; }
-    const defs = CATALOG[collection];
+    const defs = Object.hasOwn(CATALOG, collection) ? CATALOG[collection] : undefined;
     if (!defs) { notFound(reply, `Collection '${collection}' not found.`); return reply; }
     if (defs.access === 'public') {
       cannotWrite(reply, `'${collection}' is read-only for clients.`); return reply;
@@ -186,6 +201,15 @@ export default async function compatRoutes(app: FastifyInstance) {
 
     const body = (req.body ?? {}) as { data?: unknown };
     const patch = sanitizeData(body.data);
+    if (defs.access === 'user' || collection === 'playlists') {
+      for (const attr of defs.ownerAttrs) patch[attr] = userId;
+    }
+    if (collection === 'playlist_items' && patch.playlist_id !== undefined) {
+      const parent = await query<Row>('SELECT owner FROM playlists WHERE id = $1', [patch.playlist_id]);
+      if (parent.rows[0]?.owner !== userId) {
+        cannotWrite(reply, 'You do not own this playlist.'); return reply;
+      }
+    }
     if (Object.keys(patch).length === 0) {
       awError(reply, 400, 'document_invalid_structure', 'No data to update.');
       return reply;
@@ -221,7 +245,7 @@ export default async function compatRoutes(app: FastifyInstance) {
   app.delete('/:db/collections/:collection/documents/:id', async (req: Req, reply) => {
     const { db, collection, id } = req.params as Record<string, string>;
     if (!assertDb(db)) { notFound(reply, `Database '${db}' not found.`); return reply; }
-    const defs = CATALOG[collection];
+    const defs = Object.hasOwn(CATALOG, collection) ? CATALOG[collection] : undefined;
     if (!defs) { notFound(reply, `Collection '${collection}' not found.`); return reply; }
     if (defs.access === 'public') {
       cannotWrite(reply, `'${collection}' is read-only for clients.`); return reply;

@@ -149,10 +149,12 @@ export function buildList(
         break;
       }
       case 'limit':
-        limit = Number(single) || limit;
+        limit = Number(single);
+        if (!Number.isSafeInteger(limit) || limit < 1) throw new Error('Invalid limit');
         break;
       case 'offset':
-        offset = Number(single) || 0;
+        offset = Number(single);
+        if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Invalid offset');
         break;
       case 'select': {
         const fields = values.filter((v) => typeof v === 'string') as string[];
