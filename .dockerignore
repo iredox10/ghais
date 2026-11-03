@@ -1,0 +1,11 @@
+.git
+**/node_modules
+**/build
+**/dist
+**/.env
+**/.env.*
+!**/.env*.example
+**/export
+*.mp4
+reciter_images
+reciter_images_with_background
