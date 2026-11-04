@@ -1,5 +1,6 @@
 // Appwrite document body/row shapes + error helper.
 import type { QueryResultRow } from 'pg';
+import { portraitUrl } from '../portraits.js';
 
 export interface Row extends QueryResultRow {
   id: string;
@@ -13,6 +14,12 @@ export interface Row extends QueryResultRow {
 export type SharedDoc = Record<string, unknown>;
 
 const iso = (d: Date) => d.toISOString();
+
+function isHttpImage(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  try { return ['http:', 'https:'].includes(new URL(value).protocol); }
+  catch { return false; }
+}
 
 /** pg row -> Appwrite-shaped Document JSON. */
 export function toAppwriteDoc(
@@ -33,6 +40,10 @@ export function toAppwriteDoc(
     if (key.startsWith('$')) continue;
     if (selected && !selected.has(key)) continue;
     out[key] = value;
+  }
+  if (collection === 'reciters' && (!selected || selected.has('image_url')) && !isHttpImage(out.image_url)) {
+    const fallback = portraitUrl(row.doc?.slug);
+    if (fallback) out.image_url = fallback;
   }
   return out;
 }

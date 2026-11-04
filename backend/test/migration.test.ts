@@ -8,6 +8,8 @@ import compatRoutes from '../src/routes/compat.js';
 import { CATALOG } from '../src/compat/catalog.js';
 import { buildList } from '../src/compat/query.js';
 import { aggregateCharts, type ChartEvent } from '../src/charts.js';
+import { portraitRoutes } from '../src/portraits.js';
+import { toAppwriteDoc } from '../src/compat/shape.js';
 
 const originalQuery = pool.query;
 afterEach(() => { pool.query = originalQuery; });
@@ -20,6 +22,30 @@ const path = (collection: string, id = '') => `/v1/databases/ghais/collections/$
 function database(handler: (sql: string, params: any[]) => any[]) {
   pool.query = (async (sql: string, params: any[] = []) => ({ rows: handler(sql, params), rowCount:1 })) as any;
 }
+
+test('reciter catalog supplies available portraits and preserves explicit images', async () => {
+  const slug = 'maher-al-muaiqly';
+  const fallback = toAppwriteDoc(row('maher', null, { slug }), 'reciters', 'ghais', null);
+  assert.match(String(fallback.image_url), /\/v1\/reciter-images\/maher-al-muaiqly\.jpg$/);
+  assert.equal(toAppwriteDoc(row('maher-alias', null, { slug: 'muaiqly' }), 'reciters', 'ghais', null).image_url, fallback.image_url);
+  const explicit = toAppwriteDoc(row('maher', null, { slug, image_url: 'https://example.com/portrait.jpg' }), 'reciters', 'ghais', null);
+  assert.equal(explicit.image_url, 'https://example.com/portrait.jpg');
+  const invalid = toAppwriteDoc(row('maher', null, { slug, image_url: 'not-a-url' }), 'reciters', 'ghais', null);
+  assert.equal(invalid.image_url, fallback.image_url);
+  assert.equal(toAppwriteDoc(row('maher', null, { slug }), 'reciters', 'ghais', new Set(['slug'])).image_url, undefined);
+  assert.equal(toAppwriteDoc(row('unknown', null, { slug: 'no-such-reciter' }), 'reciters', 'ghais', null).image_url, undefined);
+
+  const server = Fastify();
+  await server.register(portraitRoutes, { prefix: '/v1/reciter-images' });
+  try {
+    const image = await server.inject({ url: '/v1/reciter-images/maher-al-muaiqly.jpg' });
+    assert.equal(image.statusCode, 200);
+    assert.match(String(image.headers['content-type']), /^image\/jpeg/);
+    assert.deepEqual([...image.rawPayload.subarray(0, 3)], [0xff, 0xd8, 0xff]);
+    assert.equal((await server.inject({ url: '/v1/reciter-images/missing.jpg' })).statusCode, 404);
+    assert.equal((await server.inject({ url: '/v1/reciter-images/%2e%2e%2fconfig.ts' })).statusCode, 404);
+  } finally { await server.close(); }
+});
 
 test('every collection is provisioned and covered by export/import', () => {
   const schema = readFileSync(new URL('../src/db/schema.sql', import.meta.url), 'utf8');

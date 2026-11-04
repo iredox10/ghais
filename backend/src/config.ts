@@ -4,6 +4,9 @@ import 'dotenv/config';
 export const config = {
   dbUrl: process.env.DATABASE_URL ?? 'postgres://localhost:5432/ghais',
   port: Number(process.env.PORT ?? 8080),
+  publicApiUrl: (process.env.PUBLIC_API_URL ?? ((process.env.NODE_ENV ?? 'production') === 'production'
+    ? 'https://ghaith-c77c2426ed4d.herokuapp.com'
+    : `http://localhost:${process.env.PORT ?? 8080}`)).replace(/\/+$/, ''),
   jwtSecret: process.env.JWT_SECRET ?? 'dev-insecure-jwt-secret',
   /** Google Cloud WEB client id — the audience claimed by on-device ID tokens. */
   googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID ?? '',
