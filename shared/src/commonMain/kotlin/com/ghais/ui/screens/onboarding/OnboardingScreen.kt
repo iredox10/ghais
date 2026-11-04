@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.OnboardingStore
 import com.ghais.data.repository.QuranDataRepository
@@ -90,6 +91,7 @@ object OnboardingScreen : Screen {
         val minutes by OnboardingStore.dailyGoalMinutes.collectAsState()
         val followed by FollowStore.followedSlugs.collectAsState()
         val scope = rememberCoroutineScope()
+        val navigator = LocalNavigator.current
         val startPage = savedStep.coerceIn(0, LastPage)
         val pagerState = rememberPagerState(initialPage = startPage) { PageCount }
         val currentPage = pagerState.currentPage
@@ -115,6 +117,13 @@ object OnboardingScreen : Screen {
 
         fun goTo(page: Int) {
             scope.launch { pagerState.animateScrollToPage(page.coerceIn(0, LastPage)) }
+        }
+
+        fun finishOnboarding() {
+            OnboardingStore.complete()
+            // The signup flow can either render this screen directly or push
+            // it onto the root navigator. A pushed screen must be popped.
+            if (navigator?.lastItem === OnboardingScreen) navigator.pop()
         }
 
         NoirScreenRoot {
@@ -156,7 +165,7 @@ object OnboardingScreen : Screen {
                         textAlign = TextAlign.Center,
                         modifier = Modifier.weight(1f)
                     )
-                    GhostPillButton(text = "Skip", onClick = { OnboardingStore.complete() })
+                    GhostPillButton(text = "Skip", onClick = { finishOnboarding() })
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 DotsRow(current = currentPage)
@@ -228,7 +237,7 @@ object OnboardingScreen : Screen {
                             reminderOn = reminderOn,
                             hour = hour,
                             minute = minute,
-                            onDone = { OnboardingStore.complete() }
+                            onDone = { finishOnboarding() }
                         )
                     }
                 }
