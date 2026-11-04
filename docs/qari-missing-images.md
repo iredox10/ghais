@@ -1,0 +1,56 @@
+# Qaris missing images
+
+The live reciter catalog had no backend-supplied photo for these 52 qaris when checked on 2026-11-04. The app may still display an image from another fallback source or a device cache.
+
+- [ ] Abdelelah bin Oun
+- [ ] Abdulaziz Al-Asiri
+- [ ] Abdulaziz Al-Turki
+- [ ] Abdulbadee Ghailan
+- [ ] Abdulkarim Al-Hazmi
+- [ ] Abdullah Abdl
+- [ ] Abdullah Al-Baijan
+- [ ] Abdullah Al-Meshal
+- [ ] Abdullah Al-Mousa
+- [ ] Abdullah Al-Qarafi
+- [ ] Abdullah Bukhari
+- [ ] Abdulmalik Al-Askar
+- [ ] Abdulrahman Al-Suwaid
+- [ ] Abdulrahman bin Abdulrazzaq Al-Badr
+- [ ] Ahmad Al-Nufais
+- [ ] Ahmad Al-Suwailem
+- [ ] Al-Waleed Al-Shamsan
+- [ ] Alijian Qori Hamdan
+- [ ] Asim Al-Luhaidan
+- [ ] Bader Al-Turki
+- [ ] Haitham Al-Dokhin
+- [ ] Harun Baqai
+- [ ] Hashem Abu Dalal
+- [ ] Ibrahim Al-Shehri
+- [ ] Issa Omar Sanogo
+- [ ] Junaid Adam Abdullah
+- [ ] Khalid Al-Sharekh
+- [ ] Khalid Al-Shuraimi
+- [ ] Khalid Al-Ziyadi
+- [ ] Khalid Karim Mohammadi
+- [ ] Mahmoud Harfoush
+- [ ] Malallah Abdulrahman Al-Jaber
+- [ ] Marwan Al-Akari
+- [ ] Muhammad Al-Bakhit
+- [ ] Muhammad Al-Faqih
+- [ ] Muhammad Al-Zubaidi
+- [ ] Muhammad Barhaji
+- [ ] Muhammad Dibirov
+- [ ] Muhammad Rifat
+- [ ] Mukhtar Al-Hajj
+- [ ] Nadhir Al-Malki
+- [ ] Nasser Al-Asfour
+- [ ] Nasser Al-Majed
+- [ ] Niamat Al-Hassan
+- [ ] Noreen Muhammad Siddiq
+- [ ] Othman Al-Ansari
+- [ ] Saleh Al-Quraishi
+- [ ] Saleh Al-Shamrani
+- [ ] Salman Al-Siddiq
+- [ ] Sayed Ahmad Hashemi
+- [ ] Wadih Al-Yamani
+- [ ] Youssef Al-Aidroos
