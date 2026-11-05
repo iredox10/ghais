@@ -307,7 +307,7 @@ export function setupRecitersSync(
 
   app.post('/api/reciters', async (req, res) => {
     if (!databases || !databaseId) {
-      res.status(503).json({ error: 'Appwrite is not configured.' });
+      res.status(503).json({ error: 'PostgreSQL is not configured.' });
       return;
     }
 
@@ -332,7 +332,7 @@ export function setupRecitersSync(
 
   app.patch('/api/reciters/:id', async (req, res) => {
     if (!databases || !databaseId) {
-      res.status(503).json({ error: 'Appwrite is not configured.' });
+      res.status(503).json({ error: 'PostgreSQL is not configured.' });
       return;
     }
 
@@ -362,7 +362,7 @@ export function setupRecitersSync(
 
   app.delete('/api/reciters/:id', async (req, res) => {
     if (!databases || !databaseId) {
-      res.status(503).json({ error: 'Appwrite is not configured.' });
+      res.status(503).json({ error: 'PostgreSQL is not configured.' });
       return;
     }
 
@@ -424,7 +424,7 @@ export function setupRecitersSync(
 
   app.post('/api/reciters/sync-catalog', async (req, res) => {
     if (!databases || !databaseId) {
-      res.status(503).json({ error: 'Appwrite is not configured.' });
+      res.status(503).json({ error: 'PostgreSQL is not configured.' });
       return;
     }
 

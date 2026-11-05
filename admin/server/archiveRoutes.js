@@ -353,7 +353,7 @@ export function registerArchiveRoutes(app, getContext) {
       const context = getContext();
       const { databases, databaseId, storage } = context;
       if (!databases || !databaseId) {
-        throw requestError('Appwrite is not configured.', 503);
+        throw requestError('PostgreSQL is not configured.', 503);
       }
 
       let reviewed;

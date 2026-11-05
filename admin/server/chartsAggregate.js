@@ -156,7 +156,7 @@ export function registerChartsAggregate(app, getCtx) {
     try {
       const { databases, databaseId } = getCtx();
       if (!databases) {
-        return res.status(503).json({ ok: false, error: 'Appwrite not configured (no API key).' });
+        return res.status(503).json({ ok: false, error: 'PostgreSQL is not configured.' });
       }
       const doc = await databases.getDocument(databaseId, CHARTS_COLLECTION, CHARTS_DOCUMENT_ID);
       return res.json({

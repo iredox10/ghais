@@ -128,7 +128,7 @@ export default function registerPlaybackRoutes(app, getContext) {
             });
           }
         } catch (dbErr) {
-          console.error('Error querying playback_state from Appwrite:', dbErr.message);
+          console.error('Error querying playback_state from PostgreSQL:', dbErr.message);
         }
       }
 

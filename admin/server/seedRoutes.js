@@ -135,7 +135,7 @@ export function registerSeedRoutes(app, getContext) {
       if (!databaseAvailable || !databases || !databaseId) {
         return res.status(503).json({
           success: false,
-          error: 'Appwrite is not configured.',
+          error: 'PostgreSQL is not configured.',
           seeded: 0,
           skipped: total,
           total,
@@ -170,7 +170,7 @@ export function registerSeedRoutes(app, getContext) {
       if (!databaseAvailable || !databases || !databaseId) {
         return res.status(503).json({
           success: false,
-          error: 'Appwrite is not configured.',
+          error: 'PostgreSQL is not configured.',
           seeded: 0,
           skipped: total,
           total,
