@@ -6,9 +6,17 @@ import googleRoutes from './routes/google.js';
 import compatRoutes from './routes/compat.js';
 import jobRoutes from './routes/jobs.js';
 import { portraitRoutes } from './portraits.js';
+import { mountAdmin } from './admin.js';
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: true });
+
+if (process.env.ADMIN_ENABLED === 'true') {
+  // Kept conditional so the mobile API can run independently in development.
+  const adminPath = '../../admin/server/index.js';
+  const { app: adminApp } = await import(adminPath);
+  await mountAdmin(app, adminApp);
+}
 
 app.get('/healthz', async () => ({ status: 'ok' }));
 
