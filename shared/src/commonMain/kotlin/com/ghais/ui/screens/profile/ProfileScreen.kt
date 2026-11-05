@@ -148,6 +148,17 @@ object ProfileScreen : Tab {
             ?: LocalNavigator.current?.parent
             ?: LocalNavigator.current
 
+        val signOut: () -> Unit = { scope.launch { AuthRepository.signOut() } }
+        val openLogin: () -> Unit = {
+            rootNavigator?.push(
+                AuthScreen(onAuthenticated = { isNewAccount ->
+                    if (isNewAccount) OnboardingStore.restartForNewUser()
+                    rootNavigator?.pop()
+                    if (isNewAccount) rootNavigator?.push(OnboardingScreen)
+                })
+            )
+        }
+
         // Auth session (null = guest)
         val session by AuthRepository.session.collectAsState()
 
@@ -202,7 +213,8 @@ object ProfileScreen : Tab {
                     ProfileIdentityPill(
                         displayName = session?.name?.ifBlank { null } ?: userName,
                         email = session?.email,
-                        isGuest = session == null
+                        isGuest = session == null,
+                        onClick = if (session == null) openLogin else signOut
                     )
                     Spacer(modifier = Modifier.height(18.dp))
                 }
@@ -352,30 +364,13 @@ object ProfileScreen : Tab {
                         if (session != null) {
                             com.ghais.ui.screens.profile.NoirLogoutRow(
                                 subtitle = session?.email ?: "Signed in",
-                                onClick = { scope.launch { AuthRepository.signOut() } }
+                                onClick = signOut
                             )
                         } else {
                             com.ghais.ui.screens.profile.NoirLogoutRow(
                                 subtitle = "Sign in to sync",
                                 title = "Sign in",
-                                onClick = {
-                                    rootNavigator?.push(
-                                        AuthScreen(
-                                            onAuthenticated = { isNewAccount ->
-                                                // Signup-only onboarding: fresh
-                                                // accounts get a pushed setup
-                                                // flow; logins just go home.
-                                                if (isNewAccount) {
-                                                    OnboardingStore.restartForNewUser()
-                                                }
-                                                rootNavigator?.pop()
-                                                if (isNewAccount) {
-                                                    rootNavigator?.push(OnboardingScreen)
-                                                }
-                                            }
-                                        )
-                                    )
-                                }
+                                onClick = openLogin
                             )
                         }
                     }

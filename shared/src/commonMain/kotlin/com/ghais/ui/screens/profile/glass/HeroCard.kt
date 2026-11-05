@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -18,6 +18,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -29,9 +32,8 @@ import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 
 /**
- * Phase 3 — Noir identity pill: avatar clay-well + name/email. Renders the
- * chrome "Edit" chip (the tap affordance) only when [onClick] is provided;
- * otherwise it is a static identity display.
+ * Profile identity and optional account action. Guests can log in directly
+ * from the identity card; signed-in users can sign out from the same place.
  */
 @Composable
 fun ProfileIdentityPill(
@@ -40,7 +42,7 @@ fun ProfileIdentityPill(
     isGuest: Boolean,
     onClick: (() -> Unit)? = null
 ) {
-    val subtitle = email?.takeIf { it.isNotBlank() } ?: "Guest mode"
+    val subtitle = if (isGuest) "Guest mode" else email?.takeIf { it.isNotBlank() } ?: "Signed in"
 
     Row(
         modifier = Modifier
@@ -94,16 +96,19 @@ fun ProfileIdentityPill(
         if (onClick != null) {
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Chrome "Edit" affordance chip (reference Enable pill, compact).
+            // Reuse the card's chrome action treatment with a full touch target.
             Box(
                 modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .semantics { role = Role.Button }
                     .background(GhaisNoir.chromeFill(), GhaisShapes.pill)
                     .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
                     .noirClickable(onClick)
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Edit",
+                    text = if (isGuest) "Log in" else "Sign out",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = GhaisNoir.OnChrome
