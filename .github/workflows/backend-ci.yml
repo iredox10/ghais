@@ -60,6 +60,15 @@ jobs:
           exit 1
       - name: Test real HTTP and database operations
         run: npm run smoke:local
+      - name: Verify admin against PostgreSQL
+        working-directory: admin
+        env:
+          TEST_DATABASE_URL: postgres://ghais:ci_database_only@127.0.0.1:5432/ghais
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npm test
+          npm run build -- --base=/admin/
       - name: Include API log on failure
         if: failure()
         run: cat "$RUNNER_TEMP/ghais-api.log" 2>/dev/null || true

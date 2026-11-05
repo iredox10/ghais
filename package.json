@@ -5,7 +5,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "heroku-postbuild": "npm --prefix backend ci --include=dev && npm --prefix backend run build",
+    "heroku-postbuild": "npm --prefix backend ci --include=dev && npm --prefix backend run build && npm --prefix admin ci --include=dev && npm --prefix admin run build -- --base=/admin/ && npm --prefix admin prune --omit=dev",
     "start": "node backend/dist/index.js"
   }
 }
