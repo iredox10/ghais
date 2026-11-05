@@ -30,6 +30,7 @@ import com.ghais.domain.model.RepeatMode
 import com.ghais.domain.model.isFullSurah
 import com.ghais.player.AmbientVideoArt
 import com.ghais.player.AudioEngine
+import com.ghais.player.PlaybackResumeStore
 import com.ghais.player.PlayerBridge
 import com.ghais.player.SleepTimer
 import kotlinx.coroutines.CoroutineScope
@@ -159,21 +160,10 @@ class QuranPlaybackService : MediaSessionService() {
     private var lastShadeButtonsKey: String? = null
 
     private val sessionListener = object : Player.Listener {
-        override fun onIsPlayingChanged(isPlaying: Boolean) {
-            if (isPlaying && !AudioEngine.isPlaying.value) {
-                AudioEngine.resume()
-            } else if (!isPlaying && AudioEngine.isPlaying.value) {
-                // Focus-driven pauses belong to PlayerBridge's Telegram-style
-                // focus owner (it already paused AudioEngine itself);
-                // mirroring them here issued a second USER_REQUEST pause that
-                // cancelled every auto-resume. Skip those, mirror the rest
-                // (e.g. headset-unplug noisy pauses).
-                if (PlayerBridge.isFocusPausedByUs()) return
-                val state = player?.playbackState
-                if (state != Player.STATE_BUFFERING) {
-                    AudioEngine.pause()
-                }
-            }
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            // Buffering is not a pause. Only mirror an actual playback-intent
+            // change (for example, unplugging headphones).
+            if (!playWhenReady && !PlayerBridge.isFocusPausedByUs()) AudioEngine.pause()
         }
     }
 
@@ -223,6 +213,11 @@ class QuranPlaybackService : MediaSessionService() {
                 .also { PlayerBridge.attachPlayer(it) }
         }
         player = exo
+        // A headset/system resume can create the service without MainActivity.
+        PlayerBridge.init(applicationContext)
+        com.ghais.player.AmbientPlayerBridge.init(applicationContext)
+        PlayerBridge.onPlayRequested = { start(applicationContext) }
+        PlaybackResumeStore.restore(applicationContext)
         if (!ownsPlayer) {
             PlayerBridge.attachPlayer(exo)
         }
@@ -230,6 +225,13 @@ class QuranPlaybackService : MediaSessionService() {
         exo.addListener(sessionListener)
 
         val forwardingPlayer = object : androidx.media3.common.ForwardingPlayer(exo) {
+            override fun play() = AudioEngine.resume()
+            override fun pause() = AudioEngine.pause()
+            override fun stop() = AudioEngine.stop()
+            override fun setPlayWhenReady(playWhenReady: Boolean) {
+                if (playWhenReady) AudioEngine.resume() else AudioEngine.pause()
+            }
+
             override fun getAvailableCommands(): Player.Commands {
                 return super.getAvailableCommands().buildUpon()
                     .add(Player.COMMAND_SEEK_TO_NEXT)
@@ -307,55 +309,18 @@ class QuranPlaybackService : MediaSessionService() {
         // Guarantee FGS promotion within the 10s rule even if the Media3
         // notification update is delayed (blank metadata, slow network).
         // Media3 replaces this placeholder with the real media notification.
-        try { startForegroundWithPlaceholder() } catch (_: Exception) { }
+        try {
+            startForegroundWithPlaceholder()
+            PlayerBridge.onPlaybackServiceReady()
+        } catch (_: Exception) { }
         try { observeEngine() } catch (_: Exception) { }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
         mediaSession
 
-    /**
-     * Telegram-style persistence: a paused player keeps its shade + lock
-     * controls (Play one tap away) instead of being cancelled out from
-     * under the user. When paused with a loaded playlist we post the
-     * notification DETACHED (not foreground) rather than letting Media3
-     * drop it; only a real stop (empty playlist) follows the default path
-     * so the shade can actually go away. Playing always takes the
-     * foreground path so background playback survives.
-     */
-    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
-        val keepPosted = try {
-            !session.player.isPlaying && session.player.mediaItemCount > 0
-        } catch (_: Exception) {
-            false
-        }
-        // Forensic trail for the "media card vanishes on pause" report:
-        // every Media3 notification decision lands in logcat history
-        // (survives even when the cable was unplugged during the repro).
-        try {
-            android.util.Log.d(
-                "GhaithNotif",
-                "update keep=$keepPosted playing=" +
-                    try { session.player.isPlaying } catch (_: Exception) { null } +
-                    " state=" +
-                    try { session.player.playbackState } catch (_: Exception) { -1 } +
-                    " items=" +
-                    try { session.player.mediaItemCount } catch (_: Exception) { -1 } +
-                    " fgReq=$startInForegroundRequired",
-            )
-        } catch (_: Exception) { }
-        // Both super calls can throw from the framework side
-        // (ForegroundServiceDidNotStartInTime, SecurityException on stale
-        // foreground state); an uncaught throw here kills the service and
-        // takes the shade with it, so guard like every other call site.
-        try {
-            if (keepPosted) {
-                super.onUpdateNotification(session, false)
-            } else {
-                super.onUpdateNotification(session, startInForegroundRequired)
-            }
-        } catch (_: Exception) { }
-    }
+    // Media3 retains the paused notification and its foreground grace period.
+    // Forcing startInForegroundRequired=false here drops call protection early.
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         // Keep audio alive when swiped away; stop via notification or in-app.
@@ -396,7 +361,10 @@ class QuranPlaybackService : MediaSessionService() {
         // If the service outlived its notification (playback stopped ->
         // Media3 dismissed it), this posts the placeholder synchronously;
         // Media3 replaces it with the real media notification once playing.
-        try { startForegroundWithPlaceholder() } catch (_: Exception) { }
+        try {
+            startForegroundWithPlaceholder()
+            PlayerBridge.onPlaybackServiceReady()
+        } catch (_: Exception) { }
         try {
             when (intent?.action) {
                 ACTION_TOGGLE -> AudioEngine.togglePlayPause()
@@ -493,6 +461,18 @@ class QuranPlaybackService : MediaSessionService() {
             )
         }
 
+        override fun onPlaybackResumption(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+            PlaybackResumeStore.restore(applicationContext)
+            val item = player?.currentMediaItem
+                ?: return Futures.immediateFailedFuture(IllegalStateException("No saved playback"))
+            return Futures.immediateFuture(
+                MediaSession.MediaItemsWithStartPosition(listOf(item), 0, player?.currentPosition ?: 0L)
+            )
+        }
+
         override fun onCustomCommand(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
@@ -525,54 +505,21 @@ class QuranPlaybackService : MediaSessionService() {
             }
         }
 
-        override fun onPlaybackResumption(
-            mediaSession: MediaSession,
-            controller: MediaSession.ControllerInfo,
-        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-            return try {
-                val track = try { AudioEngine.currentTrack.value } catch (_: Exception) { null }
-                if (track == null || try { track.audioUrl.isBlank() } catch (_: Exception) { true }) {
-                    return Futures.immediateFuture(
-                        MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L),
-                    )
-                }
-                try { AudioEngine.resume() } catch (_: Exception) { }
-                val title = try {
-                    displayTitle(track.surahNameEn, track.ayahNo, track.isFullSurah)
-                } catch (_: Exception) {
-                    "Ghaith"
-                }
-                val artist = try { track.reciterName.ifBlank { "Ghaith" } } catch (_: Exception) { "Ghaith" }
-                val item = MediaItem.Builder()
-                    .setMediaId(track.audioUrl)
-                    .setUri(track.audioUrl)
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle(title)
-                            .setArtist(artist)
-                            // Remote-controller resume path has no artwork
-                            // pipeline: pin the branded fallback so the
-                            // shade never renders without Ghaith art.
-                            .setArtworkUri(fallbackArtworkUri())
-                            .build(),
-                    )
-                    .build()
-                Futures.immediateFuture(
-                    MediaSession.MediaItemsWithStartPosition(listOf(item), 0, 0L),
-                )
-            } catch (_: Exception) {
-                Futures.immediateFuture(
-                    MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L),
-                )
-            }
-        }
     }
 
     private fun observeEngine() {
         serviceScope.launch {
+            while (true) {
+                PlaybackResumeStore.save(applicationContext)
+                kotlinx.coroutines.delay(5_000L)
+            }
+        }
+
+        serviceScope.launch {
             try {
                 AudioEngine.currentTrack.collect { track ->
                     try {
+                        PlaybackResumeStore.save(applicationContext)
                         if (track == null) return@collect
                         val title = try {
                             displayTitle(track.surahNameEn, track.ayahNo, track.isFullSurah)
@@ -611,6 +558,7 @@ class QuranPlaybackService : MediaSessionService() {
         serviceScope.launch {
             try {
                 AudioEngine.isPlaying.collect {
+                    PlaybackResumeStore.save(applicationContext)
                     try { QuranPlayerWidget.requestRefresh(this@QuranPlaybackService) } catch (_: Exception) { }
                 }
             } catch (_: Exception) { }
@@ -903,6 +851,7 @@ private class QuranNotificationProvider(
 private class ShadeBitmapLoader(
     appContext: android.content.Context,
 ) : androidx.media3.common.util.BitmapLoader {
+    private val networkLoader = androidx.media3.datasource.DataSourceBitmapLoader(appContext)
     private val resolver = appContext.contentResolver
     private val resources = appContext.resources
     private val packageName = appContext.packageName
@@ -924,6 +873,7 @@ private class ShadeBitmapLoader(
     }
 
     override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> {
+        if (uri.scheme == "https" || uri.scheme == "http") return networkLoader.loadBitmap(uri)
         return try {
             var bitmap: Bitmap? = null
             try {

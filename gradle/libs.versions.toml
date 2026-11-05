@@ -15,7 +15,7 @@ googleid = "1.1.1"
 androidx-activityCompose = "1.10.1"
 androidx-browser = "1.8.0"
 androidx-core = "1.16.0"
-media3 = "1.5.1"
+media3 = "1.9.4"
 
 # Added for androidApp
 androidx-compose-bom = "2024.10.01"
