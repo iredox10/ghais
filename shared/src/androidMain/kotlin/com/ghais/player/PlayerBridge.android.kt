@@ -52,11 +52,9 @@ actual object PlayerBridge {
      * playWhenReady callback never mistake them for user pauses — that
      * double-pause is what used to kill every auto-resume.
      */
-    @Volatile
-    private var resumeOnFocusGain = false
-
-    @Volatile
-    private var focusPausedByUs = false
+    private val interruption = PlaybackInterruption()
+    private val resumeOnFocusGain get() = interruption.resumeOnGain
+    private val focusPausedByUs get() = interruption.pausedByFocus
 
     @Volatile
     private var ducked = false
@@ -71,6 +69,7 @@ actual object PlayerBridge {
     @Volatile
     private var hasFocus = false
 
+    private var retryingAfterServiceStart = false
     private var baseVolume = 1f
     private var audioFocusRequest: android.media.AudioFocusRequest? = null
 
@@ -125,6 +124,7 @@ actual object PlayerBridge {
     private val audioFocusListener = android.media.AudioManager.OnAudioFocusChangeListener { change ->
         when (change) {
             android.media.AudioManager.AUDIOFOCUS_LOSS -> {
+                hasFocus = false
                 ducked = false
                 applyVolume()
                 // Calls on this device arrive as a PERMANENT loss: dialer/
@@ -142,6 +142,7 @@ actual object PlayerBridge {
                 scheduleCallLatchCheck()
             }
             android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                hasFocus = false
                 ducked = false
                 applyVolume()
                 // Latch the resume intent across the whole interruption: an
@@ -161,13 +162,17 @@ actual object PlayerBridge {
                 }
             }
             android.media.AudioManager.AUDIOFOCUS_GAIN -> {
+                hasFocus = true
+                if (focusPausedByUs && isCallShapedLoss()) {
+                    scheduleCallLatchCheck()
+                    return@OnAudioFocusChangeListener
+                }
                 ducked = false
                 applyVolume()
                 cancelCallLatchCheck()
                 logFocus("GAIN latch=$resumeOnFocusGain pausedByUs=$focusPausedByUs")
                 if (resumeOnFocusGain && focusPausedByUs) {
-                    resumeOnFocusGain = false
-                    focusPausedByUs = false
+                    interruption.consumeResume()
                     try {
                         AudioEngine.resume()
                     } catch (_: Exception) {
@@ -176,8 +181,7 @@ actual object PlayerBridge {
                     // Interruption closed without our pause-marker: drop a
                     // stale latch so it can never fire for a later,
                     // unrelated interruption.
-                    focusPausedByUs = false
-                    resumeOnFocusGain = false
+                    interruption.cancel()
                 }
             }
         }
@@ -202,13 +206,14 @@ actual object PlayerBridge {
         // the recitation stayed paused for the entire call ("doesn't resume
         // after a call"). A user pause/stop clears them immediately, so the
         // stickiness can never override an explicit user decision.
-        focusPausedByUs = focusPausedByUs || wasPlaying
-        resumeOnFocusGain = resumeOnFocusGain || resumeOnGain
+        interruption.pause(wasPlaying, resumeOnGain)
         if (!wasPlaying) return
         inFocusPause = true
         try {
             // Same effect as the public pause() minus the flag clearing.
             try { exoPlayer?.pause() } catch (_: Exception) { }
+            AudioEngine.onPlaybackInterrupted()
+            AmbientPlayerBridge.pauseAmbient()
         } finally {
             inFocusPause = false
         }
@@ -229,23 +234,28 @@ actual object PlayerBridge {
      * them all outright.
      */
     private fun scheduleCallLatchCheck() {
-        callLatchChecks.forEach {
-            try { focusLatchHandler.removeCallbacks(it) } catch (_: Exception) { }
-        }
-        callLatchChecks = listOf(600L, 1500L, 3000L, 5000L).map { delayMs ->
-            val run = Runnable {
-                try {
-                    if (resumeOnFocusGain || !focusPausedByUs) return@Runnable
-                    if (try { AudioEngine.isPlaying.value } catch (_: Exception) { true }) return@Runnable
-                    if (!isCallShapedLoss()) return@Runnable
-                    resumeOnFocusGain = true
-                    logFocus("latch armed late (call signal +" + delayMs + "ms)")
-                } catch (_: Exception) {
+        cancelCallLatchCheck()
+        var checks = 0
+        var callObserved = isCallShapedLoss()
+        val check = object : Runnable {
+            override fun run() {
+                if (!focusPausedByUs) return
+                val inCall = isCallShapedLoss()
+                if (inCall) {
+                    callObserved = true
+                    interruption.markCall()
+                } else if (callObserved && resumeOnFocusGain) {
+                    // Permanent LOSS removes us from Android's focus stack;
+                    // it does not promise a GAIN callback after a call ends.
+                    AudioEngine.resume()
+                    return
                 }
+                checks++
+                if (callObserved || checks < 10) focusLatchHandler.postDelayed(this, 600L)
             }
-            try { focusLatchHandler.postDelayed(run, delayMs) } catch (_: Exception) { }
-            run
         }
+        callLatchChecks = listOf(check)
+        focusLatchHandler.postDelayed(check, 600L)
     }
 
     private fun cancelCallLatchCheck() {
@@ -290,8 +300,9 @@ actual object PlayerBridge {
                                 .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
                                 .build()
                         )
+                        .setAcceptsDelayedFocusGain(true)
                         .setWillPauseWhenDucked(false)
-                        .setOnAudioFocusChangeListener(audioFocusListener)
+                        .setOnAudioFocusChangeListener(audioFocusListener, focusLatchHandler)
                         .build()
                     audioFocusRequest = req
                 }
@@ -367,12 +378,12 @@ actual object PlayerBridge {
             // with a non-focus reason (ExoPlayer's internal focus handling
             // is off); inFocusPause keeps the fresh interruption markers
             // intact regardless of callback ordering.
-            if (inFocusPause) return
+            if (inFocusPause || (focusPausedByUs &&
+                    reason == androidx.media3.common.Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)) return
             if (!playWhenReady &&
                 reason != androidx.media3.common.Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS
             ) {
-                resumeOnFocusGain = false
-                focusPausedByUs = false
+                interruption.cancel()
             }
         }
     }
@@ -536,7 +547,6 @@ actual object PlayerBridge {
         if (!title.isNullOrBlank()) pendingTitle = title
         if (!artist.isNullOrBlank()) pendingArtist = artist
         try { onPlayRequested?.invoke() } catch (_: Exception) { }
-        try { requestFocus() } catch (_: Exception) { }
         val p = exoPlayer ?: appContext?.let { player(it) } ?: run {
             _errorMessage.value = "Player not initialised — call PlayerBridge.init(context) from MainActivity"
             return
@@ -565,7 +575,7 @@ actual object PlayerBridge {
                 .build()
             p.setMediaItem(item, startPositionMs.coerceAtLeast(0L))
             p.prepare()
-            p.play()
+            playWhenFocused(p)
         } catch (e: Exception) {
             _isBuffering.value = false
             _errorMessage.value = e.message ?: "Unable to start playback"
@@ -640,8 +650,7 @@ actual object PlayerBridge {
     actual fun pause() {
         // Explicit pause wins over any pending focus resume — including the
         // delayed call-latch check that might still be scheduled.
-        resumeOnFocusGain = false
-        focusPausedByUs = false
+        interruption.cancel()
         try { cancelCallLatchCheck() } catch (_: Exception) { }
         try { exoPlayer?.pause() } catch (_: Exception) { }
     }
@@ -671,16 +680,39 @@ actual object PlayerBridge {
     }
 
     actual fun resume() {
-        try { onPlayRequested?.invoke() } catch (_: Exception) { }
-        try { requestFocus() } catch (_: Exception) { }
-        try { exoPlayer?.play() } catch (e: Exception) {
+        if (!retryingAfterServiceStart) {
+            try { onPlayRequested?.invoke() } catch (_: Exception) { }
+        }
+        try { exoPlayer?.let {
+            if (it.playbackState == androidx.media3.common.Player.STATE_IDLE) it.prepare()
+            playWhenFocused(it)
+        } } catch (e: Exception) {
             _errorMessage.value = e.message
         }
     }
 
+    private fun playWhenFocused(p: androidx.media3.exoplayer.ExoPlayer) {
+        if (requestFocus() && !isCallShapedLoss()) {
+            ducked = false
+            applyVolume()
+            interruption.cancel()
+            cancelCallLatchCheck()
+            p.play()
+        } else {
+            pauseForFocusLoss(resumeOnGain = true)
+            scheduleCallLatchCheck()
+        }
+    }
+
+    /** Retry a delayed request once Android has promoted our playback service. */
+    fun onPlaybackServiceReady() {
+        if (!focusPausedByUs || !resumeOnFocusGain || isCallShapedLoss()) return
+        retryingAfterServiceStart = true
+        try { AudioEngine.resume() } finally { retryingAfterServiceStart = false }
+    }
+
     actual fun stop() {
-        resumeOnFocusGain = false
-        focusPausedByUs = false
+        interruption.cancel()
         ducked = false
         try { cancelCallLatchCheck() } catch (_: Exception) { }
         try { abandonFocus() } catch (_: Exception) { }
@@ -714,7 +746,8 @@ actual object PlayerBridge {
         if (released != null && exoPlayer === released) {
             try { released.removeListener(listener) } catch (_: Exception) { }
             exoPlayer = null
-            pollStarted = false
+            // The existing polling coroutine remains alive and reads exoPlayer.
+            // Do not start another coroutine when a new player is attached.
         }
     }
 }

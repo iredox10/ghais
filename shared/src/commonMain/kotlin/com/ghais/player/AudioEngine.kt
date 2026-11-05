@@ -292,12 +292,19 @@ object AudioEngine {
             PlayerBridge.errorMessage.collect { error ->
                 try {
                 if (error != null && _currentTrack.value != null) {
+                    val playbackWasRequested = _isPlaying.value
                     _isPlaying.value = false
                     _playbackState.update { state ->
                         state.copy(
                             status = PlaybackStatus.ERROR,
                             currentTrackInfo = state.currentTrackInfo.copy(isPlaying = false)
                         )
+                    }
+                    // A paused stream can fail while buffering ahead. Never skip
+                    // tracks or autoplay through a call/user pause in response.
+                    if (!playbackWasRequested) {
+                        _engineError.value = "Connection interrupted. Tap play to retry."
+                        return@collect
                     }
                     // Auto-skip a broken ayah (404/timeout) so the surah plays fully.
                     val failed = _currentTrack.value
@@ -981,8 +988,13 @@ object AudioEngine {
     }
 
     fun pause() {
-        if (!_isPlaying.value && _playbackState.value.status != PlaybackStatus.BUFFERING) return
+        // A user pause must cancel auto-resume even if a call already paused us.
         PlayerBridge.pause()
+        onPlaybackInterrupted()
+    }
+
+    /** Pause shared state without cancelling the platform interruption intent. */
+    fun onPlaybackInterrupted() {
         progressJob?.cancel()
         _isPlaying.value = false
         _playbackState.update { state ->
@@ -995,12 +1007,16 @@ object AudioEngine {
 
     fun resume() {
         val track = _currentTrack.value ?: queueManager.currentTrack ?: return
-        if (_playbackState.value.status == PlaybackStatus.IDLE || _playbackState.value.status == PlaybackStatus.ERROR) {
+        if (_playbackState.value.status == PlaybackStatus.IDLE) {
             startPlayback(track)
             return
         }
         if (_playbackState.value.status == PlaybackStatus.PLAYING) return
-        PlayerBridge.resume()
+        if (_playbackState.value.status == PlaybackStatus.ERROR) {
+            consecutiveErrors = 0
+            _engineError.value = null
+            PlayerBridge.reprepareInPlace()
+        }
         _isPlaying.value = true
         _playbackState.update { state ->
             state.copy(
@@ -1008,6 +1024,7 @@ object AudioEngine {
                 currentTrackInfo = state.currentTrackInfo.copy(isPlaying = true)
             )
         }
+        PlayerBridge.resume()
     }
 
     fun seekTo(positionMs: Long) {
