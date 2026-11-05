@@ -1325,6 +1325,8 @@ object SyncEngine {
                             Query.select(listOf("image_url")),
                         ),
                     ).documents.firstOrNull()?.data
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     if (!isNotFound(e)) {
                         Log.w(TAG, "reciters image_url select query '$slug' failed; trying plain query", e)
@@ -1335,6 +1337,8 @@ object SyncEngine {
                             RECITERS,
                             listOf(Query.equal("slug", slug), Query.limit(1)),
                         ).documents.firstOrNull()?.data
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
                     } catch (e2: Exception) {
                         if (!isNotFound(e2)) {
                             Log.w(TAG, "reciters query '$slug' failed", e2)
@@ -1343,6 +1347,8 @@ object SyncEngine {
                     }
                 }
                 (data?.get("image_url") as? String)?.trim()?.takeIf { it.isNotEmpty() }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (_: Exception) {
                 null
             }

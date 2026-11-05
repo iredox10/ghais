@@ -50,6 +50,9 @@ object QariImageCache {
     fun install(context: Context) {
         SingletonImageLoader.setSafe { ctx ->
             ImageLoader.Builder(ctx)
+                .apply {
+                    if (com.ghais.shared.BuildConfig.DEBUG) logger(coil3.util.DebugLogger())
+                }
                 .diskCache {
                     DiskCache.Builder()
                         .directory(ctx.cacheDir.resolve("qari_photos"))

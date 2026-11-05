@@ -22,6 +22,7 @@ import com.ghais.data.seed.GhaisAssets
 import com.ghais.data.seed.QuranDataRepository as SeedRepository
 import com.ghais.ui.screens.home.NoirArtworkWell
 import com.ghais.ui.util.realImageUrlOrNull
+import kotlinx.coroutines.CancellationException
 
 private fun reciterPhotoOrNull(photoUrl: String?): String? =
     realImageUrlOrNull(photoUrl)
@@ -121,18 +122,18 @@ fun rememberReciterPhoto(slug: String?): String? {
     val cloudCatalog by ReciterCloudCache.cloudReciters.collectAsState()
     val resolvedPhoto = remember(slug, cloudCatalog) { resolveReciterPhoto(slug) }
     var remoteUrl by remember(slug) { mutableStateOf<String?>(null) }
-    var fetchAttempted by remember(slug) { mutableStateOf(false) }
-
-    if (resolvedPhoto == null && !slug.isNullOrBlank() && !fetchAttempted) {
-        LaunchedEffect(slug) {
-            fetchAttempted = true
-            val fetched = try {
-                remotePhotoFetcher?.invoke(slug)
-            } catch (_: Exception) {
-                null
-            }
-            reciterPhotoOrNull(fetched)?.let { remoteUrl = it }
+    // Keep the effect in the composition while its request runs. Toggling a
+    // state flag around LaunchedEffect used to remove and cancel itself.
+    LaunchedEffect(slug, resolvedPhoto) {
+        if (resolvedPhoto != null || slug.isNullOrBlank()) return@LaunchedEffect
+        val fetched = try {
+            remotePhotoFetcher?.invoke(slug)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
         }
+        remoteUrl = reciterPhotoOrNull(fetched)
     }
 
     return resolvedPhoto ?: remoteUrl
