@@ -28,7 +28,7 @@ export function registerPlaylistEditing(app, pool) {
         await client.query('INSERT INTO playlist_items (id, owner, doc) VALUES ($1,$2,$3)', [randomBytes(10).toString('hex'), 'editorial', JSON.stringify(doc)]);
       }
       const qariSlugs = [...new Set(tracks.map(t => t.reciterSlug.trim()))];
-      await client.query("UPDATE playlists SET doc=doc || $2::jsonb, updated_at=now() WHERE id=$1", [req.params.id, JSON.stringify({ qariSlugs })]);
+      await client.query("UPDATE playlists SET doc=doc || $2::jsonb || CASE WHEN doc ? 'publishedAt' OR doc ? 'published_at' THEN '{}'::jsonb ELSE jsonb_build_object('publishedAt', $3::bigint) END, updated_at=now() WHERE id=$1", [req.params.id, JSON.stringify({ qariSlugs }), Date.now()]);
       await client.query('COMMIT');
       return res.json({ success: true, total: tracks.length });
     } catch (error) {
