@@ -33,18 +33,16 @@ object ReciterCloudCache {
      * as [com.ghais.data.repository.BroadcastRepository.cloudFetcher]); null
      * on platforms without the Appwrite client, where [refresh] is a no-op.
      */
-    var catalogFetcher: (suspend () -> List<Reciter>)? = null
+    var catalogFetcher: (suspend () -> List<Reciter>?)? = null
 
     /**
      * Refreshes the overlay from the cloud catalog. Returns true when the
-     * cache was replaced. An empty result (offline, error, or a pull that
-     * parsed nothing) keeps the previous cache so a transient failure never
-     * blanks the catalog back to bundled-only.
+     * cache was replaced. A null result signals failure and preserves the
+     * previous cache; a successful empty list clears deleted cloud entries.
      */
     suspend fun refresh(): Boolean {
         return try {
             val list = catalogFetcher?.invoke() ?: return false
-            if (list.isEmpty()) return false
             setCloudReciters(list)
             true
         } catch (_: Exception) {

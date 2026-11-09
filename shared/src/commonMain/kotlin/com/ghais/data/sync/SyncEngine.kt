@@ -1207,10 +1207,8 @@ object SyncEngine {
      */
     suspend fun refreshReciterCatalog(db: Databases) {
         try {
-            val out = fetchReciterCatalog(db)
-            if (out.isNotEmpty()) {
-                com.ghais.data.repository.ReciterCloudCache.setCloudReciters(out)
-            }
+            val out = fetchReciterCatalog(db) ?: return
+            com.ghais.data.repository.ReciterCloudCache.setCloudReciters(out)
         } catch (e: Exception) {
             Log.w(TAG, "reciter catalog refresh failed", e)
         }
@@ -1220,10 +1218,10 @@ object SyncEngine {
      * Public-read reciter catalog pull (Appwrite `reciters`, see
      * `collections.json`). Split out of [refreshReciterCatalog] so the
      * periodic, session-free refresh in `SyncTriggers` can reuse it without
-     * running a full user sync. Returns an empty list on any failure, which
-     * callers treat as "keep the current cache".
+     * running a full user sync. Returns null on failure so callers preserve
+     * the last complete snapshot, including when a later page fails.
      */
-    suspend fun fetchReciterCatalog(db: Databases): List<Reciter> {
+    suspend fun fetchReciterCatalog(db: Databases): List<Reciter>? {
         return try {
             val out = ArrayList<Reciter>(300)
             var offset = 0
@@ -1236,7 +1234,7 @@ object SyncEngine {
                     ).documents
                 } catch (e: Exception) {
                     if (!isNotFound(e)) Log.w(TAG, "reciters list failed", e)
-                    break
+                    return null
                 }
                 if (page.isEmpty()) break
                 for (doc in page) {
@@ -1248,7 +1246,7 @@ object SyncEngine {
             out
         } catch (e: Exception) {
             Log.w(TAG, "reciter catalog fetch failed", e)
-            emptyList()
+            null
         }
     }
 

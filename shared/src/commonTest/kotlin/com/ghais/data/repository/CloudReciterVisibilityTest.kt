@@ -90,9 +90,18 @@ class CloudReciterVisibilityTest {
     }
 
     @Test
-    fun testRefreshKeepsPreviousCacheOnEmptyPull() = runBlocking {
+    fun testRefreshClearsCacheOnSuccessfulEmptyPull() = runBlocking {
         ReciterCloudCache.setCloudReciters(listOf(archiveReciter))
         ReciterCloudCache.catalogFetcher = { emptyList() }
+
+        assertEquals(true, ReciterCloudCache.refresh())
+        assertTrue(ReciterCloudCache.cloudReciters.value.isEmpty())
+    }
+
+    @Test
+    fun testRefreshKeepsCacheOnFailedPull() = runBlocking {
+        ReciterCloudCache.setCloudReciters(listOf(archiveReciter))
+        ReciterCloudCache.catalogFetcher = { null }
 
         assertEquals(false, ReciterCloudCache.refresh())
         assertTrue(ReciterCloudCache.cloudReciters.value.any { it.slug == archiveReciter.slug })
