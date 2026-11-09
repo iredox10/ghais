@@ -45,7 +45,8 @@ data class RecitationSchedule(
     val autoStart: Boolean = true,
     val enabled: Boolean = true,
     val source: String = SOURCE_STREAM,
-    val offlineKeys: List<String> = emptyList()
+    val offlineKeys: List<String> = emptyList(),
+    val modifiedAtMs: Long = 0L
 ) {
     companion object {
         const val SOURCE_STREAM = "stream"
@@ -140,7 +141,7 @@ object SchedulesStore {
      * and returns the stored schedule.
      */
     fun add(schedule: RecitationSchedule): RecitationSchedule {
-        val normalized = normalize(schedule)
+        val normalized = normalize(schedule.copy(modifiedAtMs = Clock.System.now().toEpochMilliseconds()))
         val sorted = (_schedules.value.filter { it.id != normalized.id } + normalized)
             .sortedWith(scheduleOrder())
         _schedules.value = sorted
@@ -150,7 +151,7 @@ object SchedulesStore {
 
     /** Replaces the schedule with the same id (same normalization as [add]). */
     fun update(schedule: RecitationSchedule) {
-        val normalized = normalize(schedule)
+        val normalized = normalize(schedule.copy(modifiedAtMs = Clock.System.now().toEpochMilliseconds()))
         val sorted = (_schedules.value.filter { it.id != normalized.id } + normalized)
             .sortedWith(scheduleOrder())
         _schedules.value = sorted
@@ -168,7 +169,7 @@ object SchedulesStore {
         val current = _schedules.value
         if (current.none { it.id == id && it.enabled != enabled }) return
         val updated = current.map { schedule ->
-            if (schedule.id == id) schedule.copy(enabled = enabled) else schedule
+            if (schedule.id == id) schedule.copy(enabled = enabled, modifiedAtMs = Clock.System.now().toEpochMilliseconds()) else schedule
         }.sortedWith(scheduleOrder())
         _schedules.value = updated
         saveAndRefresh(updated)

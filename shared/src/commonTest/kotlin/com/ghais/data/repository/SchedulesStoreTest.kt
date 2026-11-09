@@ -72,6 +72,27 @@ class SchedulesStoreTest {
         assertNotNull(SchedulesStore.get("local-only"))
     }
 
+    @Test
+    fun tombstoneWinsOverDuplicateRowsButAllowsNewerExplicitEdit() {
+        val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
+        SchedulesStore.add(schedule("notify-daily"))
+        val futureDelete = com.ghais.data.backend.Document("deleted", mapOf<String, Any>(
+            "schedule_id" to "notify-daily", "deleted" to true, "deleted_at_ms" to now + 60_000,
+        ))
+        val duplicate = com.ghais.data.backend.Document("duplicate", mapOf<String, Any>(
+            "schedule_id" to "notify-daily", "deleted" to false,
+        ))
+        val removed = com.ghais.data.sync.SyncEngine.applyScheduleTombstones(listOf(futureDelete, duplicate))
+        assertTrue("notify-daily" in removed)
+        assertNull(SchedulesStore.get("notify-daily"))
+
+        SchedulesStore.add(schedule("notify-daily"))
+        val pastDelete = futureDelete.copy(data = futureDelete.data + ("deleted_at_ms" to (now - 60_000)))
+        val recreated = com.ghais.data.sync.SyncEngine.applyScheduleTombstones(listOf(pastDelete, duplicate))
+        assertTrue("notify-daily" !in recreated)
+        assertNotNull(SchedulesStore.get("notify-daily"))
+    }
+
     // --- Normalization ---
 
     @Test

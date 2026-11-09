@@ -2745,7 +2745,7 @@ object SyncEngine {
         if (docs.isEmpty()) return false
         // Tombstones are retained on the server so each device can observe an
         // admin deletion, including devices that were offline at the time.
-        applyScheduleTombstones(docs)
+        val tombstoned = applyScheduleTombstones(docs)
         val remote = docs.mapNotNull { doc ->
             if (doc.data["deleted"] == true) return@mapNotNull null
             val raw = (doc.data["schedule_json"] as? String)?.trim().orEmpty()
@@ -2755,7 +2755,7 @@ object SyncEngine {
             } catch (_: Exception) {
                 null
             } ?: return@mapNotNull null
-            if (schedule.id.isBlank()) return@mapNotNull null
+            if (schedule.id.isBlank() || schedule.id in tombstoned) return@mapNotNull null
             schedule
         }
         if (remote.isEmpty()) {
@@ -2775,13 +2775,19 @@ object SyncEngine {
         return true
     }
 
-    internal fun applyScheduleTombstones(docs: List<com.ghais.data.backend.Document<Map<String, Any>>>) {
-        for (doc in docs) {
-            if (doc.data["deleted"] != true) continue
-            val id = (doc.data["schedule_id"] as? String)?.trim()
-                ?.takeIf { it.isNotEmpty() } ?: schedulePayloadId(doc)
-            if (id != null) SchedulesStore.remove(id)
-        }
+    internal fun applyScheduleTombstones(docs: List<com.ghais.data.backend.Document<Map<String, Any>>>): Set<String> {
+        val tombstones = docs.filter { it.data["deleted"] == true }
+            .mapNotNull { doc ->
+                val id = (doc.data["schedule_id"] as? String)?.trim()
+                    ?.takeIf { it.isNotEmpty() } ?: schedulePayloadId(doc)
+                id?.let { it to ((doc.data["deleted_at_ms"] as? Number)?.toLong() ?: Long.MAX_VALUE) }
+            }.groupBy({ it.first }, { it.second })
+        val effective = tombstones.filter { (id, times) ->
+            val local = SchedulesStore.get(id)
+            local == null || local.modifiedAtMs <= (times.maxOrNull() ?: Long.MAX_VALUE)
+        }.keys
+        effective.forEach { SchedulesStore.remove(it) }
+        return effective
     }
 
     private suspend fun pushSchedules(db: Databases, userId: String, cloudHasData: Boolean) {
@@ -2797,8 +2803,19 @@ object SyncEngine {
         val existing = listForUser(db, SCHEDULES, userId) ?: return
         val localIds = local.mapTo(mutableSetOf()) { it.id }
         for (doc in existing) {
-            // Do not remove tombstones: other devices may not have synced yet.
-            if (doc.data["deleted"] == true) continue
+            if (doc.data["deleted"] == true) {
+                val id = (doc.data["schedule_id"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: schedulePayloadId(doc)
+                val replacement = local.firstOrNull { it.id == id }
+                val deletedAt = (doc.data["deleted_at_ms"] as? Number)?.toLong() ?: Long.MAX_VALUE
+                if (replacement != null && replacement.modifiedAtMs > deletedAt) {
+                    db.updateDocument(DB_ID, SCHEDULES, doc.id, mapOf(
+                        "deleted" to false, "schedule_json" to json.encodeToString(replacement),
+                        "enabled" to replacement.enabled,
+                    ))
+                }
+                continue
+            }
             val attributeId = (doc.data["schedule_id"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
             val payloadId = schedulePayloadId(doc)
             val live = (attributeId != null && attributeId in localIds) ||
