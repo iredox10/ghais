@@ -2746,7 +2746,16 @@ object SyncEngine {
     private suspend fun pullSchedules(db: Databases, userId: String): Boolean {
         val docs = listForUser(db, SCHEDULES, userId) ?: return false
         if (docs.isEmpty()) return false
+        // Tombstones are retained on the server so each device can observe an
+        // admin deletion, including devices that were offline at the time.
+        for (doc in docs) {
+            if (doc.data["deleted"] != true) continue
+            val id = (doc.data["schedule_id"] as? String)?.trim()
+                ?.takeIf { it.isNotEmpty() } ?: schedulePayloadId(doc)
+            if (id != null) SchedulesStore.remove(id)
+        }
         val remote = docs.mapNotNull { doc ->
+            if (doc.data["deleted"] == true) return@mapNotNull null
             val raw = (doc.data["schedule_json"] as? String)?.trim().orEmpty()
             if (raw.isEmpty()) return@mapNotNull null
             val schedule = try {
@@ -2787,6 +2796,8 @@ object SyncEngine {
         val existing = listForUser(db, SCHEDULES, userId) ?: return
         val localIds = local.mapTo(mutableSetOf()) { it.id }
         for (doc in existing) {
+            // Do not remove tombstones: other devices may not have synced yet.
+            if (doc.data["deleted"] == true) continue
             val attributeId = (doc.data["schedule_id"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
             val payloadId = schedulePayloadId(doc)
             val live = (attributeId != null && attributeId in localIds) ||
