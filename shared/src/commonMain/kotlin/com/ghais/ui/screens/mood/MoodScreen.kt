@@ -35,6 +35,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -242,21 +244,23 @@ fun MoodModalContent(
     onClose: () -> Unit = {},
     onMoodSelected: (MoodItem) -> Unit = {}
 ) {
+    val moods by MoodCatalog.moods.collectAsState()
+    LaunchedEffect(Unit) { MoodCatalog.refresh() }
     var selectedMoodId by remember { mutableStateOf(initialMoodId) }
     var selectedCategory by remember { mutableStateOf("All") }
 
     val categories = listOf("All", "Reflection", "Comfort", "Focus", "Night")
 
-    val filteredMoods = remember(selectedCategory) {
+    val filteredMoods = remember(selectedCategory, moods) {
         if (selectedCategory == "All") {
-            AVAILABLE_MOODS
+            moods
         } else {
-            AVAILABLE_MOODS.filter { it.category == selectedCategory }
+            moods.filter { it.category == selectedCategory }
         }
     }
 
-    val selectedMood = remember(selectedMoodId) {
-        AVAILABLE_MOODS.find { it.id == selectedMoodId } ?: AVAILABLE_MOODS.first()
+    val selectedMood = remember(selectedMoodId, moods) {
+        moods.find { it.id == selectedMoodId } ?: moods.first()
     }
 
     Column(

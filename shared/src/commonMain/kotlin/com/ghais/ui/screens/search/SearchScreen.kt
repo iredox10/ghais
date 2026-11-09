@@ -70,7 +70,7 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.devotional.DevotionPlayerScreen
-import com.ghais.ui.screens.mood.AVAILABLE_MOODS
+import com.ghais.ui.screens.mood.MoodCatalog
 import com.ghais.ui.screens.mood.MoodItem
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.playlists.PlaylistDetailsScreen
@@ -135,6 +135,8 @@ private const val HUB_TASTE_ROW_COUNT: Int = 5
 class SearchScreen : Screen {
     @Composable
     override fun Content() {
+        val availableMoods by MoodCatalog.moods.collectAsState()
+        LaunchedEffect(Unit) { MoodCatalog.refresh() }
         val navigator = LocalNavigator.currentOrThrow
         val rootNavigator = LocalRootNavigator.current ?: navigator.parent ?: navigator
         var query by remember { mutableStateOf("") }
@@ -531,13 +533,13 @@ class SearchScreen : Screen {
                             }
                         }
 
-                        if (AVAILABLE_MOODS.isNotEmpty()) {
+                        if (availableMoods.isNotEmpty()) {
                             item(key = "hub-mood-gap") { Spacer(Modifier.height(8.dp)) }
                             item(key = "hub-mood-header") {
                                 NoirSectionHeader(label = "Browse by mood")
                             }
                             items(
-                                AVAILABLE_MOODS.chunked(2),
+                                availableMoods.chunked(2),
                                 key = { "hub-mood-${it.first().id}" }
                             ) { pair ->
                                 Row(
