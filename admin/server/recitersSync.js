@@ -373,10 +373,9 @@ export function setupRecitersSync(
         return;
       }
 
-      await databases.deleteDocument(databaseId, 'reciters', existing.$id);
-      if (storage && existing.image_file_id) {
-        await storage.delete(existing.image_file_id).catch(() => undefined);
-      }
+      // Keep a disabled catalog row so clients can suppress bundled copies.
+      // Preserve the image and metadata for a possible restoration.
+      await databases.updateDocument(databaseId, 'reciters', existing.$id, { enabled: false });
       res.json({ success: true, id: existing.$id });
     } catch (error) {
       sendError(res, error);
@@ -457,7 +456,7 @@ export function setupRecitersSync(
           description: reciter.description,
           isTeacher: reciter.isTeacher,
           verified: reciter.verified,
-          enabled: true,
+          enabled: existing?.enabled ?? true,
           imageUrl: reciter.imageUrl,
         }, existing || {});
 

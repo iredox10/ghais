@@ -54,3 +54,12 @@ test('reciter image upload cleans up R2 object when updating PostgreSQL fails',a
   try { const data=new FormData();data.append('image',new Blob([new Uint8Array([0xff,0xd8,0xff,0x01])],{type:'image/jpeg'}),'qari.jpg');const res=await fetch(url+'/api/reciters/maher/image',{method:'POST',body:data});assert.equal(res.status,500);assert.deepEqual(deleted,['reciters/test.jpg']); }
   finally {await new Promise(r=>server.close(r));}
 });
+
+test('deleting a reciter disables its catalog row without deleting its image',async()=>{
+  const updates=[],deleted=[];
+  const docs=[{$id:'maher',slug:'maher',name_en:'Maher',catalog:'mp3quran',catalog_key:'mp3quran:maher',image_file_id:'reciters/old.jpg',enabled:true}];
+  const database={listDocuments:async()=>({documents:docs,total:docs.length}),updateDocument:async(...args)=>{updates.push(args);return {...docs[0],...args[3]};},deleteDocument:async()=>{throw Error('must not physically delete');}};
+  const app=express();setupRecitersSync(app,database,'ghais',{delete:async key=>deleted.push(key)});const {server,url}=await listen(app);
+  try {const response=await fetch(url+'/api/reciters/maher',{method:'DELETE'});assert.equal(response.status,200);assert.deepEqual(updates[0].slice(0,3),['ghais','reciters','maher']);assert.deepEqual(updates[0][3],{enabled:false});assert.deepEqual(deleted,[]);}
+  finally {await new Promise(r=>server.close(r));}
+});
