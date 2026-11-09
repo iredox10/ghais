@@ -138,6 +138,7 @@ export const Moods: React.FC = () => {
           <p className="text-sm text-white/50 mt-1">
             Browse the 6 curated listening moods — each with its default reciter, ambient pairing, and cover art.
           </p>
+          <p className="text-xs text-amber-300/80 mt-2">Admin reference catalog only. The mobile app uses its own bundled moods; changes here do not publish to devices.</p>
         </div>
 
         {/* Live / static source badge */}

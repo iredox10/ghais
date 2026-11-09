@@ -155,6 +155,7 @@ export const Surahs: React.FC = () => {
           <p className="text-sm text-white/50 mt-1">
             Explore all 114 Surahs of the Noble Quran with Arabic calligraphy, revelation metadata, and direct audio streaming.
           </p>
+          <p className="text-xs text-amber-300/80 mt-2">Admin reference catalog only. The mobile app uses bundled surah data; this view does not publish changes to devices.</p>
         </div>
 
         {/* Reciter Audio Switcher Dropdown */}
