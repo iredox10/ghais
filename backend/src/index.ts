@@ -7,6 +7,7 @@ import compatRoutes from './routes/compat.js';
 import jobRoutes from './routes/jobs.js';
 import { portraitRoutes } from './portraits.js';
 import { mountAdmin } from './admin.js';
+import { editorialRoutes } from './routes/editorial.js';
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: true });
@@ -25,6 +26,7 @@ await app.register(googleRoutes, { prefix: '/v1/auth/google' });
 await app.register(compatRoutes, { prefix: '/v1/databases' });
 await app.register(jobRoutes, { prefix: '/v1/jobs' });
 await app.register(portraitRoutes, { prefix: '/v1/reciter-images' });
+await app.register(editorialRoutes, { prefix: '/v1/editorial' });
 
 const start = async (): Promise<void> => {
   try {
