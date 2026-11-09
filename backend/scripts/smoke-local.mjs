@@ -47,6 +47,23 @@ try {
   await req('POST',doc('playlist_items'),item,b.accessToken,403);
   await req('POST',doc('playlist_items'),item,a.accessToken,201);
   await req('GET',doc('playlist_items',tag));
+  const privateId=`${tag}-private`;
+  await req('POST',doc('playlists'),{documentId:privateId,data:{title:'Private',is_public:false}},a.accessToken,201);
+  await req('POST',doc('playlist_items'),{documentId:privateId,data:{playlist_id:privateId,position:0}},a.accessToken,201);
+  for (const collection of ['playlists','playlist_items']) {
+    await req('GET',doc(collection,privateId),null,null,404);
+    await req('GET',doc(collection,privateId),null,b.accessToken,404);
+    await req('GET',doc(collection,privateId),null,a.accessToken);
+    const filter=new URLSearchParams();
+    filter.append('queries[]',JSON.stringify({method:'equal',attribute:'$id',values:[privateId]}));
+    assert.equal((await req('GET',doc(collection)+'?'+filter)).total,0);
+    assert.equal((await req('GET',doc(collection)+'?'+filter,null,b.accessToken)).total,0);
+    assert.equal((await req('GET',doc(collection)+'?'+filter,null,a.accessToken)).total,1);
+  }
+  await req('PATCH',doc('playlists',privateId),{data:{is_public:true}},a.accessToken);
+  await req('GET',doc('playlist_items',privateId));
+  await req('PATCH',doc('playlists',privateId),{data:{is_public:false}},a.accessToken);
+  await req('GET',doc('playlist_items',privateId),null,null,404);
   await req('POST',doc('devotion'),{documentId:tag,data:{userId:b.userId}},a.accessToken,403);
   await req('POST',doc('devotion'),{documentId:tag,data:{userId:a.userId,streakCount:1}},a.accessToken,201);
   await req('POST',doc('leagues'),{documentId:tag,data:{memberIds:[a.userId,b.userId],leagueId:tag}},a.accessToken,201);

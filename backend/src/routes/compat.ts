@@ -42,6 +42,15 @@ function cannotWrite(reply: FastifyReply, message: string): void {
   awError(reply, 403, 'general_forbidden', message);
 }
 
+// The visibility of an item is inherited from its parent playlist. Missing
+// parents and absent/malformed public flags are private by default.
+function catalogReadFilter(collection: string): string {
+  const visible = "(p.doc->'is_public' = 'true'::jsonb OR p.owner = $1)";
+  return collection === 'playlists'
+    ? `(doc->'is_public' = 'true'::jsonb OR owner = $1)`
+    : `EXISTS (SELECT 1 FROM playlists p WHERE p.id = playlist_items.doc->>'playlist_id' AND ${visible})`;
+}
+
 /** Ad-hoc social write authorization: own docs, or referenced members. */
 function socialCanWrite(def: CollectionDef, row: Row, userId: string): boolean {
   if (row.owner === userId) return true;
@@ -70,6 +79,8 @@ export default async function compatRoutes(app: FastifyInstance) {
     if (defs.access === 'user' || defs.access === 'social') {
       userId = await bearerUserId(req);
       if (!userId) { awError(reply, 401, 'user_unauthorized', 'Unauthorized.'); return reply; }
+    } else if (defs.access === 'catalog') {
+      userId = await bearerUserId(req);
     }
 
     const qs = req.query as Record<string, unknown>;
@@ -86,7 +97,7 @@ export default async function compatRoutes(app: FastifyInstance) {
       }
     }
 
-    const whereOwner = defs.access === 'user' ? 'owner = $1' : null;
+    const whereOwner = defs.access === 'user' ? 'owner = $1' : defs.access === 'catalog' ? catalogReadFilter(collection) : null;
     let list;
     try {
       list = buildList(defs, queryValues, whereOwner, userId);
@@ -172,18 +183,19 @@ export default async function compatRoutes(app: FastifyInstance) {
     if (defs.access === 'user' || defs.access === 'social') {
       userId = await bearerUserId(req);
       if (!userId) { awError(reply, 401, 'user_unauthorized', 'Unauthorized.'); return reply; }
+    } else if (defs.access === 'catalog') {
+      userId = await bearerUserId(req);
     }
 
     const { rows } = await query<Row>(
-      `SELECT id, owner, doc, created_at, updated_at FROM ${collection} WHERE id = $1`,
-      [id],
+      `SELECT id, owner, doc, created_at, updated_at FROM ${collection} WHERE id = $1${defs.access === 'catalog' ? ` AND ${catalogReadFilter(collection).replaceAll('$1', '$2')}` : ''}`,
+      defs.access === 'catalog' ? [id, userId] : [id],
     );
     const row = rows[0];
     if (!row || (defs.access === 'user' && row.owner !== userId)) {
       notFound(reply, `Document '${id}' not found in '${collection}'.`);
       return reply;
     }
-    void defs; // (catalog/social reads are open by design)
     return reply.send(toAppwriteDoc(row, collection, db, null));
   });
 

@@ -3,8 +3,9 @@
 // - 'public'  : anon read; client writes rejected (server/admin only).
 // - 'user'    : Bearer required; EVERY op is forced to owner = token user,
 //               regardless of the queried user_id / userId attribute.
-// - 'catalog' : anon read (editorial pulls); writes need Bearer and are
-//               owner-scoped (own playlist publishing only).
+// - 'catalog' : public playlists and their items are readable anonymously;
+//               private playlists and their items are visible only to owners.
+//               Writes need Bearer and are owner-scoped.
 // - 'social'  : Bearer; read-any-authenticated; write when own or when the
 //               token user is referenced by the document (pair/member rules).
 export type AccessClass = 'public' | 'user' | 'catalog' | 'social';
