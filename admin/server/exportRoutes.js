@@ -345,11 +345,8 @@ export default function registerExportRoutes(app, getContext) {
         databaseId,
         source: analyticsSource,
         sampleSize: analyticsSampleSize,
-        retention: {
-          day1: 0,
-          day7: 0,
-          day30: 0
-        },
+        // Retention is not calculated yet; null distinguishes unknown from 0%.
+        retention: null,
         peakHours,
         deviceDistribution: [],
         reciterStyleDistribution: []

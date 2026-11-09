@@ -589,7 +589,7 @@ export const Settings: React.FC = () => {
               </div>
             </div>
             <span className="text-[11px] text-white/50 text-left leading-relaxed">
-              Analytics export of retention rates, 24-hour peak activity cycles, and device distribution metrics.
+              Analytics export includes sampled listening activity and identifies unavailable metrics.
             </span>
           </a>
         </div>
