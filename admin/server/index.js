@@ -11,6 +11,7 @@ import { registerPublicImages } from './publicImages.js';
 import registerExportRoutes from './exportRoutes.js';
 import registerIndexAudit from './indexAudit.js';
 import registerBroadcastRoutes from './broadcastRoutes.js';
+import { registerPlaylistEditing } from './playlistEditing.js';
 import registerPlaybackRoutes from './playbackRoutes.js';
 import registerSurahsRoutes from './surahsRoutes.js';
 import { registerTelemetry } from './telemetry.js';
@@ -682,7 +683,7 @@ app.post('/api/playlists', async (req, res) => {
   try {
     const { owner_id = 'editorial', title, description = '', cover_url = '', is_public = true } = req.body || {};
     if (typeof title !== 'string' || !title.trim()) return res.status(400).json({ success: false, message: 'Playlist title is required.' });
-    const doc = await databases.createDocument(DATABASE_ID, 'playlists', 'unique()', { owner_id, title: title.trim(), description, is_public, cover_url });
+    const doc = await databases.createDocument(DATABASE_ID, 'playlists', 'unique()', { owner_id, title: title.trim(), description, is_public, cover_url, publishedAt: Date.now(), qariSlugs: [] });
     return res.status(201).json({ success: true, playlist: { id: doc.$id, title: doc.title, description: doc.description, tracksCount: 0, isPublic: doc.is_public, creator: doc.owner_id === 'editorial' ? 'Ghais Editorial' : 'Community Listener', coverUrl: doc.cover_url }, document: doc });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Could not create playlist.' });
@@ -716,6 +717,7 @@ app.get('/api/playlists', async (req, res) => {
 
         livePlaylists = plRes.documents.map(p => ({
           id: p.$id,
+          ownerId: p.owner_id,
           title: p.title || 'Untitled Routine',
           description: p.description || 'Custom listener reflection sequence from Ghais',
           // Derived aggregate: count of playlist_items rows (no tracks_count in schema).
@@ -995,6 +997,7 @@ registerSurahsRoutes(app, () => ({
   databaseAvailable
 }));
 setupRecitersSync(app, databases, DATABASE_ID, storage);
+registerPlaylistEditing(app, pool);
 registerCdnHealth(app);
 
 registerSeedRoutes(app, () => ({

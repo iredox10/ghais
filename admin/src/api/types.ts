@@ -340,6 +340,7 @@ export interface SeedResponse {
 // ============================================================================
 
 export interface Playlist {
+  ownerId?: string;
   id: string;
   title: string;
   description: string;
@@ -365,6 +366,13 @@ export interface CreatePlaylistInput {
 export interface CreatePlaylistResponse {
   success: boolean;
   playlist: Playlist;
+}
+
+export interface EditablePlaylistTrack {
+  reciterSlug: string;
+  surahId: number;
+  ayahFrom: number;
+  ayahTo: number;
 }
 
 export interface PlaylistTrack {

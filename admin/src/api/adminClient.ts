@@ -18,6 +18,7 @@ import type {
   CollectionsResponse,
   ProvisionResponse,
   PlaylistTracksResponse,
+  EditablePlaylistTrack,
   TelemetryData,
   BroadcastInput,
   BroadcastResponse,
@@ -316,6 +317,12 @@ export async function deletePlaylist(id: string): Promise<{ success: boolean; id
  */
 export async function getPlaylistTracks(id: string): Promise<PlaylistTracksResponse> {
   return apiRequest<PlaylistTracksResponse>(`/api/playlists/${encodeURIComponent(id)}/tracks`);
+}
+
+export async function savePlaylistTracks(id: string, tracks: EditablePlaylistTrack[]): Promise<{ success: boolean }> {
+  return apiRequest(`/api/playlists/${encodeURIComponent(id)}/tracks`, {
+    method: 'PUT', body: JSON.stringify({ tracks }),
+  });
 }
 
 /**

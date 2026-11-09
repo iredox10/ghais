@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ListMusic,
   Plus,
@@ -22,7 +22,8 @@ import { GlassCard } from '../components/ui/GlassCard';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { StatCard } from '../components/ui/StatCard';
-import type { Playlist, PlaylistTrack } from '../api/types';
+import type { EditablePlaylistTrack, Playlist, PlaylistTrack } from '../api/types';
+import { savePlaylistTracks } from '../api/adminClient';
 
 // Track view served by GET /api/playlists/:id/tracks. Base keys come from
 // PlaylistTrack; the canonical app-schema range (position, ayah_from,
@@ -44,6 +45,30 @@ const PlaylistInspectorModal: React.FC<{
     enabled: Boolean(playlist),
   });
   const audioPlayer = useAudioPlayer();
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState<EditablePlaylistTrack[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  useEffect(() => {
+    setDraft((tracksData?.tracks || []).map(track => {
+      const item = track as TrackView;
+      return { reciterSlug: item.reciterSlug, surahId: item.surahId, ayahFrom: item.ayahFrom ?? 0, ayahTo: item.ayahTo ?? 0 };
+    }));
+    setSaveError('');
+  }, [playlist?.id, tracksData]);
+  const saveTracks = async () => {
+    if (!playlist) return;
+    setSaving(true); setSaveError('');
+    try { await savePlaylistTracks(playlist.id, draft); await queryClient.invalidateQueries({ queryKey: adminQueryKeys.playlists() }); }
+    catch (error) { setSaveError(error instanceof Error ? error.message : 'Could not save tracks.'); }
+    finally { setSaving(false); }
+  };
+  const updateTrack = (index: number, patch: Partial<EditablePlaylistTrack>) => setDraft(current => current.map((track, i) => i === index ? { ...track, ...patch } : track));
+  const moveTrack = (index: number, delta: number) => setDraft(current => {
+    const next = [...current]; const target = index + delta;
+    if (target < 0 || target >= next.length) return current;
+    [next[index], next[target]] = [next[target], next[index]]; return next;
+  });
 
   if (!playlist) return null;
 
@@ -158,6 +183,31 @@ const PlaylistInspectorModal: React.FC<{
                 </button>
               </div>
             </div>
+          )}
+
+          {playlist.ownerId === 'editorial' && (
+            <section className="space-y-3 border-t border-white/10 pt-4">
+              <h3 className="text-xs font-semibold text-white/80 uppercase">Edit tracks</h3>
+              <p className="text-xs text-white/50">Enter a reciter slug and surah number. Use 0 for both ayah fields to play the full surah.</p>
+              {draft.map((track, index) => (
+                <div key={index} className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-xl border border-white/10 p-3">
+                  <label className="text-xs text-white/60">Reciter slug<input aria-label={`Reciter slug ${index + 1}`} value={track.reciterSlug} onChange={e => updateTrack(index, { reciterSlug: e.target.value })} className="w-full rounded bg-black/40 p-2 text-white" /></label>
+                  <label className="text-xs text-white/60">Surah<input aria-label={`Surah ${index + 1}`} type="number" min="1" max="114" value={track.surahId} onChange={e => updateTrack(index, { surahId: Number(e.target.value) })} className="w-full rounded bg-black/40 p-2 text-white" /></label>
+                  <label className="text-xs text-white/60">From ayah<input aria-label={`From ayah ${index + 1}`} type="number" min="0" max="286" value={track.ayahFrom} onChange={e => updateTrack(index, { ayahFrom: Number(e.target.value) })} className="w-full rounded bg-black/40 p-2 text-white" /></label>
+                  <label className="text-xs text-white/60">To ayah<input aria-label={`To ayah ${index + 1}`} type="number" min="0" max="286" value={track.ayahTo} onChange={e => updateTrack(index, { ayahTo: Number(e.target.value) })} className="w-full rounded bg-black/40 p-2 text-white" /></label>
+                  <div className="col-span-full flex gap-3 text-xs text-emerald-400">
+                    <button type="button" disabled={index === 0} onClick={() => moveTrack(index, -1)}>Move up</button>
+                    <button type="button" disabled={index === draft.length - 1} onClick={() => moveTrack(index, 1)}>Move down</button>
+                    <button type="button" onClick={() => setDraft(current => current.filter((_, i) => i !== index))}>Remove</button>
+                  </div>
+                </div>
+              ))}
+              {saveError && <p role="alert" className="text-xs text-rose-300">{saveError}</p>}
+              <div className="flex gap-3 text-xs">
+                <button type="button" disabled={draft.length >= 50 || tracksLoading} onClick={() => setDraft(current => [...current, { reciterSlug: '', surahId: 1, ayahFrom: 0, ayahTo: 0 }])} className="rounded-lg bg-white/10 px-3 py-2 text-white">Add track</button>
+                <button type="button" disabled={saving || tracksLoading} onClick={saveTracks} className="chrome-btn rounded-lg px-3 py-2">{saving ? 'Saving...' : 'Save tracks'}</button>
+              </div>
+            </section>
           )}
 
           {/* Tracklist Sequencer */}
@@ -478,7 +528,7 @@ export const Playlists: React.FC = () => {
           <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <span className="text-xs text-white/70">
-              Immediately published to all app clients via PostgreSQL sync.
+              Published to the public catalog. Open the playlist to add tracks.
             </span>
           </div>
 
