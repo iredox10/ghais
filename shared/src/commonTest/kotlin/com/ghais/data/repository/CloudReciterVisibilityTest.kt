@@ -90,6 +90,15 @@ class CloudReciterVisibilityTest {
     }
 
     @Test
+    fun testDisabledCloudRowHidesBundledReciterAndRestoresOnEnable() {
+        val bundled = QuranDataRepository.getReciters().first { it.catalogKey() == "mp3quran:alafasy" }
+        ReciterCloudCache.setCloudReciters(listOf(bundled.copy(enabled = false)))
+        assertNull(QuranDataRepository.getReciters().firstOrNull { it.catalogKey() == bundled.catalogKey() })
+        ReciterCloudCache.setCloudReciters(listOf(bundled.copy(enabled = true)))
+        assertNotNull(QuranDataRepository.getReciters().firstOrNull { it.catalogKey() == bundled.catalogKey() })
+    }
+
+    @Test
     fun testRefreshClearsCacheOnSuccessfulEmptyPull() = runBlocking {
         ReciterCloudCache.setCloudReciters(listOf(archiveReciter))
         ReciterCloudCache.catalogFetcher = { emptyList() }

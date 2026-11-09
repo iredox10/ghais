@@ -1203,7 +1203,7 @@ object SyncEngine {
 
     /**
      * Pulls all `reciters` docs (paginated) into [ReciterCloudCache].
-     * Skips disabled docs and malformed rows. Never throws.
+     * Retains disabled docs as catalog tombstones and skips malformed rows. Never throws.
      */
     suspend fun refreshReciterCatalog(db: Databases) {
         try {
@@ -1254,7 +1254,6 @@ object SyncEngine {
         return try {
             val slug = (data["slug"] as? String)?.trim()?.takeIf { it.isNotEmpty() } ?: return null
             val enabled = data["enabled"] as? Boolean ?: true
-            if (!enabled) return null
             // Catalog fallback chain: explicit `catalog` first, then the
             // `catalog_key = "<catalog>:<slug>"` prefix (legacy docs predate
             // the catalog attribute), else MP3QURAN via catalogOf default.
@@ -1287,7 +1286,7 @@ object SyncEngine {
                 description = (data["description"] as? String) ?: "",
                 isTeacher = (data["is_teacher"] as? Boolean) ?: false,
                 imageFileId = (data["image_file_id"] as? String)?.takeIf { it.isNotBlank() },
-                enabled = true,
+                enabled = enabled,
             )
         } catch (_: Exception) {
             null

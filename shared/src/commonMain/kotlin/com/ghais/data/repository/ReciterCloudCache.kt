@@ -1,6 +1,7 @@
 package com.ghais.data.repository
 
 import com.ghais.domain.model.Reciter
+import com.russhwolf.settings.Settings
 import com.ghais.domain.model.ReciterCatalog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -21,10 +22,17 @@ import kotlinx.coroutines.flow.asStateFlow
  * untouched — this only overlays metadata (names, images, flags).
  */
 object ReciterCloudCache {
+    private const val DISABLED_KEY = "ghais_disabled_reciter_catalog_keys"
+    private val settings: Settings? by lazy { runCatching { Settings() }.getOrNull() }
+    private var disabledKeys: Set<String> = runCatching {
+        settings?.getString(DISABLED_KEY, "").orEmpty().split('\n').filter { it.isNotBlank() }.toSet()
+    }.getOrDefault(emptySet())
     private val _cloudReciters = MutableStateFlow<List<Reciter>>(emptyList())
     val cloudReciters: StateFlow<List<Reciter>> = _cloudReciters.asStateFlow()
 
     fun setCloudReciters(reciters: List<Reciter>) {
+        disabledKeys = reciters.filterNot { it.enabled }.mapTo(mutableSetOf()) { it.catalogKey() }
+        runCatching { settings?.putString(DISABLED_KEY, disabledKeys.joinToString("\n")) }
         _cloudReciters.value = reciters
     }
 
@@ -61,10 +69,10 @@ object ReciterCloudCache {
     fun mergedWith(bundled: List<Reciter>): List<Reciter> {
         return try {
             val cloud = cloudByKey()
-            if (cloud.isEmpty()) return bundled
-            val merged = bundled.map { local -> cloud[local.catalogKey()] ?: local }
+            val merged = bundled.filterNot { it.catalogKey() in disabledKeys }
+                .map { local -> cloud[local.catalogKey()] ?: local }
             val bundledKeys = bundled.mapTo(HashSet()) { it.catalogKey() }
-            merged + cloud.values.filter { it.catalogKey() !in bundledKeys }
+            merged + cloud.values.filter { it.enabled && it.catalogKey() !in bundledKeys }
         } catch (_: Exception) {
             bundled
         }
@@ -76,7 +84,7 @@ object ReciterCloudCache {
         val clean = slug.trim().lowercase()
         return try {
             _cloudReciters.value.firstOrNull {
-                it.slug.equals(clean, ignoreCase = true) && !it.imageUrl.isNullOrBlank()
+                it.enabled && it.slug.equals(clean, ignoreCase = true) && !it.imageUrl.isNullOrBlank()
             }?.imageUrl?.takeIf { it.isNotBlank() }
         } catch (_: Exception) {
             null
@@ -103,7 +111,7 @@ object ReciterCloudCache {
     fun cloudBySlug(slug: String): Reciter? {
         if (slug.isBlank()) return null
         val clean = slug.trim()
-        return _cloudReciters.value.firstOrNull { it.slug.equals(clean, ignoreCase = true) }
+        return _cloudReciters.value.firstOrNull { it.enabled && it.slug.equals(clean, ignoreCase = true) }
     }
 }
 
