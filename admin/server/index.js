@@ -809,7 +809,7 @@ app.delete('/api/playlists/:id', async (req, res) => {
 app.delete('/api/schedules/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    try { await databases.deleteDocument(DATABASE_ID, 'schedules', id); }
+    try { await databases.updateDocument(DATABASE_ID, 'schedules', id, { deleted: true, enabled: false }); }
     catch (error) { if (error.code !== 404) throw error; }
     res.json({ success: true });
   } catch (e) {
