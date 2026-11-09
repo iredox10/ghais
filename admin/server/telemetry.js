@@ -119,7 +119,7 @@ export function registerTelemetry(app, { getDatabases, getDatabaseId }) {
         }
       : {
           connected: false,
-          reason: 'waiting for devices: telemetry collection is empty (app-side uploader pending); server-self metrics only'
+          reason: 'No device telemetry is available yet; server metrics remain available.'
         };
 
     res.json({

@@ -544,6 +544,7 @@ export interface TelemetryData {
   nodeVersion: string;
   platform: string;
   activeConnections: number;
+  deviceTelemetry?: { devices: number; byPlatform: Record<string, number> };
 }
 
 export interface PlaybackSession {

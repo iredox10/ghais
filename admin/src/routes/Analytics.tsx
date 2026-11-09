@@ -21,7 +21,7 @@ import {
   Compass,
   CheckCheck
 } from 'lucide-react';
-import { useAnalytics } from '../lib/queryClient';
+import { useAnalytics, useTelemetry } from '../lib/queryClient';
 import { GlassCard } from '../components/ui/GlassCard';
 import { Badge } from '../components/ui/Badge';
 import { StatCard } from '../components/ui/StatCard';
@@ -30,6 +30,7 @@ const COLORS = ['#10B981', '#06B6D4', '#6366F1', '#F59E0B', '#EC4899'];
 
 export const Analytics: React.FC = () => {
   const { data: analytics, isLoading } = useAnalytics();
+  const { data: telemetry } = useTelemetry();
 
   if (isLoading || !analytics) {
     return (
@@ -45,7 +46,11 @@ export const Analytics: React.FC = () => {
     name: item.name || item.style || '',
     percentage: item.percentage,
   }));
-  const devices = analytics.deviceDistribution || [];
+  const deviceCounts = telemetry?.deviceTelemetry?.byPlatform ?? {};
+  const deviceTotal = Object.values(deviceCounts).reduce((sum, count) => sum + count, 0);
+  const devices = Object.entries(deviceCounts).map(([name, count]) => ({
+    name, value: deviceTotal ? Math.round(count * 100 / deviceTotal) : 0,
+  }));
 
   return (
     <div className="flex flex-col gap-8 pb-12">
@@ -68,13 +73,8 @@ export const Analytics: React.FC = () => {
               24-Hour Recitation Activity Peaks
             </span>
             <span className="text-xs text-white/40">
-              Listener traffic index across prayer times & daily routine rhythms
+              Relative activity from up to 200 recorded history entries, in server time
             </span>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <Badge variant="indigo" className="font-mono text-[10px]">
-              Peak: Bedtime & Fajr
-            </Badge>
           </div>
         </div>
 
@@ -133,6 +133,7 @@ export const Analytics: React.FC = () => {
           </div>
 
           <div className="h-44 w-full flex items-center justify-center">
+            {reciterStyles.length === 0 ? <p className="text-xs text-white/50">Style breakdown is not available yet.</p> :
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -160,7 +161,7 @@ export const Analytics: React.FC = () => {
                   }}
                 />
               </PieChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer>}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -183,10 +184,11 @@ export const Analytics: React.FC = () => {
               <Smartphone className="w-4 h-4 text-cyan-400" />
               Device Distribution
             </span>
-            <span className="text-xs text-white/40">Client operating systems in production</span>
+            <span className="text-xs text-white/40">Platforms among up to 200 reporting devices; not all installations</span>
           </div>
 
           <div className="flex flex-col gap-4 my-auto">
+            {devices.length === 0 && <p className="text-xs text-white/50">No device telemetry available.</p>}
             {devices.map((dev) => (
               <div key={dev.name} className="flex flex-col gap-1.5">
                 <div className="flex justify-between text-xs">
@@ -203,9 +205,6 @@ export const Analytics: React.FC = () => {
             ))}
           </div>
 
-          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] text-[11px] text-white/50">
-            Android features full Jetpack Media3 background service + AlarmManager exact clock delivery.
-          </div>
         </GlassCard>
       </div>
     </div>
