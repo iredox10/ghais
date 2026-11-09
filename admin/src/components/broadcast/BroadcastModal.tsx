@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Megaphone, Smartphone, Send, AlertCircle, CheckCircle2, Clock, Users, Sparkles, Bell } from 'lucide-react';
+import { Megaphone, Smartphone, Send, AlertCircle, CheckCircle2, Clock, Sparkles } from 'lucide-react';
 import { Modal, ModalHeader, ModalTitle, ModalDescription, ModalContent, ModalFooter } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -18,17 +18,10 @@ const URGENCY_OPTIONS = [
   { label: 'Friday Reminder', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
 ];
 
-const TARGET_GROUPS = [
-  { label: 'All Listeners', desc: 'Broadcast to all active app installations across Android & iOS' },
-  { label: 'Daily Khatma Streaks', desc: 'Target users maintaining active Quran reading streaks' },
-  { label: 'Jumu\'ah Surah Al-Kahf Readers', desc: 'Subscribers who listen to Friday recitations' },
-];
-
 export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose, onDispatched }) => {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [urgency, setUrgency] = useState('Normal');
-  const [targetTopic, setTargetTopic] = useState('All Listeners');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successResult, setSuccessResult] = useState<{ broadcastId: string; timestamp: string } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -79,7 +72,6 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose,
     setTitle('');
     setBody('');
     setUrgency('Normal');
-    setTargetTopic('All Listeners');
     setSuccessResult(null);
     setErrorMsg(null);
     setShowConfirm(false);
@@ -104,7 +96,7 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose,
         title: title.trim(),
         body: body.trim(),
         urgency,
-        targetTopic,
+        targetTopic: 'all',
       });
 
       if (res.success) {
@@ -135,11 +127,11 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose,
           </div>
           <div>
             <h2 className="text-xl font-semibold text-white tracking-tight flex items-center gap-2">
-              Broadcast & Push Dispatcher
-              <Badge variant="emerald" className="text-[10px] font-mono">Live FCM Gateway</Badge>
+              In-app Announcements
+              <Badge variant="emerald" className="text-[10px] font-mono">In-app inbox</Badge>
             </h2>
             <p className="text-xs text-white/50">
-              Compose in-app announcements and push notifications for Ghais listeners.
+              Publish announcements to the in-app inbox for all listeners. Push notifications are not sent.
             </p>
           </div>
         </div>
@@ -160,7 +152,7 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose,
                 <CheckCircle2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-base font-semibold text-white">Broadcast Dispatched Successfully!</h3>
+                <h3 className="text-base font-semibold text-white">Announcement published</h3>
                 <p className="text-xs text-white/60 mt-1">
                   ID: <span className="font-mono text-emerald-400">{successResult.broadcastId}</span>
                 </p>
@@ -205,7 +197,7 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose,
                   rows={4}
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  placeholder="Write announcement or push notification message here..."
+                  placeholder="Write an announcement..."
                   className="w-full px-3.5 py-2.5 bg-black/40 border border-white/[0.1] rounded-xl text-xs text-white placeholder-white/30 focus:outline-none focus:border-emerald-500 transition-colors resize-none"
                 />
               </div>
@@ -235,45 +227,12 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose,
                 </div>
               </div>
 
-              {/* Target Group Selector */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-white/80 flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-emerald-400" />
-                  Target Audience Group
-                </label>
-                <div className="space-y-2">
-                  {TARGET_GROUPS.map((group) => (
-                    <div
-                      key={group.label}
-                      onClick={() => setTargetTopic(group.label)}
-                      className={`p-3 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
-                        targetTopic === group.label
-                          ? 'bg-emerald-500/10 border-emerald-500/40 text-white'
-                          : 'bg-black/20 border-white/[0.06] text-white/70 hover:border-white/20'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="targetGroup"
-                        checked={targetTopic === group.label}
-                        onChange={() => setTargetTopic(group.label)}
-                        className="mt-0.5 accent-emerald-500 cursor-pointer"
-                      />
-                      <div>
-                        <div className="text-xs font-medium text-white">{group.label}</div>
-                        <div className="text-[11px] text-white/50">{group.desc}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {/* Confirmation Step / Dispatch Button */}
               <div className="pt-2">
                 {showConfirm ? (
                   <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-3">
                     <p className="text-xs font-medium text-amber-200">
-                      Are you sure you want to broadcast this announcement to <span className="font-bold underline">{targetTopic}</span>?
+                      Are you sure you want to broadcast this announcement to <span className="font-bold underline">all listeners</span>?
                     </p>
                     <div className="flex gap-2">
                       <Button
@@ -312,7 +271,7 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose,
         <div className="lg:col-span-5 flex flex-col items-center justify-center bg-black/40 rounded-2xl border border-white/[0.08] p-6">
           <div className="flex items-center gap-2 text-xs font-medium text-white/60 mb-4">
             <Smartphone className="w-4 h-4 text-emerald-400" />
-            <span>Mobile Push Notification Preview</span>
+            <span>In-app Announcement Preview</span>
           </div>
 
           {/* Smartphone Bezel Mockup */}
@@ -362,10 +321,10 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose,
                   </span>
                 </div>
                 <p className="text-[11px] text-white/70 leading-snug line-clamp-4">
-                  {body.trim() || 'Push notification preview text will appear here as you type your announcement message...'}
+                  {body.trim() || 'Announcement preview text will appear here as you type your message...'}
                 </p>
                 <div className="pt-1 flex items-center justify-between text-[10px] text-emerald-400 font-medium">
-                  <span>Target: {targetTopic}</span>
+                  <span>Audience: All listeners</span>
                   <span>Tap to open →</span>
                 </div>
               </div>
@@ -438,7 +397,7 @@ export const BroadcastModal: React.FC<BroadcastModalProps> = ({ isOpen, onClose,
 
       <div className="p-4 px-6 border-t border-white/[0.08] bg-white/[0.02] flex items-center justify-between">
         <span className="text-xs text-white/40">
-          Gateway: FCM Production (Android / iOS APNS)
+          Delivered in the app inbox when it refreshes; no push notification is sent.
         </span>
         <Button variant="glass" onClick={handleClose} className="text-xs border-white/20 text-white/80 hover:bg-white/10">
           Close

@@ -15,8 +15,10 @@ export default function registerBroadcastRoutes(app, getContext) {
     try {
       const {title,body,audience,targetTopic,targetGroup,urgency}=req.body||{};
       if(typeof title!=='string'||!title.trim()||typeof body!=='string'||!body.trim()) return res.status(400).json({success:false,error:'Title and message body are required.'});
+      const requestedAudience = audience || targetTopic || targetGroup || 'all';
+      if (!['all', 'All Listeners'].includes(requestedAudience)) return res.status(400).json({success:false,error:'Audience targeting is not supported; announcements are visible to all listeners.'});
       const {databases,databaseId}=getContext();
-      const doc=await databases.createDocument(databaseId,'broadcasts','unique()',{title:title.trim(),body:body.trim(),audience:audience||targetTopic||targetGroup||'all',urgency:urgency||'Normal'});
+      const doc=await databases.createDocument(databaseId,'broadcasts','unique()',{title:title.trim(),body:body.trim(),audience:'all',urgency:urgency||'Normal'});
       res.status(201).json({success:true,broadcastId:doc.$id,timestamp:doc.$createdAt});
     } catch(error) { res.status(500).json({success:false,error:'Could not save broadcast.'}); }
   });
