@@ -60,6 +60,18 @@ class SchedulesStoreTest {
         SchedulesStore.setOwner("local")
     }
 
+    @Test
+    fun remoteTombstonesRemoveOnlyMatchingSchedules() {
+        SchedulesStore.add(schedule("deleted"))
+        SchedulesStore.add(schedule("local-only"))
+        com.ghais.data.sync.SyncEngine.applyScheduleTombstones(listOf(
+            com.ghais.data.backend.Document("remote", mapOf("schedule_id" to "deleted", "deleted" to true)),
+            com.ghais.data.backend.Document("active", mapOf("schedule_id" to "local-only", "deleted" to false)),
+        ))
+        assertNull(SchedulesStore.get("deleted"))
+        assertNotNull(SchedulesStore.get("local-only"))
+    }
+
     // --- Normalization ---
 
     @Test

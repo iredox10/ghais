@@ -2748,12 +2748,7 @@ object SyncEngine {
         if (docs.isEmpty()) return false
         // Tombstones are retained on the server so each device can observe an
         // admin deletion, including devices that were offline at the time.
-        for (doc in docs) {
-            if (doc.data["deleted"] != true) continue
-            val id = (doc.data["schedule_id"] as? String)?.trim()
-                ?.takeIf { it.isNotEmpty() } ?: schedulePayloadId(doc)
-            if (id != null) SchedulesStore.remove(id)
-        }
+        applyScheduleTombstones(docs)
         val remote = docs.mapNotNull { doc ->
             if (doc.data["deleted"] == true) return@mapNotNull null
             val raw = (doc.data["schedule_json"] as? String)?.trim().orEmpty()
@@ -2781,6 +2776,15 @@ object SyncEngine {
                 "${SchedulesStore.schedules.value.size} local (+$added new)."
         )
         return true
+    }
+
+    internal fun applyScheduleTombstones(docs: List<com.ghais.data.backend.Document<Map<String, Any>>>) {
+        for (doc in docs) {
+            if (doc.data["deleted"] != true) continue
+            val id = (doc.data["schedule_id"] as? String)?.trim()
+                ?.takeIf { it.isNotEmpty() } ?: schedulePayloadId(doc)
+            if (id != null) SchedulesStore.remove(id)
+        }
     }
 
     private suspend fun pushSchedules(db: Databases, userId: String, cloudHasData: Boolean) {
