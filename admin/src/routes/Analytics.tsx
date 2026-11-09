@@ -42,6 +42,7 @@ export const Analytics: React.FC = () => {
   }
 
   const peakHours = analytics.peakHours || [];
+  const peakIndex = Math.max(0, ...peakHours.map((hour) => hour.index));
   const reciterStyles = (analytics.reciterStyleDistribution || []).map((item: any) => ({
     name: item.name || item.style || '',
     percentage: item.percentage,
@@ -109,7 +110,7 @@ export const Analytics: React.FC = () => {
                 {peakHours.map((_, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={index === 0 || index === 5 ? '#10B981' : 'rgba(255,255,255,0.2)'}
+                    fill={peakIndex > 0 && peakHours[index].index === peakIndex ? '#10B981' : 'rgba(255,255,255,0.2)'}
                   />
                 ))}
               </Bar>
