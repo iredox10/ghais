@@ -3431,9 +3431,8 @@ object SyncEngine {
     // cache is kept so offline keeps showing the previous shelf.
 
     /**
-     * Pulls public playlists + their items (see section header). Updates
-     * [EditorialRepository] only when at least one usable playlist parses —
-     * an empty/error result keeps the previous shelf. Never throws.
+     * Pulls public playlists + their items (see section header). Updates [EditorialRepository] on a successful response, including an empty
+     * response; failed requests preserve the previous shelf. Never throws.
      */
     suspend fun refreshEditorial() {
         if (!BackendConfig.isConfigured()) return
@@ -3454,10 +3453,8 @@ object SyncEngine {
                 val out = docs.mapNotNull { doc ->
                     parseEditorialPlaylist(db, doc.id, doc.data)
                 }
-                if (out.isNotEmpty()) {
-                    EditorialRepository.setPlaylists(out)
-                    Log.i(TAG, "editorial pull: adopted ${out.size} public playlist(s).")
-                }
+                EditorialRepository.setPlaylists(out)
+                Log.i(TAG, "editorial pull: adopted ${out.size} public playlist(s).")
             }
         } catch (e: Exception) {
             Log.w(TAG, "editorial refresh failed", e)
