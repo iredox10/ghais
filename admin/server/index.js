@@ -12,6 +12,7 @@ import registerExportRoutes from './exportRoutes.js';
 import registerIndexAudit from './indexAudit.js';
 import registerBroadcastRoutes from './broadcastRoutes.js';
 import { registerPlaylistEditing } from './playlistEditing.js';
+import { registerScheduleDeletion } from './scheduleDeletion.js';
 import registerPlaybackRoutes from './playbackRoutes.js';
 import registerSurahsRoutes from './surahsRoutes.js';
 import { registerTelemetry } from './telemetry.js';
@@ -404,7 +405,7 @@ app.get('/api/overview', async (req, res) => {
         safeCall(() => databases.listDocuments(DATABASE_ID, 'likes', [Query.limit(100)]), emptyList),
         safeCall(() => databases.listDocuments(DATABASE_ID, 'follows', [Query.limit(100)]), emptyList),
         pool.query("SELECT doc->>'reciter_slug' AS slug, COUNT(*)::int AS count FROM follows WHERE doc->>'reciter_slug' IS NOT NULL GROUP BY 1"),
-        safeCall(() => databases.listDocuments(DATABASE_ID, 'schedules', [Query.limit(100)]), emptyList),
+        pool.query("SELECT COUNT(*)::int AS total FROM schedules WHERE COALESCE(doc->>'deleted','false') <> 'true'"),
         safeCall(() => listHistoryDocs([Query.limit(100)]), emptyList),
         safeCall(() => databases.listDocuments(DATABASE_ID, 'khatma_plans', [Query.limit(100)]), emptyList),
       ]);
@@ -413,7 +414,7 @@ app.get('/api/overview', async (req, res) => {
       totalLikes = lRes.total ?? 0;
       totalFollows = fRes.total ?? 0;
       followCounts.rows.forEach(f => { followsBySlug[f.slug] = f.count; });
-      activeSchedules = schRes.total ?? 0;
+      activeSchedules = schRes.rows[0]?.total ?? 0;
       khatmaActive = khRes.total ?? 0;
       realHistoryDocs = (hRes && hRes.documents) || [];
 
@@ -506,7 +507,7 @@ app.get('/api/users', async (req, res) => {
     });
 
     const schedulesByUser = {};
-    schRes.documents.forEach(sch => {
+    schRes.documents.filter(sch => sch.deleted !== true).forEach(sch => {
       schedulesByUser[sch.user_id] = (schedulesByUser[sch.user_id] || 0) + 1;
     });
 
@@ -572,7 +573,7 @@ app.get('/api/users/:id', async (req, res) => {
     //   durationMin (null = play range to end), enabled }.
     // Doc id == schedule.id (truncated to 36 chars); the `schedule_id`
     // attribute carries the full id. Top-level `enabled` is authoritative.
-    const schedules = schRes.documents.map(d => {
+    const schedules = schRes.documents.filter(d => d.deleted !== true).map(d => {
       let parsed = {};
       try { parsed = JSON.parse(d.schedule_json || '{}'); } catch (_) {}
       const h = Number.isInteger(parsed.hour) ? Math.min(23, Math.max(0, parsed.hour)) : 7;
@@ -805,20 +806,7 @@ app.delete('/api/playlists/:id', async (req, res) => {
   } finally { client?.release(); }
 });
 
-// Delete a schedule / alarm by document ID (doc id == schedule.id, see
-// scheduleDocId in the app's SyncEngine; schedule_id attr holds the full id).
-// Idempotent: a missing doc still returns success so retries/sandbox stay quiet.
-app.delete('/api/schedules/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    try { await databases.updateDocument(DATABASE_ID, 'schedules', id, { deleted: true, enabled: false }); }
-    catch (error) { if (error.code !== 404) throw error; }
-    res.json({ success: true });
-  } catch (e) {
-    console.error('Error deleting schedule:', e);
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
+registerScheduleDeletion(app, pool);
 
 
 // Live Activity Feed synthesized from Appwrite history, likes & schedules
@@ -879,7 +867,7 @@ app.get('/api/activity', async (req, res) => {
       });
 
       // Parse Schedules
-      schRes.documents.forEach(s => {
+      schRes.documents.filter(s => s.deleted !== true).forEach(s => {
         const userName = userMap[s.user_id] || 'Listener';
         activities.push({
           id: s.$id,
