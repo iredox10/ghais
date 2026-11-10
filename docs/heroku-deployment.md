@@ -4,7 +4,7 @@ The `ghaith` Heroku app runs the backend at `https://ghaith-c77c2426ed4d.herokua
 
 The Android production endpoint targets the Heroku API. A debug APK was built and installed on the emulator. The GitHub chart workflow and its admin secret are configured, and a manual chart refresh succeeded. Automatic GitHub-to-Heroku deployment is not configured.
 
-On 2026-11-10, release v19 deployed the admin/mobile integration changes from commit `e02cb9c` using a clean Git archive and the native Node buildpack. The release, API health endpoint, public mood endpoint, authenticated admin and its PostgreSQL/R2 configuration checks succeeded. The mobile changes must be included in a new app build and installed on devices. The scheduled GitHub chart workflow was last observed completing successfully on 2026-11-09.
+On 2026-11-10, release v19 deployed the admin/mobile integration changes from commit `e02cb9c` using a clean Git archive and the native Node buildpack. The release, API health endpoint, public mood endpoint, authenticated admin and its PostgreSQL/R2 configuration checks succeeded. A new debug APK was built at `androidApp/build/outputs/apk/debug/androidApp-debug.apk`; it has not been installed on a device or distributed as a release. The scheduled GitHub chart workflow was last observed completing successfully on 2026-11-09.
 
 Appwrite currently rejects document reads with `team_read_only`, so the cutover uses the existing Heroku catalog and bundled app data. Existing Appwrite accounts and private cloud documents are unavailable; users must create new accounts. Device-local data remains on the device, subject to the app's existing local storage behavior. Do not overwrite the existing Heroku catalog with demo fixtures.
 
