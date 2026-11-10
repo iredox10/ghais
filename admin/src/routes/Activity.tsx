@@ -45,7 +45,7 @@ export const Activity: React.FC = () => {
 
   const seenIdsRef = useRef<Set<string>>(new Set());
 
-  const { data, isLoading } = useActivity({
+  const { data, isLoading, isError: activityError } = useActivity({
     refetchInterval: pollIntervalMap[pollRate],
   });
 
@@ -357,9 +357,11 @@ export const Activity: React.FC = () => {
               <div key={i} className="h-16 rounded-xl bg-white/5 border border-white/10" />
             ))}
           </div>
+        ) : activityError && serverActivities.length === 0 ? (
+          <div className="text-center py-12 text-xs text-rose-300">Activity data is unavailable. Try again later.</div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-xs text-white/40">
-            No recent activity found for filter "{filterType}". Try clicking "Simulate / Test Inbound Event".
+            No recent activity found for filter "{filterType}".
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -448,7 +450,7 @@ export const Activity: React.FC = () => {
         {inspectingActivity && (
           <div className="flex flex-col gap-4">
             <p className="text-xs text-white/60">
-              Complete event payload transmitted via PostgreSQL real-time cluster or simulation stream.
+              {inspectingActivity.simulated ? 'This is a simulated event.' : 'This is a summary assembled from saved records; it is not a complete device event.'}
             </p>
 
             <div className="grid grid-cols-2 gap-3 text-xs">
