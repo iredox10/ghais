@@ -53,13 +53,9 @@ function surahNameEn(surahId) {
 }
 
 function formatUpdatedAt(doc) {
-  if (typeof doc.updated_at === 'number' && doc.updated_at > 0) {
-    return new Date(doc.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  }
-  if (doc.$updatedAt) {
-    return new Date(doc.$updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  }
-  return 'Unknown';
+  const raw = typeof doc.updated_at === 'number' && doc.updated_at > 0 ? doc.updated_at : doc.$updatedAt;
+  const timestamp = raw ? new Date(raw) : null;
+  return timestamp && Number.isFinite(timestamp.getTime()) ? timestamp.toISOString() : 'Unknown';
 }
 
 export default function registerPlaybackRoutes(app, getContext) {
