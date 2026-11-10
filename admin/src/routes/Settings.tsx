@@ -201,11 +201,11 @@ export const Settings: React.FC = () => {
                 Database Ping
               </span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">
-                {(telemetry?.pingMs ?? 42) < 100 ? 'Low Latency' : 'Optimal'}
+                {telemetry?.pingMs == null ? 'Unavailable' : telemetry.pingMs < 100 ? 'Low Latency' : 'Measured'}
               </span>
             </div>
             <div className="text-xl font-bold text-white">
-              {telemetry?.pingMs ?? 42} <span className="text-xs font-normal text-white/50">ms</span>
+              {telemetry?.pingMs ?? '—'} <span className="text-xs font-normal text-white/50">ms</span>
             </div>
           </div>
 
@@ -219,7 +219,7 @@ export const Settings: React.FC = () => {
               <span className="text-[10px] text-white/40">Counter</span>
             </div>
             <div className="text-xl font-bold text-white">
-              {formatUptime(telemetry?.uptimeSeconds ?? 0)}
+              {telemetry?.uptimeSeconds == null ? '—' : formatUptime(telemetry.uptimeSeconds)}
             </div>
           </div>
 
@@ -233,7 +233,7 @@ export const Settings: React.FC = () => {
               <span className="text-[10px] text-white/40">RSS</span>
             </div>
             <div className="text-xl font-bold text-white">
-              {telemetry?.memoryMb ?? 38} <span className="text-xs font-normal text-white/50">MB RSS</span>
+              {telemetry?.memoryMb ?? '—'} <span className="text-xs font-normal text-white/50">MB RSS</span>
             </div>
           </div>
 
@@ -244,10 +244,10 @@ export const Settings: React.FC = () => {
                 <Cpu className="w-3.5 h-3.5 text-emerald-400" />
                 Node Runtime
               </span>
-              <span className="text-[10px] text-white/40">{telemetry?.activeConnections ?? 1} active conn</span>
+              <span className="text-[10px] text-white/40">{telemetry?.activeConnections ?? '—'} active conn</span>
             </div>
             <div className="text-sm font-bold text-white truncate pt-1">
-              Node {telemetry?.nodeVersion ?? 'v18.19.0'} ({telemetry?.platform ?? 'linux'})
+              Node {telemetry?.nodeVersion ?? '—'} ({telemetry?.platform ?? '—'})
             </div>
           </div>
         </div>
@@ -257,7 +257,7 @@ export const Settings: React.FC = () => {
           <div className="flex items-center justify-between text-xs">
             <span className="text-white/70 font-semibold font-sans">Device Telemetry — live app reports</span>
             <Badge variant={appTelemetry?.connected ? 'emerald' : 'amber'} className="font-mono text-[10px]">
-              {appTelemetry?.connected ? `${deviceCount} device${deviceCount === 1 ? '' : 's'} connected` : 'Waiting for devices'}
+              {appTelemetry?.connected ? `${deviceCount} device${deviceCount === 1 ? '' : 's'} reported` : 'No device reports'}
             </Badge>
           </div>
           {deviceCount > 0 ? (
@@ -274,7 +274,7 @@ export const Settings: React.FC = () => {
             </div>
           ) : (
             <div className="text-[11px] text-white/40">
-              {appTelemetry?.reason ?? 'No devices reporting yet — app-side uploader pending. Server-self metrics above remain live.'}
+              {appTelemetry?.reason ?? 'Device telemetry is unavailable.'}
             </div>
           )}
         </div>

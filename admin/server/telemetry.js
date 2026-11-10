@@ -18,20 +18,11 @@ export function registerTelemetry(app, { getDatabases, getDatabaseId }) {
     next();
   });
 
-  // NOTE (one-sided pipeline, verified 2026-09-24): nothing in the
-  // quranify app posts telemetry — `telemetry|Telemetry` has zero matches
-  // across the whole app repo, and the app's SyncEngine only syncs
-  // likes/follows/playback_state/schedules/listening_stats/history/
-  // playlists/playlist_items/user_prefs/routine_backups/reciter_stats/
-  // khatma_plans. There is NO app-side telemetry writer, so this endpoint
-  // is server self-health (process + Appwrite reachability), NOT app
-  // telemetry. It degrades gracefully: live ping when Appwrite answers,
-  // sandbox latency otherwise, always HTTP 200, and the `appTelemetry`
-  // block below reports the missing writer explicitly instead of implying
-  // coverage that does not exist.
+  // The device section is a sample of saved mobile reports; it is not a count
+  // of devices currently connected. Server process metrics are independent.
   app.get('/api/telemetry', async (req, res) => {
     const startTime = Date.now();
-    let pingMs = 0;
+    let pingMs = null;
     let dbReachable = false;
     let mode = 'sandbox';
 
@@ -47,9 +38,6 @@ export function registerTelemetry(app, { getDatabases, getDatabaseId }) {
       } catch (err) {
         pingMs = Date.now() - startTime;
       }
-    } else {
-      // Sandbox mode simulated Frankfurt Cloud ping latency
-      pingMs = 38 + Math.floor(Math.random() * 12);
     }
 
     const memUsage = process.memoryUsage();
@@ -58,14 +46,9 @@ export function registerTelemetry(app, { getDatabases, getDatabaseId }) {
     const nodeVersion = process.version;
     const platform = process.platform;
 
-    // LIVE device telemetry (additive, degrades gracefully).
-    // Schema (centrally provisioned, USER_RW):
-    //   telemetry = (user_id, device_id, platform, app_version,
-    //                total_seconds, updated_at)
-    // Until the sibling agent's app-side uploader ships, the collection is
-    // empty (or unreadable) — keep server-self fields + sandbox behavior
-    // untouched and report devices: 0 with connected: false.
+    // Most recent 200 device reports. Reports may be old or absent.
     let deviceTelemetry = {
+      available: false,
       devices: 0,
       byPlatform: {},
       byAppVersion: {},
@@ -74,7 +57,7 @@ export function registerTelemetry(app, { getDatabases, getDatabaseId }) {
     };
     if (databases && databaseId) {
       try {
-        const telRes = await databases.listDocuments(databaseId, 'telemetry', [Query.limit(200)]);
+        const telRes = await databases.listDocuments(databaseId, 'telemetry', [Query.orderDesc('$updatedAt'), Query.limit(200)]);
         const docs = Array.isArray(telRes?.documents) ? telRes.documents : [];
         const byPlatform = {};
         const byAppVersion = {};
@@ -101,6 +84,7 @@ export function registerTelemetry(app, { getDatabases, getDatabaseId }) {
           }
         }
         deviceTelemetry = {
+          available: true,
           devices: docs.length,
           byPlatform,
           byAppVersion,
@@ -117,7 +101,10 @@ export function registerTelemetry(app, { getDatabases, getDatabaseId }) {
           connected: true,
           reason: `live: ${deviceTelemetry.devices} device(s) reporting via telemetry collection (limit 200)`
         }
-      : {
+      : !deviceTelemetry.available ? {
+          connected: false,
+          reason: 'Device telemetry could not be retrieved.'
+        } : {
           connected: false,
           reason: 'No device telemetry is available yet; server metrics remain available.'
         };

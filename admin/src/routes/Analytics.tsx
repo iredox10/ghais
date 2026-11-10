@@ -193,7 +193,7 @@ export const Analytics: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-4 my-auto">
-            {devices.length === 0 && <p className="text-xs text-white/50">No device telemetry available.</p>}
+            {devices.length === 0 && <p className="text-xs text-white/50">{telemetry?.deviceTelemetry?.available ? 'No devices have reported yet.' : 'Device telemetry could not be loaded.'}</p>}
             {devices.map((dev) => (
               <div key={dev.name} className="flex flex-col gap-1.5">
                 <div className="flex justify-between text-xs">

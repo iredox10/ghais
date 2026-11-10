@@ -550,13 +550,13 @@ export interface ProvisionResponse {
 }
 
 export interface TelemetryData {
-  pingMs: number;
+  pingMs: number | null;
   uptimeSeconds: number;
   memoryMb: number;
   nodeVersion: string;
   platform: string;
   activeConnections: number;
-  deviceTelemetry?: { devices: number; byPlatform: Record<string, number> };
+  deviceTelemetry?: { available: boolean; devices: number; byPlatform: Record<string, number> };
 }
 
 export interface PlaybackSession {
