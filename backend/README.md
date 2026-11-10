@@ -66,7 +66,7 @@ The root `package.json` installs and builds this backend with the Node buildpack
 
 The app uses shared Ktor HTTP code for auth and document sync on Android and iOS. It no longer includes the Appwrite SDK. `BackendConfig.ENDPOINT` points at this API; document paths/shapes remain compatible. iOS Google UI is supplied by the native host through `IosGoogleSignIn.idTokenProvider`.
 
-Copy Heroku’s `ADMIN_TOKEN` into GitHub Actions secret `HEROKU_ADMIN_TOKEN` to enable `.github/workflows/charts-rollup.yml` (daily at 03:00 UTC, plus manual dispatch). Set repository variable `HEROKU_API_URL` if the API uses a different host. The job refreshes both charts and reciter follower/like counts. It replaces the legacy `appwrite/functions/aggregate-charts` function, including per-owner/surah/day deduplication and velocity trending. Play-event `ms` is listened duration, not an event timestamp; chart windows use the server `created_at` timestamp.
+Copy Heroku’s `ADMIN_TOKEN` into GitHub Actions secret `HEROKU_ADMIN_TOKEN` to enable `.github/workflows/charts-rollup.yml` (daily at 03:00 UTC, plus manual dispatch). Set repository variable `HEROKU_API_URL` if the API uses a different host. The job refreshes both charts and reciter follower/like counts. It replaces the legacy `appwrite/functions/aggregate-charts` function, including per-owner/surah/day deduplication and velocity trending. Play-event `ms` is playback position, not a listening duration or event timestamp. Chart windows use a plausible `playedAtMs` recorded by updated clients; older clients and records without a valid timestamp fall back to server `created_at`, so offline plays from older app versions are dated by upload time.
 
 ## Tests
 
