@@ -98,6 +98,7 @@ class MainActivity : ComponentActivity() {
         }
         // Any play/resume boots the foreground MediaSession service so audio
         // survives background + shows system notification controls.
+        val playbackContext = applicationContext
         com.ghais.player.PlayerBridge.onPlayRequested = {
             // May fire while the activity is stopped/backgrounded (alarm,
             // headset resume, notification-interruption auto-resume):
@@ -105,13 +106,10 @@ class MainActivity : ComponentActivity() {
             // use the application context (an activity reference goes stale
             // once destroyed) and MUST NOT be gated behind the permission
             // ask — a skipped start leaves playback non-foreground and the
-            // system kills it when a notification lands. The POST_NOTIFICATIONS
-            // ask is best-effort, after the service boot.
+            // system kills it when a notification lands. Permission requests
+            // happen from onResume; this callback retains only the app context.
             try {
-                QuranPlaybackService.start(applicationContext)
-            } catch (_: Exception) { }
-            try {
-                requestNotificationPermission()
+                QuranPlaybackService.start(playbackContext)
             } catch (_: Exception) { }
         }
         // Do NOT warm-start the FGS here: starting a foreground service with an

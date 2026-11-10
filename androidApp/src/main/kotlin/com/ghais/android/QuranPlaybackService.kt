@@ -216,7 +216,8 @@ class QuranPlaybackService : MediaSessionService() {
         // A headset/system resume can create the service without MainActivity.
         PlayerBridge.init(applicationContext)
         com.ghais.player.AmbientPlayerBridge.init(applicationContext)
-        PlayerBridge.onPlayRequested = { start(applicationContext) }
+        val playbackContext = applicationContext
+        PlayerBridge.onPlayRequested = { start(playbackContext) }
         PlaybackResumeStore.restore(applicationContext)
         if (!ownsPlayer) {
             PlayerBridge.attachPlayer(exo)
@@ -224,71 +225,7 @@ class QuranPlaybackService : MediaSessionService() {
         exo.removeListener(sessionListener)
         exo.addListener(sessionListener)
 
-        val forwardingPlayer = object : androidx.media3.common.ForwardingPlayer(exo) {
-            override fun play() = AudioEngine.resume()
-            override fun pause() = AudioEngine.pause()
-            override fun stop() = AudioEngine.stop()
-            override fun setPlayWhenReady(playWhenReady: Boolean) {
-                if (playWhenReady) AudioEngine.resume() else AudioEngine.pause()
-            }
-
-            override fun getAvailableCommands(): Player.Commands {
-                return super.getAvailableCommands().buildUpon()
-                    .add(Player.COMMAND_SEEK_TO_NEXT)
-                    .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
-                    .add(Player.COMMAND_SEEK_TO_PREVIOUS)
-                    .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
-                    .add(Player.COMMAND_SEEK_BACK)
-                    .add(Player.COMMAND_SEEK_FORWARD)
-                    .build()
-            }
-
-            override fun isCommandAvailable(command: Int): Boolean {
-                return when (command) {
-                    Player.COMMAND_SEEK_TO_NEXT,
-                    Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-                    Player.COMMAND_SEEK_TO_PREVIOUS,
-                    Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
-                    Player.COMMAND_SEEK_BACK,
-                    Player.COMMAND_SEEK_FORWARD -> true
-                    else -> super.isCommandAvailable(command)
-                }
-            }
-
-            // Shade ±10s: route rewind/ffwd buttons through AudioEngine so the
-            // shared position/speed state stays the single source of truth.
-            override fun getSeekBackIncrement(): Long = SEEK_STEP_MS
-
-            override fun getSeekForwardIncrement(): Long = SEEK_STEP_MS
-
-            override fun seekBack() {
-                try {
-                    AudioEngine.seekTo((AudioEngine.currentPositionMs.value - SEEK_STEP_MS).coerceAtLeast(0L))
-                } catch (_: Exception) { }
-            }
-
-            override fun seekForward() {
-                try {
-                    AudioEngine.seekTo(AudioEngine.currentPositionMs.value + SEEK_STEP_MS)
-                } catch (_: Exception) { }
-            }
-
-            override fun seekToNext() {
-                try { AudioEngine.next() } catch (_: Exception) { }
-            }
-
-            override fun seekToNextMediaItem() {
-                try { AudioEngine.next() } catch (_: Exception) { }
-            }
-
-            override fun seekToPrevious() {
-                try { AudioEngine.previous() } catch (_: Exception) { }
-            }
-
-            override fun seekToPreviousMediaItem() {
-                try { AudioEngine.previous() } catch (_: Exception) { }
-            }
-        }
+        val forwardingPlayer = NotificationPlayer(exo, EngineNotificationControls)
 
         val session = try {
             MediaSession.Builder(this, forwardingPlayer)
@@ -397,6 +334,7 @@ class QuranPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        try { PlaybackResumeStore.save(applicationContext) } catch (_: Exception) { }
         try {
             android.util.Log.w(
                 "GhaithNotif",
@@ -482,18 +420,16 @@ class QuranPlaybackService : MediaSessionService() {
             return try {
                 when (customCommand.customAction) {
                     CUSTOM_FAVORITE_TOGGLE -> {
-                        try {
-                            AudioEngine.currentTrack.value?.let { FavoritesStore.toggle(it) }
-                        } catch (_: Exception) { }
+                        val track = AudioEngine.currentTrack.value
+                            ?: return Futures.immediateFuture(SessionResult(SessionResult.RESULT_INFO_SKIPPED))
+                        FavoritesStore.toggle(track)
                         try { refreshShadeButtons() } catch (_: Exception) { }
                         try { refreshNotification() } catch (_: Exception) { }
                         Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                     }
                     CUSTOM_REPEAT_CYCLE -> {
-                        try {
-                            val current = AudioEngine.playbackState.value.settings.repeatMode
-                            AudioEngine.setRepeatMode(nextShadeRepeatMode(current))
-                        } catch (_: Exception) { }
+                        val current = AudioEngine.playbackState.value.settings.repeatMode
+                        AudioEngine.setRepeatMode(nextShadeRepeatMode(current))
                         try { refreshShadeButtons() } catch (_: Exception) { }
                         try { refreshNotification() } catch (_: Exception) { }
                         Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
@@ -508,6 +444,11 @@ class QuranPlaybackService : MediaSessionService() {
     }
 
     private fun observeEngine() {
+        serviceScope.launch {
+            AudioEngine.isPlaying.collect { playing ->
+                if (!playing) PlaybackResumeStore.save(applicationContext)
+            }
+        }
         serviceScope.launch {
             while (true) {
                 PlaybackResumeStore.save(applicationContext)
@@ -655,11 +596,11 @@ class QuranPlaybackService : MediaSessionService() {
             val key = "${track?.audioUrl}:$isFav:$repeat"
             if (key == lastShadeButtonsKey) return
             lastShadeButtonsKey = key
-            session.setCustomLayout(buildShadeButtons(isFav, repeat))
+            session.setCustomLayout(buildShadeButtons(isFav, repeat, track != null))
         } catch (_: Exception) { }
     }
 
-    private fun buildShadeButtons(isFav: Boolean, repeat: RepeatMode): List<CommandButton> {
+    private fun buildShadeButtons(isFav: Boolean, repeat: RepeatMode, hasTrack: Boolean): List<CommandButton> {
         val buttons = mutableListOf<CommandButton>()
         try {
             val favIcon = CommandButton.getIconResIdForIconConstant(
@@ -670,7 +611,7 @@ class QuranPlaybackService : MediaSessionService() {
                     .setSessionCommand(SessionCommand(CUSTOM_FAVORITE_TOGGLE, Bundle.EMPTY))
                     .setDisplayName(if (isFav) "Remove favorite" else "Add favorite")
                     .setIconResId(favIcon)
-                    .setEnabled(true)
+                    .setEnabled(hasTrack)
                     .build(),
             )
         } catch (_: Exception) { }
@@ -702,7 +643,7 @@ class QuranPlaybackService : MediaSessionService() {
         try {
             val p = player ?: return
             if (p.mediaItemCount == 0) return
-            if (p.isPlaying) return
+            if (p.isPlaying || p.playWhenReady || p.playbackState == Player.STATE_BUFFERING) return
             val index = p.currentMediaItemIndex.coerceIn(0, p.mediaItemCount - 1)
             val current = p.getMediaItemAt(index)
             val target = artUri ?: fallbackArtworkUri()
@@ -713,7 +654,7 @@ class QuranPlaybackService : MediaSessionService() {
                 .setArtworkUri(target)
                 .build()
             p.replaceMediaItem(index, current.buildUpon().setMediaMetadata(meta).build())
-            if (resumePos > 1_000L) {
+            if (resumePos > 0L) {
                 try { p.seekTo(resumePos) } catch (_: Exception) { }
             }
         } catch (_: Exception) { }

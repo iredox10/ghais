@@ -2,6 +2,7 @@ package com.ghais.player
 
 import android.content.Context
 import com.ghais.domain.model.TrackItem
+import com.ghais.domain.model.isFullSurah
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -23,7 +24,25 @@ object PlaybackResumeStore {
     }
 
     fun restore(context: Context) {
-        if (AudioEngine.currentTrack.value != null) return
+        AudioEngine.currentTrack.value?.let { track ->
+            // Service destruction may release its player while the process and
+            // engine queue survive. Rebuild only the missing native media item.
+            val player = PlayerBridge.playerOrNull()
+            if (player != null && player.mediaItemCount == 0) {
+                val uri = if (track.ayahNo > 0 && !track.isFullSurah) {
+                    QuranDownloads.localAyahUri(track.reciterSlug, track.surahId, track.ayahNo)
+                        ?: QuranDownloads.localUri(track.reciterSlug, track.surahId)
+                        ?: track.audioUrl
+                } else QuranDownloads.localUri(track.reciterSlug, track.surahId) ?: track.audioUrl
+                PlayerBridge.setSpeed(AudioEngine.playbackSpeed.value)
+                PlayerBridge.setPlaybackArtworkUri(runCatching {
+                    com.ghais.ui.screens.reciters.resolveReciterPhoto(track.reciterSlug)
+                }.getOrNull())
+                PlayerBridge.prepareWithMetadata(uri, AudioEngine.trackDisplayTitle(track), track.reciterName,
+                    AudioEngine.currentPositionMs.value)
+            }
+            return
+        }
         val prefs = context.getSharedPreferences("playback_resume", Context.MODE_PRIVATE)
         val encoded = prefs.getString("track", null) ?: return
         try {
