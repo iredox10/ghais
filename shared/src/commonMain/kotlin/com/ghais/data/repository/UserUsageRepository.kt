@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -667,6 +668,12 @@ object UserUsageRepository {
         loadHistory()
         loadStats()
         observeAudioEngine()
+        scope.launch {
+            while (true) {
+                refreshCalendarDay()
+                delay(30_000L)
+            }
+        }
     }
 
     private fun currentTimeMs(): Long = Clock.System.now().toEpochMilliseconds()
@@ -1027,7 +1034,6 @@ object UserUsageRepository {
             AudioEngine.isPlaying.collect { isPlaying ->
                 if (isPlaying) {
                     lastRecordedTimeMs = currentTimeMs()
-                    ensureStreakUpdatedForToday()
                     // Devotion streak (hooks): a day with real listening.
                     try {
                         com.ghais.devotion.DevotionStreak.recordDevotionDay()
@@ -1050,9 +1056,8 @@ object UserUsageRepository {
                 val track = AudioEngine.currentTrack.value ?: return@collect
                 val duration = resolveDurationMs(track)
 
-                recordProgress(track, pos, duration)
-
                 if (AudioEngine.isPlaying.value) {
+                    recordProgress(track, pos, duration)
                     maybeCountSurahPlay(track, pos, duration)
                     val now = currentTimeMs()
                     val deltaMs = if (lastRecordedTimeMs > 0L) (now - lastRecordedTimeMs).coerceIn(0L, 5000L) else 0L
@@ -1130,6 +1135,7 @@ object UserUsageRepository {
         val deltaSeconds = unaccountedMs / 1000L
         if (deltaSeconds <= 0L) return
         unaccountedMs %= 1000L
+        recordDeviceListeningSeconds(deltaSeconds)
 
         val today = currentEpochDay()
         val savedDay = migratedLong(KEY_LAST_DAY, 0L)
@@ -1178,27 +1184,15 @@ object UserUsageRepository {
         }
     }
 
-    private fun ensureStreakUpdatedForToday() {
+    /** Refresh idle day rollover without marking an unplayed day as listened. */
+    fun refreshCalendarDay() {
         val today = currentEpochDay()
         val savedDay = migratedLong(KEY_LAST_DAY, 0L)
-        var streak = migratedInt(KEY_STREAK, 0).coerceAtLeast(0)
-
-        if (savedDay != today) {
-            if (savedDay != 0L && today == savedDay + 1L) {
-                streak += 1
-            } else if (savedDay != 0L && today > savedDay + 1L) {
-                streak = 1
-            } else if (savedDay == 0L) {
-                // Fresh install, first listen ever: 0 → 1.
-                streak = streak.coerceAtLeast(1)
-            }
-            settings.putLong(k(KEY_LAST_DAY), today)
-            settings.putInt(k(KEY_STREAK), streak)
-            settings.putLong(k(KEY_SECONDS_TODAY), 0L)
-            // Buckets intentionally kept: only minutes_today resets on rollover.
-
-            _stats.update { it.copy(daysStreak = streak, minutesToday = 0) }
-        }
+        if (savedDay == today) return
+        val streak = streakBeforeListening(today, savedDay, migratedInt(KEY_STREAK, 0))
+        _stats.update { it.copy(daysStreak = streak, minutesToday = 0) }
+        // Keep LAST_DAY as the last actual listening day. The next recorded
+        // second advances it and grows the streak exactly once.
     }
 
     private fun recordUniqueItem(reciterSlug: String, surahId: Int) {
@@ -1272,6 +1266,7 @@ object UserUsageRepository {
 
     private fun recordSurahPlay(surahId: Int) {
         try {
+            recordDeviceSurahPlay(surahId)
             val updated = _surahPlays.value.toMutableMap()
             updated[surahId] = (updated[surahId] ?: 0L) + 1L
             _surahPlays.value = updated
@@ -1499,3 +1494,7 @@ object UserUsageRepository {
         )
     }
 }
+
+/** Idle rollover preserves yesterday's streak but never awards today's day. */
+internal fun streakBeforeListening(today: Long, lastListenedDay: Long, savedStreak: Int): Int =
+    if (lastListenedDay <= 0L || today > lastListenedDay + 1L) 0 else savedStreak.coerceAtLeast(0)
