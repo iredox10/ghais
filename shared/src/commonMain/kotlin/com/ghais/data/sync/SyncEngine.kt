@@ -1758,11 +1758,11 @@ object SyncEngine {
      * an empty "cloud" side, or it would drop every OTHER device's days from
      * the collection.
      *
-     * `surah_plays` has no per-device split, so it is written as this device
-     * sees it; [UserUsageRepository.restoreSurahPlays] per-surah maxes it on the
-     * way back in, which makes a two-device account converge on the higher
-     * count rather than the sum (the same trade-off, and for the same reason, as
-     * the daily buckets).
+     * `device_counters` carries this device's monotonic increments since the
+     * additive-counter upgrade. Heroku merges them under a row lock, retaining
+     * the legacy aggregate as a baseline and rebuilding total_seconds and
+     * surah_plays. Pulls continue to adopt those server aggregates by max.
+     * Historical overlap from pre-upgrade clients cannot be reconstructed.
      *
      * Residual race (documented, accepted): read-modify-write is not atomic —
      * two devices pushing concurrently can interleave (both read, then last
