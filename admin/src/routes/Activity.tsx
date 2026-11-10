@@ -34,6 +34,13 @@ const pollIntervalMap: Record<PollRate, number | false> = {
   '30s': 30000,
 };
 
+function formatActivityTime(value: string): string {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime())
+    ? date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+    : value;
+}
+
 export const Activity: React.FC = () => {
   const [pollRate, setPollRate] = useState<PollRate>('10s');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
@@ -172,10 +179,10 @@ export const Activity: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
             <Radio className="w-6 h-6 text-emerald-400 animate-pulse" />
-            Live Recitation Activity Stream
+            Recent Listener Activity
           </h1>
           <p className="text-sm text-white/50 mt-1">
-            Real-time feed of recitations, Ayah likes, reciter follows, and schedule alarms.
+            Recent saved history, favorites, and schedules, refreshed by polling.
           </p>
         </div>
 
@@ -225,7 +232,7 @@ export const Activity: React.FC = () => {
           {/* Live Pulse Badge */}
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono text-emerald-400">
             <span className={`w-2 h-2 rounded-full bg-emerald-400 ${pollRate === 'Paused' ? '' : 'animate-ping'}`} />
-            <span>{pollRate === 'Paused' ? 'Polling Paused' : `Live (${pollRate})`}</span>
+            <span>{pollRate === 'Paused' ? 'Polling Paused' : `Refreshes every ${pollRate}`}</span>
           </div>
         </div>
       </div>
@@ -405,7 +412,7 @@ export const Activity: React.FC = () => {
 
                   <span className="text-xs text-white/40 font-mono flex items-center gap-1">
                     <Clock className="w-3 h-3 text-white/30" />
-                    {act.time}
+                    {formatActivityTime(act.time)}
                   </span>
 
                   {/* Quick Actions */}
@@ -468,7 +475,7 @@ export const Activity: React.FC = () => {
               </div>
               <div className="p-3 rounded-xl bg-white/[0.03] border border-white/10 flex flex-col gap-1">
                 <span className="text-white/40 font-mono text-[10px]">Timestamp</span>
-                <span className="font-mono text-white/80">{inspectingActivity.time}</span>
+                <span className="font-mono text-white/80">{formatActivityTime(inspectingActivity.time)}</span>
               </div>
             </div>
 
