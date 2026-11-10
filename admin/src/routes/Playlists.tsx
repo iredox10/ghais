@@ -41,8 +41,9 @@ const PlaylistInspectorModal: React.FC<{
   playlist: Playlist | null;
   onClose: () => void;
 }> = ({ playlist, onClose }) => {
-  const { data: tracksData, isLoading: tracksLoading } = usePlaylistTracks(playlist?.id || '', {
+  const { data: tracksData, isLoading: tracksLoading, isError: tracksError } = usePlaylistTracks(playlist?.id || '', {
     enabled: Boolean(playlist),
+    refetchOnWindowFocus: false,
   });
   const audioPlayer = useAudioPlayer();
   const queryClient = useQueryClient();
@@ -57,7 +58,7 @@ const PlaylistInspectorModal: React.FC<{
     setSaveError('');
   }, [playlist?.id, tracksData]);
   const saveTracks = async () => {
-    if (!playlist) return;
+    if (!playlist || !tracksData || tracksError) return;
     setSaving(true); setSaveError('');
     try { await savePlaylistTracks(playlist.id, draft); await queryClient.invalidateQueries({ queryKey: adminQueryKeys.playlists() }); }
     catch (error) { setSaveError(error instanceof Error ? error.message : 'Could not save tracks.'); }
@@ -189,6 +190,7 @@ const PlaylistInspectorModal: React.FC<{
             <section className="space-y-3 border-t border-white/10 pt-4">
               <h3 className="text-xs font-semibold text-white/80 uppercase">Edit tracks</h3>
               <p className="text-xs text-white/50">Enter a reciter slug and surah number. Use 0 for both ayah fields to play the full surah.</p>
+              {tracksError && <p role="alert" className="text-xs text-rose-300">Could not load tracks. Reopen the playlist before editing it.</p>}
               {draft.map((track, index) => (
                 <div key={index} className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-xl border border-white/10 p-3">
                   <label className="text-xs text-white/60">Reciter slug<input aria-label={`Reciter slug ${index + 1}`} value={track.reciterSlug} onChange={e => updateTrack(index, { reciterSlug: e.target.value })} className="w-full rounded bg-black/40 p-2 text-white" /></label>
@@ -204,8 +206,8 @@ const PlaylistInspectorModal: React.FC<{
               ))}
               {saveError && <p role="alert" className="text-xs text-rose-300">{saveError}</p>}
               <div className="flex gap-3 text-xs">
-                <button type="button" disabled={draft.length >= 50 || tracksLoading} onClick={() => setDraft(current => [...current, { reciterSlug: '', surahId: 1, ayahFrom: 0, ayahTo: 0 }])} className="rounded-lg bg-white/10 px-3 py-2 text-white">Add track</button>
-                <button type="button" disabled={saving || tracksLoading} onClick={saveTracks} className="chrome-btn rounded-lg px-3 py-2">{saving ? 'Saving...' : 'Save tracks'}</button>
+                <button type="button" disabled={draft.length >= 50 || tracksLoading || tracksError || !tracksData} onClick={() => setDraft(current => [...current, { reciterSlug: '', surahId: 1, ayahFrom: 0, ayahTo: 0 }])} className="rounded-lg bg-white/10 px-3 py-2 text-white">Add track</button>
+                <button type="button" disabled={saving || tracksLoading || tracksError || !tracksData} onClick={saveTracks} className="chrome-btn rounded-lg px-3 py-2">{saving ? 'Saving...' : 'Save tracks'}</button>
               </div>
             </section>
           )}
