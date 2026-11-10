@@ -11,3 +11,5 @@
 Daily bucket keys currently use UTC. Preserve existing data and label this convention explicitly rather than reinterpreting old buckets as local dates.
 
 Validation: 15 backend tests and build passed; 3 targeted Android stats tests and debug APK build passed. Real PostgreSQL concurrent-update checks confirmed additive counters and retry idempotence. Historical undercounts cannot be reconstructed. The phone is disconnected, so installation and device verification remain pending.
+
+Server support deployed to Heroku release v22; release succeeded and API health returned HTTP 200.
