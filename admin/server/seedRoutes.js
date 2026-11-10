@@ -1,5 +1,6 @@
 import express from 'express';
 import { FULL_SURAHS_LIST } from './surahsData.js';
+import { Query } from './query.js';
 
 /**
  * Live seed-backfill routes for the EMPTY `surahs` (0 docs) and `moods`
@@ -20,9 +21,9 @@ import { FULL_SURAHS_LIST } from './surahsData.js';
  *   "" means no ambient (focus modes). cover_url has no app source and is
  *   left "" (optional attr).
  *
- * Strategy: true upsert — getDocument first; update if it exists, create if
- * it is missing. `seeded` counts successful writes, `skipped` counts docs
- * that could not be written (error detail logged server-side).
+ * Surahs are upserted. Existing moods are left untouched so seed runs do not
+ * overwrite editorial changes. `seeded` counts successful writes; `skipped`
+ * counts existing moods or documents that could not be written.
  *
  * Wiring: registerSeedRoutes(app, getContext) — same (app, getContext)
  * pattern as exportRoutes.js. Central wiring in server/index.js lands
@@ -180,6 +181,13 @@ export function registerSeedRoutes(app, getContext) {
       let seeded = 0;
       let skipped = 0;
       for (const m of MOODS_SEED) {
+        try {
+          const existing = await databases.listDocuments(databaseId, 'moods', [Query.equal('slug', m.slug), Query.limit(1)]);
+          if (existing.documents.length) { skipped++; continue; } // Preserve edits when seeding again.
+        } catch (error) {
+          skipped++;
+          continue;
+        }
         const outcome = await upsertById(databases, databaseId, 'moods', m.slug, { ...m });
         if (outcome === 'seeded') seeded++;
         else skipped++;
