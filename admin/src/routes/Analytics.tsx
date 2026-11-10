@@ -29,9 +29,12 @@ import { StatCard } from '../components/ui/StatCard';
 const COLORS = ['#10B981', '#06B6D4', '#6366F1', '#F59E0B', '#EC4899'];
 
 export const Analytics: React.FC = () => {
-  const { data: analytics, isLoading } = useAnalytics();
+  const { data: analytics, isLoading, isError, refetch } = useAnalytics();
   const { data: telemetry } = useTelemetry();
 
+  if (isError && !analytics) {
+    return <div role="alert" className="text-sm text-rose-300">Listening analytics could not be loaded. <button type="button" onClick={() => refetch()} className="underline">Try again</button></div>;
+  }
   if (isLoading || !analytics) {
     return (
       <div className="flex flex-col gap-6 animate-pulse">
@@ -61,7 +64,7 @@ export const Analytics: React.FC = () => {
           Listening Analytics & Quran Deep-Dive
         </h1>
         <p className="text-sm text-white/50 mt-1">
-          Behavioral recitation patterns, 24-hour cycle peaks, retention curves, and audio styles.
+          Patterns from saved listening history and reported devices.
         </p>
       </div>
 
@@ -74,12 +77,13 @@ export const Analytics: React.FC = () => {
               24-Hour Recitation Activity Peaks
             </span>
             <span className="text-xs text-white/40">
-              Relative activity from up to 200 recorded history entries, in server time
+              {analytics.sampleSize.toLocaleString()} saved history entries, grouped by UTC hour. Saved history is not a complete listening log.
+              {analytics.skipped > 0 && ` ${analytics.skipped.toLocaleString()} entries had no valid timestamp.`}
             </span>
           </div>
         </div>
 
-        <div className="h-64 w-full pt-4">
+        {analytics.sampleSize === 0 ? <p className="text-sm text-white/50">No dated listening history is available yet.</p> : <div className="h-64 w-full pt-4">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={peakHours}>
               <XAxis
@@ -116,7 +120,7 @@ export const Analytics: React.FC = () => {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </div>}
       </GlassCard>
 
       {/* Retention & Routine Grid */}

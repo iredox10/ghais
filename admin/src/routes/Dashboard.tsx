@@ -49,6 +49,10 @@ export const Dashboard: React.FC = () => {
     );
   }
 
+  if (error || !overview) {
+    return <p role="alert" className="text-sm text-rose-300">Dashboard data is unavailable. Please try again.</p>;
+  }
+
   const kpis = overview?.kpis;
   const listeningTrends = overview?.listeningTrends || [];
   const routineDistribution = overview?.routineDistribution || [];
@@ -68,7 +72,7 @@ export const Dashboard: React.FC = () => {
             </span>
           </h1>
           <p className="text-sm text-white/50 mt-1">
-            Real-time listener metrics, Quran recitation volume, and PostgreSQL sync analytics.
+            Account totals and saved listening history from PostgreSQL.
           </p>
         </div>
 
@@ -147,13 +151,13 @@ export const Dashboard: React.FC = () => {
                 Listening History (Last 7 Days)
               </span>
               <span className="text-xs text-white/40">
-                Recent history records by day
+                Saved history records by UTC day; this is not a complete play log.
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-white/50">
               <span className="flex items-center gap-1.5 font-mono">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                Listening Events
+                Saved records
               </span>
             </div>
           </div>
@@ -179,7 +183,7 @@ export const Dashboard: React.FC = () => {
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(val) => `${val}h`}
+                  allowDecimals={false}
                 />
                 <Tooltip
                   contentStyle={{
@@ -195,6 +199,7 @@ export const Dashboard: React.FC = () => {
                 <Area
                   type="monotone"
                   dataKey="sessions"
+                  name="Saved history records"
                   stroke="#10B981"
                   strokeWidth={2}
                   fillOpacity={1}

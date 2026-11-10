@@ -1,6 +1,7 @@
 import express from 'express';
 import { Query } from './query.js';
 import { RECITERS_CATALOG } from './recitersData.js';
+import { getListeningAnalytics } from './listeningAnalytics.js';
 
 export default function registerExportRoutes(app, getContext) {
   const router = express.Router();
@@ -294,63 +295,10 @@ export default function registerExportRoutes(app, getContext) {
   // GET /api/export/analytics - Analytics JSON export
   router.get('/api/export/analytics', async (req, res) => {
     try {
-      const { databases, databaseId, databaseAvailable } = getContext();
-
-      let peakHours = ['04:00 (Fajr)', '08:00 (Morning)', '13:00 (Dhuhr)', '17:00 (Asr)', '20:00 (Isha)', '23:00 (Night)'].map(hour => ({hour,index:0}));
-      // Static peakHours/retention/device/style values below are SANDBOX
-      // demo fallbacks. peakHours is recomputed from live history docs
-      // (played_at_ms, as written by the app's SyncEngine HISTORY) whenever
-      // the DB answers with at least one doc.
-      let analyticsSource = 'live-history';
-      let analyticsSampleSize = 0;
-
-      if (databaseAvailable && databases) {
-        try {
-          const hRes = await listHistoryDocs(databases, databaseId, [Query.limit(200)]);
-
-          if (hRes.documents && hRes.documents.length > 0) {
-            analyticsSource = 'live-history';
-            analyticsSampleSize = hRes.documents.length;
-            const buckets = { fajr: 0, morning: 0, dhuhr: 0, asr: 0, isha: 0, night: 0 };
-            hRes.documents.forEach(h => {
-              const ms = historyTs(h) || Date.now();
-              const hr = new Date(ms).getHours();
-              if (hr >= 3 && hr <= 5) buckets.fajr++;
-              else if (hr >= 6 && hr <= 11) buckets.morning++;
-              else if (hr >= 12 && hr <= 15) buckets.dhuhr++;
-              else if (hr >= 16 && hr <= 19) buckets.asr++;
-              else if (hr >= 20 && hr <= 22) buckets.isha++;
-              else buckets.night++;
-            });
-            const maxVal = Math.max(1, buckets.fajr, buckets.morning, buckets.dhuhr, buckets.asr, buckets.isha, buckets.night);
-            peakHours = [
-              { hour: "04:00 (Fajr)", index: Math.round((buckets.fajr / maxVal) * 100) },
-              { hour: "08:00 (Morning)", index: Math.round((buckets.morning / maxVal) * 100) },
-              { hour: "13:00 (Dhuhr)", index: Math.round((buckets.dhuhr / maxVal) * 100) },
-              { hour: "17:00 (Asr)", index: Math.round((buckets.asr / maxVal) * 100) },
-              { hour: "20:00 (Isha)", index: Math.round((buckets.isha / maxVal) * 100) },
-              { hour: "23:00 (Night)", index: Math.round((buckets.night / maxVal) * 100) }
-            ];
-          }
-        } catch (err) {
-          throw err;
-        }
-      }
-
+      const { pool, databaseId } = getContext();
+      const analyticsPayload = { exportedAt: new Date().toISOString(), databaseId, ...await getListeningAnalytics(pool) };
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       res.setHeader('Content-Disposition', 'attachment; filename="quranify_analytics_export.json"');
-
-      const analyticsPayload = {
-        exportedAt: new Date().toISOString(),
-        databaseId,
-        source: analyticsSource,
-        sampleSize: analyticsSampleSize,
-        // Retention is not calculated yet; null distinguishes unknown from 0%.
-        retention: null,
-        peakHours,
-        deviceDistribution: [],
-        reciterStyleDistribution: []
-      };
 
       res.status(200).send(JSON.stringify(analyticsPayload, null, 2));
     } catch (e) {

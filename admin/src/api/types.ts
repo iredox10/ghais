@@ -490,12 +490,16 @@ export interface ReciterStyleDistribution {
 
 export interface AnalyticsData {
   peakHours: PeakHour[];
+  source: string;
+  timezone: string;
+  sampleSize: number;
+  skipped: number;
   hourlyCycle?: HourlyCyclePoint[];
   surahCompletion?: SurahCompletionMetric[];
   ayahRepetitions?: AyahRepetitionMetric[];
   routineAnalytics?: RoutineModeMetric[];
   deviceDistribution: DeviceDistribution[];
-  retention: RetentionMetrics;
+  retention: RetentionMetrics | null;
   reciterStyleDistribution: ReciterStyleDistribution[];
 }
 
