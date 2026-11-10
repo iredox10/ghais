@@ -188,14 +188,14 @@ fun HomeStatsCard() {
     val stats by UserUsageRepository.stats.collectAsState()
     val dailySeconds by UserUsageRepository.dailySeconds.collectAsState()
 
-    val todayEpochDay = remember {
-        Clock.System.now().toEpochMilliseconds() / 86_400_000L
-    }
+    val remoteDays by UserUsageRepository.remoteDailySeconds.collectAsState()
+    val combinedDays = remember(dailySeconds, remoteDays) { com.ghais.ui.screens.stats.combinedStatsDays(dailySeconds, remoteDays) }
+    val todayEpochDay = com.ghais.ui.screens.stats.rememberStatsEpochDay()
     // Last 7 epoch days, oldest → newest: (epochDay, minutes, isToday).
-    val week = remember(dailySeconds, todayEpochDay) {
+    val week = remember(combinedDays, todayEpochDay) {
         (6 downTo 0).map { back ->
             val day = todayEpochDay - back
-            val minutes = ((dailySeconds[day] ?: 0L) / 60L).toInt().coerceAtLeast(0)
+            val minutes = ((combinedDays[day] ?: 0L) / 60L).toInt().coerceAtLeast(0)
             Triple(day, minutes, back == 0)
         }
     }

@@ -53,7 +53,6 @@ import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.UserUsageRepository
-import com.ghais.data.seed.JumpBackInItem
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.NoirCard
@@ -70,9 +69,7 @@ import com.ghais.ui.screens.home.moments.WeekRecapShelf
 import com.ghais.ui.screens.reciters.rememberReciterPhoto
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
-import kotlin.time.Clock
 
-private const val DAY_MS = 86_400_000L
 
 object StatsScreen : Screen {
     @Composable
@@ -98,7 +95,7 @@ object StatsScreen : Screen {
         }
 
         val qariPlayCounts = remember(history) {
-            history.filter { it.reciterSlug.isNotBlank() }
+            history.filter { it.reciterSlug.isNotBlank() && it.surahId in 1..114 }
                 .groupingBy { it.reciterSlug }
                 .eachCount()
         }
@@ -130,64 +127,23 @@ object StatsScreen : Screen {
                 }
         }
 
-        val weekMinutes = remember(history) {
-            val nowMs = Clock.System.now().toEpochMilliseconds()
-            val todayStart = (nowMs / DAY_MS) * DAY_MS
-            List(7) { offset ->
-                val dayIndex = 6 - offset
-                val dayStart = todayStart - dayIndex * DAY_MS
-                val dayEnd = dayStart + DAY_MS
-                history.filter { it.lastPlayedTimestampMs in dayStart until dayEnd }
-                    .sumOf { item ->
-                        val listenedMs = if (item.positionMs > 0L) {
-                            item.positionMs
-                        } else if (item.durationMs > 0L) {
-                            (item.durationMs * item.progress).toLong()
-                        } else {
-                            0L
-                        }
-                        listenedMs / 60_000L
-                    }.toFloat()
-            }
-        }
-
         val goalMin by com.ghais.data.repository.OnboardingStore.dailyGoalMinutes.collectAsState()
-        val ringProgress = (stats.minutesToday / goalMin.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
 
-        // Time-range selection. Contracts (sibling-owned):
-        // UserUsageRepository.dailySeconds: StateFlow<Map<epochDay, seconds>> (this device).
-        // UserUsageRepository.remoteDailySeconds: StateFlow<Map<epochDay, seconds>>
-        //   (other devices only, own device excluded -> plain per-day sum, no double count).
-        // Empty maps = contracts not yet populated -> fall back to history-derived
-        // per-day minutes (same math as weekMinutes below).
         val dailyMap by UserUsageRepository.dailySeconds.collectAsState()
         val remoteDailyMap by UserUsageRepository.remoteDailySeconds.collectAsState()
         var range by remember { mutableStateOf(StatsRange.Week) }
-        val todayEpochDay = remember { Clock.System.now().toEpochMilliseconds() / DAY_MS }
+        val todayEpochDay = rememberStatsEpochDay()
 
         // Combined per-day seconds: this device + other devices. Plain sum is
         // correct because the remote map excludes this device.
-        val combinedDailySeconds: Map<Long, Long> = remember(dailyMap, remoteDailyMap) {
-            if (remoteDailyMap.isEmpty()) dailyMap
-            else {
-                val merged = dailyMap.toMutableMap()
-                for ((day, secs) in remoteDailyMap) {
-                    if (secs > 0L) merged[day] = (merged[day] ?: 0L) + secs
-                }
-                merged
-            }
+        val combinedDailySeconds = remember(dailyMap, remoteDailyMap) {
+            combinedStatsDays(dailyMap, remoteDailyMap)
         }
-
-        val rangeMinutes: List<Float> = remember(range, combinedDailySeconds, history, weekMinutes) {
-            if (range == StatsRange.Week && combinedDailySeconds.isEmpty()) {
-                weekMinutes
-            } else {
-                List(range.days) { i ->
-                    val epochDay = todayEpochDay - (range.days - 1 - i)
-                    val mapped = combinedDailySeconds[epochDay]
-                    if (mapped != null) mapped / 60f
-                    else historyMinutesForEpochDay(history, epochDay)
-                }
+        val todayMinutes = (combinedDailySeconds[todayEpochDay] ?: 0L) / 60f
+        val ringProgress = (todayMinutes / goalMin.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
+        val rangeMinutes = remember(range, combinedDailySeconds, todayEpochDay) {
+            List(range.days) { i ->
+                (combinedDailySeconds[todayEpochDay - (range.days - 1 - i)] ?: 0L) / 60f
             }
         }
 
@@ -201,7 +157,7 @@ object StatsScreen : Screen {
         } ?: "—"
         val shownBars = remember(rangeMinutes) { rangeMinutes.takeLast(30) }
         val barsTruncated = rangeMinutes.size > shownBars.size
-        val usingHistoryFallback = combinedDailySeconds.isEmpty()
+        val dailyBreakdownUnavailable = combinedDailySeconds.isEmpty() && stats.totalSecondsListened > 0L
         // Quiet multi-device note: remote minutes inside the current window.
         val remoteMinutesInRange = remember(range, remoteDailyMap, todayEpochDay) {
             var sum = 0L
@@ -365,7 +321,7 @@ object StatsScreen : Screen {
                                         fontWeight = FontWeight.ExtraBold
                                     )
                                     Text(
-                                        text = "${stats.minutesToday}/${goalMin}m",
+                                        text = "${todayMinutes.toInt()}/${goalMin}m",
                                         color = Color.White.copy(alpha = 0.72f),
                                         fontSize = 10.sp
                                     )
@@ -415,7 +371,7 @@ object StatsScreen : Screen {
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
-                                        text = range.window,
+                                        text = "${range.window} • UTC",
                                         color = GhaisNoir.TextTertiary,
                                         fontSize = 12.sp
                                     )
@@ -462,7 +418,7 @@ object StatsScreen : Screen {
                             }
                             Spacer(modifier = Modifier.height(14.dp))
                             var selectedBar by remember(range) {
-                                mutableStateOf(bestIndex ?: (shownBars.size - 1).coerceAtLeast(0))
+                                mutableStateOf((bestIndex?.minus(rangeMinutes.size - shownBars.size) ?: shownBars.lastIndex).coerceIn(0, shownBars.lastIndex.coerceAtLeast(0)))
                             }
                             val weekLabels = remember(range, todayEpochDay) {
                                 if (range == StatsRange.Week) {
@@ -514,10 +470,10 @@ object StatsScreen : Screen {
                                     fontSize = 11.sp
                                 )
                             }
-                            if (usingHistoryFallback) {
+                            if (dailyBreakdownUnavailable) {
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Daily breakdown pending — estimated from history",
+                                    text = "Daily breakdown unavailable for older listening",
                                     color = GhaisNoir.TextTertiary,
                                     fontSize = 11.sp
                                 )
@@ -538,13 +494,13 @@ object StatsScreen : Screen {
                     NoirCard(modifier = Modifier.fillMaxWidth()) {
                         Column {
                             Text(
-                                text = "Top Qari",
+                                text = "Qaris in recent history",
                                 color = GhaisNoir.TextPrimary,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Most played • all time",
+                                text = "Distinct saved surahs • latest history",
                                 color = GhaisNoir.TextTertiary,
                                 fontSize = 12.sp
                             )
@@ -715,7 +671,7 @@ private fun TopQariRow(
                     .padding(horizontal = 10.dp, vertical = 5.dp)
             ) {
                 Text(
-                    text = "$plays plays",
+                    text = "$plays saved surahs",
                     color = GhaisNoir.Lavender,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
@@ -759,7 +715,7 @@ private fun TopQariRow(
             overflow = TextOverflow.Ellipsis
         )
         Text(
-            text = "$plays plays",
+            text = "$plays saved surahs",
             color = GhaisNoir.TextTertiary,
             fontSize = 12.sp
         )
@@ -777,23 +733,6 @@ private enum class StatsRange(
     Month("30 days", 30, "Your month in Quran", "last 30 days"),
     Quarter("3 months", 90, "Your season in Quran", "last 90 days"),
     Year("Year", 365, "Your year in Quran", "last 365 days")
-}
-
-/** History-derived per-day minutes (fallback while `dailySeconds` is unpopulated). */
-private fun historyMinutesForEpochDay(history: List<JumpBackInItem>, epochDay: Long): Float {
-    val dayStart = epochDay * DAY_MS
-    val dayEnd = dayStart + DAY_MS
-    return history.filter { it.lastPlayedTimestampMs in dayStart until dayEnd }
-        .sumOf { item ->
-            val listenedMs = if (item.positionMs > 0L) {
-                item.positionMs
-            } else if (item.durationMs > 0L) {
-                (item.durationMs * item.progress).toLong()
-            } else {
-                0L
-            }
-            listenedMs / 60_000L
-        }.toFloat()
 }
 
 private fun formatCompactMinutes(minutes: Float): String {
@@ -824,7 +763,7 @@ private fun buildWrappedCard(
     appendLine("$totalHoursText listened • $dayStreak-day streak")
     appendLine()
     if (topQariName != null && topQariPlays != null) {
-        appendLine("Top Qari: $topQariName ($topQariPlays plays)")
+        appendLine("Recent-history Qari: $topQariName ($topQariPlays saved surahs)")
     } else {
         appendLine("Top Qari: —")
     }
