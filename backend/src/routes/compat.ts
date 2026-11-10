@@ -16,7 +16,8 @@
 // session cookies); X-Appwrite-Project is accepted and ignored.
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { randomBytes } from 'node:crypto';
-import { query } from '../db.js';
+import { query, pool } from '../db.js';
+import { mergeListeningStats } from '../stats.js';
 import { verifyAccessToken } from '../tokens.js';
 import { CATALOG, DATABASE_ID, type CollectionDef } from '../compat/catalog.js';
 import { awError, sanitizeData, toAppwriteDoc, type Row, type SharedDoc } from '../compat/shape.js';
@@ -139,7 +140,8 @@ export default async function compatRoutes(app: FastifyInstance) {
     const rawId = typeof body.documentId === 'string' ? body.documentId.trim() : '';
     const id = !rawId || rawId === 'unique()' ? genId() : rawId;
     if (id.length > 256) { awError(reply, 400, 'document_invalid_structure', 'Document id too long (maximum 256 characters).'); return reply; }
-    const data = sanitizeData(body.data);
+    let data = sanitizeData(body.data);
+    if (collection === 'listening_stats') { delete data.counter_state; data = mergeListeningStats({}, data); }
     if (defs.access === 'user' || collection === 'playlists') {
       for (const attr of defs.ownerAttrs) data[attr] = userId;
     }
@@ -213,6 +215,7 @@ export default async function compatRoutes(app: FastifyInstance) {
 
     const body = (req.body ?? {}) as { data?: unknown };
     const patch = sanitizeData(body.data);
+    if (collection === 'listening_stats') delete patch.counter_state;
     if (defs.access === 'user' || collection === 'playlists') {
       for (const attr of defs.ownerAttrs) patch[attr] = userId;
     }
@@ -243,6 +246,20 @@ export default async function compatRoutes(app: FastifyInstance) {
     if (defs.access === 'social' && !socialCanWrite(defs, existing, userId)) {
       awError(reply, 403, 'general_forbidden', 'You do not own this document.');
       return reply;
+    }
+
+    if (collection === 'listening_stats') {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const locked = await client.query<Row>('SELECT * FROM listening_stats WHERE id=$1 AND owner=$2 FOR UPDATE', [id, userId]);
+        if (!locked.rows[0]) { await client.query('ROLLBACK'); notFound(reply, 'Stats document not found.'); return reply; }
+        const merged = mergeListeningStats(locked.rows[0].doc, patch);
+        const updated = await client.query<Row>('UPDATE listening_stats SET doc=$2, updated_at=now() WHERE id=$1 RETURNING *', [id, merged]);
+        await client.query('COMMIT');
+        return reply.send(toAppwriteDoc(updated.rows[0], collection, db, null));
+      } catch (error) { await client.query('ROLLBACK'); throw error; }
+      finally { client.release(); }
     }
 
     const { rows: updated } = await query<Row>(

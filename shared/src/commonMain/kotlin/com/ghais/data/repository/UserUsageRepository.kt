@@ -777,6 +777,24 @@ object UserUsageRepository {
      * - Per-day buckets ([dailySeconds]) are adopted separately, not here:
      *   the sync agent merges the cloud `daily_json` series via [restoreDaily].
      */
+    // New counters start at zero; legacy aggregates remain a server baseline.
+    fun recordDeviceListeningSeconds(seconds: Long) {
+        val key = k("ghais_device_listening_seconds_v2")
+        settings.putLong(key, settings.getLong(key, 0L) + seconds.coerceAtLeast(0L))
+    }
+
+    fun recordDeviceSurahPlay(surahId: Int) {
+        val key = k("ghais_device_surah_plays_v2")
+        val counts = deviceSurahPlays().toMutableMap()
+        counts[surahId] = (counts[surahId] ?: 0L) + 1L
+        settings.putString(key, json.encodeToString(counts))
+    }
+
+    fun deviceListeningSeconds(): Long = settings.getLong(k("ghais_device_listening_seconds_v2"), 0L)
+    fun deviceSurahPlays(): Map<Int, Long> = runCatching {
+        json.decodeFromString<Map<Int, Long>>(settings.getString(k("ghais_device_surah_plays_v2"), "{}"))
+    }.getOrDefault(emptyMap())
+
     fun restoreStats(snapshot: StatsSnapshot) {
         try {
             val today = currentEpochDay()

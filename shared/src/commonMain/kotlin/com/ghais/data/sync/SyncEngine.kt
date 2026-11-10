@@ -1798,6 +1798,11 @@ object SyncEngine {
             "updated_at" to Clock.System.now().toEpochMilliseconds(),
             "daily_json" to dailyJson,
             "surah_plays" to encodeSurahPlays(UserUsageRepository.surahPlays.value),
+            "device_counters" to mapOf(
+                "device" to devId,
+                "seconds" to UserUsageRepository.deviceListeningSeconds(),
+                "plays" to UserUsageRepository.deviceSurahPlays().mapKeys { it.key.toString() },
+            ),
         )
         // `daily_json` (string 8192, optional) and `surah_plays` (string 2048,
         // optional) are sent when the cloud collection has them; when an
