@@ -17,3 +17,16 @@ test('telemetry does not fabricate latency or report missing data as connected',
     assert.equal(data.appTelemetry.connected, false);
   } finally { await new Promise(resolve => server.close(resolve)); }
 });
+
+test('telemetry does not present a failed database request as low latency', async () => {
+  const app = express();
+  registerTelemetry(app, { getDatabases: () => ({ listDocuments: async () => { throw new Error('offline'); } }), getDatabaseId: () => 'ghais' });
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise(resolve => server.once('listening', resolve));
+  try {
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/api/telemetry`);
+    const data = await response.json();
+    assert.equal(data.pingMs, null);
+    assert.equal(data.deviceTelemetry.available, false);
+  } finally { await new Promise(resolve => server.close(resolve)); }
+});
