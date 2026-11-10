@@ -46,6 +46,7 @@ class NotificationPlayerTest {
         p.seekTo(1, 99_000); assertEquals(12_000L, c.positionMs)
         p.seekBack(); assertEquals(2_000L, c.positionMs)
         p.seekForward(); assertEquals(12_000L, c.positionMs)
+        p.seekToDefaultPosition(); assertEquals(0L, c.positionMs)
         p.seekToNextMediaItem(); assertEquals("next", c.action)
         p.seekToPrevious(); assertEquals("previous", c.action)
         p.stop(); assertEquals("stop", c.action)

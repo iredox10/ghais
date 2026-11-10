@@ -53,6 +53,12 @@ internal class NotificationPlayer(player: Player, private val controls: Notifica
             // Forwarding them to ExoPlayer bypasses shared queue/settings state.
             override fun seekTo(positionMs: Long) = controls.seekTo(positionMs)
 
+            override fun seekToDefaultPosition() = controls.seekTo(0L)
+
+            override fun seekToDefaultPosition(mediaItemIndex: Int) {
+                if (mediaItemIndex == currentMediaItemIndex) controls.seekTo(0L)
+            }
+
             override fun seekTo(mediaItemIndex: Int, positionMs: Long) {
                 // ExoPlayer contains one item; the app owns the logical queue.
                 if (mediaItemIndex == currentMediaItemIndex) controls.seekTo(positionMs)
