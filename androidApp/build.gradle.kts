@@ -37,6 +37,7 @@ android {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     implementation(project(":shared"))
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
