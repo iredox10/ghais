@@ -111,7 +111,7 @@ export const Dashboard: React.FC = () => {
           icon={<Headphones className="w-4 h-4 text-cyan-400" />}
         />
         <StatCard
-          title="Active Today"
+          title="Users in History Today"
           value={kpis?.activeListenersToday.value.toLocaleString() || '0'}
           delta={kpis?.activeListenersToday.delta}
           deltaType="positive"
@@ -276,6 +276,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-3 mt-2">
+            {topReciters.length === 0 && <p className="text-xs text-white/50">No reciter follows have been recorded.</p>}
             {topReciters.map((reciter, idx) => (
               <div
                 key={reciter.slug}
@@ -303,8 +304,8 @@ export const Dashboard: React.FC = () => {
         <GlassCard className="p-6 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-base font-semibold text-white">Most Played Surahs</span>
-              <span className="text-xs text-white/40">Top chapters in recent history</span>
+              <span className="text-base font-semibold text-white">Surahs in Saved History</span>
+              <span className="text-xs text-white/40">Counts from saved records, not total plays</span>
             </div>
             <Link to="/analytics" className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
               Deep Dive <ArrowRight className="w-3 h-3" />
@@ -312,6 +313,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-3 mt-2">
+            {topSurahs.length === 0 && <p className="text-xs text-white/50">No surahs in saved history yet.</p>}
             {topSurahs.map((surah) => (
               <div
                 key={surah.id}
@@ -329,7 +331,7 @@ export const Dashboard: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-['Amiri',serif] text-white/60">{surah.nameAr}</span>
                   <Badge variant="cyan" className="font-mono text-[10px]">
-                    {surah.plays.toLocaleString()} plays
+                    {surah.plays.toLocaleString()} saved records
                   </Badge>
                 </div>
               </div>

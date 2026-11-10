@@ -411,7 +411,10 @@ app.get('/api/overview', async (req, res) => {
         pool.query("SELECT COALESCE(SUM(CASE WHEN doc->>'total_seconds' ~ '^[0-9]+$' THEN (doc->>'total_seconds')::numeric ELSE 0 END),0) AS total FROM listening_stats"),
         databases.listDocuments(DATABASE_ID, 'likes', [Query.limit(1)]),
         databases.listDocuments(DATABASE_ID, 'follows', [Query.limit(1)]),
-        pool.query("SELECT doc->>'reciter_slug' AS slug, COUNT(DISTINCT owner)::int AS count FROM follows WHERE doc->>'reciter_slug' IS NOT NULL GROUP BY 1"),
+        pool.query(`WITH counts AS (
+          SELECT doc->>'reciter_slug' AS slug, COUNT(DISTINCT owner)::int AS count
+          FROM follows WHERE NULLIF(doc->>'reciter_slug','') IS NOT NULL GROUP BY 1
+        ) SELECT counts.*, (SELECT doc FROM reciters WHERE doc->>'slug'=counts.slug ORDER BY id LIMIT 1) AS reciter FROM counts`),
         pool.query("SELECT COUNT(*)::int AS total FROM schedules WHERE COALESCE(doc->>'deleted','false') <> 'true' AND COALESCE(doc->>'enabled','true') = 'true'"),
         Promise.resolve({ documents: history }),
         databases.listDocuments(DATABASE_ID, 'khatma_plans', [Query.limit(1)]),
@@ -420,7 +423,7 @@ app.get('/api/overview', async (req, res) => {
       totalUsers = uRes.total ?? 0;
       totalLikes = lRes.total ?? 0;
       totalFollows = fRes.total ?? 0;
-      followCounts.rows.forEach(f => { followsBySlug[f.slug] = f.count; });
+      followCounts.rows.forEach(f => { followsBySlug[f.slug] = f; });
       activeSchedules = schRes.rows[0]?.total ?? 0;
       khatmaActive = khRes.total ?? 0;
       realHistoryDocs = (hRes && hRes.documents) || [];
@@ -450,10 +453,11 @@ app.get('/api/overview', async (req, res) => {
           ? (surahCounts[s.id] || 0)
           : [320, 280, 240, 200, 160][i] ?? 120
       }))
+      .filter(s => s.plays > 0)
       .sort((a, b) => b.plays - a.plays)
       .slice(0, 5);
 
-    // Listening event timestamps support daily counts; duration by day is not recorded.
+    // Saved history is bounded and does not represent every listening session.
     const listeningTrends = Array.from({ length: 7 }, (_, i) => {
       const day = new Date(); day.setUTCHours(0, 0, 0, 0); day.setUTCDate(day.getUTCDate() - (6 - i));
       const start = day.getTime(), end = start + 86400000;
@@ -469,7 +473,7 @@ app.get('/api/overview', async (req, res) => {
       kpis: {
         totalUsers: { value: totalUsers, delta: `${totalUsers} PostgreSQL users` },
         totalHoursListened: { value: totalHours, delta: deltaSuffix },
-        activeListenersToday: { value: activeToday, delta: 'Listeners with history today' },
+        activeListenersToday: { value: activeToday, delta: 'Users with saved history today (UTC)' },
         totalLikes: { value: isLive ? totalLikes : 0, delta: `${isLive ? totalLikes : 0} Ayah & Surah Likes` },
         totalFollows: { value: isLive ? totalFollows : 0, delta: `${isLive ? totalFollows : 0} Reciter Follows` },
         activeSchedules: { value: isLive ? activeSchedules : 0, delta: `${isLive ? activeSchedules : 0} Daily Alarms in DB` },
@@ -479,13 +483,11 @@ app.get('/api/overview', async (req, res) => {
       routineDistribution: [],
       ambientUsage: [],
       topSurahs,
-      // Live: SEED_RECITERS carry no followers attribute — followers are
-      // counted from the real follows docs (follows{user_id,reciter_slug}),
-      // 0 when the DB is empty. Sandbox: labeled demo counts.
-      topReciters: RECITERS_CATALOG.map((r, i) => ({
-        ...r,
-        followers: isLive ? (followsBySlug[r.slug] || 0) : 120 + i * 15
-      })).sort((a, b) => b.followers - a.followers).slice(0, 5)
+      topReciters: Object.values(followsBySlug).map(({slug, count, reciter}) => {
+        const bundled = RECITER_BY_SLUG.get(slug);
+        return { id: slug, slug, nameEn: reciter?.name_en || bundled?.nameEn || slug,
+          nameAr: reciter?.name_ar || bundled?.nameAr || '', followers: count };
+      }).filter(r => r.followers > 0).sort((a, b) => b.followers - a.followers).slice(0, 5)
     });
   } catch (e) {
     console.error('Error fetching overview:', e);

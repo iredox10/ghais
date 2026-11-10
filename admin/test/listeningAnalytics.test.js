@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getListeningAnalytics } from '../server/listeningAnalytics.js';
 import pg from 'pg';
+import express from 'express';
+import registerExportRoutes from '../server/exportRoutes.js';
 
 test('listening analytics groups all UTC hours and excludes invalid dates', async () => {
   const result = await getListeningAnalytics({ query: async () => ({ rows: [
@@ -18,6 +20,22 @@ test('listening analytics groups all UTC hours and excludes invalid dates', asyn
 
 test('analytics propagates database errors instead of reporting fabricated zeros', async () => {
   await assert.rejects(getListeningAnalytics({ query: async () => { throw new Error('database offline'); } }), /database offline/);
+});
+
+test('analytics export uses the same source and does not claim zero retention', async () => {
+  const pool = { query: async () => ({ rows: [{ hour: 8, count: '5' }] }) };
+  const app = express();
+  registerExportRoutes(app, () => ({ pool, databaseId: 'ghais' }));
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise(resolve => server.once('listening', resolve));
+  try {
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/api/export/analytics`);
+    assert.equal(response.status, 200);
+    const data = await response.json();
+    assert.equal(data.sampleSize, 5);
+    assert.equal(data.source, 'saved-history');
+    assert.equal(data.retention, null);
+  } finally { await new Promise(resolve => server.close(resolve)); }
 });
 
 test('PostgreSQL counts beyond 200 and safely excludes malformed timestamps', { skip: !process.env.TEST_DATABASE_URL }, async () => {
