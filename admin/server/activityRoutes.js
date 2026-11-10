@@ -12,6 +12,11 @@ export function registerActivityRoutes(app, pool) {
           UNION ALL
           SELECT 'like', l.id, l.owner, l.doc, l.created_at FROM likes l
           UNION ALL
+          SELECT 'follow', f.id, f.owner, f.doc, f.created_at FROM follows f
+          UNION ALL
+          SELECT 'playlist', p.id, p.owner, p.doc, p.created_at FROM playlists p
+          WHERE EXISTS (SELECT 1 FROM users listener WHERE listener.id = p.owner)
+          UNION ALL
           SELECT 'schedule', s.id, s.owner, s.doc, s.updated_at FROM schedules s
           WHERE s.doc->>'deleted' IS DISTINCT FROM 'true'
         )
@@ -27,9 +32,15 @@ export function registerActivityRoutes(app, pool) {
         const surah = row.type === 'listen' ? (track.surahNameEn || track.surahName || track.surah_name || (track.surahId ? `Surah ${track.surahId}` : '—'))
           : row.type === 'like' && doc.surah_id ? `Surah ${doc.surah_id}` : '—';
         const reciter = row.type === 'listen' ? (track.reciterName || track.reciter_name || track.reciterSlug || '—')
-          : row.type === 'like' ? (doc.reciter_slug || '—') : (schedule.reciterSlug || '—');
+          : (row.type === 'like' || row.type === 'follow') ? (doc.reciter_slug || '—') : (schedule.reciterSlug || '—');
+        const title = typeof doc.title === 'string' ? doc.title.trim() : '';
+        const action = row.type === 'listen' ? 'Saved listening history'
+          : row.type === 'like' ? 'Saved a favorite'
+          : row.type === 'follow' ? 'Followed a reciter'
+          : row.type === 'playlist' ? (title ? `Created playlist: ${title}` : 'Created a playlist')
+          : 'Saved a recitation schedule';
         return { id: `${row.type}:${row.id}`, user: row.name?.trim() || row.email?.split('@')[0] || 'Listener',
-          action: row.type === 'listen' ? 'Saved listening history' : row.type === 'like' ? 'Saved a favorite' : 'Saved a recitation schedule',
+          action,
           reciter, surah, ambient: '—', time: new Date(row.event_at).toISOString(), type: row.type };
       });
       res.json({ activities });
