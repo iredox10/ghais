@@ -521,7 +521,7 @@ actual object PlayerBridge {
                 }
                 .build()
             p.replaceMediaItem(index, current.buildUpon().setMediaMetadata(meta).build())
-            if (resumePos > 1_000L) {
+            if (resumePos > 0L) {
                 try { p.seekTo(resumePos) } catch (_: Exception) { }
             }
         } catch (_: Exception) { }
