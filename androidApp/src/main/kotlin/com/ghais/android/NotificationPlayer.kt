@@ -1,5 +1,6 @@
 package com.ghais.android
 
+import androidx.media3.common.FlagSet
 import androidx.media3.common.Player
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.PlaybackParameters
@@ -41,6 +42,40 @@ internal object EngineNotificationControls : NotificationPlaybackControls {
 /** Keeps system controllers on the same playback path as the app. */
 @OptIn(UnstableApi::class)
 internal class NotificationPlayer(player: Player, private val controls: NotificationPlaybackControls) : ForwardingPlayer(player) {
+    private val settingListeners = linkedSetOf<Player.Listener>()
+    private var publishedRepeat = repeatMode
+    private var publishedShuffle = shuffleModeEnabled
+
+    override fun addListener(listener: Player.Listener) {
+        settingListeners.add(listener)
+        super.addListener(listener)
+    }
+
+    override fun removeListener(listener: Player.Listener) {
+        settingListeners.remove(listener)
+        super.removeListener(listener)
+    }
+
+    /** Engine settings are logical queue state, so ExoPlayer emits no event. */
+    fun publishSettingsChanges() {
+        val repeat = repeatMode
+        val shuffle = shuffleModeEnabled
+        val repeatChanged = repeat != publishedRepeat
+        val shuffleChanged = shuffle != publishedShuffle
+        if (!repeatChanged && !shuffleChanged) return
+        publishedRepeat = repeat
+        publishedShuffle = shuffle
+        val flags = FlagSet.Builder().apply {
+            if (repeatChanged) add(Player.EVENT_REPEAT_MODE_CHANGED)
+            if (shuffleChanged) add(Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED)
+        }.build()
+        for (listener in settingListeners.toList()) {
+            if (repeatChanged) listener.onRepeatModeChanged(repeat)
+            if (shuffleChanged) listener.onShuffleModeEnabledChanged(shuffle)
+            listener.onEvents(this, Player.Events(flags))
+        }
+    }
+
             override fun play() = controls.resume()
             override fun pause() = controls.pause()
             override fun stop() = controls.stop()
@@ -75,16 +110,17 @@ internal class NotificationPlayer(player: Player, private val controls: Notifica
                 else -> Player.REPEAT_MODE_OFF
             }
 
-            override fun setRepeatMode(repeatMode: Int) = controls.setRepeatMode(when (repeatMode) {
+            override fun setRepeatMode(repeatMode: Int) { controls.setRepeatMode(when (repeatMode) {
                 Player.REPEAT_MODE_ONE -> RepeatMode.SURAH
                 Player.REPEAT_MODE_ALL -> RepeatMode.QUEUE
                 else -> RepeatMode.OFF
-            })
+            }); publishSettingsChanges() }
 
             override fun getShuffleModeEnabled(): Boolean = controls.shuffle
 
             override fun setShuffleModeEnabled(shuffleModeEnabled: Boolean) {
                 if (shuffleModeEnabled != getShuffleModeEnabled()) controls.toggleShuffle()
+                publishSettingsChanges()
             }
 
             override fun getAvailableCommands(): Player.Commands {

@@ -31,6 +31,7 @@ class NotificationPlayerTest {
                 "getCurrentMediaItemIndex" -> 0
                 "getAvailableCommands" -> Player.Commands.EMPTY
                 "isCommandAvailable" -> false
+                "addListener", "removeListener" -> null
                 else -> error("System controls bypassed shared state: ${method.name}")
             }
         } as Player
@@ -50,6 +51,23 @@ class NotificationPlayerTest {
         p.seekToNextMediaItem(); assertEquals("next", c.action)
         p.seekToPrevious(); assertEquals("previous", c.action)
         p.stop(); assertEquals("stop", c.action)
+    }
+
+    @Test fun engineSettingChangesNotifySystemListeners() {
+        val c = Controls(); val p = player(c)
+        var repeatEvents = 0
+        var shuffleEvents = 0
+        val listener = object : Player.Listener {
+            override fun onRepeatModeChanged(repeatMode: Int) { repeatEvents++ }
+            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) { shuffleEvents++ }
+        }
+        p.addListener(listener)
+        c.storedRepeatMode = RepeatMode.QUEUE; c.shuffle = true
+        p.publishSettingsChanges(); p.publishSettingsChanges()
+        assertEquals(1, repeatEvents); assertEquals(1, shuffleEvents)
+        p.removeListener(listener)
+        c.shuffle = false; p.publishSettingsChanges()
+        assertEquals(1, shuffleEvents)
     }
 
     @Test fun systemSettingsUseSharedStateAndShuffleIsIdempotent() {

@@ -153,6 +153,7 @@ class QuranPlaybackService : MediaSessionService() {
     }
 
     private var mediaSession: MediaSession? = null
+    private var notificationPlayer: NotificationPlayer? = null
     private var player: ExoPlayer? = null
     private var ownsPlayer = false
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -226,6 +227,7 @@ class QuranPlaybackService : MediaSessionService() {
         exo.addListener(sessionListener)
 
         val forwardingPlayer = NotificationPlayer(exo, EngineNotificationControls)
+        notificationPlayer = forwardingPlayer
 
         val session = try {
             MediaSession.Builder(this, forwardingPlayer)
@@ -533,6 +535,7 @@ class QuranPlaybackService : MediaSessionService() {
         serviceScope.launch {
             try {
                 AudioEngine.playbackState.collect {
+                    notificationPlayer?.publishSettingsChanges()
                     try { refreshShadeButtons() } catch (_: Exception) { }
                 }
             } catch (_: Exception) { }
