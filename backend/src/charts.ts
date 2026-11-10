@@ -11,7 +11,12 @@ export function aggregateCharts(events: ChartEvent[], now: number) {
   for (const event of events) {
     const slug = event.doc.reciterSlug;
     const surah = event.doc.surahId;
-    const time = event.created_at.getTime();
+    // Recent uploads can contain plays recorded while offline. Prefer the
+    // recorded time when plausible, with a small device clock-skew allowance.
+    const uploadedAt = event.created_at.getTime();
+    const recordedAt = event.doc.playedAtMs;
+    const time = typeof recordedAt === 'number' && Number.isFinite(recordedAt) && recordedAt > 0 && recordedAt <= uploadedAt + 300_000
+      ? recordedAt : uploadedAt;
     if (typeof slug !== 'string' || !slug || typeof surah !== 'number' || !Number.isFinite(time) || time <= now - 30 * day || time > now) continue;
     const key = JSON.stringify([event.owner ?? event.doc.ownerId ?? event.id, slug, surah, Math.floor(time / day)]);
     if (seen.has(key)) continue;

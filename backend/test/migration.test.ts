@@ -127,6 +127,18 @@ test('charts dedupe per owner/surah/UTC day, yesterday is bounded, trending uses
   assert.ok(!charts.topQaris30d.includes('invalid'));
 });
 
+test('charts use offline play time while retaining legacy and invalid-clock fallbacks', () => {
+  const now = Date.parse('2026-10-27T12:00:00Z'), day = 86400000;
+  const row = (id: string, playedAtMs?: number): ChartEvent => ({
+    id, owner: id, doc: { reciterSlug: id, surahId: 1, ...(playedAtMs === undefined ? {} : { playedAtMs }) }, created_at: new Date(now),
+  });
+  const charts = aggregateCharts([row('offline', now - 8 * day), row('legacy'), row('bad-clock', now + day)], now);
+  assert.ok(charts.topQaris30d.includes('offline'));
+  assert.ok(!charts.topQaris7d.includes('offline'));
+  assert.ok(charts.topQaris7d.includes('legacy'));
+  assert.ok(charts.topQaris7d.includes('bad-clock'));
+});
+
 test('repeated queries[] parameters reach SQL ordering and pagination', async () => {
   const server = await app();
   let listed = false;
