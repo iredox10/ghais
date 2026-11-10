@@ -12,6 +12,7 @@ import registerExportRoutes from './exportRoutes.js';
 import registerIndexAudit from './indexAudit.js';
 import registerBroadcastRoutes from './broadcastRoutes.js';
 import { registerPlaylistEditing } from './playlistEditing.js';
+import { getListeningAnalytics } from './listeningAnalytics.js';
 import { registerScheduleDeletion } from './scheduleDeletion.js';
 import registerPlaybackRoutes from './playbackRoutes.js';
 import registerSurahsRoutes from './surahsRoutes.js';
@@ -26,6 +27,8 @@ import {
 } from './chartsAggregate.js';
 import registerMoodsRoutes from './moodsRoutes.js';
 import registerArchiveRoutes from './archiveRoutes.js';
+import { registerUsersRoutes } from './usersRoutes.js';
+import { registerActivityRoutes } from './activityRoutes.js';
 import { RECITERS_CATALOG } from './recitersData.js';
 import { FULL_SURAHS_LIST } from './surahsData.js';
 
@@ -396,18 +399,22 @@ app.get('/api/overview', async (req, res) => {
     let realHistoryDocs = [];
 
     if (isLive) {
-      // Each call degrades independently: one stalled collection must not
-      // 500 the whole dashboard (browser shows zeros for that slice).
-      const emptyList = { total: 0, documents: [] };
+      // Fail visibly on DB errors instead of reporting zero users or activity.
+      const history = [];
+      for (let offset = 0;; offset += 500) {
+        const page = await listHistoryDocs([Query.limit(500), Query.offset(offset)]);
+        history.push(...page.documents);
+        if (page.documents.length < 500) break;
+      }
       const [uRes, secondsRes, lRes, fRes, followCounts, schRes, hRes, khRes] = await Promise.all([
-        safeCall(() => userStore.list([Query.limit(100)]), { total: 0 }),
+        userStore.list([Query.limit(1)]),
         pool.query("SELECT COALESCE(SUM(CASE WHEN doc->>'total_seconds' ~ '^[0-9]+$' THEN (doc->>'total_seconds')::numeric ELSE 0 END),0) AS total FROM listening_stats"),
-        safeCall(() => databases.listDocuments(DATABASE_ID, 'likes', [Query.limit(100)]), emptyList),
-        safeCall(() => databases.listDocuments(DATABASE_ID, 'follows', [Query.limit(100)]), emptyList),
-        pool.query("SELECT doc->>'reciter_slug' AS slug, COUNT(*)::int AS count FROM follows WHERE doc->>'reciter_slug' IS NOT NULL GROUP BY 1"),
-        pool.query("SELECT COUNT(*)::int AS total FROM schedules WHERE COALESCE(doc->>'deleted','false') <> 'true'"),
-        safeCall(() => listHistoryDocs([Query.limit(100)]), emptyList),
-        safeCall(() => databases.listDocuments(DATABASE_ID, 'khatma_plans', [Query.limit(100)]), emptyList),
+        databases.listDocuments(DATABASE_ID, 'likes', [Query.limit(1)]),
+        databases.listDocuments(DATABASE_ID, 'follows', [Query.limit(1)]),
+        pool.query("SELECT doc->>'reciter_slug' AS slug, COUNT(DISTINCT owner)::int AS count FROM follows WHERE doc->>'reciter_slug' IS NOT NULL GROUP BY 1"),
+        pool.query("SELECT COUNT(*)::int AS total FROM schedules WHERE COALESCE(doc->>'deleted','false') <> 'true' AND COALESCE(doc->>'enabled','true') = 'true'"),
+        Promise.resolve({ documents: history }),
+        databases.listDocuments(DATABASE_ID, 'khatma_plans', [Query.limit(1)]),
       ]);
 
       totalUsers = uRes.total ?? 0;
@@ -430,8 +437,8 @@ app.get('/api/overview', async (req, res) => {
     realHistoryDocs.forEach(h => {
       try {
         const tr = parseTrack(h.track_json);
-        const sId = trackSurahId(tr);
-        if (sId) surahCounts[sId] = (surahCounts[sId] || 0) + 1;
+        const sId = Number(tr.surahId ?? tr.surah_id ?? tr.surahID);
+        if (Number.isInteger(sId) && sId >= 1 && sId <= 114) surahCounts[sId] = (surahCounts[sId] || 0) + 1;
       } catch (_) {}
     });
 
@@ -486,195 +493,7 @@ app.get('/api/overview', async (req, res) => {
   }
 });
 
-// Real Users list from Appwrite Auth + Listening Stats
-app.get('/api/users', async (req, res) => {
-  try {
-    if (!databaseAvailable) {
-      return res.json({ total: 0, users: [] });
-    }
-
-    // Serialized + retried via the shared pool (see awCall note above).
-    const [uRes, stRes, schRes, plRes] = await Promise.all([
-      awCall(() => userStore.list([Query.limit(100), Query.orderDesc('$createdAt')])),
-      awCall(() => databases.listDocuments(DATABASE_ID, 'listening_stats', [Query.limit(100)])),
-      awCall(() => databases.listDocuments(DATABASE_ID, 'schedules', [Query.limit(100)])),
-      awCall(() => databases.listDocuments(DATABASE_ID, 'playlists', [Query.limit(100)])),
-    ]);
-
-    const statsByUser = {};
-    stRes.documents.forEach(st => {
-      statsByUser[st.user_id] = st;
-    });
-
-    const schedulesByUser = {};
-    schRes.documents.filter(sch => sch.deleted !== true).forEach(sch => {
-      schedulesByUser[sch.user_id] = (schedulesByUser[sch.user_id] || 0) + 1;
-    });
-
-    const playlistsByUser = {};
-    plRes.documents.forEach(pl => {
-      playlistsByUser[pl.owner_id] = (playlistsByUser[pl.owner_id] || 0) + 1;
-    });
-
-    const users = uRes.users.map(u => {
-      const st = statsByUser[u.$id] || {};
-      const sec = st.total_seconds || 0;
-      const mins = Math.round(sec / 60);
-
-      return {
-        id: u.$id,
-        name: u.name && u.name.trim().length > 0 ? u.name : (u.email.split('@')[0] || 'Listener'),
-        email: u.email || 'No email',
-        provider: u.provider || 'email',
-        createdAt: u.$createdAt,
-        totalMinutes: mins,
-        daysStreak: st.days_streak ?? 0,
-        uniqueSurahs: st.unique_surahs ?? 0,
-        schedulesCount: schedulesByUser[u.$id] || 0,
-        playlistsCount: playlistsByUser[u.$id] || 0,
-        lastActive: u.accessedAt ? new Date(u.accessedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'
-      };
-    });
-
-    res.json({
-      total: users.length,
-      users
-    });
-  } catch (e) {
-    console.error('Error fetching users:', e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Single user profile details
-app.get('/api/users/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    let userRecord = null;
-    try {
-      userRecord = await userStore.get(id);
-    } catch (error) {
-      if (error.code === 404) return res.status(404).json({ error: 'User not found.' });
-      throw error;
-    }
-
-    const [stRes, schRes, plRes, histRes] = await Promise.all([
-      databases.listDocuments(DATABASE_ID, 'listening_stats', [Query.equal('user_id', id)]).catch(() => ({ documents: [] })),
-      databases.listDocuments(DATABASE_ID, 'schedules', [Query.equal('user_id', id)]).catch(() => ({ documents: [] })),
-      databases.listDocuments(DATABASE_ID, 'playlists', [Query.equal('owner_id', id)]).catch(() => ({ documents: [] })),
-      listHistoryDocs([Query.equal('user_id', id), Query.limit(25)]).catch(() => ({ documents: [] }))
-    ]);
-
-    const st = stRes.documents[0] || {};
-    const totalMinutes = Math.round((st.total_seconds || 0) / 60);
-
-    // schedule_json is Json.encodeToString(RecitationSchedule):
-    // { id, hour 0..23, minute 0..59, reciterSlug, fromSurah, toSurah,
-    //   durationMin (null = play range to end), enabled }.
-    // Doc id == schedule.id (truncated to 36 chars); the `schedule_id`
-    // attribute carries the full id. Top-level `enabled` is authoritative.
-    const schedules = schRes.documents.filter(d => d.deleted !== true).map(d => {
-      let parsed = {};
-      try { parsed = JSON.parse(d.schedule_json || '{}'); } catch (_) {}
-      const h = Number.isInteger(parsed.hour) ? Math.min(23, Math.max(0, parsed.hour)) : 7;
-      const m = Number.isInteger(parsed.minute) ? Math.min(59, Math.max(0, parsed.minute)) : 0;
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const dispH = h % 12 === 0 ? 12 : h % 12;
-      const timeStr = `${dispH}:${m.toString().padStart(2, '0')} ${ampm}`;
-
-      let from = Number.isInteger(parsed.fromSurah) ? Math.min(114, Math.max(1, parsed.fromSurah)) : 1;
-      let to = Number.isInteger(parsed.toSurah) ? Math.min(114, Math.max(1, parsed.toSurah)) : 114;
-      if (from > to) { const tmp = from; from = to; to = tmp; } // app normalizes on add/update
-      const durationLabel = parsed.durationMin == null
-        ? 'Full range'
-        : `${parsed.durationMin} mins`;
-
-      return {
-        id: d.$id,
-        scheduleId: d.schedule_id || parsed.id || d.$id,
-        time: timeStr,
-        label: `Recitation Alarm (${durationLabel})`,
-        reciter: parsed.reciterSlug || "Default Reciter",
-        surahs: `Surah ${from} -> ${to}`,
-        enabled: d.enabled ?? parsed.enabled ?? true
-      };
-    });
-
-    const playlists = plRes.documents.map(p => ({
-      id: p.$id,
-      title: p.title || "Custom Playlist",
-      tracks: 0,
-      createdAt: p.$createdAt ? p.$createdAt.split('T')[0] : '2026-09-22'
-    }));
-
-    const history = histRes.documents
-      .slice()
-      .sort((a, b) => historyTs(b) - historyTs(a))
-      .map(h => {
-      const tr = parseTrack(h.track_json);
-
-      const durationMs = Number(tr.durationMs) || 0;
-      const mins = Math.floor(durationMs / 60000);
-      const secs = Math.floor((durationMs % 60000) / 1000);
-      const durationStr = durationMs > 0 ? (mins > 0 ? `${mins}m ${secs}s` : `${secs}s`) : 'Full Surah';
-
-      let playedTimeStr = 'Recently';
-      const playedAt = historyTs(h);
-      if (playedAt > 0) {
-        const d = new Date(playedAt);
-        const now = Date.now();
-        const diffMs = now - playedAt;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMins / 60);
-        const diffDays = Math.floor(diffHours / 24);
-
-        if (diffMins < 1) playedTimeStr = 'Just now';
-        else if (diffMins < 60) playedTimeStr = `${diffMins}m ago`;
-        else if (diffHours < 24) playedTimeStr = `${diffHours}h ago`;
-        else if (diffDays < 7) playedTimeStr = `${diffDays}d ago`;
-        else playedTimeStr = d.toLocaleDateString();
-      }
-
-      return {
-        id: h.$id,
-        surahName: trackSurahName(tr),
-        reciterName: trackReciterName(tr),
-        duration: durationStr,
-        playedTime: playedTimeStr,
-        surahNumber: trackSurahId(tr)
-      };
-    });
-
-
-    res.json({
-      user: {
-        id,
-        name: userRecord?.name || 'Listener',
-        email: userRecord?.email || `${id}@quranify.app`,
-        provider: userRecord?.provider || 'email',
-        createdAt: userRecord?.$createdAt || new Date().toISOString(),
-        totalMinutes,
-        daysStreak: st.days_streak ?? 0,
-        uniqueSurahs: st.unique_surahs ?? 0,
-        schedulesCount: schedules.length,
-        playlistsCount: playlists.length,
-        lastActive: 'Active'
-      },
-      stats: {
-        totalHours: Math.round(totalMinutes / 60),
-        streak: st.days_streak ?? 0,
-        topReciter: "—",
-        favoriteSurah: "—",
-        preferredAmbient: "—"
-      },
-      schedules,
-      playlists,
-      history
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
+registerUsersRoutes(app, { pool, databases, databaseId: DATABASE_ID, userStore, listHistoryDocs, historyTs, parseTrack });
 
 // Reciters Directory routes are handled by recitersSync.js
 
@@ -809,145 +628,22 @@ app.delete('/api/playlists/:id', async (req, res) => {
 registerScheduleDeletion(app, pool);
 
 
-// Live Activity Feed synthesized from Appwrite history, likes & schedules
-app.get('/api/activity', async (req, res) => {
-  try {
-    let activities = [];
+registerActivityRoutes(app, pool);
 
-    if (databaseAvailable) {
-      const [hRes, lRes, schRes, uRes] = await Promise.all([
-        listHistoryDocs([Query.limit(20)]).catch(() => ({ documents: [] })),
-        databases.listDocuments(DATABASE_ID, 'likes', [Query.limit(10), Query.orderDesc('$createdAt')]).catch(() => ({ documents: [] })),
-        databases.listDocuments(DATABASE_ID, 'schedules', [Query.limit(5), Query.orderDesc('$createdAt')]).catch(() => ({ documents: [] })),
-        userStore.list([Query.limit(100)]).catch(() => ({ users: [] })),
-      ]);
-
-      const userMap = {};
-      uRes.users.forEach(u => {
-        userMap[u.$id] = u.name || u.email.split('@')[0];
-      });
-
-      // Parse History into events
-      hRes.documents
-        .slice()
-        .sort((a, b) => historyTs(b) - historyTs(a))
-        .forEach(h => {
-        try {
-          const tr = parseTrack(h.track_json);
-          const userName = userMap[h.user_id] || 'Active Listener';
-          const playedAt = historyTs(h);
-          const playedTime = playedAt > 0 ? new Date(playedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently';
-
-          activities.push({
-            id: h.$id,
-            user: userName,
-            action: `Recited Surah ${trackSurahName(tr)}`,
-            reciter: trackReciterName(tr),
-            surah: trackSurahName(tr),
-            ambient: '—',
-            time: playedTime,
-            type: 'listen'
-          });
-        } catch (_) {}
-      });
-
-      // Parse Likes
-      lRes.documents.forEach(l => {
-        const userName = userMap[l.user_id] || 'Listener';
-        activities.push({
-          id: l.$id,
-          user: userName,
-          action: `Favorited Surah ${l.surah_id}`,
-          reciter: l.reciter_slug || 'Beloved Reciter',
-          surah: `Surah ${l.surah_id}`,
-          ambient: '-',
-          time: 'Active',
-          type: 'like'
-        });
-      });
-
-      // Parse Schedules
-      schRes.documents.filter(s => s.deleted !== true).forEach(s => {
-        const userName = userMap[s.user_id] || 'Listener';
-        activities.push({
-          id: s.$id,
-          user: userName,
-          action: 'Scheduled Daily Recitation Alarm',
-          reciter: 'Selected Qari',
-          surah: 'Al-Kahf',
-          ambient: '—',
-          time: 'Configured',
-          type: 'schedule'
-        });
-      });
-    }
-
-    res.json({ activities });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Analytics: Peak hours and retention
+// Saved listening history is a partial snapshot, not a complete play log.
 app.get('/api/analytics', async (req, res) => {
   try {
-    let peakHours = ['04:00 (Fajr)', '08:00 (Morning)', '13:00 (Dhuhr)', '17:00 (Asr)', '20:00 (Isha)', '23:00 (Night)'].map(hour => ({ hour, index: 0 }));
-
-    if (databaseAvailable && databases) {
-      try {
-        const hRes = await listHistoryDocs([Query.limit(200)]);
-
-        if (hRes.documents && hRes.documents.length > 0) {
-          const buckets = {
-            fajr: 0,    // 3, 4, 5
-            morning: 0, // 6, 7, 8, 9, 10, 11
-            dhuhr: 0,   // 12, 13, 14, 15
-            asr: 0,     // 16, 17, 18, 19
-            isha: 0,    // 20, 21, 22
-            night: 0    // 23, 0, 1, 2
-          };
-
-          hRes.documents.forEach(h => {
-            const ms = historyTs(h) || Date.now();
-            const hr = new Date(ms).getHours();
-            if (hr >= 3 && hr <= 5) buckets.fajr++;
-            else if (hr >= 6 && hr <= 11) buckets.morning++;
-            else if (hr >= 12 && hr <= 15) buckets.dhuhr++;
-            else if (hr >= 16 && hr <= 19) buckets.asr++;
-            else if (hr >= 20 && hr <= 22) buckets.isha++;
-            else buckets.night++;
-          });
-
-          const maxVal = Math.max(1, buckets.fajr, buckets.morning, buckets.dhuhr, buckets.asr, buckets.isha, buckets.night);
-
-          peakHours = [
-            { hour: "04:00 (Fajr)", index: Math.round((buckets.fajr / maxVal) * 100) },
-            { hour: "08:00 (Morning)", index: Math.round((buckets.morning / maxVal) * 100) },
-            { hour: "13:00 (Dhuhr)", index: Math.round((buckets.dhuhr / maxVal) * 100) },
-            { hour: "17:00 (Asr)", index: Math.round((buckets.asr / maxVal) * 100) },
-            { hour: "20:00 (Isha)", index: Math.round((buckets.isha / maxVal) * 100) },
-            { hour: "23:00 (Night)", index: Math.round((buckets.night / maxVal) * 100) }
-          ];
-        }
-      } catch (e) {
-        console.error('Error fetching history for peakHours:', e);
-      }
-    }
-
-    res.json({
-      peakHours,
-      deviceDistribution: [],
-      retention: { day1: 0, day7: 0, day30: 0 },
-      reciterStyleDistribution: []
-    });
+    res.json(await getListeningAnalytics(pool));
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error('Listening analytics unavailable:', e.message);
+    res.status(503).json({ error: 'Listening analytics are unavailable.' });
   }
 });
 
 registerExportRoutes(app, () => ({
   users: userStore,
   databases,
+  pool,
   databaseId: DATABASE_ID,
   databaseAvailable
 }));
