@@ -65,9 +65,10 @@ object BackendHttp {
         }
 
     suspend fun request(method: HttpMethod, path: String, body: JsonElement? = null,
-                        authenticated: Boolean = true, queries: List<String> = emptyList()): String {
+                        authenticated: Boolean = true, queries: List<String> = emptyList(), expectedUserId: String? = null): String {
         init()
         val before = if (authenticated) _tokens.value else null
+        if (expectedUserId != null && before?.userId != expectedUserId) throw BackendException(401, "Account changed before request.")
         var response = send(method, path, body, before?.accessToken, queries)
         if (response.status.value == 401 && before != null && refresh(before)) {
             // Do not retry a request under a different signed-in account.

@@ -118,6 +118,21 @@ class PlayEventLogTest {
     }
 
     @Test
+    fun pendingEventsAreBoundToTheirFirstAccountAndAcknowledgedIndividually() {
+        PlayEventLog.record("alafasy", 1, 30000, "alice")
+        PlayEventLog.record("husary", 2, 30000, "bob")
+        PlayEventLog.record("minshawi", 3, 30000)
+        val alice = PlayEventLog.pendingFor("alice")
+        assertEquals(listOf("alafasy", "minshawi"), alice.map { it.reciterSlug })
+        assertEquals(2, alice.map { it.eventId }.distinct().size)
+        assertEquals(alice, PlayEventLog.pendingFor("alice"))
+        PlayEventLog.acknowledge(alice.first().eventId)
+        assertEquals(listOf("minshawi"), PlayEventLog.pendingFor("alice").map { it.reciterSlug })
+        assertEquals(listOf("husary"), PlayEventLog.pendingFor("bob").map { it.reciterSlug })
+        assertEquals(2, PlayEventLog.pendingCount())
+    }
+
+    @Test
     fun testDrainOnAnEmptyBufferReturnsEmpty() {
         assertTrue(PlayEventLog.drain().isEmpty())
     }

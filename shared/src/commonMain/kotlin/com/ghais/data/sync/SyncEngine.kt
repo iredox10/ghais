@@ -49,6 +49,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -548,43 +549,42 @@ object SyncEngine {
         clean
     }
 
-    /**
-     * Best-effort upload of the [PlayEventLog] buffer into [PLAY_EVENTS]
-     * (create-only, one document per event via [ID.unique()]; never
-     * update/delete — events are append-only, unlike every pull-then-push
-     * collection above).
-     *
-     * Mirrors the file's write pattern (`db.createDocument(DB_ID, …)` with a
-     * `Map<String, Any?>` payload) inside the caller's `runCollection` guard,
-     * so an unprovisioned collection is skipped without poisoning the pass.
-     * Drains first, then re-records only the unsent remainder on ANY failure
-     * (offline included) — already-sent events keep their documents, and the
-     * re-queue is cap-bounded by [PlayEventLog.MAX_BUFFER]. Never throws.
-     */
+    private val playEventsUploadLock = Mutex()
+
+    /** Upload a persisted snapshot and acknowledge each confirmed event. */
     suspend fun uploadPlayEvents() {
         if (!BackendConfig.isConfigured()) return
-        if (AuthRepository.session.value?.userId == null) return
-        val events = PlayEventLog.drain()
-        if (events.isEmpty()) return
-        var sent = 0
+        val userId = AuthRepository.session.value?.userId ?: return
+        if (!playEventsUploadLock.tryLock()) return
         try {
+            val events = PlayEventLog.pendingFor(userId)
             val db = databases()
-            for ((index, event) in events.withIndex()) {
+            for (event in events) {
+                if (AuthRepository.session.value?.userId != userId) return
                 val data: Map<String, Any?> = buildMap {
                     put("reciterSlug", event.reciterSlug)
                     put("surahId", event.surahId)
                     put("ms", event.ms)
-                    event.ownerId?.takeIf { it.isNotBlank() }?.let { put("ownerId", it) }
+                    put("ownerId", userId)
+                    put("playedAtMs", event.playedAtMs)
                 }
-                db.createDocument(DB_ID, PLAY_EVENTS, ID.unique(), data)
-                sent = index + 1
+                try {
+                    db.createDocument(DB_ID, PLAY_EVENTS, event.eventId, data, expectedUserId = userId)
+                } catch (e: BackendException) {
+                    if (e.code != 409) throw e
+                    // A previous create may have succeeded before its response
+                    // was lost. Verify that the existing row is ours before ack.
+                    val existing = db.getDocument(DB_ID, PLAY_EVENTS, event.eventId, expectedUserId = userId).data
+                    if (existing["ownerId"] != userId || existing["reciterSlug"] != event.reciterSlug ||
+                        (existing["surahId"] as? Number)?.toInt() != event.surahId ||
+                        (existing["ms"] as? Number)?.toLong() != event.ms ||
+                        (existing["playedAtMs"] as? Number)?.toLong() != event.playedAtMs) throw e
+                }
+                PlayEventLog.acknowledge(event.eventId)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "play_events upload failed after $sent/${events.size}; re-queuing remainder.", e)
-            for (event in events.drop(sent)) {
-                PlayEventLog.record(event.reciterSlug, event.surahId, event.ms, event.ownerId)
-            }
-        }
+            Log.w(TAG, "play_events upload failed; unconfirmed events remain queued.", e)
+        } finally { playEventsUploadLock.unlock() }
     }
 
     /**

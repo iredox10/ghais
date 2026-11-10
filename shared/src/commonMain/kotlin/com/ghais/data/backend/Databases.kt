@@ -35,12 +35,12 @@ class Databases {
         val obj = Json.parseToJsonElement(BackendHttp.request(HttpMethod.Get, path(databaseId, collectionId), queries = queries)).jsonObject
         return DocumentList(obj.getValue("documents").jsonArray.map { document(it.jsonObject) })
     }
-    suspend fun getDocument(databaseId: String, collectionId: String, documentId: String) =
-        document(BackendHttp.request(HttpMethod.Get, path(databaseId, collectionId, documentId)))
-    suspend fun createDocument(databaseId: String, collectionId: String, documentId: String, data: Map<String, Any?>) =
+    suspend fun getDocument(databaseId: String, collectionId: String, documentId: String, expectedUserId: String? = null) =
+        document(BackendHttp.request(HttpMethod.Get, path(databaseId, collectionId, documentId), expectedUserId = expectedUserId))
+    suspend fun createDocument(databaseId: String, collectionId: String, documentId: String, data: Map<String, Any?>, expectedUserId: String? = null) =
         document(BackendHttp.request(HttpMethod.Post, path(databaseId, collectionId), buildJsonObject {
             put("documentId", documentId); put("data", encode(data))
-        }))
+        }, expectedUserId = expectedUserId))
     suspend fun updateDocument(databaseId: String, collectionId: String, documentId: String, data: Map<String, Any?>) =
         document(BackendHttp.request(HttpMethod.Patch, path(databaseId, collectionId, documentId), buildJsonObject { put("data", encode(data)) }))
     suspend fun deleteDocument(databaseId: String, collectionId: String, documentId: String) {

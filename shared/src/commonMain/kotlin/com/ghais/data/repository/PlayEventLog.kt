@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
+import kotlin.random.Random
 
 /**
  * PlayEventLog: buffer of qualifying surah plays for the Appwrite
@@ -14,17 +15,15 @@ import kotlin.time.Clock
  * [UserUsageRepository.maybeCountSurahPlay] records here at the exact site
  * where `surahPlays` increments on the completion-or-30s rule, so every
  * buffered event is a play the local chart already counted — the buffer never
- * invents one. [com.ghais.data.sync.SyncEngine.uploadPlayEvents] drains the
- * buffer on the sync path (create-only, never update/delete).
+ * invents one. [com.ghais.data.sync.SyncEngine.uploadPlayEvents] removes each
+ * event only after its create is confirmed.
  *
  * Pure Kotlin, no Android APIs: a [Mutex] guards an immutable list so the
  * non-suspend [record]/[drain] pair stays thread-safe on every platform.
  * [record] uses [Mutex.tryLock] and drops the event under extreme contention
- * rather than ever blocking playback; [drain] leaves the buffer intact when
- * the lock is busy so the next heartbeat retries — drains never lose data.
- * Capped at [MAX_BUFFER] (drop-oldest); upload failures re-record the unsent
- * remainder, which is also cap-bounded, so the buffer can never grow without
- * bound. Never throws.
+ * rather than ever blocking playback; [pendingFor] leaves events buffered
+ * until the server confirms them. Capped at [MAX_BUFFER] (drop-oldest).
+ * Never throws.
  *
  * The buffer is persisted to Settings on every mutation and restored on first
  * access, so events recorded offline survive a process kill and still upload
@@ -41,11 +40,16 @@ object PlayEventLog {
         val ms: Long,
         /** Signing-in account at record time, null while signed out. */
         val ownerId: String? = null,
-        val playedAtMs: Long = Clock.System.now().toEpochMilliseconds()
+        val playedAtMs: Long = Clock.System.now().toEpochMilliseconds(),
+        /** Stable document ID makes retries after a lost response idempotent. */
+        val eventId: String = newEventId()
     )
 
+    private fun newEventId(): String = Random.nextBytes(10).joinToString("") { (it.toInt() and 255).toString(16).padStart(2, '0') }
+
     private const val STORE_KEY = "ghais_play_events_v1"
-    private val json = Json { ignoreUnknownKeys = true }
+    // Persist timestamps/IDs even when their dynamic defaults happen to match.
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val settings: Settings by lazy { Settings() }
 
     private val lock = Mutex()
@@ -106,6 +110,28 @@ object PlayEventLog {
         }
     } catch (_: Exception) {
         emptyList()
+    }
+
+    /** Snapshot eligible events without removing them; bind anonymous plays once. */
+    fun pendingFor(ownerId: String): List<PlayEvent> = try {
+        if (ownerId.isBlank() || !lock.tryLock()) return emptyList()
+        try {
+            ensureRestored()
+            buffer = buffer.map { if (it.ownerId == null) it.copy(ownerId = ownerId) else it }
+            // Also persists IDs generated while restoring pre-ID events.
+            persistLocked()
+            buffer.filter { it.ownerId == ownerId }
+        } finally { lock.unlock() }
+    } catch (_: Exception) { emptyList() }
+
+    /** Remove an event only after the server has confirmed it. */
+    fun acknowledge(eventId: String) {
+        if (!lock.tryLock()) return
+        try {
+            ensureRestored()
+            buffer = buffer.filterNot { it.eventId == eventId }
+            persistLocked()
+        } finally { lock.unlock() }
     }
 
     /** Buffered event count (restores first). For tests/diagnostics. Never throws. */

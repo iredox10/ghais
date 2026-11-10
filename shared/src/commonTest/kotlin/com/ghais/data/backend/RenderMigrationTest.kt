@@ -59,6 +59,18 @@ class RenderMigrationTest {
         assertNull(BackendHttp.tokens.value)
     }
 
+    @Test fun accountBoundRequestsNeverUseAnotherAccountsToken() = runBlocking {
+        var sent = false
+        configure { sent = true; 200 to "{}" }
+        try {
+            BackendHttp.request(HttpMethod.Get, "/auth/me", expectedUserId = "bob")
+            fail("Expected account mismatch")
+        } catch (e: BackendException) { assertEquals(401, e.code) }
+        assertFalse(sent)
+        BackendHttp.request(HttpMethod.Get, "/auth/me", expectedUserId = "alice")
+        assertTrue(sent)
+    }
+
     @Test fun rejectedRefreshClearsIdentityButServerFailureKeepsOfflineIdentity() = runBlocking {
         for (status in listOf(401, 503)) {
             configure { req -> if (req.url.encodedPath.endsWith("/auth/refresh")) status to "{}" else 401 to "{}" }
