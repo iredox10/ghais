@@ -6,7 +6,12 @@ import com.ghais.domain.model.RepeatMode
 import org.junit.Assert.*
 import org.junit.Test
 import java.lang.reflect.Proxy
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], manifest = Config.NONE)
 class NotificationPlayerTest {
     private class Controls : NotificationPlaybackControls {
         override var positionMs = 30_000L

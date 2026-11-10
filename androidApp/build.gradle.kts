@@ -37,6 +37,7 @@ android {
 }
 
 dependencies {
+    testImplementation("org.robolectric:robolectric:4.17")
     testImplementation("junit:junit:4.13.2")
     implementation(project(":shared"))
     implementation(libs.androidx.activity.compose)
