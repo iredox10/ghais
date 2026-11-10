@@ -127,8 +127,9 @@ export async function getOverview(): Promise<OverviewData> {
  * GET /api/users
  * Directory of registered users and engagement summaries
  */
-export async function getUsers(): Promise<UsersResponse> {
-  return apiRequest<UsersResponse>('/api/users');
+export async function getUsers(offset = 0, search = ''): Promise<UsersResponse> {
+  const params = new URLSearchParams({ limit: '50', offset: String(offset), search });
+  return apiRequest<UsersResponse>(`/api/users?${params}`);
 }
 
 /**

@@ -25,9 +25,11 @@ import { Modal } from '../components/ui/Modal';
 import { GlassCard } from '../components/ui/GlassCard';
 
 export const Users: React.FC = () => {
-  const { data, isLoading } = useUsers();
+  const [offset, setOffset] = useState(0);
+  const [search, setSearch] = useState('');
+  const { data, isLoading, isError, isFetching } = useUsers(offset, search);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const { data: userDetails, isLoading: isDetailsLoading } = useUserDetails(selectedUserId || '', {
+  const { data: userDetails, isLoading: isDetailsLoading, isError: isDetailsError } = useUserDetails(selectedUserId || '', {
     enabled: !!selectedUserId
   });
   const queryClient = useQueryClient();
@@ -171,12 +173,26 @@ export const Users: React.FC = () => {
 
       {/* TanStack Table Card */}
       <GlassCard className="p-6">
+        <label className="block text-xs text-white/60 mb-3">
+          Search all listeners
+          <input aria-label="Search all listeners" value={search} onChange={event => { setSearch(event.target.value); setOffset(0); }} className="ml-3 rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white" placeholder="Name, email, or ID" />
+        </label>
+        {isError && <p role="alert" className="text-sm text-red-300 mb-3">Could not load listeners. Please try again.</p>}
         <DataTable
           columns={columns}
           data={data?.users || []}
           isLoading={isLoading}
-          searchPlaceholder="Filter listeners by name, email, or ID..."
+          enableGlobalFilter={false}
+          enablePagination={false}
         />
+        <div className="mt-4 flex items-center justify-between text-xs text-white/60">
+          <span>{data?.total ?? 0} matching listeners</span>
+          <div className="flex items-center gap-3">
+            <button type="button" disabled={offset === 0 || isFetching} onClick={() => setOffset(Math.max(0, offset - 50))} className="disabled:opacity-40">Previous</button>
+            <span>{data?.total ? `${offset + 1}–${offset + data.users.length}` : '0'}</span>
+            <button type="button" disabled={isFetching || !data || offset + data.users.length >= data.total} onClick={() => setOffset(offset + 50)} className="disabled:opacity-40">Next</button>
+          </div>
+        </div>
       </GlassCard>
 
       {/* User Details Modal */}
@@ -185,7 +201,9 @@ export const Users: React.FC = () => {
         onClose={() => setSelectedUserId(null)}
         title="Listener Intelligence Profile"
       >
-        {isDetailsLoading || !userDetails ? (
+        {isDetailsError ? (
+          <div role="alert" className="p-8 text-red-300 text-xs">Could not load this listener profile.</div>
+        ) : isDetailsLoading || !userDetails ? (
           <div className="flex items-center justify-center p-8 text-white/50 text-xs">
             Loading user profile from PostgreSQL database...
           </div>
@@ -243,6 +261,7 @@ export const Users: React.FC = () => {
             </div>
 
             {/* Configured Daily Alarms */}
+            {deleteScheduleMutation.isError && <p role="alert" className="text-xs text-red-300">Could not delete the schedule. Please try again.</p>}
             <div className="flex flex-col gap-2">
               <span className="text-xs font-semibold text-white/80 flex items-center gap-1.5">
                 <AlarmClock className="w-3.5 h-3.5 text-purple-400" />
@@ -308,11 +327,11 @@ export const Users: React.FC = () => {
               </div>
             </div>
 
-            {/* Actual Listening Sessions from PostgreSQL History */}
+            {/* Saved history is not a complete session log. */}
             <div className="flex flex-col gap-2">
               <span className="text-xs font-semibold text-white/80 flex items-center gap-1.5">
                 <History className="w-3.5 h-3.5 text-emerald-400" />
-                Listening Sessions (PostgreSQL History)
+                Recent Saved Listening History
               </span>
               <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
                 {userDetails.history && userDetails.history.length > 0 ? (
@@ -333,7 +352,7 @@ export const Users: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-[11px] text-emerald-400/90 font-mono">
+                          <span title="Track duration, not time listened" className="text-[11px] text-emerald-400/90 font-mono">
                           {item.duration}
                         </span>
                         <span className="text-[10px] text-white/30 font-mono">

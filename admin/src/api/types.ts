@@ -126,7 +126,7 @@ export interface UserHistoryItem {
   reciterName: string;
   duration: string;
   playedTime: string;
-  surahNumber?: number;
+  surahNumber?: number | null;
 }
 
 export interface UserDetails {

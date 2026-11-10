@@ -153,10 +153,10 @@ export function useOverview(options?: Partial<QueryOptionsWithoutKeyFn<OverviewD
 /**
  * Hook to retrieve registered users directory and summaries.
  */
-export function useUsers(options?: Partial<QueryOptionsWithoutKeyFn<UsersResponse>>) {
+export function useUsers(offset = 0, search = '', options?: Partial<QueryOptionsWithoutKeyFn<UsersResponse>>) {
   return useQuery({
-    queryKey: adminQueryKeys.users(),
-    queryFn: getUsers,
+    queryKey: [...adminQueryKeys.users(), 'page', offset, search],
+    queryFn: () => getUsers(offset, search),
     ...options,
   });
 }
