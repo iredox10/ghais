@@ -36,7 +36,8 @@ export function registerTelemetry(app, { getDatabases, getDatabaseId }) {
         mode = 'live';
         pingMs = Date.now() - startTime;
       } catch (err) {
-        pingMs = Date.now() - startTime;
+        // Failed DB requests do not measure a usable connection latency.
+        pingMs = null;
       }
     }
 
