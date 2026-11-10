@@ -22,8 +22,9 @@ function parseCurrentRef(ref) {
   const idx = ref.lastIndexOf('/');
   if (idx <= 0 || idx >= ref.length - 1) return null;
   const slug = ref.slice(0, idx).trim();
-  const surahId = parseInt(ref.slice(idx + 1).trim(), 10);
-  if (!slug || !Number.isInteger(surahId) || surahId <= 0) return null;
+  const rawId = ref.slice(idx + 1).trim();
+  const surahId = Number(rawId);
+  if (!slug || !/^\d+$/.test(rawId) || !Number.isInteger(surahId) || surahId < 1 || surahId > 114) return null;
   return { slug, surahId };
 }
 
@@ -34,7 +35,7 @@ function parseQueueFirst(queueJson) {
     if (!first || typeof first !== 'object') return null;
     const slug = typeof first.reciter_slug === 'string' ? first.reciter_slug.trim() : '';
     const surahId = Number(first.surah_id);
-    if (!slug || !Number.isInteger(surahId) || surahId <= 0) return null;
+    if (!slug || !Number.isInteger(surahId) || surahId < 1 || surahId > 114) return null;
     return {
       slug,
       surahId,
@@ -58,7 +59,7 @@ function formatUpdatedAt(doc) {
   if (doc.$updatedAt) {
     return new Date(doc.$updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
-  return 'Just now';
+  return 'Unknown';
 }
 
 export default function registerPlaybackRoutes(app, getContext) {
@@ -67,46 +68,47 @@ export default function registerPlaybackRoutes(app, getContext) {
     try {
       const { users, databases, databaseId, databaseAvailable } = getContext();
 
+      if (!databaseAvailable || !databases || !users) return res.status(503).json({ error: 'Playback data is unavailable.' });
+
       let sessions = [];
 
       if (databaseAvailable && databases) {
         try {
-          const [pbRes, uRes] = await Promise.all([
-            databases.listDocuments(databaseId, 'playback_state', [
+          const pbRes = await databases.listDocuments(databaseId, 'playback_state', [
               Query.limit(50),
               Query.orderDesc('$updatedAt')
-            ]).catch(() => ({ documents: [] })),
-            users.list([Query.limit(100)]).catch(() => ({ users: [] }))
-          ]);
+            ]);
 
           const userMap = {};
-          uRes.users.forEach(u => {
-            userMap[u.$id] = {
-              name: u.name && u.name.trim() ? u.name : (u.email ? u.email.split('@')[0] : 'Listener'),
-              avatar: u.prefs?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.$id}`
-            };
-          });
+          const userIds = [...new Set(pbRes.documents.map(doc => doc.user_id).filter(id => typeof id === 'string' && id))];
+          await Promise.all(userIds.map(async id => {
+            try {
+              const u = await users.get(id);
+              userMap[id] = { name: u.name?.trim() || u.email?.split('@')[0] || 'Listener', avatar: '' };
+            } catch { /* The snapshot may outlive the account. */ }
+          }));
 
           if (pbRes.documents && pbRes.documents.length > 0) {
-            sessions = pbRes.documents.map((doc, index) => {
+            sessions = pbRes.documents.flatMap((doc, index) => {
               const userInfo = userMap[doc.user_id] || {
-                name: 'Active Listener',
-                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${doc.user_id || index}`
+                name: 'Listener',
+                avatar: ''
               };
 
               // Canonical parsing: queue_json first, current_ref fallback
               // (same precedence as the app's pullPlaybackIfEmpty).
               const queued = parseQueueFirst(doc.queue_json);
               const ref = parseCurrentRef(doc.current_ref);
-              const reciterSlug = queued?.slug || ref?.slug || 'mishary';
-              const surahId = queued?.surahId || ref?.surahId || 1;
+              if (!queued && !ref) return [];
+              const reciterSlug = queued?.slug || ref.slug;
+              const surahId = queued?.surahId || ref.surahId;
               const ayahNo = queued?.ayahNo || 0;
               const positionMs = typeof doc.position_ms === 'number'
                 ? Math.max(0, Math.floor(doc.position_ms))
                 : 0;
               const positionSeconds = Math.floor(positionMs / 1000);
 
-              return {
+              return [{
                 id: doc.$id || `playback_${index + 1}`,
                 userId: doc.user_id || `usr_${index + 1}`,
                 userName: userInfo.name,
@@ -124,11 +126,12 @@ export default function registerPlaybackRoutes(app, getContext) {
                 ayahNo,
                 audioUrl: queued?.audioUrl || '',
                 updated_at: typeof doc.updated_at === 'number' ? doc.updated_at : null
-              };
+              }];
             });
           }
         } catch (dbErr) {
           console.error('Error querying playback_state from PostgreSQL:', dbErr.message);
+          return res.status(503).json({ error: 'Playback data is unavailable.' });
         }
       }
 

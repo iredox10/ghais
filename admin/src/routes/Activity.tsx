@@ -49,7 +49,7 @@ export const Activity: React.FC = () => {
     refetchInterval: pollIntervalMap[pollRate],
   });
 
-  const { data: playbackData, isLoading: playbackLoading } = usePlayback({
+  const { data: playbackData, isLoading: playbackLoading, isError: playbackError } = usePlayback({
     refetchInterval: pollIntervalMap[pollRate],
   });
 
@@ -239,13 +239,13 @@ export const Activity: React.FC = () => {
               <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white">Live Listening Radar</h2>
-              <p className="text-xs text-white/50">Active streaming sessions & listener playback state</p>
+              <h2 className="text-base font-semibold text-white">Recent Playback Snapshots</h2>
+              <p className="text-xs text-white/50">Last synced playback state; this does not indicate whether a listener is currently playing.</p>
             </div>
           </div>
           <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono text-emerald-400">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>{playbackData?.total || 0} Active Listeners</span>
+            <span>{playbackData?.total ?? 0} snapshots</span>
           </div>
         </div>
 
@@ -255,9 +255,11 @@ export const Activity: React.FC = () => {
               <div key={i} className="h-32 rounded-2xl bg-white/5 border border-white/10" />
             ))}
           </div>
+        ) : playbackError ? (
+          <div className="text-center py-8 text-xs text-rose-300">Playback data is unavailable. Try again later.</div>
         ) : (!playbackData?.sessions || playbackData.sessions.length === 0) ? (
           <div className="text-center py-8 text-xs text-white/40">
-            No active listening sessions detected right now.
+            No playback snapshots available.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -266,7 +268,7 @@ export const Activity: React.FC = () => {
               const posSec = session.positionSeconds % 60;
               const durMin = Math.floor(session.durationSeconds / 60);
               const durSec = session.durationSeconds % 60;
-              const progressPct = Math.min(100, Math.max(0, (session.positionSeconds / (session.durationSeconds || 1)) * 100));
+              const progressPct = session.durationSeconds > 0 ? Math.min(100, Math.max(0, (session.positionSeconds / session.durationSeconds) * 100)) : null;
 
               return (
                 <div
@@ -276,11 +278,7 @@ export const Activity: React.FC = () => {
                   {/* User Identity & Avatar & Device Badge */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={session.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.userId}`}
-                        alt={session.userName}
-                        className="w-10 h-10 rounded-full border border-white/15 bg-white/5 object-cover"
-                      />
+                      <div aria-hidden="true" className="w-10 h-10 rounded-full border border-white/15 bg-white/5 flex items-center justify-center text-white/60">{session.userName.slice(0, 1).toUpperCase()}</div>
                       <div className="flex flex-col">
                         <span className="text-xs font-semibold text-white group-hover:text-emerald-300 transition-colors">
                           {session.userName}
@@ -288,6 +286,7 @@ export const Activity: React.FC = () => {
                         <span className="text-[10px] text-white/40 font-mono">
                           ID: {session.userId.substring(0, 8)}...
                         </span>
+                        <span className="text-[10px] text-white/40">Last synced: {session.updatedAt}</span>
                       </div>
                     </div>
                     <span className={`px-2.5 py-1 rounded-lg text-[10px] font-mono border ${
@@ -316,13 +315,13 @@ export const Activity: React.FC = () => {
                   <div className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between text-[11px] font-mono text-white/50">
                       <span>{posMin}:{posSec.toString().padStart(2, '0')}</span>
-                      <span className="text-emerald-400 font-semibold">{Math.round(progressPct)}%</span>
-                      <span>{durMin}:{durSec.toString().padStart(2, '0')}</span>
+                      <span className="text-emerald-400 font-semibold">{progressPct === null ? 'Duration unknown' : `${Math.round(progressPct)}%`}</span>
+                      <span>{progressPct === null ? '—' : `${durMin}:${durSec.toString().padStart(2, '0')}`}</span>
                     </div>
                     <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full transition-all duration-1000"
-                        style={{ width: `${progressPct}%` }}
+                        style={{ width: `${progressPct ?? 0}%` }}
                       />
                     </div>
                   </div>
