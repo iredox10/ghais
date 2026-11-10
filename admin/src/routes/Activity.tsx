@@ -182,7 +182,7 @@ export const Activity: React.FC = () => {
             Recent Listener Activity
           </h1>
           <p className="text-sm text-white/50 mt-1">
-            Recent saved history, favorites, and schedules, refreshed by polling.
+            Recent saved listener activity, refreshed by polling.
           </p>
         </div>
 
@@ -341,7 +341,7 @@ export const Activity: React.FC = () => {
 
       {/* Filter Buttons */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-        {['all', 'listen', 'like', 'follow', 'schedule', 'streak', 'playlist'].map((type) => (
+        {['all', 'listen', 'like', 'follow', 'schedule', 'playlist'].map((type) => (
           <button
             key={type}
             onClick={() => setFilterType(type)}
