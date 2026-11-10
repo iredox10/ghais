@@ -209,7 +209,7 @@ object StatsScreen : Screen {
                                 contentDescription = "Share your stats",
                                 onClick = {
                                     ShareSheet.shareText(
-                                        title = "Ghaith — My Quran Year",
+                                        title = "Ghaith — My Quran Journey",
                                         text = buildWrappedCard(
                                             totalHoursText = totalHoursText,
                                             dayStreak = stats.daysStreak,
@@ -438,7 +438,7 @@ object StatsScreen : Screen {
                             // Selected-bar readout: the chart's one takeaway.
                             val selIdx = if (shownBars.isEmpty()) 0 else selectedBar.coerceIn(shownBars.indices)
                             val selLabel = weekLabels.getOrNull(selIdx)
-                                ?: if (range == StatsRange.Today) "Today" else "Day ${selIdx + 1}"
+                                ?: if (range == StatsRange.Today) "Today (UTC)" else "${shownBars.lastIndex - selIdx} days ago (UTC)"
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
@@ -530,7 +530,7 @@ object StatsScreen : Screen {
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "No plays yet",
+                                    text = "No recent history yet",
                                     color = GhaisNoir.TextTertiary,
                                     fontSize = 12.sp
                                 )
@@ -758,7 +758,7 @@ private fun buildWrappedCard(
     topSurahName: String?,
     topSurahPlays: Long?
 ): String = buildString {
-    appendLine("Ghaith — My Quran Year")
+    appendLine("Ghaith — My Quran Journey")
     appendLine()
     appendLine("$totalHoursText listened • $dayStreak-day streak")
     appendLine()

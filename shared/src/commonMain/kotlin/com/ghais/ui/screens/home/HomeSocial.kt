@@ -233,6 +233,8 @@ fun HomeStatsCard() {
                 }
             }
             Spacer(Modifier.height(18.dp))
+            Text(text = "Last 7 days • UTC", color = GhaisNoir.TextTertiary, fontSize = 10.sp)
+            Spacer(Modifier.height(6.dp))
             // 7-day minutes chart — flat bars are silent days, never gaps.
             Row(
                 modifier = Modifier.fillMaxWidth(),
