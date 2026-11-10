@@ -331,7 +331,7 @@ export const Users: React.FC = () => {
             <div className="flex flex-col gap-2">
               <span className="text-xs font-semibold text-white/80 flex items-center gap-1.5">
                 <History className="w-3.5 h-3.5 text-emerald-400" />
-                Recent Saved Listening History
+                Latest 25 Saved History Entries
               </span>
               <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
                 {userDetails.history && userDetails.history.length > 0 ? (

@@ -18,7 +18,9 @@ export function registerUsersRoutes(app, { pool, databases, databaseId, userStor
           st.doc AS stats,
           (SELECT COUNT(DISTINCT COALESCE(NULLIF(s.doc->>'schedule_id',''), s.id))::int FROM schedules s WHERE s.owner = u.id AND s.doc->>'deleted' IS DISTINCT FROM 'true') AS schedules_count,
           (SELECT COUNT(*)::int FROM playlists p WHERE p.owner = u.id) AS playlists_count,
-          (SELECT MAX(h.created_at) FROM history h WHERE h.owner = u.id) AS last_active
+          (SELECT MAX(CASE WHEN h.doc->>'played_at_ms' ~ '^[0-9]{12,13}$'
+            THEN to_timestamp((h.doc->>'played_at_ms')::numeric / 1000)
+            ELSE h.created_at END) FROM history h WHERE h.owner = u.id) AS last_active
           FROM users u
           LEFT JOIN LATERAL (SELECT doc FROM listening_stats WHERE owner = u.id ORDER BY updated_at DESC, id DESC LIMIT 1) st ON true
           WHERE ${filter} ORDER BY u.created_at DESC, u.id DESC LIMIT $2 OFFSET $3`, [pattern, limit, offset]),
