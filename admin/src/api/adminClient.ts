@@ -253,6 +253,10 @@ export async function getMoods(): Promise<MoodsResponse> {
   return apiRequest<MoodsResponse>('/api/moods');
 }
 
+export async function updateMood(slug: string, mood: { title: string; subtitle: string; category: string }): Promise<void> {
+  await apiRequest(`/api/moods/${encodeURIComponent(slug)}`, { method: 'PATCH', body: JSON.stringify(mood) });
+}
+
 /**
  * POST /api/seed/surahs
  * Seed the surahs catalog

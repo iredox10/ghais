@@ -1,5 +1,6 @@
 import React from 'react';
 import { ColumnDef } from '@tanstack/react-table';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Smile,
   LayoutGrid,
@@ -14,6 +15,8 @@ import { ColumnHeader } from '../components/table/ColumnHeader';
 import { Badge } from '../components/ui/Badge';
 import { GlassCard } from '../components/ui/GlassCard';
 import { StatCard } from '../components/ui/StatCard';
+import { Modal } from '../components/ui/Modal';
+import { updateMood } from '../api/adminClient';
 
 // Contract (shared types + real hook now live):
 //   useMoods() -> react-query result with
@@ -22,6 +25,23 @@ import { StatCard } from '../components/ui/StatCard';
 
 export const Moods: React.FC = () => {
   const { data, isLoading } = useMoods();
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = React.useState<Mood | null>(null);
+  const [saving, setSaving] = React.useState(false);
+  const [saveError, setSaveError] = React.useState('');
+
+  const saveMood = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editing) return;
+    setSaving(true); setSaveError('');
+    try {
+      await updateMood(editing.slug, { title: editing.title, subtitle: editing.subtitle, category: editing.category });
+      await queryClient.invalidateQueries({ queryKey: ['moods'] });
+      setEditing(null);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not save mood.');
+    } finally { setSaving(false); }
+  };
 
   const moods = data?.moods ?? [];
   const total = data?.total ?? moods.length ?? 0;
@@ -125,6 +145,15 @@ export const Moods: React.FC = () => {
         </Badge>
       ),
     },
+    {
+      id: 'edit',
+      header: 'Edit',
+      cell: ({ row }) => ['gratitude', 'anxiety', 'hifz', 'qiyam', 'study', 'sleep'].includes(row.original.slug) ? (
+        <button type="button" className="text-xs text-emerald-300 hover:text-emerald-200" onClick={() => { setSaveError(''); setEditing({ ...row.original }); }}>
+          Edit
+        </button>
+      ) : <span className="text-xs text-white/40">Unsupported on mobile</span>,
+    },
   ];
 
   return (
@@ -138,7 +167,7 @@ export const Moods: React.FC = () => {
           <p className="text-sm text-white/50 mt-1">
             Browse the 6 curated listening moods — each with its default reciter, ambient pairing, and cover art.
           </p>
-          <p className="text-xs text-amber-300/80 mt-2">Admin reference catalog only. The mobile app uses its own bundled moods; changes here do not publish to devices.</p>
+          <p className="text-xs text-white/50 mt-2">Titles, subtitles and categories are shown in updated mobile apps. Playback remains bundled.</p>
         </div>
 
         {/* Live / static source badge */}
@@ -228,6 +257,23 @@ export const Moods: React.FC = () => {
           searchPlaceholder="Search moods by slug, title, category, reciter, or ambient..."
         />
       </GlassCard>
+      <Modal isOpen={Boolean(editing)} onClose={() => !saving && setEditing(null)} title="Edit mood" description="Changes update display text in supported mobile apps.">
+        {editing && <form onSubmit={saveMood} className="flex flex-col gap-4">
+          <label className="flex flex-col gap-1 text-xs text-white/70">Title
+            <input required maxLength={120} value={editing.title} onChange={event => setEditing({ ...editing, title: event.target.value })} className="rounded-lg bg-black/40 border border-white/10 p-2 text-white" />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-white/70">Subtitle
+            <input required maxLength={240} value={editing.subtitle} onChange={event => setEditing({ ...editing, subtitle: event.target.value })} className="rounded-lg bg-black/40 border border-white/10 p-2 text-white" />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-white/70">Category
+            <select value={editing.category} onChange={event => setEditing({ ...editing, category: event.target.value })} className="rounded-lg bg-black/40 border border-white/10 p-2 text-white">
+              {['Reflection', 'Comfort', 'Focus', 'Night'].map(category => <option key={category} value={category}>{category}</option>)}
+            </select>
+          </label>
+          {saveError && <p role="alert" className="text-xs text-rose-300">{saveError}</p>}
+          <button type="submit" disabled={saving} className="chrome-btn self-start rounded-lg px-4 py-2 text-sm">{saving ? 'Saving...' : 'Save changes'}</button>
+        </form>}
+      </Modal>
     </div>
   );
 };
