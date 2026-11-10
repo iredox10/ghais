@@ -408,14 +408,15 @@ app.get('/api/overview', async (req, res) => {
       }
       const [uRes, secondsRes, lRes, fRes, followCounts, schRes, hRes, khRes] = await Promise.all([
         userStore.list([Query.limit(1)]),
-        pool.query("SELECT COALESCE(SUM(CASE WHEN doc->>'total_seconds' ~ '^[0-9]+$' THEN (doc->>'total_seconds')::numeric ELSE 0 END),0) AS total FROM listening_stats"),
+        pool.query(`SELECT COALESCE(SUM(CASE WHEN doc->>'total_seconds' ~ '^[0-9]+$' THEN (doc->>'total_seconds')::numeric ELSE 0 END),0) AS total
+          FROM (SELECT DISTINCT ON (owner) doc FROM listening_stats WHERE owner IS NOT NULL ORDER BY owner, updated_at DESC, id DESC) latest_stats`),
         databases.listDocuments(DATABASE_ID, 'likes', [Query.limit(1)]),
         databases.listDocuments(DATABASE_ID, 'follows', [Query.limit(1)]),
         pool.query(`WITH counts AS (
           SELECT doc->>'reciter_slug' AS slug, COUNT(DISTINCT owner)::int AS count
           FROM follows WHERE NULLIF(doc->>'reciter_slug','') IS NOT NULL GROUP BY 1
         ) SELECT counts.*, (SELECT doc FROM reciters WHERE doc->>'slug'=counts.slug ORDER BY id LIMIT 1) AS reciter FROM counts`),
-        pool.query("SELECT COUNT(*)::int AS total FROM schedules WHERE COALESCE(doc->>'deleted','false') <> 'true' AND COALESCE(doc->>'enabled','true') = 'true'"),
+        pool.query("SELECT COUNT(DISTINCT (owner, COALESCE(NULLIF(doc->>'schedule_id',''), id)))::int AS total FROM schedules WHERE owner IS NOT NULL AND COALESCE(doc->>'deleted','false') <> 'true' AND COALESCE(doc->>'enabled','true') = 'true'"),
         Promise.resolve({ documents: history }),
         databases.listDocuments(DATABASE_ID, 'khatma_plans', [Query.limit(1)]),
       ]);
