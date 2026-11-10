@@ -33,8 +33,9 @@ actual object PlayerBridge {
 
     private var onTrackEnd: (() -> Unit)? = null
     private var pollStarted = false
-    private var pendingTitle: String? = null
-    private var pendingArtist: String? = null
+    private var pendingMetadata = PlaybackMetadataState()
+    private val pendingTitle get() = pendingMetadata.title
+    private val pendingArtist get() = pendingMetadata.artist
     private var pendingArtworkUri: String? = null
 
     /**
@@ -71,6 +72,7 @@ actual object PlayerBridge {
 
     private var retryingAfterServiceStart = false
     private var baseVolume = 1f
+    private var playbackSpeed = 1f
     private var audioFocusRequest: android.media.AudioFocusRequest? = null
 
     /** True while the current pause was initiated by a focus loss. */
@@ -408,6 +410,8 @@ actual object PlayerBridge {
                 .build()
             p.addListener(listener)
             exoPlayer = p
+            p.setPlaybackSpeed(playbackSpeed)
+            applyVolume()
             startPolling()
         }
         return p
@@ -492,8 +496,7 @@ actual object PlayerBridge {
      * AudioEngine.currentTrack changes.
      */
     fun updateMetadata(title: String, artist: String? = null) {
-        pendingTitle = title
-        pendingArtist = artist
+        pendingMetadata = pendingMetadata.replace(title, artist)
         try {
             val p = exoPlayer ?: return
             if (p.mediaItemCount == 0) return
@@ -503,19 +506,18 @@ actual object PlayerBridge {
             if (p.isPlaying) return
             val index = p.currentMediaItemIndex.coerceIn(0, p.mediaItemCount - 1)
             val current = p.getMediaItemAt(index)
-            val artworkUriStr = try { AmbientVideoArt.artworkUri.value?.toString() } catch (_: Exception) { null }
+            val artworkUriStr = pendingArtworkUri ?: brandedFallbackArtUri()
             val currentArtworkStr = try { current.mediaMetadata.artworkUri?.toString() } catch (_: Exception) { null }
-            if (current.mediaMetadata.title?.toString() == title && currentArtworkStr == artworkUriStr) return
+            if (current.mediaMetadata.title?.toString() == title &&
+                current.mediaMetadata.artist?.toString() == pendingArtist && currentArtworkStr == artworkUriStr) return
             // Replacing the item resets the timeline — preserve position so a
             // resume seek applied just before us isn't wiped out.
             val resumePos = p.currentPosition.coerceAtLeast(0L)
             val meta = current.mediaMetadata.buildUpon()
                 .setTitle(title)
-                .apply { artist?.let { setArtist(it) } }
+                .setArtist(pendingArtist)
                 .apply {
-                    if (!artworkUriStr.isNullOrBlank() && artworkUriStr != currentArtworkStr) {
-                        try { setArtworkUri(android.net.Uri.parse(artworkUriStr)) } catch (_: Exception) { }
-                    }
+                    setArtworkUri(artworkUriStr?.let { android.net.Uri.parse(it) })
                 }
                 .build()
             p.replaceMediaItem(index, current.buildUpon().setMediaMetadata(meta).build())
@@ -534,8 +536,7 @@ actual object PlayerBridge {
     }
 
     actual fun setPlaybackMetadata(title: String?, artist: String?) {
-        if (!title.isNullOrBlank()) pendingTitle = title
-        if (!artist.isNullOrBlank()) pendingArtist = artist
+        pendingMetadata = pendingMetadata.replace(title, artist)
     }
 
     actual fun setPlaybackArtworkUri(uri: String?) {
@@ -544,8 +545,7 @@ actual object PlayerBridge {
 
     /** Android-only: start playback with lockscreen/notification metadata set atomically. */
     fun playWithMetadata(url: String, title: String?, artist: String?, startPositionMs: Long = 0L) {
-        if (!title.isNullOrBlank()) pendingTitle = title
-        if (!artist.isNullOrBlank()) pendingArtist = artist
+        pendingMetadata = pendingMetadata.replace(title, artist)
         try { onPlayRequested?.invoke() } catch (_: Exception) { }
         val p = exoPlayer ?: appContext?.let { player(it) } ?: run {
             _errorMessage.value = "Player not initialised — call PlayerBridge.init(context) from MainActivity"
@@ -554,7 +554,7 @@ actual object PlayerBridge {
         try {
             _errorMessage.value = null
             _isBuffering.value = true
-            _positionMs.value = 0L
+            _positionMs.value = startPositionMs.coerceAtLeast(0L)
             _durationMs.value = 0L
             val metadata = androidx.media3.common.MediaMetadata.Builder()
                 .apply {
@@ -596,8 +596,7 @@ actual object PlayerBridge {
      * can never autoplay on READY — the no-autoplay guarantee.
      */
     fun prepareWithMetadata(url: String, title: String?, artist: String?, startPositionMs: Long = 0L) {
-        if (!title.isNullOrBlank()) pendingTitle = title
-        if (!artist.isNullOrBlank()) pendingArtist = artist
+        pendingMetadata = pendingMetadata.replace(title, artist)
         val p = exoPlayer ?: appContext?.let { player(it) } ?: run {
             _errorMessage.value = "Player not initialised — call PlayerBridge.init(context) from MainActivity"
             return
@@ -721,6 +720,8 @@ actual object PlayerBridge {
             exoPlayer?.clearMediaItems()
         } catch (_: Exception) { }
         _positionMs.value = 0L
+        _durationMs.value = 0L
+        _errorMessage.value = null
         _isBuffering.value = false
     }
 
@@ -729,7 +730,8 @@ actual object PlayerBridge {
     }
 
     actual fun setSpeed(speed: Float) {
-        try { exoPlayer?.setPlaybackSpeed(speed.coerceIn(0.25f, 3.0f)) } catch (_: Exception) { }
+        playbackSpeed = speed.coerceIn(0.25f, 3.0f)
+        try { exoPlayer?.setPlaybackSpeed(playbackSpeed) } catch (_: Exception) { }
     }
 
     actual fun setVolume(volume: Float) {
@@ -746,6 +748,10 @@ actual object PlayerBridge {
         if (released != null && exoPlayer === released) {
             try { released.removeListener(listener) } catch (_: Exception) { }
             exoPlayer = null
+            _positionMs.value = 0L
+            _durationMs.value = 0L
+            _isBuffering.value = false
+            _errorMessage.value = null
             // The existing polling coroutine remains alive and reads exoPlayer.
             // Do not start another coroutine when a new player is attached.
         }
