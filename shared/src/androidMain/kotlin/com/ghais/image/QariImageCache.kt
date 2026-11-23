@@ -50,6 +50,12 @@ object QariImageCache {
      * genuinely too late, which surfaces the ordering bug loudly.
      */
     fun install(context: Context) {
+        val permanentDirectory = context.filesDir.resolve("qari_photos")
+        val oldDirectory = context.cacheDir.resolve("qari_photos")
+        // Keep portraits downloaded by earlier builds during this upgrade.
+        if (!permanentDirectory.exists() && oldDirectory.exists()) {
+            oldDirectory.renameTo(permanentDirectory)
+        }
         SingletonImageLoader.setSafe { ctx ->
             ImageLoader.Builder(ctx)
                 .apply {
@@ -57,7 +63,7 @@ object QariImageCache {
                 }
                 .diskCache {
                     DiskCache.Builder()
-                        .directory(ctx.cacheDir.resolve("qari_photos"))
+                        .directory(ctx.filesDir.resolve("qari_photos"))
                         .maxSizeBytes(DISK_CACHE_BYTES)
                         .build()
                 }

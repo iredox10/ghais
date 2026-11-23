@@ -11,6 +11,8 @@ import com.ghais.data.seed.QuranData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
 
 /**
  * Cloud overlay for the reciter catalog (Appwrite `reciters` is the source
@@ -23,16 +25,21 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 object ReciterCloudCache {
     private const val DISABLED_KEY = "ghais_disabled_reciter_catalog_keys"
+    private const val CATALOG_KEY = "ghais_reciter_catalog_cache_v1"
+    private val catalogJson = Json { ignoreUnknownKeys = true }
     private val settings: Settings? by lazy { runCatching { Settings() }.getOrNull() }
     private var disabledKeys: Set<String> = runCatching {
         settings?.getString(DISABLED_KEY, "").orEmpty().split('\n').filter { it.isNotBlank() }.toSet()
     }.getOrDefault(emptySet())
-    private val _cloudReciters = MutableStateFlow<List<Reciter>>(emptyList())
+    private val _cloudReciters = MutableStateFlow(runCatching {
+        catalogJson.decodeFromString<List<Reciter>>(settings?.getString(CATALOG_KEY, "[]") ?: "[]")
+    }.getOrDefault(emptyList()))
     val cloudReciters: StateFlow<List<Reciter>> = _cloudReciters.asStateFlow()
 
     fun setCloudReciters(reciters: List<Reciter>) {
         disabledKeys = reciters.filterNot { it.enabled }.mapTo(mutableSetOf()) { it.catalogKey() }
         runCatching { settings?.putString(DISABLED_KEY, disabledKeys.joinToString("\n")) }
+        runCatching { settings?.putString(CATALOG_KEY, catalogJson.encodeToString(reciters)) }
         _cloudReciters.value = reciters
     }
 
