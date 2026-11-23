@@ -25,7 +25,7 @@ import com.ghais.ui.util.realImageUrlOrNull
 import kotlinx.coroutines.CancellationException
 
 private fun reciterPhotoOrNull(photoUrl: String?): String? =
-    realImageUrlOrNull(photoUrl)
+    realImageUrlOrNull(photoUrl)?.takeUnless { it.contains("images.unsplash.com", ignoreCase = true) }
 
 private fun cloudPhotoForSlug(slug: String): String? {
     if (slug.isBlank()) return null
@@ -192,7 +192,7 @@ fun NoirReciterAvatar(
 ) {
     val remoteUrl = rememberCloudPhoto(slug)
     NoirArtworkWell(
-        coverUrl = remoteUrl ?: photoUrl.orEmpty(),
+        coverUrl = reciterPhotoOrNull(remoteUrl) ?: reciterPhotoOrNull(photoUrl).orEmpty(),
         monogram = monogramForReciter(nameEn),
         shape = shape,
         modifier = modifier,

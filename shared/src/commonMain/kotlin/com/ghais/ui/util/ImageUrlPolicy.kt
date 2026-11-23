@@ -24,6 +24,7 @@ private val PLACEHOLDER_HOSTS = listOf(
     "fakeimg.pl",
     "placeimg.com",
     "placehold.it",
+    "lh3.googleusercontent.com/aida-public/",
 )
 
 private val PLACEHOLDER_PATH_HINTS = listOf(
