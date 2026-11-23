@@ -1,0 +1,50 @@
+[
+  {
+    "slug": "ahmad-al-nufais",
+    "name": "Ahmad Al-Nufais",
+    "source": "https://qurancentral.com/audio/ahmad-alnufais/",
+    "image": "https://artwork.qurancentral.com/ahmad-alnufais-300x300.jpg"
+  },
+  {
+    "slug": "abdullah-al-qarafi",
+    "name": "Abdullah Al-Qarafi",
+    "source": "https://qurancentral.com/audio/abdullah-al-qarafi/",
+    "image": "https://artwork.qurancentral.com/abdullah-al-qarafi-300x300.jpg"
+  },
+  {
+    "slug": "muhammad-al-faqih",
+    "name": "Muhammad Al-Faqih",
+    "source": "https://qurancentral.com/audio/muhammad-al-faqih/",
+    "image": "https://artwork.qurancentral.com/muhammad-al-faqih-300x300.jpg"
+  },
+  {
+    "slug": "muhammad-barhaji",
+    "name": "Muhammad Barhaji",
+    "source": "https://qurancentral.com/audio/muhammad-barhaji/",
+    "image": "https://artwork.qurancentral.com/muhammad-barhaji-300x300.jpg"
+  },
+  {
+    "slug": "muhammad-dibirov",
+    "name": "Muhammad Dibirov",
+    "source": "https://qurancentral.com/audio/muhammad-dibirov/",
+    "image": "https://artwork.qurancentral.com/muhammad-dibirov-300x300.jpg"
+  },
+  {
+    "slug": "mukhtar-al-hajj",
+    "name": "Mukhtar Al-Hajj",
+    "source": "https://qurancentral.com/audio/mukhtar-al-hajj/",
+    "image": "https://artwork.qurancentral.com/mukhtar-al-hajj-300x300.jpg"
+  },
+  {
+    "slug": "haitham-al-dokhin",
+    "name": "Haitham Al-Dokhin",
+    "source": "https://qurancentral.com/audio/haitham-al-dokhin/",
+    "image": "https://artwork.qurancentral.com/haitham-al-dokhin-300x300.jpg"
+  },
+  {
+    "slug": "al-waleed-al-shamsan",
+    "name": "Waleed Al Shamsan",
+    "source": "https://podcasts.apple.com/us/podcast/waleed-al-shamsan/id1832706561?uo=4",
+    "image": "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/f9/26/ab/f926abc9-9a58-64e9-06ea-c8894a072423/mza_10828436828743005191.jpg/600x600bb.jpg"
+  }
+]
