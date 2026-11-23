@@ -121,6 +121,8 @@ fun App() {
         // Two exceptions: an explicit Log out latches the auth gate, and a
         // brand-new signup replays the full onboarding (goal + qari + goal
         // minutes), because a fresh account has no taste/history yet.
+        // Only the local token read gates first content; refreshSession's
+        // network validation continues after Home is visible.
         if (!checked) {
             SplashScreen.Content()
         } else if (showAuth) {

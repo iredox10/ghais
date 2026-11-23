@@ -23,6 +23,49 @@ class RenderMigrationTest {
         BackendHttp.configureForTest(client, old)
     }
 
+    @Test fun startupIsReadyWhileSessionValidationWaitsOnSlowNetwork() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        configure {
+            entered.complete(Unit)
+            release.await()
+            200 to """{"userId":"alice","email":"a@example.com","name":"Alice"}"""
+        }
+        val validation = launch { com.ghais.data.auth.AuthRepository.refreshSession() }
+        entered.await()
+        assertTrue(com.ghais.data.auth.AuthRepository.authChecked.value)
+        assertEquals("alice", com.ghais.data.auth.AuthRepository.cachedSession.value?.userId)
+        assertFalse(validation.isCompleted)
+        release.complete(Unit)
+        validation.join()
+        assertEquals("alice", com.ghais.data.auth.AuthRepository.session.value?.userId)
+    }
+
+    @Test fun oldStartupFailureCannotClearNewLogin() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        configure {
+            entered.complete(Unit); release.await(); 401 to "{}"
+        }
+        val validation = launch { com.ghais.data.auth.AuthRepository.refreshSession() }
+        entered.await()
+        val bob = old.copy(userId = "bob", accessToken = "bob-token")
+        BackendHttp.adopt(bob)
+        release.complete(Unit)
+        validation.join()
+        assertEquals(bob, BackendHttp.tokens.value)
+    }
+
+    @Test fun guestStartupNeedsNoNetwork() = runBlocking {
+        var requests = 0
+        client = HttpClient(FakeBackendEngine { requests++; 503 to "{}" })
+        BackendHttp.configureForTest(client, null)
+        com.ghais.data.auth.AuthRepository.refreshSession()
+        assertTrue(com.ghais.data.auth.AuthRepository.authChecked.value)
+        assertNull(com.ghais.data.auth.AuthRepository.cachedSession.value)
+        assertEquals(0, requests)
+    }
+
     @Test fun concurrentUnauthorizedRequestsRotateOnce() = runBlocking {
         var refreshes = 0
         var oldRequests = 0

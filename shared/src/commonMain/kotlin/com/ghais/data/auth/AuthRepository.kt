@@ -30,6 +30,9 @@ object AuthRepository {
         }
         BackendHttp.init()
         _cachedSession.value = BackendHttp.tokens.value?.asSession()
+        // Startup readiness means local identity has loaded. Server validation
+        // runs independently so a slow connection never gates guest/offline UI.
+        _authChecked.value = true
     }
 
     private fun TokenBundle.asSession() = AuthSession(userId, email, name)
@@ -74,10 +77,12 @@ object AuthRepository {
 
     suspend fun refreshSession() {
         init()
+        val restoringUserId = BackendHttp.tokens.value?.userId
         try {
-            if (BackendHttp.tokens.value == null) { _session.value = null; return }
-            val obj = Json.parseToJsonElement(BackendHttp.request(HttpMethod.Get, "/auth/me")).jsonObject
+            if (restoringUserId == null) { _session.value = null; return }
+            val obj = Json.parseToJsonElement(BackendHttp.request(HttpMethod.Get, "/auth/me", expectedUserId = restoringUserId)).jsonObject
             val current = BackendHttp.tokens.value ?: return
+            if (current.userId != restoringUserId) return
             val user = AuthSession(obj.getValue("userId").jsonPrimitive.content,
                 obj.getValue("email").jsonPrimitive.content, obj.getValue("name").jsonPrimitive.content)
             if (current.userId == user.userId) {
@@ -87,8 +92,12 @@ object AuthRepository {
             }
         } catch (e: CancellationException) { throw e
         } catch (e: Exception) {
-            _session.value = null
-            if (e is BackendException && e.code == 401) BackendHttp.adopt(null)
+            // A response from an old account must never clear a newer login.
+            if (BackendHttp.tokens.value?.userId != restoringUserId) return
+            if (e is BackendException && e.code == 401) {
+                BackendHttp.adopt(null)
+                _session.value = null
+            }
             _cachedSession.value = BackendHttp.tokens.value?.asSession()
         } finally { _authChecked.value = true }
     }
