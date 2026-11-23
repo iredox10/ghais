@@ -19,6 +19,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -94,14 +96,19 @@ object QariPhotoPreheater {
             combine(NetworkMonitor.isOnline, ReciterCloudCache.cloudReciters) { online, _ ->
                 online
             }.collectLatest { online ->
-                if (online) preheat(appCtx)
+                if (online) {
+                    // Let visible Home images and session validation take the
+                    // connection first, especially on a cold, weak connection.
+                    delay(5_000L)
+                    preheat(appCtx)
+                }
             }
         }
         Log.i(TAG, "Qari photo preheater started")
     }
 
     /**
-     * Enqueues every resolved qari photo URL into the singleton loader so
+     * Fetches resolved qari photos one at a time into the singleton loader so
      * the network fetcher writes each file into the persistent disk cache.
      * Already-cached URLs short-circuit without a network round trip, so the
      * pass is cheap to re-run; mid-pass disconnects just stop enqueueing and
@@ -126,7 +133,7 @@ object QariPhotoPreheater {
                 // Stop enqueueing as soon as the device goes offline; the
                 // next online window retriggers the pass for the rest.
                 if (!NetworkMonitor.isOnline.value) return
-                loader.enqueue(
+                loader.execute(
                     ImageRequest.Builder(appCtx)
                         .data(url)
                         .size(1, 1)
@@ -135,7 +142,9 @@ object QariPhotoPreheater {
                         .build()
                 )
             }
-            Log.i(TAG, "Qari photo preheat enqueued ${urls.size} photos")
+            Log.i(TAG, "Qari photo preheat completed ${urls.size} photos")
+        } catch (e: CancellationException) {
+            throw e
         } catch (t: Throwable) {
             Log.w(TAG, "Qari photo preheat failed", t)
         } finally {
