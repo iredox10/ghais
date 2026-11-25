@@ -500,7 +500,7 @@ private fun ReciterStep(
                                             previewingSlug = null
                                         } else {
                                             previewingSlug = reciter.slug
-                                            AudioEngine.playAyah(reciter.slug, 1, 1)
+                                            AudioEngine.playAyah(1, 1, reciter.slug)
                                         }
                                     },
                                 contentAlignment = Alignment.Center
