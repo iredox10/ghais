@@ -38,7 +38,6 @@ import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.toTrackItems
 import com.ghais.data.seed.JumpBackInItem
 import com.ghais.devotion.DevotionStreak
-import com.ghais.devotion.StreakRestoreHost
 import com.ghais.domain.model.DEVOTIONAL_TRACK_SLUG
 import com.ghais.domain.model.DevotionKind
 import com.ghais.domain.model.DevotionalItem
@@ -173,18 +172,6 @@ object HomeScreen : Tab {
                     ActivationHost(
                         onOpenPlayer = { rootNavigator?.push(NowPlayingScreen()) }
                     )
-                }
-
-                // -------------------------------------------------------------
-                // Devotion streak (hooks). The Monday weekly recap shelf moved
-                // to the Stats screen — the recap is listening-metrics copy.
-                // -------------------------------------------------------------
-                if (HookFlags.streakEnabled) {
-                    item {
-                        StreakRestoreHost(
-                            onBegin = { rootNavigator?.push(NowPlayingScreen()) }
-                        )
-                    }
                 }
 
                 // -------------------------------------------------------------
