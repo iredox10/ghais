@@ -42,6 +42,7 @@ import com.ghais.data.repository.EditorialPlaylist
 import com.ghais.data.repository.EditorialRepository
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.ReciterCloudCache
 import com.ghais.data.repository.RelatedQaris
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.prettifySlug
@@ -51,6 +52,7 @@ import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.screens.reciters.ReciterReelCard
+import com.ghais.ui.screens.reciters.photoForSlug
 import com.ghais.ui.screens.reciters.rememberCloudPhoto
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
@@ -89,7 +91,8 @@ private const val MILLIS_PER_DAY = 86_400_000L
 @Composable
 fun HomeDailyMixShelf(onOpenPlayer: () -> Unit) {
     val history by UserUsageRepository.history.collectAsState()
-    val daySeed = remember { Clock.System.now().toEpochMilliseconds() / MILLIS_PER_DAY }
+    val cloudCatalog by ReciterCloudCache.cloudReciters.collectAsState()
+    val daySeed = Clock.System.now().toEpochMilliseconds() / MILLIS_PER_DAY
     val topQaris = remember(history) {
         try {
             UserUsageRepository.topQariSlugs(5)
@@ -97,7 +100,7 @@ fun HomeDailyMixShelf(onOpenPlayer: () -> Unit) {
             emptyList()
         }
     }
-    val mix = remember(daySeed, topQaris) {
+    val mix = remember(daySeed, topQaris, cloudCatalog) {
         try {
             val played = history.mapNotNull { item ->
                 val slug = item.reciterSlug.trim()
@@ -134,9 +137,14 @@ fun HomeDailyMixShelf(onOpenPlayer: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Overlapping cover collage from the mix's first qaris.
             Box(modifier = Modifier.size(76.dp)) {
-                val collageSlugs = remember(mix) { mix.map { it.reciterSlug }.distinct().take(3) }
-                collageSlugs.forEachIndexed { index, slug ->
-                    val collagePhoto = rememberCloudPhoto(slug)
+                val collageEntries = remember(mix) {
+                    mix.distinctBy { it.reciterSlug }.take(3)
+                }
+                collageEntries.forEachIndexed { index, track ->
+                    val slug = track.reciterSlug
+                    val collagePhoto = rememberCloudPhoto(slug) ?: photoForSlug(slug)
+                    val itemMonogram = track.reciterName.trim()
+                        .firstOrNull { it.isLetter() }?.uppercase() ?: monogram
                     Box(
                         modifier = Modifier
                             .size(52.dp)
@@ -145,7 +153,7 @@ fun HomeDailyMixShelf(onOpenPlayer: () -> Unit) {
                     ) {
                         NoirArtworkWell(
                             coverUrl = collagePhoto.orEmpty(),
-                            monogram = monogram,
+                            monogram = itemMonogram,
                             shape = CircleShape,
                             size = 52.dp,
                             monogramSize = 18.sp,
@@ -282,7 +290,8 @@ fun HomeDailyMixShelf(onOpenPlayer: () -> Unit) {
 fun HomeTopQarisShelf(onReciter: (String) -> Unit) {
     LaunchedEffect(Unit) { ChartsRepository.refresh() }
     val snapshot by ChartsRepository.snapshot.collectAsState()
-    val reciters = remember(snapshot) {
+    val cloudCatalog by ReciterCloudCache.cloudReciters.collectAsState()
+    val reciters = remember(snapshot, cloudCatalog) {
         try {
             snapshot?.topQaris7d.orEmpty()
                 .mapNotNull { QuranDataRepository.getBrowseReciterBySlug(it) }
@@ -467,6 +476,7 @@ fun HomeDiscoverShelf(
     val history by UserUsageRepository.history.collectAsState()
     val followed by FollowStore.followedSlugs.collectAsState()
     val followerCounts by FollowStore.followerCounts.collectAsState()
+    val cloudCatalog by ReciterCloudCache.cloudReciters.collectAsState()
     val topQaris = remember(history) {
         try {
             UserUsageRepository.topQariSlugs(5)
@@ -474,14 +484,14 @@ fun HomeDiscoverShelf(
             emptyList()
         }
     }
-    val seed = remember(topQaris) {
+    val seed = remember(topQaris, cloudCatalog) {
         try {
             topQaris.firstOrNull()?.let { QuranDataRepository.getBrowseReciterBySlug(it) }
         } catch (_: Exception) {
             null
         }
     }
-    val related = remember(seed) {
+    val related = remember(seed, cloudCatalog) {
         try {
             if (seed == null) emptyList()
             else RelatedQaris.relatedTo(
