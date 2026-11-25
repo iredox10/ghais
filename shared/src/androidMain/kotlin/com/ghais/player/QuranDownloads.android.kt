@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
+import com.ghais.data.sync.NetworkMonitor
 import com.russhwolf.settings.Settings
 import java.io.File
 import java.io.FileOutputStream
@@ -11,17 +12,23 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * Android actual: downloads per-surah mp3s (plus per-ayah hifz mp3s) with
@@ -112,21 +119,98 @@ actual object QuranDownloads {
     private val _failedKeys = MutableStateFlow(emptySet<String>())
     actual val failedKeys: StateFlow<Set<String>> = _failedKeys.asStateFlow()
 
+    private val _pausedKeys = MutableStateFlow(emptySet<String>())
+    actual val pausedKeys: StateFlow<Set<String>> = _pausedKeys.asStateFlow()
+
+    @Serializable
+    private data class PendingEntry(val key: String, val url: String, val filePath: String)
+
+    private const val PENDING_PREF_KEY = "ghais_pending_downloads"
+    private val json = Json { ignoreUnknownKeys = true }
+
     private val inFlight = ConcurrentHashMap.newKeySet<String>()
     private val jobs = ConcurrentHashMap<String, Job>()
+    private val activeRequests = ConcurrentHashMap<String, PendingEntry>()
+    private val pausedEntries = ConcurrentHashMap<String, PendingEntry>()
+    private val networkRetryEntries = ConcurrentHashMap<String, PendingEntry>()
+    private val watcherStarted = AtomicBoolean(false)
 
     /**
      * Must be called once from Android (e.g. MainActivity.onCreate) so the
      * singleton can resolve filesDir and restore the persisted set.
      */
     fun init(context: Context) {
-        appContext = context.applicationContext
+        val appCtx = context.applicationContext
+        appContext = appCtx
+        QuranDownloadNotifier.init(appCtx)
         try {
             val persisted = readPersisted()
-            _downloadedKeys.value = reconcileWithDisk(appContext, persisted)
+            _downloadedKeys.value = reconcileWithDisk(appCtx, persisted)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load downloaded set", e)
         }
+        restorePendingRetries()
+        startNetworkRecoveryWatcher()
+    }
+
+    private fun startNetworkRecoveryWatcher() {
+        if (!watcherStarted.compareAndSet(false, true)) return
+        scope.launch {
+            NetworkMonitor.isOnline.collectLatest { online ->
+                if (!online) return@collectLatest
+                val ctx = appContext ?: return@collectLatest
+                val toRetry = networkRetryEntries.values.toList()
+                if (toRetry.isNotEmpty()) {
+                    Log.i(TAG, "Network online — auto-resuming ${toRetry.size} interrupted download(s)")
+                    toRetry.forEach { entry ->
+                        if (entry.key !in _pausedKeys.value) {
+                            networkRetryEntries.remove(entry.key)
+                            enqueueDownload(ctx, entry.key, entry.url, File(entry.filePath))
+                        }
+                    }
+                    persistPendingRetries()
+                    refreshNotification(force = true)
+                }
+            }
+        }
+    }
+
+    private fun restorePendingRetries() {
+        try {
+            val raw = settings.getStringOrNull(PENDING_PREF_KEY) ?: return
+            val list = json.decodeFromString<List<PendingEntry>>(raw)
+            list.forEach { entry ->
+                if (entry.key !in _downloadedKeys.value) {
+                    networkRetryEntries[entry.key] = entry
+                }
+            }
+            if (networkRetryEntries.isNotEmpty()) {
+                refreshNotification(force = true)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun persistPendingRetries() {
+        try {
+            val entries = networkRetryEntries.values.toList()
+            if (entries.isEmpty()) {
+                settings.remove(PENDING_PREF_KEY)
+            } else {
+                settings.putString(PENDING_PREF_KEY, json.encodeToString(entries))
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun refreshNotification(force: Boolean = false) {
+        QuranDownloadNotifier.update(
+            context = appContext,
+            progress = _progress.value,
+            pausedCount = _pausedKeys.value.size,
+            waitingNetworkCount = networkRetryEntries.size,
+            force = force,
+        )
     }
 
     /**
@@ -304,7 +388,77 @@ actual object QuranDownloads {
 
     actual fun download(slug: String, surahId: Int, url: String) {
         val ctx = contextOrNull() ?: return
-        enqueueDownload(ctx, canonicalKey(slug, surahId), url, fileFor(ctx, slug, surahId))
+        val key = canonicalKey(slug, surahId)
+        _pausedKeys.value = _pausedKeys.value - key
+        pausedEntries.remove(key)
+        networkRetryEntries.remove(key)
+        persistPendingRetries()
+        enqueueDownload(ctx, key, url, fileFor(ctx, slug, surahId))
+    }
+
+    actual fun pause(slug: String, surahId: Int) {
+        pauseKey(canonicalKey(slug, surahId))
+    }
+
+    private fun pauseKey(key: String) {
+        val entry = activeRequests[key] ?: networkRetryEntries.remove(key) ?: return
+        jobs.remove(key)?.cancel()
+        inFlight.remove(key)
+        _progress.value = _progress.value - key
+        pausedEntries[key] = entry
+        _pausedKeys.value = _pausedKeys.value + key
+        persistPendingRetries()
+        refreshNotification(force = true)
+    }
+
+    actual fun resume(slug: String, surahId: Int) {
+        val ctx = contextOrNull() ?: return
+        val key = canonicalKey(slug, surahId)
+        val entry = pausedEntries.remove(key) ?: networkRetryEntries.remove(key) ?: return
+        _pausedKeys.value = _pausedKeys.value - key
+        persistPendingRetries()
+        enqueueDownload(ctx, entry.key, entry.url, File(entry.filePath))
+    }
+
+    actual fun pauseAll() {
+        val activeKeys = activeRequests.keys.toList() + networkRetryEntries.keys.toList()
+        activeKeys.distinct().forEach { pauseKey(it) }
+    }
+
+    actual fun resumeAll() {
+        val ctx = contextOrNull() ?: return
+        val toResume = (pausedEntries.values.toList() + networkRetryEntries.values.toList())
+            .distinctBy { it.key }
+        pausedEntries.clear()
+        networkRetryEntries.clear()
+        _pausedKeys.value = emptySet()
+        persistPendingRetries()
+        toResume.forEach { entry ->
+            enqueueDownload(ctx, entry.key, entry.url, File(entry.filePath))
+        }
+        refreshNotification(force = true)
+    }
+
+    actual fun cancelAll() {
+        val ctx = appContext
+        val allKeys = (jobs.keys.toList() + pausedEntries.keys.toList() + networkRetryEntries.keys.toList()).distinct()
+        allKeys.forEach { key ->
+            val entry = activeRequests.remove(key) ?: pausedEntries.remove(key) ?: networkRetryEntries.remove(key)
+            jobs.remove(key)?.cancel()
+            inFlight.remove(key)
+            _progress.value = _progress.value - key
+            _failedKeys.value = _failedKeys.value - key
+            _pausedKeys.value = _pausedKeys.value - key
+            val file = entry?.let { File(it.filePath) }
+            if (file != null) {
+                try {
+                    File(file.parent, "${file.name}.part").delete()
+                } catch (_: Exception) {
+                }
+            }
+        }
+        persistPendingRetries()
+        QuranDownloadNotifier.update(ctx, emptyMap(), 0, 0, force = true)
     }
 
     actual fun isAyahDownloaded(slug: String, surahId: Int, ayahNo: Int): Boolean =
@@ -332,13 +486,13 @@ actual object QuranDownloads {
     }
 
     // Shared download machinery for surah + ayah keys: engine-level
-    // idempotency (already-downloaded / in-flight no-ops), progress/failed
-    // flow updates, .part temp file + atomic rename, persisted index update.
+    // idempotency (already-downloaded / in-flight no-ops), HTTP Range byte
+    // resumption, progress/failed/paused flow updates, notification bar sync,
+    // and automatic network-recovery queueing on IOException.
     private fun enqueueDownload(ctx: Context, key: String, url: String, finalFile: File) {
-        // Wi-Fi-only gate (see KEY_WIFI_ONLY): refuse metered downloads before
-        // touching idempotency/progress state. Recorded as a failed key so the
-        // row surfaces a retryable state instead of stalling silently; the next
-        // tap on Wi-Fi proceeds normally.
+        val entry = PendingEntry(key, url, finalFile.absolutePath)
+        // Wi-Fi-only gate (see KEY_WIFI_ONLY): defer until Wi-Fi is available
+        // and queue for auto-resume if connectivity changes.
         if (isWifiOnly() && !isOnWifi(ctx)) {
             Log.i(TAG, "Deferring download until Wi-Fi (wifi-only on): $key")
             _failedKeys.value = _failedKeys.value + key
@@ -355,47 +509,32 @@ actual object QuranDownloads {
             return
         }
         _failedKeys.value = _failedKeys.value - key
+        _pausedKeys.value = _pausedKeys.value - key
+        pausedEntries.remove(key)
+        networkRetryEntries.remove(key)
+        activeRequests[key] = entry
         _progress.value = _progress.value + (key to -1f)
+        refreshNotification(force = true)
         val job = scope.launch(Dispatchers.IO) {
             val partFile = File(finalFile.parent, "${finalFile.name}.part")
             var success = false
+            var keepPartForResume = false
             try {
                 finalFile.parentFile?.mkdirs()
-                var connection: HttpURLConnection? = null
-                try {
-                    connection = (URL(url).openConnection() as HttpURLConnection).apply {
-                        instanceFollowRedirects = true
-                        connectTimeout = 15_000
-                        readTimeout = 30_000
-                        requestMethod = "GET"
-                        connect()
-                    }
-                    val code = connection.responseCode
-                    if (code !in 200..299) throw IOException("HTTP $code for $url")
-                    val total = connection.contentLengthLong
-                    connection.inputStream.use { input ->
-                        FileOutputStream(partFile).use { output ->
-                            val buffer = ByteArray(8192)
-                            var bytesRead = 0L
-                            while (true) {
-                                ensureActive()
-                                val n = input.read(buffer)
-                                if (n < 0) break
-                                output.write(buffer, 0, n)
-                                bytesRead += n
-                                val p = if (total > 0) {
-                                    (bytesRead.toFloat() / total.toFloat()).coerceIn(0f, 1f)
-                                } else {
-                                    -1f
-                                }
-                                _progress.value = _progress.value + (key to p)
-                            }
-                        }
-                    }
-                } finally {
+                var attempt = 0
+                while (true) {
                     try {
-                        connection?.disconnect()
-                    } catch (_: Exception) {
+                        downloadWithRangeResume(key, url, partFile)
+                        break
+                    } catch (io: IOException) {
+                        ensureActive()
+                        if (attempt == 0 && NetworkMonitor.isOnline.value) {
+                            attempt++
+                            delay(2_000L)
+                            ensureActive()
+                            continue
+                        }
+                        throw io
                     }
                 }
                 ensureActive()
@@ -408,27 +547,98 @@ actual object QuranDownloads {
                 persist()
                 _progress.value = _progress.value - key
                 _failedKeys.value = _failedKeys.value - key
+                activeRequests.remove(key)
+                if (_progress.value.isEmpty() && _pausedKeys.value.isEmpty() && networkRetryEntries.isEmpty()) {
+                    QuranDownloadNotifier.showCompleted(appContext)
+                } else {
+                    refreshNotification()
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) {
+                    // Explicit pause keeps .part intact; delete/cancelAll cleans it up separately.
+                    keepPartForResume = key in _pausedKeys.value
                     _progress.value = _progress.value - key
                     throw e
                 }
-                Log.e(TAG, "Download failed: $key", e)
+                Log.e(TAG, "Download interrupted ($key) — queuing for auto-resume", e)
+                keepPartForResume = true
+                networkRetryEntries[key] = entry
+                persistPendingRetries()
                 _failedKeys.value = _failedKeys.value + key
                 _progress.value = _progress.value - key
+                refreshNotification(force = true)
             } finally {
-                if (!success) {
+                if (!success && !keepPartForResume) {
                     try {
                         partFile.delete()
                     } catch (_: Exception) {
                     }
                 }
+                activeRequests.remove(key)
                 inFlight.remove(key)
                 jobs.remove(key)
             }
         }
         jobs[key] = job
         job.invokeOnCompletion { jobs.remove(key, job) }
+    }
+
+    private fun downloadWithRangeResume(key: String, url: String, partFile: File) {
+        val existingBytes = if (partFile.exists() && partFile.length() > 0L) partFile.length() else 0L
+        var connection: HttpURLConnection? = null
+        try {
+            connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                instanceFollowRedirects = true
+                connectTimeout = 15_000
+                readTimeout = 30_000
+                requestMethod = "GET"
+                if (existingBytes > 0L) {
+                    setRequestProperty("Range", "bytes=$existingBytes-")
+                }
+                connect()
+            }
+            val code = connection.responseCode
+            if (code == 416 && existingBytes > 0L) {
+                // Range not satisfiable (stale .part): restart cleanly from 0.
+                partFile.delete()
+                throw IOException("Range 416 reset for $key")
+            }
+            if (code !in 200..299) throw IOException("HTTP $code for $url")
+
+            val append = code == 206 && existingBytes > 0L
+            val contentLen = connection.contentLengthLong
+            val total = if (contentLen > 0L) {
+                if (append) existingBytes + contentLen else contentLen
+            } else {
+                -1L
+            }
+            var bytesRead = if (append) existingBytes else 0L
+
+            connection.inputStream.use { input ->
+                FileOutputStream(partFile, append).use { output ->
+                    val buffer = ByteArray(8192)
+                    while (true) {
+                        if (Thread.currentThread().isInterrupted) throw CancellationException("Interrupted")
+                        val n = input.read(buffer)
+                        if (n < 0) break
+                        output.write(buffer, 0, n)
+                        bytesRead += n
+                        val p = if (total > 0L) {
+                            (bytesRead.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+                        } else {
+                            -1f
+                        }
+                        _progress.value = _progress.value + (key to p)
+                        refreshNotification()
+                    }
+                }
+            }
+        } finally {
+            try {
+                connection?.disconnect()
+            } catch (_: Exception) {
+            }
+        }
     }
 
     actual fun delete(slug: String, surahId: Int) {
