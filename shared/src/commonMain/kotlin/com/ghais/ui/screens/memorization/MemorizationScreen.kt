@@ -293,83 +293,80 @@ object MemorizationScreen : Tab {
                         Spacer(Modifier.height(12.dp))
 
                         val activePlan = listeningPlans.firstOrNull { it.enabled } ?: listeningPlans.firstOrNull()
-                        NoirCard(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Listening Planner",
-                                            color = GhaisNoir.TextPrimary,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Spacer(Modifier.height(2.dp))
-                                        val reciterSummary = remember(activePlan?.reciterSlugs) {
-                                            activePlan?.reciterSlugs?.mapNotNull { slug ->
-                                                QuranDataRepository.getReciterBySlug(slug).nameEn
-                                            }?.joinToString(", ") ?: ""
-                                        }
-                                        Text(
-                                            text = if (activePlan != null) {
-                                                val done = activePlan.sessionsDoneOn(epochDay)
-                                                val dayNo = activePlan.currentDayNumber(epochDay)
-                                                val qariPart = if (reciterSummary.isNotBlank()) " • $reciterSummary" else ""
-                                                "${activePlan.displayTitle { id -> QuranDataRepository.getSurahById(id)?.nameEn ?: "Surah $id" }}$qariPart • $done/${activePlan.sessionsPerDay} today (Day $dayNo/${activePlan.durationDays})"
-                                            } else {
-                                                "Pick Qaris, Surahs, daily repeats & days with incomplete-day reminders"
-                                            },
-                                            color = GhaisNoir.TextTertiary,
-                                            fontSize = 12.sp,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                    Spacer(Modifier.width(8.dp))
-                                    GhostPillButton(
-                                        text = if (activePlan != null) "Manage" else "Create",
-                                        active = activePlan == null,
-                                        onClick = {
-                                            rootNavigator?.push(
-                                                HifzListeningPlannerScreen(startInCreator = activePlan == null)
-                                            )
-                                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(GhaisShapes.row)
+                                .background(GhaisNoir.Fill1)
+                                .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.row)
+                                .noirClickable {
+                                    rootNavigator?.push(
+                                        HifzListeningPlannerScreen(startInCreator = activePlan == null)
                                     )
                                 }
-                                if (activePlan != null) {
-                                    Spacer(Modifier.height(10.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        GhostPillButton(
-                                            text = "Listen Session",
-                                            active = true,
-                                            onClick = {
-                                                val tracks = HifzListeningPlannerStore.buildSessionTracks(activePlan)
-                                                if (tracks.isNotEmpty()) {
-                                                    AudioEngine.playListeningPlan(activePlan.id, tracks)
-                                                    rootNavigator?.push(NowPlayingScreen())
-                                                }
-                                            },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        GhostPillButton(
-                                            text = "+ New Plan",
-                                            onClick = {
-                                                rootNavigator?.push(HifzListeningPlannerScreen(startInCreator = true))
-                                            }
-                                        )
-                                    }
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Listening Planner",
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                val subtitle = if (activePlan != null) {
+                                    val done = activePlan.sessionsDoneOn(epochDay)
+                                    val dayNo = activePlan.currentDayNumber(epochDay)
+                                    "$done/${activePlan.sessionsPerDay} today • Day $dayNo/${activePlan.durationDays}"
+                                } else {
+                                    "Create a daily listening plan"
                                 }
+                                Text(
+                                    text = subtitle,
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            if (activePlan != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(GhaisNoir.Fill3)
+                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                                        .noirClickable {
+                                            val tracks = HifzListeningPlannerStore.buildSessionTracks(activePlan)
+                                            if (tracks.isNotEmpty()) {
+                                                AudioEngine.playListeningPlan(activePlan.id, tracks)
+                                                rootNavigator?.push(NowPlayingScreen())
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.PlayArrow,
+                                        contentDescription = "Listen",
+                                        tint = GhaisNoir.TextPrimary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    text = "+ Create",
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                         }
 
-                        Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(10.dp))
                     }
                 }
 
