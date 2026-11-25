@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
@@ -50,8 +51,11 @@ import kotlinx.coroutines.launch
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.ghais.data.repository.POPULAR_PORTIONS
+import com.ghais.data.repository.PortionsStore
 import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.QuranPortion
 import com.ghais.data.seed.EveryAyahReciters
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.Surah
@@ -68,6 +72,7 @@ import com.ghais.ui.components.noir.NoirSegmentedProgress
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
+import com.ghais.ui.screens.reciters.CreatePortionDialog
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
@@ -99,10 +104,17 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
         val scope = rememberCoroutineScope()
 
         var surahQuery by remember { mutableStateOf("") }
-        var juzAmmaOnly by remember { mutableStateOf(false) }
+        val customPortions by PortionsStore.customPortions.collectAsState()
+        var selectedPortion by remember { mutableStateOf<QuranPortion?>(null) }
+        var showCreatePortion by remember { mutableStateOf(false) }
 
-        val visibleSurahs = remember(allSurahs, surahQuery, juzAmmaOnly) {
-            val base = if (juzAmmaOnly) allSurahs.filter { it.id >= 78 } else allSurahs
+        val allPortions = remember(customPortions) {
+            customPortions + POPULAR_PORTIONS
+        }
+
+        val visibleSurahs = remember(allSurahs, surahQuery, selectedPortion) {
+            val portionIds = selectedPortion?.surahIds?.toSet()
+            val base = if (portionIds == null) allSurahs else allSurahs.filter { it.id in portionIds }
             val q = surahQuery.trim().lowercase()
             if (q.isEmpty()) base
             else base.filter { s ->
@@ -223,74 +235,117 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                             }
 
                             Spacer(modifier = Modifier.height(12.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(42.dp)
+                                    .clip(GhaisShapes.pill)
+                                    .background(GhaisNoir.insetFill())
+                                    .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.pill)
+                                    .padding(horizontal = 14.dp),
+                                contentAlignment = Alignment.CenterStart
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(42.dp)
-                                        .clip(GhaisShapes.pill)
-                                        .background(GhaisNoir.insetFill())
-                                        .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.pill)
-                                        .padding(horizontal = 14.dp),
-                                    contentAlignment = Alignment.CenterStart
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Search,
-                                            contentDescription = "Search surahs",
-                                            tint = GhaisNoir.TextTertiary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(Modifier.width(8.dp))
-                                        BasicTextField(
-                                            value = surahQuery,
-                                            onValueChange = { surahQuery = it },
-                                            modifier = Modifier.weight(1f),
-                                            singleLine = true,
-                                            textStyle = TextStyle(
-                                                color = GhaisNoir.TextPrimary,
-                                                fontSize = 13.sp
-                                            ),
-                                            cursorBrush = SolidColor(Color.White),
-                                            decorationBox = { innerTextField ->
-                                                if (surahQuery.isEmpty()) {
-                                                    Text(
-                                                        text = "Search surah...",
-                                                        color = GhaisNoir.TextTertiary,
-                                                        fontSize = 13.sp
-                                                    )
-                                                }
-                                                innerTextField()
+                                    Icon(
+                                        imageVector = Icons.Filled.Search,
+                                        contentDescription = "Search surahs",
+                                        tint = GhaisNoir.TextTertiary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    BasicTextField(
+                                        value = surahQuery,
+                                        onValueChange = { surahQuery = it },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true,
+                                        textStyle = TextStyle(
+                                            color = GhaisNoir.TextPrimary,
+                                            fontSize = 13.sp
+                                        ),
+                                        cursorBrush = SolidColor(Color.White),
+                                        decorationBox = { innerTextField ->
+                                            if (surahQuery.isEmpty()) {
+                                                Text(
+                                                    text = "Search surah...",
+                                                    color = GhaisNoir.TextTertiary,
+                                                    fontSize = 13.sp
+                                                )
                                             }
+                                            innerTextField()
+                                        }
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                item(key = "portion-all") {
+                                    val selected = selectedPortion == null
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(GhaisShapes.pill)
+                                            .then(
+                                                if (selected) Modifier.background(GhaisNoir.lavenderFill())
+                                                else Modifier
+                                                    .background(GhaisNoir.Fill2)
+                                                    .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                                            )
+                                            .noirClickable { selectedPortion = null }
+                                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = "All",
+                                            color = if (selected) GhaisNoir.LavenderInk else GhaisNoir.TextPrimary,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                     }
                                 }
-                                Box(
-                                    modifier = Modifier
-                                        .clip(GhaisShapes.pill)
-                                        .then(
-                                            if (juzAmmaOnly) Modifier.background(GhaisNoir.lavenderFill())
-                                            else Modifier
-                                                .background(GhaisNoir.Fill2)
-                                                .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                                items(allPortions, key = { it.id }) { portion ->
+                                    val selected = selectedPortion?.id == portion.id
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(GhaisShapes.pill)
+                                            .then(
+                                                if (selected) Modifier.background(GhaisNoir.lavenderFill())
+                                                else Modifier
+                                                    .background(GhaisNoir.Fill2)
+                                                    .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                                            )
+                                            .noirClickable {
+                                                selectedPortion = if (selected) null else portion
+                                            }
+                                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = portion.name,
+                                            color = if (selected) GhaisNoir.LavenderInk else GhaisNoir.TextPrimary,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold
                                         )
-                                        .noirClickable { juzAmmaOnly = !juzAmmaOnly }
-                                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "Juz Amma",
-                                        color = if (juzAmmaOnly) GhaisNoir.LavenderInk else GhaisNoir.TextPrimary,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
+                                    }
+                                }
+                                item(key = "portion-create") {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(GhaisShapes.pill)
+                                            .background(GhaisNoir.wellFill())
+                                            .border(1.dp, GhaisNoir.SpecularTop, GhaisShapes.pill)
+                                            .noirClickable { showCreatePortion = true }
+                                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = "+ Create",
+                                            color = GhaisNoir.TextPrimary,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
                                 }
                             }
                             Spacer(modifier = Modifier.height(12.dp))
@@ -361,6 +416,21 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                         Spacer(modifier = Modifier.height(6.dp))
                     }
                 }
+            }
+
+            if (showCreatePortion) {
+                CreatePortionDialog(
+                    onDismiss = { showCreatePortion = false },
+                    onCreate = { name, fromSurah, toSurah ->
+                        PortionsStore.addRange(
+                            name = name,
+                            fromSurah = fromSurah,
+                            toSurah = toSurah,
+                            reciterSlug = reciter.slug,
+                        )
+                        showCreatePortion = false
+                    },
+                )
             }
         }
     }
