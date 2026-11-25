@@ -321,10 +321,18 @@ class RecitersScreen : Tab {
             }
         }
 
+        val currentTrack by AudioEngine.currentTrack.collectAsState()
+        val bottomDockPadding = if (currentTrack != null) 200.dp else 112.dp
+
         NoirScreenRoot {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 112.dp)
+                contentPadding = PaddingValues(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = 12.dp,
+                    bottom = bottomDockPadding
+                )
             ) {
                 // P4-ordered sections: SEARCH header first, NATIONS last,
                 // everything in between per orderSections(...).
