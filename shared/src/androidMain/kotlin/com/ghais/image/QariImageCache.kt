@@ -61,6 +61,8 @@ object QariImageCache {
                 .apply {
                     if (com.ghais.shared.BuildConfig.DEBUG) logger(coil3.util.DebugLogger())
                 }
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .networkCachePolicy(CachePolicy.ENABLED)
                 .diskCache {
                     DiskCache.Builder()
                         .directory(ctx.filesDir.resolve("qari_photos"))

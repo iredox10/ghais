@@ -42,6 +42,12 @@ test('reciter catalog supplies available portraits and preserves explicit images
     assert.equal(image.statusCode, 200);
     assert.match(String(image.headers['content-type']), /^image\/jpeg/);
     assert.deepEqual([...image.rawPayload.subarray(0, 3)], [0xff, 0xd8, 0xff]);
+    assert.ok(image.headers.etag, 'portrait response should include an ETag');
+    const cached = await server.inject({
+      url: '/v1/reciter-images/maher-al-muaiqly.jpg',
+      headers: { 'if-none-match': String(image.headers.etag) },
+    });
+    assert.equal(cached.statusCode, 304);
     assert.equal((await server.inject({ url: '/v1/reciter-images/missing.jpg' })).statusCode, 404);
     assert.equal((await server.inject({ url: '/v1/reciter-images/%2e%2e%2fconfig.ts' })).statusCode, 404);
   } finally { await server.close(); }
