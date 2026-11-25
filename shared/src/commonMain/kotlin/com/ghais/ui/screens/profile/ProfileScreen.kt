@@ -49,8 +49,10 @@ import com.ghais.ui.components.noir.NoirGrainOverlay
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirAmbientGlow
 import com.ghais.ui.navigation.LocalRootNavigator
+import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.profile.glass.AuroraBackdrop
 import com.ghais.ui.screens.profile.glass.GlassCardContainer
+import com.ghais.ui.screens.profile.glass.PortionsProfileSection
 import com.ghais.ui.screens.profile.glass.ProfileIdentityPill
 import com.ghais.ui.screens.profile.glass.ProtonSwitchRow
 import com.ghais.ui.screens.profile.glass.SchedulesProtonSection
@@ -277,7 +279,17 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 2. Recitation schedules
+                // 2. Listening Portions (popular + custom)
+                // -----------------------------------------------------------------
+                item {
+                    PortionsProfileSection(
+                        onOpenPlayer = { rootNavigator?.push(NowPlayingScreen()) }
+                    )
+                    Spacer(modifier = Modifier.height(18.dp))
+                }
+
+                // -----------------------------------------------------------------
+                // 3. Recitation schedules
                 // -----------------------------------------------------------------
                 item {
                     NoirSectionHeader(label = "Schedules")
