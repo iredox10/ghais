@@ -104,9 +104,7 @@ fun ActivationHost(
     val currentTrack by AudioEngine.currentTrack.collectAsState()
 
     var activationDone by remember { mutableStateOf(ActivationStore.isDone()) }
-    var showQuiz by remember(taste.completed, activationDone, history.size) {
-        mutableStateOf(!taste.completed && !activationDone && history.isEmpty())
-    }
+    var showQuiz by remember { mutableStateOf(false) }
     var nudgeDismissed by remember { mutableStateOf(false) }
 
     val isCold = history.isEmpty() && currentTrack == null && !activationDone

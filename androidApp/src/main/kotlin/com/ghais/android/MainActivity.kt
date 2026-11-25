@@ -27,9 +27,6 @@ class MainActivity : ComponentActivity() {
 
     private var askedOnce = false
 
-    /** One-time battery-optimization exemption prompt (see onResume). */
-    private var askedBatteryOnce = false
-
     // Caller-owned scope for deferred startup work: SupervisorJob so one
     // failing child can never cancel the others or crash the launch.
     private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -111,6 +108,10 @@ class MainActivity : ComponentActivity() {
             try {
                 QuranPlaybackService.start(playbackContext)
             } catch (_: Exception) { }
+            if (!askedOnce) {
+                askedOnce = true
+                runOnUiThread { requestNotificationPermission() }
+            }
         }
         // Do NOT warm-start the FGS here: starting a foreground service with an
         // idle player posts no notification within 10s ->
@@ -142,45 +143,6 @@ class MainActivity : ComponentActivity() {
             val link = parseAppLink(uriString) ?: return
             DeepLinkBus.post(link)
         } catch (_: Exception) { }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (!askedOnce) {
-            askedOnce = true
-            requestNotificationPermission()
-        }
-        if (!askedBatteryOnce) {
-            askedBatteryOnce = true
-            requestBatteryExemptionOnce()
-        }
-    }
-
-    /**
-     * Telegram-style playback survival: aggressive OEM battery managers
-     * (Xiaomi/HyperOS, ColorOS, One UI power save…) kill even a properly
-     * foregrounded mediaPlayback service when a high-priority notification
-     * arrives, unless the app is exempt from battery optimization. Ask ONCE
-     * per install for the standard system exemption; user denial is final
-     * for this install (never nag, never loop).
-     */
-    private fun requestBatteryExemptionOnce() {
-        try {
-            val pm = getSystemService(android.os.PowerManager::class.java) ?: return
-            if (pm.isIgnoringBatteryOptimizations(packageName)) return
-            val prefs = getSharedPreferences("ghais_main", MODE_PRIVATE)
-            if (prefs.getBoolean("battery_exemption_asked", false)) return
-            prefs.edit().putBoolean("battery_exemption_asked", true).apply()
-            startActivity(
-                android.content.Intent(
-                    android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                    android.net.Uri.parse("package:$packageName")
-                )
-            )
-        } catch (_: Exception) {
-            // Some OEM builds strip the direct-exemption activity; the user
-            // can still whitelist manually — never crash for a nicety.
-        }
     }
 
     override fun onDestroy() {
