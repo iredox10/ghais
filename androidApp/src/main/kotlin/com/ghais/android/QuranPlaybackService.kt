@@ -219,6 +219,12 @@ class QuranPlaybackService : MediaSessionService() {
         // A headset/system resume can create the service without MainActivity.
         PlayerBridge.init(applicationContext)
         com.ghais.player.AmbientPlayerBridge.init(applicationContext)
+        try {
+            com.ghais.data.auth.AuthRepository.init()
+            com.ghais.data.auth.AuthRepository.cachedSession.value?.userId?.let {
+                FavoritesStore.setOwner(it)
+            }
+        } catch (_: Exception) { }
         val playbackContext = applicationContext
         PlayerBridge.onPlayRequested = { start(playbackContext) }
         PlaybackResumeStore.restore(applicationContext)
@@ -327,7 +333,7 @@ class QuranPlaybackService : MediaSessionService() {
                             ).coerceAtLeast(0L),
                     )
                 ACTION_PLAY_SCHEDULE -> {
-                    val sid = intent?.getStringExtra(EXTRA_SCHEDULE_ID)
+                    val sid = intent.getStringExtra(EXTRA_SCHEDULE_ID)
                     if (sid != null) com.ghais.android.SchedulePlayback.run(this@QuranPlaybackService, sid)
                 }
             }
@@ -469,7 +475,17 @@ class QuranPlaybackService : MediaSessionService() {
                 AudioEngine.currentTrack.collect { track ->
                     try {
                         PlaybackResumeStore.save(applicationContext)
-                        if (track == null) return@collect
+                        if (track == null) {
+                            if (player?.isPlaying != true) {
+                                try {
+                                    stopForeground(STOP_FOREGROUND_REMOVE)
+                                } catch (_: Exception) { }
+                                try {
+                                    stopSelf()
+                                } catch (_: Exception) { }
+                            }
+                            return@collect
+                        }
                         val title = try {
                             displayTitle(track.surahNameEn, track.ayahNo, track.isFullSurah)
                         } catch (_: Exception) {
