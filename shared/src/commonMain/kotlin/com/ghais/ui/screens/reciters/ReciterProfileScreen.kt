@@ -345,6 +345,13 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                         )
                     }
 
+                    item(key = "reciter-portions") {
+                        ReciterPortionsSection(
+                            reciter = reciter,
+                            onOpenPlayer = { rootNavigator.push(NowPlayingScreen()) }
+                        )
+                    }
+
                     item(key = "recitations-header") {
                         Spacer(modifier = Modifier.height(18.dp))
 
