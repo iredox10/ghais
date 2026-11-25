@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -109,6 +110,7 @@ object MemorizationScreen : Tab {
 
         val currentTrack by AudioEngine.currentTrack.collectAsState()
         val isAyahMode by AudioEngine.isAyahMode.collectAsState()
+        val isEnginePlaying by AudioEngine.isPlaying.collectAsState()
 
         val downloaded by QuranDownloads.downloadedKeys.collectAsState()
         val dlProgress by QuranDownloads.progress.collectAsState()
@@ -214,7 +216,8 @@ object MemorizationScreen : Tab {
                         items = reciters,
                         key = { it.slug }
                     ) { reciter ->
-                        val isPlayingThisReciter = currentTrack?.reciterSlug == reciter.slug && isAyahMode
+                        val isCurrentReciter = currentTrack?.reciterSlug == reciter.slug && isAyahMode
+                        val isPlayingThisReciter = isCurrentReciter && isEnginePlaying
 
                         // Starter-pack bundle: Al-Fatihah surah file + every ayah
                         // clip + verse text, so the bundle plays and reads fully
@@ -225,7 +228,7 @@ object MemorizationScreen : Tab {
                         }
                         val isDownloaded = bundleKeys.all { it in downloaded }
                         val isDownloading = !isDownloaded &&
-                            bundleKeys.any { it in downloaded || it in dlProgress }
+                            bundleKeys.any { it in dlProgress }
                         val isFailed = !isDownloaded && !isDownloading &&
                             bundleKeys.any { it in failedKeys }
                         val doneCount = bundleKeys.count { it in downloaded }
@@ -253,7 +256,16 @@ object MemorizationScreen : Tab {
                                 )
                                 QuranAyahRepository.prefetchSurah(1)
                             },
-                            onPlayClick = { playReciterAyahMode(reciter, 1) },
+                            onPlayClick = {
+                                if (isPlayingThisReciter) {
+                                    AudioEngine.pause()
+                                } else if (isCurrentReciter) {
+                                    AudioEngine.resume()
+                                    rootNavigator?.push(NowPlayingScreen())
+                                } else {
+                                    playReciterAyahMode(reciter, 1)
+                                }
+                            },
                             onCardClick = { rootNavigator?.push(MemorizationReciterScreen(reciter.slug)) }
                         )
 
@@ -420,8 +432,8 @@ private fun MemorizationReciterCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.PlayArrow,
-                        contentDescription = "Play ${reciter.nameEn} in Ayah Mode",
+                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause ${reciter.nameEn}" else "Play ${reciter.nameEn} in Ayah Mode",
                         tint = if (isPlaying) Color.Black else GhaisNoir.TextPrimary,
                         modifier = Modifier.size(20.dp)
                     )

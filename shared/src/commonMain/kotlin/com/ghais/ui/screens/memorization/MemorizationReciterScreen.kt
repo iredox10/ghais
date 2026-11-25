@@ -219,7 +219,7 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                         }
                         val isDownloaded = bundleKeys.all { it in downloaded }
                         val isDownloading = !isDownloaded &&
-                            bundleKeys.any { it in downloaded || it in dlProgress }
+                            bundleKeys.any { it in dlProgress }
                         val isFailed = !isDownloaded && !isDownloading &&
                             bundleKeys.any { it in failedKeys }
                         val bundleProgress: Float? = if (!isDownloading) null else
