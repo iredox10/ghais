@@ -51,6 +51,8 @@ import kotlinx.coroutines.launch
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.ghais.data.repository.HifzMasteryStore
+import com.ghais.data.repository.MasteryStatus
 import com.ghais.data.repository.POPULAR_PORTIONS
 import com.ghais.data.repository.PortionsStore
 import com.ghais.data.repository.QuranAyahRepository
@@ -101,6 +103,7 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
         val downloaded by QuranDownloads.downloadedKeys.collectAsState()
         val dlProgress by QuranDownloads.progress.collectAsState()
         val failedKeys by QuranDownloads.failedKeys.collectAsState()
+        val masteryMap by HifzMasteryStore.masteryMap.collectAsState()
         val scope = rememberCoroutineScope()
 
         var surahQuery by remember { mutableStateOf("") }
@@ -411,6 +414,24 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                                     trackHeight = 4.dp
                                 )
                             }
+
+                            val surahMastered = masteryMap.count { (coord, st) ->
+                                coord.first == surah.id && st == MasteryStatus.MASTERED
+                            }
+                            val surahWeak = masteryMap.count { (coord, st) ->
+                                coord.first == surah.id && st == MasteryStatus.REVIEW_NEEDED
+                            }
+                            val practicedCount = surahMastered + surahWeak
+                            if (practicedCount > 0) {
+                                val surahLearning = (surah.ayahsCount - practicedCount).coerceAtLeast(0)
+                                Spacer(modifier = Modifier.height(5.dp))
+                                SurahMasteryHeatmapBar(
+                                    masteredCount = surahMastered,
+                                    weakCount = surahWeak,
+                                    learningCount = surahLearning,
+                                    modifier = Modifier.padding(horizontal = 6.dp)
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(6.dp))
@@ -508,3 +529,58 @@ private fun RowScope.HifzSurahTrailing(
 internal fun displayReciterName(reciter: Reciter): String =
     reciter.nameEn.replace(Regex("\\s*\\([^)]*\\)\\s*$"), "").trim()
         .ifBlank { reciter.nameEn }
+
+@Composable
+private fun SurahMasteryHeatmapBar(
+    masteredCount: Int,
+    weakCount: Int,
+    learningCount: Int,
+    modifier: Modifier = Modifier,
+) {
+    val total = (masteredCount + weakCount + learningCount).coerceAtLeast(1)
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .height(4.dp)
+                .clip(GhaisShapes.pill)
+                .background(GhaisNoir.Fill1)
+        ) {
+            if (masteredCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .weight(masteredCount.toFloat() / total.toFloat())
+                        .height(4.dp)
+                        .background(Color.White.copy(alpha = 0.85f))
+                )
+            }
+            if (weakCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .weight(weakCount.toFloat() / total.toFloat())
+                        .height(4.dp)
+                        .background(GhaisNoir.Lavender)
+                )
+            }
+            if (learningCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .weight(learningCount.toFloat() / total.toFloat())
+                        .height(4.dp)
+                        .background(GhaisNoir.Fill2)
+                )
+            }
+        }
+        Text(
+            text = "${masteredCount}M · ${weakCount}W · ${learningCount}L",
+            color = GhaisNoir.TextTertiary,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1
+        )
+    }
+}

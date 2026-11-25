@@ -51,6 +51,8 @@ import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.EveryAyahReciter
 import com.ghais.data.seed.EveryAyahReciters
 import com.ghais.data.repository.HifzMasteryStore
+import com.ghais.hifz.HifzSessionPlan
+import com.ghais.hifz.buildSrsSessions
 import com.ghais.hifz.quests.QuestRow
 import com.ghais.hifz.quests.questsFor
 import kotlin.time.Clock
@@ -114,7 +116,16 @@ object MemorizationScreen : Tab {
         val dailyGoal by HifzMasteryStore.dailyGoalCount.collectAsState()
         val weakAyahs by HifzMasteryStore.weakAyahs.collectAsState()
         val masteryMap by HifzMasteryStore.masteryMap.collectAsState()
+        val dueDayMap by HifzMasteryStore.dueDayMap.collectAsState()
         val epochDay = Clock.System.now().toEpochMilliseconds() / 86_400_000L
+        val srsSessions = remember(masteryMap, dueDayMap, weakAyahs, epochDay) {
+            buildSrsSessions(
+                masteryMap = masteryMap,
+                dueDayMap = dueDayMap,
+                weakAyahs = weakAyahs,
+                todayEpochDay = epochDay,
+            )
+        }
         val dailyQuests = remember(masteryMap, todayReviewed, dailyGoal, epochDay) {
             questsFor(
                 mastery = masteryMap,
@@ -254,6 +265,20 @@ object MemorizationScreen : Tab {
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
+                                Spacer(Modifier.height(10.dp))
+                                val teacherSlug = reciters.firstOrNull()?.slug ?: "husary"
+                                HifzSrsTierRow(
+                                    sessions = srsSessions,
+                                    onSelectPlan = { plan ->
+                                        val firstTarget = plan.targets.firstOrNull() ?: return@HifzSrsTierRow
+                                        AudioEngine.playSurahInAyahMode(
+                                            surahId = firstTarget.first,
+                                            reciterSlug = teacherSlug,
+                                            startAyahNo = firstTarget.second
+                                        )
+                                        rootNavigator?.push(NowPlayingScreen())
+                                    }
+                                )
                             }
                         }
 
@@ -512,6 +537,69 @@ private fun MemorizationReciterCard(
                     progress = p,
                     trackHeight = 3.dp
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HifzSrsTierRow(
+    sessions: List<HifzSessionPlan>,
+    onSelectPlan: (HifzSessionPlan) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        sessions.forEach { plan ->
+            val hasTargets = plan.targets.isNotEmpty()
+            val tileShape = RoundedCornerShape(14.dp)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(tileShape)
+                    .background(if (hasTargets) GhaisNoir.Fill2 else GhaisNoir.InsetFill)
+                    .border(
+                        1.dp,
+                        if (hasTargets) GhaisNoir.BorderCard else GhaisNoir.BorderGhost,
+                        tileShape
+                    )
+                    .then(
+                        if (hasTargets) Modifier.noirClickable { onSelectPlan(plan) }
+                        else Modifier
+                    )
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = plan.title,
+                            color = if (hasTargets) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = plan.targets.size.toString(),
+                            color = if (hasTargets) GhaisNoir.Lavender else GhaisNoir.TextTertiary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = plan.subtitle,
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 10.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
