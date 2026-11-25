@@ -18,12 +18,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,15 +33,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -62,6 +69,7 @@ import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
 import com.ghais.ui.util.bidiIsolate
 
@@ -88,22 +96,38 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
         val downloaded by QuranDownloads.downloadedKeys.collectAsState()
         val dlProgress by QuranDownloads.progress.collectAsState()
         val failedKeys by QuranDownloads.failedKeys.collectAsState()
+        val scope = rememberCoroutineScope()
 
-        // Download-all bookkeeping over full bundles (surah + every ayah).
-        // A surah counts as done only when its whole bundle is on disk.
-        val allKeys = remember(reciter.slug, allSurahs) {
-            allSurahs.flatMap { DownloadKeys.bundleKeys(reciter.slug, it.id, it.ayahsCount) }
-        }
-        val downloadedCount = remember(reciter.slug, allSurahs, downloaded) {
-            allSurahs.count { surah ->
-                DownloadKeys.bundleKeys(reciter.slug, surah.id, surah.ayahsCount)
-                    .all { it in downloaded }
+        var surahQuery by remember { mutableStateOf("") }
+        var juzAmmaOnly by remember { mutableStateOf(false) }
+
+        val visibleSurahs = remember(allSurahs, surahQuery, juzAmmaOnly) {
+            val base = if (juzAmmaOnly) allSurahs.filter { it.id >= 78 } else allSurahs
+            val q = surahQuery.trim().lowercase()
+            if (q.isEmpty()) base
+            else base.filter { s ->
+                s.nameEn.lowercase().contains(q) ||
+                    s.nameAr.contains(q) ||
+                    s.id.toString() == q
             }
         }
-        val allDone = allKeys.isNotEmpty() && allKeys.all { it in downloaded }
-        val downloadingCount = allSurahs.count { surah ->
-            val keys = DownloadKeys.bundleKeys(reciter.slug, surah.id, surah.ayahsCount)
-            !keys.all { it in downloaded } && keys.any { it in downloaded || it in dlProgress }
+
+        // Precompute bundle keys once per reciter instead of allocating ~6,350
+        // strings on every download progress tick.
+        val bundleMap = remember(reciter.slug, allSurahs) {
+            allSurahs.associate { it.id to DownloadKeys.bundleKeys(reciter.slug, it.id, it.ayahsCount) }
+        }
+        val downloadedCount = remember(bundleMap, downloaded) {
+            allSurahs.count { surah ->
+                bundleMap[surah.id].orEmpty().all { it in downloaded }
+            }
+        }
+        val allDone = allSurahs.isNotEmpty() && downloadedCount == allSurahs.size
+        val downloadingCount = remember(bundleMap, downloaded, dlProgress) {
+            allSurahs.count { surah ->
+                val keys = bundleMap[surah.id].orEmpty()
+                !keys.all { it in downloaded } && keys.any { it in dlProgress }
+            }
         }
 
         fun playSurahInAyahMode(surahId: Int) {
@@ -176,47 +200,112 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
                                         else -> "Download all"
                                     },
                                     onClick = {
-                                        allSurahs.forEach { surah ->
-                                            val keys = DownloadKeys.bundleKeys(
-                                                reciter.slug, surah.id, surah.ayahsCount
-                                            )
-                                            if (keys.all { it in downloaded }) return@forEach
-                                            val ayahUrls = (1..surah.ayahsCount).associateWith { ayahNo ->
-                                                reciter.getAyahAudioUrl(surah.id, ayahNo)
+                                        val targets = visibleSurahs
+                                        scope.launch(Dispatchers.Default) {
+                                            targets.forEach { surah ->
+                                                val keys = bundleMap[surah.id].orEmpty()
+                                                if (keys.all { it in downloaded }) return@forEach
+                                                val ayahUrls = (1..surah.ayahsCount).associateWith { ayahNo ->
+                                                    reciter.getAyahAudioUrl(surah.id, ayahNo)
+                                                }
+                                                QuranDownloads.downloadSurahBundle(
+                                                    reciter.slug,
+                                                    surah.id,
+                                                    reciter.getFullSurahUrl(surah.id),
+                                                    ayahUrls
+                                                )
+                                                QuranAyahRepository.prefetchSurah(surah.id)
                                             }
-                                            QuranDownloads.downloadSurahBundle(
-                                                reciter.slug,
-                                                surah.id,
-                                                reciter.getFullSurahUrl(surah.id),
-                                                ayahUrls
-                                            )
-                                            QuranAyahRepository.prefetchSurah(surah.id)
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
 
-
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(42.dp)
+                                        .clip(GhaisShapes.pill)
+                                        .background(GhaisNoir.insetFill())
+                                        .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.pill)
+                                        .padding(horizontal = 14.dp),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Search,
+                                            contentDescription = "Search surahs",
+                                            tint = GhaisNoir.TextTertiary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        BasicTextField(
+                                            value = surahQuery,
+                                            onValueChange = { surahQuery = it },
+                                            modifier = Modifier.weight(1f),
+                                            singleLine = true,
+                                            textStyle = TextStyle(
+                                                color = GhaisNoir.TextPrimary,
+                                                fontSize = 13.sp
+                                            ),
+                                            cursorBrush = SolidColor(Color.White),
+                                            decorationBox = { innerTextField ->
+                                                if (surahQuery.isEmpty()) {
+                                                    Text(
+                                                        text = "Search surah...",
+                                                        color = GhaisNoir.TextTertiary,
+                                                        fontSize = 13.sp
+                                                    )
+                                                }
+                                                innerTextField()
+                                            }
+                                        )
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(GhaisShapes.pill)
+                                        .then(
+                                            if (juzAmmaOnly) Modifier.background(GhaisNoir.lavenderFill())
+                                            else Modifier
+                                                .background(GhaisNoir.Fill2)
+                                                .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                                        )
+                                        .noirClickable { juzAmmaOnly = !juzAmmaOnly }
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Juz Amma",
+                                        color = if (juzAmmaOnly) GhaisNoir.LavenderInk else GhaisNoir.TextPrimary,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
                             Spacer(modifier = Modifier.height(12.dp))
                         }
                     }
 
                     items(
-                        items = allSurahs,
+                        items = visibleSurahs,
                         key = { "${reciter.slug}/${it.id}" }
                     ) { surah ->
                         val isPlayingThisSurah = currentTrack?.surahId == surah.id &&
                             currentTrack?.reciterSlug == reciter.slug &&
                             isAyahMode
 
-                        // Bundle precedence: downloaded (surah + every ayah) >
-                        // downloading (any bundle key in flight or partial) >
-                        // failed > idle. Partial bundles resume on tap — the
-                        // engine skips keys already done or in flight.
-                        val bundleKeys = remember(reciter.slug, surah.id, surah.ayahsCount) {
-                            DownloadKeys.bundleKeys(reciter.slug, surah.id, surah.ayahsCount)
-                        }
+                        val bundleKeys = bundleMap[surah.id].orEmpty()
                         val isDownloaded = bundleKeys.all { it in downloaded }
                         val isDownloading = !isDownloaded &&
                             bundleKeys.any { it in dlProgress }
