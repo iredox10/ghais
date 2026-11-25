@@ -189,13 +189,12 @@ fun ActivationHost(
                                 AuthScreen(
                                     onAuthenticated = { isNewAccount ->
                                         nudgeDismissed = true
-                                        // Signup-only onboarding: fresh
-                                        // accounts get a pushed setup flow.
-                                        if (isNewAccount) {
+                                        val shouldOnboard = isNewAccount && !TasteStore.taste.value.completed
+                                        if (shouldOnboard) {
                                             OnboardingStore.restartForNewUser()
                                         }
                                         rootNavigator?.pop()
-                                        if (isNewAccount) {
+                                        if (shouldOnboard) {
                                             rootNavigator?.push(OnboardingScreen)
                                         }
                                     }

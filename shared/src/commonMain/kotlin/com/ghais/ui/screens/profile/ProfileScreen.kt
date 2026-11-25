@@ -152,9 +152,11 @@ object ProfileScreen : Tab {
         val openLogin: () -> Unit = {
             rootNavigator?.push(
                 AuthScreen(onAuthenticated = { isNewAccount ->
-                    if (isNewAccount) OnboardingStore.restartForNewUser()
+                    val shouldOnboard = isNewAccount &&
+                        !com.ghais.ui.screens.reciters.taste.TasteStore.taste.value.completed
+                    if (shouldOnboard) OnboardingStore.restartForNewUser()
                     rootNavigator?.pop()
-                    if (isNewAccount) rootNavigator?.push(OnboardingScreen)
+                    if (shouldOnboard) rootNavigator?.push(OnboardingScreen)
                 })
             )
         }

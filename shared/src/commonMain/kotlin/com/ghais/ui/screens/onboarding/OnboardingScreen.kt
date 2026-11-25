@@ -26,13 +26,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Work
+import com.ghais.player.AudioEngine
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -80,7 +83,7 @@ import com.ghais.ui.theme.GhaisNoir
 import kotlinx.coroutines.launch
 import com.ghais.ui.theme.GhaisTypography
 
-private const val PageCount = 5
+private const val PageCount = 3
 private const val LastPage = PageCount - 1
 
 object OnboardingScreen : Screen {
@@ -115,11 +118,17 @@ object OnboardingScreen : Screen {
                 .take(16)
         }
 
+        fun stopPreview() {
+            runCatching { AudioEngine.pause() }
+        }
+
         fun goTo(page: Int) {
+            if (currentPage == 1 && page != 1) stopPreview()
             scope.launch { pagerState.animateScrollToPage(page.coerceIn(0, LastPage)) }
         }
 
         fun finishOnboarding() {
+            stopPreview()
             OnboardingStore.complete()
             // The signup flow can either render this screen directly or push
             // it onto the root navigator. A pushed screen must be popped.
@@ -178,15 +187,14 @@ object OnboardingScreen : Screen {
                     userScrollEnabled = false
                 ) { page ->
                     when (page) {
-                        0 -> WelcomeStep(onNext = { goTo(1) })
-                        1 -> GoalStep(
+                        0 -> GoalStep(
                             selectedGoal = goal,
                             onPick = { id ->
                                 OnboardingStore.setGoal(id)
-                                goTo(2)
+                                goTo(1)
                             }
                         )
-                        2 -> ReciterStep(
+                        1 -> ReciterStep(
                             reciters = reciters,
                             followed = followed,
                             onPick = { slug ->
@@ -201,9 +209,9 @@ object OnboardingScreen : Screen {
                                     FollowStore.follow(slug)
                                 }
                             },
-                            onContinue = { goTo(3) }
+                            onContinue = { goTo(2) }
                         )
-                        3 -> GoalReminderStep(
+                        else -> GoalReminderStep(
                             minutes = minutes,
                             onMinutesChange = { OnboardingStore.setDailyGoalMinutes(it) },
                             reminderOn = reminderOn,
@@ -227,17 +235,8 @@ object OnboardingScreen : Screen {
                                         )
                                     )
                                 }
-                                goTo(4)
+                                finishOnboarding()
                             }
-                        )
-                        else -> PreviewStep(
-                            goalId = goal,
-                            reciterSlug = followed.firstOrNull(),
-                            minutes = minutes,
-                            reminderOn = reminderOn,
-                            hour = hour,
-                            minute = minute,
-                            onDone = { finishOnboarding() }
                         )
                     }
                 }
@@ -293,45 +292,6 @@ private fun StepScroll(content: @Composable () -> Unit) {
     )
 }
 
-@Composable
-private fun WelcomeStep(onNext: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.weight(1f))
-        Box(
-            modifier = Modifier
-                .size(96.dp)
-                .background(GhaisNoir.wellFill(), RoundedCornerShape(28.dp))
-                .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(28.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            com.ghais.ui.components.GhaithLogo(
-                modifier = Modifier.size(64.dp),
-                animated = true,
-            )
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "Listen to the Quran every day",
-            style = GhaisTypography.displayEditorialSmall,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = "Daily recitation, reminders and your favorite qari — in one calm place.",
-            style = GhaisTypography.editorialBody,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        Spacer(modifier = Modifier.height(16.dp))
-        PrimaryButton(label = "Get Started", onClick = onNext)
-    }
-}
-
 private data class GoalOption(
     val id: String,
     val label: String,
@@ -340,11 +300,11 @@ private data class GoalOption(
 )
 
 private val GoalOptions = listOf(
-    GoalOption("study", "Study", "Steady recitation to boost focus", Icons.Filled.School),
-    GoalOption("sleep", "Sleep", "Calm voices to fall asleep to", Icons.Filled.Bedtime),
-    GoalOption("work", "Work", "Deep focus for the workday", Icons.Filled.Work),
-    GoalOption("memorize", "Memorize", "Repeat and retain verse by verse", Icons.Filled.Psychology),
-    GoalOption("consistency", "Consistency", "A small daily habit that sticks", Icons.Filled.Repeat)
+    GoalOption("tilawah", "Daily Tilawah", "Listen and read along every day", Icons.Filled.MenuBook),
+    GoalOption("memorize", "Hifz & Memorize", "Repeat and retain verse by verse", Icons.Filled.Psychology),
+    GoalOption("reflect", "Tadabbur & Reflect", "Slow, contemplative recitation", Icons.Filled.AutoStories),
+    GoalOption("sleep", "Calm & Sleep", "Soothing voices to unwind to", Icons.Filled.Bedtime),
+    GoalOption("consistency", "Daily Habit", "A small routine that sticks", Icons.Filled.Repeat)
 )
 
 @Composable
@@ -433,6 +393,10 @@ private fun ReciterStep(
     onPick: (String) -> Unit,
     onContinue: () -> Unit
 ) {
+    val currentTrack by AudioEngine.currentTrack.collectAsState()
+    val isPlaying by AudioEngine.isPlaying.collectAsState()
+    var previewingSlug by remember { mutableStateOf<String?>(null) }
+
     StepScroll {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -452,7 +416,7 @@ private fun ReciterStep(
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "Tap the voices you love — you can change them anytime.",
+            text = "Tap a Qari to select, or press play to hear their voice.",
             color = GhaisNoir.TextTertiary,
             fontSize = 14.sp
         )
@@ -469,6 +433,9 @@ private fun ReciterStep(
                 reciters.forEach { reciter ->
                     val photo = remember(reciter.slug) { resolveReciterPhoto(reciter.slug) }
                     val selected = followed.contains(reciter.slug)
+                    val isThisPreviewPlaying = isPlaying &&
+                        previewingSlug == reciter.slug &&
+                        currentTrack?.reciterSlug == reciter.slug
                     val ringWidth = if (selected) 3.dp else 1.dp
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -519,6 +486,31 @@ private fun ReciterStep(
                                         modifier = Modifier.size(14.dp)
                                     )
                                 }
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .size(22.dp)
+                                    .clip(CircleShape)
+                                    .background(GhaisNoir.CanvasTop, CircleShape)
+                                    .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                                    .noirClickable {
+                                        if (isThisPreviewPlaying) {
+                                            AudioEngine.pause()
+                                            previewingSlug = null
+                                        } else {
+                                            previewingSlug = reciter.slug
+                                            AudioEngine.playAyah(reciter.slug, 1, 1)
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isThisPreviewPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                    contentDescription = if (isThisPreviewPlaying) "Pause preview" else "Preview voice",
+                                    tint = GhaisNoir.TextPrimary,
+                                    modifier = Modifier.size(13.dp)
+                                )
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -729,7 +721,7 @@ private fun GoalReminderStep(
             )
         }
         Spacer(modifier = Modifier.height(20.dp))
-        PrimaryButton(label = "Continue", onClick = onContinue)
+        PrimaryButton(label = "Start listening", onClick = onContinue)
     }
 }
 
@@ -753,110 +745,6 @@ private fun StepperButton(
             contentDescription = desc,
             tint = GhaisNoir.TextPrimary,
             modifier = Modifier.size(22.dp)
-        )
-    }
-}
-
-@Composable
-private fun TimeStepper(
-    label: String,
-    value: String,
-    onMinus: () -> Unit,
-    onPlus: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
-            .background(GhaisNoir.cardFillSoft(), RoundedCornerShape(24.dp))
-            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(24.dp))
-            .padding(vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = label, color = GhaisNoir.TextTertiary, fontSize = 12.sp)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = value,
-            color = GhaisNoir.TextPrimary,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.ExtraBold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StepperButton(icon = Icons.Filled.Remove, desc = "Down", onClick = onMinus)
-            StepperButton(icon = Icons.Filled.Add, desc = "Up", onClick = onPlus)
-        }
-    }
-}
-
-@Composable
-private fun PreviewStep(
-    goalId: String?,
-    reciterSlug: String?,
-    minutes: Int,
-    reminderOn: Boolean,
-    hour: Int,
-    minute: Int,
-    onDone: () -> Unit
-) {
-    val goalLabel = GoalOptions.find { it.id == goalId }?.label ?: "Listening"
-    val reciterName = if (reciterSlug != null) {
-        QuranDataRepository.getReciterBySlug(reciterSlug).nameEn
-    } else {
-        "Not chosen"
-    }
-    val reminderText = if (reminderOn) {
-        "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}"
-    } else {
-        "Off"
-    }
-    StepScroll {
-        Text(
-            text = "Your setup",
-            style = GhaisTypography.displayEditorialSmall
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "Here's what we'll start you with.",
-            color = GhaisNoir.TextTertiary,
-            fontSize = 14.sp
-        )
-        Spacer(modifier = Modifier.height(18.dp))
-        NoirCard(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                PreviewRow(label = "Goal", value = goalLabel)
-                PreviewRow(label = "Qari", value = reciterName)
-                PreviewRow(label = "Daily goal", value = "$minutes min")
-                PreviewRow(label = "Reminder", value = reminderText)
-            }
-        }
-        Spacer(modifier = Modifier.height(20.dp))
-        PrimaryButton(label = "Start listening", onClick = onDone)
-    }
-}
-
-@Composable
-private fun PreviewRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            color = GhaisNoir.TextTertiary,
-            fontSize = 14.sp,
-            modifier = Modifier.width(96.dp)
-        )
-        Text(
-            text = value,
-            color = GhaisNoir.TextPrimary,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
         )
     }
 }
