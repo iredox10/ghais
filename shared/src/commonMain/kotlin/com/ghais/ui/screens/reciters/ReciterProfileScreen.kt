@@ -170,6 +170,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
         val downloaded by QuranDownloads.downloadedKeys.collectAsState()
         val dlProgress by QuranDownloads.progress.collectAsState()
         val failedKeys by QuranDownloads.failedKeys.collectAsState()
+        val pausedKeys by QuranDownloads.pausedKeys.collectAsState()
 
         // Follow state (persisted global store)
         val followedSlugs by FollowStore.followedSlugs.collectAsState()
@@ -329,7 +330,11 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                             },
                             onToggleFollow = { FollowStore.toggle(reciter.slug) },
                             onDownloadAll = {
-                                if (!allDone) {
+                                if (downloadingCount > 0) {
+                                    QuranDownloads.pauseAll()
+                                } else if (allKeys.any { it in pausedKeys }) {
+                                    QuranDownloads.resumeAll()
+                                } else if (!allDone) {
                                     surahs.forEach { surah ->
                                         val key = "${reciter.slug}/${surah.id}"
                                         if (key !in downloaded && !dlProgress.containsKey(key) && key !in failedKeys) {
@@ -398,7 +403,8 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                         val rawProgress: Float? = dlProgress[downloadKey]
                         val surahProgress: Float? = if (isDownloaded) null else rawProgress
                         val isDownloading = surahProgress != null
-                        val isFailed = !isDownloaded && !isDownloading && downloadKey in failedKeys
+                        val isPaused = !isDownloaded && !isDownloading && downloadKey in pausedKeys
+                        val isFailed = !isDownloaded && !isDownloading && !isPaused && downloadKey in failedKeys
                         val audioUrl = reciter.getFullSurahUrl(surah.id)
                         val isAvailable = reciter.isSurahAvailable(surah.id)
 
@@ -408,15 +414,16 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                             isPlaying = isCurrentSurahPlaying,
                             isDownloaded = isDownloaded,
                             downloadProgress = surahProgress,
+                            isDownloadPaused = isPaused,
                             isDownloadFailed = isFailed,
                             isAvailable = isAvailable,
                             onDownloadClick = {
-                                // Guard: finished keys stay finished (no re-download affordance),
-                                // in-flight keys ignore double-taps (no duplicate enqueue).
-                                // Failed/idle keys fall through to an explicit (re)try.
                                 if (isDownloaded) return@ReciterNoirSurahRow
-                                if (dlProgress.containsKey(downloadKey)) return@ReciterNoirSurahRow
-                                QuranDownloads.download(reciter.slug, surah.id, audioUrl)
+                                when {
+                                    isDownloading -> QuranDownloads.pause(reciter.slug, surah.id)
+                                    isPaused -> QuranDownloads.resume(reciter.slug, surah.id)
+                                    else -> QuranDownloads.download(reciter.slug, surah.id, audioUrl)
+                                }
                             },
                             onItemClick = {
                                 if (isCurrentSurahPlaying) {
@@ -1019,6 +1026,7 @@ private fun ReciterNoirSurahRow(
     onItemClick: () -> Unit,
     isDownloaded: Boolean = false,
     downloadProgress: Float? = null,
+    isDownloadPaused: Boolean = false,
     isDownloadFailed: Boolean = false,
     isAvailable: Boolean = true,
     onDownloadClick: () -> Unit = {}
@@ -1027,14 +1035,11 @@ private fun ReciterNoirSurahRow(
         formatSurahDuration(surah.ayahsCount)
     }
     val isDownloading = downloadProgress != null
-    // Unavailable takes precedence: the file was never recorded, so no
-    // downloaded/downloading/failed state can apply — file can't exist.
-    // Strict precedence for AVAILABLE surahs is untouched:
-    // downloaded > downloading > failed > idle.
     val stateSuffix = when {
         !isAvailable -> " • Not recorded"
         isDownloaded -> " • Offline"
         isDownloading -> " • Downloading…"
+        isDownloadPaused -> " • Paused — tap to resume"
         isDownloadFailed -> " • Failed — tap to retry"
         else -> ""
     }
@@ -1058,6 +1063,7 @@ private fun ReciterNoirSurahRow(
                     isPlaying = isPlaying,
                     isDownloaded = isDownloaded,
                     isDownloading = isDownloading,
+                    isDownloadPaused = isDownloadPaused,
                     isDownloadFailed = isDownloadFailed,
                     isAvailable = isAvailable,
                     onDownloadClick = onDownloadClick,
@@ -1090,6 +1096,7 @@ private fun RowScope.SurahRowTrailing(
     isPlaying: Boolean,
     isDownloaded: Boolean,
     isDownloading: Boolean,
+    isDownloadPaused: Boolean,
     isDownloadFailed: Boolean,
     onDownloadClick: () -> Unit,
     onItemClick: () -> Unit,
@@ -1132,13 +1139,26 @@ private fun RowScope.SurahRowTrailing(
             when {
                 isDownloading -> {
                     IconButton(
-                        onClick = {},
+                        onClick = onDownloadClick,
                         modifier = Modifier.size(34.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Download,
-                            contentDescription = "Downloading",
-                            tint = GhaisNoir.TextTertiary,
+                            imageVector = Icons.Default.Pause,
+                            contentDescription = "Pause download",
+                            tint = GhaisNoir.Lavender,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                isDownloadPaused -> {
+                    IconButton(
+                        onClick = onDownloadClick,
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Resume download",
+                            tint = GhaisNoir.TextPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
