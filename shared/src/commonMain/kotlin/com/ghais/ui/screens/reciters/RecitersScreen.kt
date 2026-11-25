@@ -69,6 +69,9 @@ import com.ghais.personal.PersonalFlags
 import com.ghais.personal.ShelfRow
 import com.ghais.personal.SignalStore
 import com.ghais.personal.buildShelves
+import com.ghais.ui.screens.reciters.filter.MoodFilter
+import com.ghais.ui.screens.reciters.filter.ReciterFilterState
+import com.ghais.ui.screens.reciters.filter.applyFilters
 import com.ghais.ui.screens.reciters.personal.ColdStartGate
 import com.ghais.ui.screens.reciters.personal.SectionId
 import com.ghais.ui.screens.reciters.personal.WeeklyRitualRow
@@ -127,6 +130,11 @@ class RecitersScreen : Tab {
         // catalog sync instead of only in search. Reactive to the cache.
         val browseReciters = rememberBrowseReciters()
 
+        var quickFilter by remember { mutableStateOf(ReciterFilterState()) }
+        val filteredReciters = remember(browseReciters, quickFilter) {
+            applyFilters(browseReciters, quickFilter)
+        }
+
         LaunchedEffect(Unit) {
             ChartsRepository.refresh()
         }
@@ -168,8 +176,8 @@ class RecitersScreen : Tab {
         // forming a second, near-identical nation. Nations and the reciters
         // inside them are both alphabetical, and the label keeps the richest
         // raw spelling in the group (the one that still carries its flag).
-        val groups = remember(browseReciters) {
-            browseReciters
+        val groups = remember(filteredReciters) {
+            filteredReciters
                 .groupBy { reciterCountryKey(it.country).ifBlank { "other" } }
                 .map { (key, reciters) ->
                     val label = reciters
@@ -184,8 +192,8 @@ class RecitersScreen : Tab {
                 .sortedBy { (label, _) -> reciterCountryKey(label).ifBlank { label.lowercase() } }
         }
 
-        // Browse is unfiltered: collapsed shows top-6 nations by count.
-        var nationsExpanded by remember(browseReciters) { mutableStateOf(false) }
+        // Browse is unfiltered by default; collapsed shows top-6 nations by count.
+        var nationsExpanded by remember(filteredReciters) { mutableStateOf(false) }
         val topNations = remember(groups) {
             groups.sortedByDescending { (_, reciters) -> reciters.size }.take(6)
         }
@@ -341,7 +349,12 @@ class RecitersScreen : Tab {
                                 },
                                 onOpenSearch = { openReciterSearch(initialQuery = searchQuery) }
                             )
-                            Spacer(Modifier.height(20.dp))
+                            Spacer(Modifier.height(12.dp))
+                            QuickReciterFilterBar(
+                                active = quickFilter,
+                                onSelect = { quickFilter = it }
+                            )
+                            Spacer(Modifier.height(16.dp))
                         }
 
                         SectionId.YOUR_VOICES -> if (PersonalFlags.personalShelves) {
@@ -621,6 +634,53 @@ private val NoirReelCardShape = RoundedCornerShape(28.dp)
  *
  * Trigger rules are documented next to `openReciterSearch` in Content.
  */
+@Composable
+private fun QuickReciterFilterBar(
+    active: ReciterFilterState,
+    onSelect: (ReciterFilterState) -> Unit,
+) {
+    val chips: List<Pair<String, ReciterFilterState>> = listOf(
+        "All" to ReciterFilterState(),
+        "Hafs" to ReciterFilterState(riwayah = "Hafs"),
+        "Warsh" to ReciterFilterState(riwayah = "Warsh"),
+        "Mujawwad" to ReciterFilterState(style = "Mujawwad"),
+        "Calm" to ReciterFilterState(mood = MoodFilter.CALM),
+        "Focus" to ReciterFilterState(mood = MoodFilter.FOCUS),
+        "Sleep" to ReciterFilterState(mood = MoodFilter.SLEEP),
+    )
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(chips, key = { it.first }) { (label, state) ->
+            val selected = active == state
+            Box(
+                modifier = Modifier
+                    .clip(GhaisShapes.pill)
+                    .then(
+                        if (selected) {
+                            Modifier.background(GhaisNoir.lavenderFill())
+                        } else {
+                            Modifier
+                                .background(GhaisNoir.Fill2)
+                                .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                        }
+                    )
+                    .noirClickable {
+                        onSelect(if (selected && label != "All") ReciterFilterState() else state)
+                    }
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = label,
+                    color = if (selected) GhaisNoir.LavenderInk else GhaisNoir.TextSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun NoirRecitersHeader(
     expanded: Boolean,
