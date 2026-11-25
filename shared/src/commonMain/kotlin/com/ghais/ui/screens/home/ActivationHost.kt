@@ -33,7 +33,6 @@ import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.auth.AuthScreen
-import com.ghais.ui.screens.onboarding.OnboardingScreen
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.reciters.taste.TasteQuizSheet
 import com.ghais.ui.screens.reciters.taste.TasteStore
@@ -187,16 +186,10 @@ fun ActivationHost(
                         onClick = {
                             rootNavigator?.push(
                                 AuthScreen(
-                                    onAuthenticated = { isNewAccount ->
+                                    onAuthenticated = { _ ->
                                         nudgeDismissed = true
-                                        val shouldOnboard = isNewAccount && !TasteStore.taste.value.completed
-                                        if (shouldOnboard) {
-                                            OnboardingStore.restartForNewUser()
-                                        }
+                                        OnboardingStore.markDoneForCurrentUser()
                                         rootNavigator?.pop()
-                                        if (shouldOnboard) {
-                                            rootNavigator?.push(OnboardingScreen)
-                                        }
                                     }
                                 )
                             )

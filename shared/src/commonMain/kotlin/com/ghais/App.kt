@@ -41,7 +41,6 @@ import com.ghais.ui.components.MiniPlayer
 import com.ghais.ui.components.isFullScreenPlayer
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.navigation.MainScreen
-import com.ghais.ui.screens.onboarding.OnboardingScreen
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.splash.SplashScreen
 import com.ghais.ui.theme.GhaisTheme
@@ -55,7 +54,6 @@ fun App() {
         val checked by AuthRepository.authChecked.collectAsState()
         val cachedSession by AuthRepository.cachedSession.collectAsState()
         val doneForUser by OnboardingStore.isDoneForCurrentUser.collectAsState()
-        var forceOnboarding by remember { mutableStateOf(false) }
         val signedInUserId = session?.userId ?: cachedSession?.userId
         // Every launch effect below runs network / disk work on first
         // composition: an uncaught throw here kills the process with no
@@ -76,43 +74,12 @@ fun App() {
                 if (e is CancellationException) throw e
             }
         }
-        // OnboardingScreen exposes plain Screen.Content() with no onFinish/onComplete
-        // callback (completion lands in OnboardingStore internally); clearing the
-        // replay latch is therefore observed via doneForUser.
-        LaunchedEffect(doneForUser) { if (doneForUser) forceOnboarding = false }
-        // Onboarding belongs to brand-new accounts only. Every other
-        // established session (returning login, session restored at launch,
-        // cached offline session) records the per-user flag as done, so the
-        // gate below and any later owner rebind can never drop that user back
-        // into onboarding. Keyed off the session user id rather than the store
-        // namespace because OnboardingStore.setOwner runs on SyncTriggers'
-        // own collector and may still be bound to "local" on this frame —
-        // doneForUser doubles as a key so that the first write landing in the
-        // wrong namespace is retried once setOwner reports the real value.
-        // Signup-only: only an explicit isNewAccount callback replays
-        // onboarding (showAuth gate's forceOnboarding, or a pushed
-        // OnboardingScreen from profile/nudge signup). A done=false login —
-        // e.g. an existing account on a fresh device — is marked done, never
-        // onboarded: login must never show setup.
-        LaunchedEffect(signedInUserId, forceOnboarding, doneForUser) {
-            if (signedInUserId == null || forceOnboarding || doneForUser) return@LaunchedEffect
+        LaunchedEffect(signedInUserId, doneForUser) {
+            if (signedInUserId == null || doneForUser) return@LaunchedEffect
             OnboardingStore.markDoneForCurrentUser()
         }
-        // Guest-first activation: auth is deferred, never blocking. Signed-out
-        // users (and offline users with no cache) enter main content as
-        // guests; a Day-2 nudge (ActivationHost, after real listening
-        // history) offers sign-in. Guests skip onboarding — the taste quiz
-        // inside ActivationHost already captures voice preference, and the
-        // signed-in effect below marks onboarding done on first auth.
-        // Two exceptions: an explicit Log out latches the auth gate, and a
-        // brand-new signup replays the full onboarding (goal + qari + goal
-        // minutes), because a fresh account has no taste/history yet.
-        // Only the local token read gates first content; refreshSession's
-        // network validation continues after Home is visible.
         if (!checked) {
             SplashScreen.Content()
-        } else if (forceOnboarding) {
-            OnboardingScreen.Content()
         } else {
             Navigator(MainScreen) { navigator ->
             val currentTrack by AudioEngine.currentTrack.collectAsState()

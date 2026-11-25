@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.data.auth.AuthRepository
@@ -33,7 +34,7 @@ import com.ghais.data.repository.BroadcastRepository
 import com.ghais.data.repository.KhatmaStore
 import com.ghais.data.repository.OnboardingStore
 import com.ghais.ui.screens.auth.AuthScreen
-import com.ghais.ui.screens.onboarding.OnboardingScreen
+import com.ghais.ui.screens.home.HomeScreen
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.khatmaIsComplete
 import com.ghais.data.share.ShareSheet
@@ -147,16 +148,15 @@ object ProfileScreen : Tab {
         val rootNavigator = LocalRootNavigator.current
             ?: LocalNavigator.current?.parent
             ?: LocalNavigator.current
+        val tabNavigator = LocalTabNavigator.current
 
         val signOut: () -> Unit = { scope.launch { AuthRepository.signOut() } }
         val openLogin: () -> Unit = {
             rootNavigator?.push(
-                AuthScreen(onAuthenticated = { isNewAccount ->
-                    val shouldOnboard = isNewAccount &&
-                        !com.ghais.ui.screens.reciters.taste.TasteStore.taste.value.completed
-                    if (shouldOnboard) OnboardingStore.restartForNewUser()
+                AuthScreen(onAuthenticated = { _ ->
+                    OnboardingStore.markDoneForCurrentUser()
                     rootNavigator?.pop()
-                    if (shouldOnboard) rootNavigator?.push(OnboardingScreen)
+                    tabNavigator.current = HomeScreen
                 })
             )
         }
