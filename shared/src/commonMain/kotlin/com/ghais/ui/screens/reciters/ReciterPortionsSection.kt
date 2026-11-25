@@ -326,7 +326,10 @@ fun CreatePortionDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(GhaisShapes.row)
-                            .background(if (checked) GhaisNoir.cardFillActive() else GhaisNoir.Fill2)
+                            .then(
+                                if (checked) Modifier.background(GhaisNoir.cardFillActive())
+                                else Modifier.background(GhaisNoir.Fill2)
+                            )
                             .border(
                                 1.dp,
                                 if (checked) GhaisNoir.Lavender.copy(alpha = 0.5f) else GhaisNoir.BorderGhost,
