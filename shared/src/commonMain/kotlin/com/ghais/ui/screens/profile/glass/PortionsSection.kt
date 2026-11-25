@@ -51,6 +51,7 @@ import com.ghais.ui.components.noir.ChromePillButton
 import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.screens.profile.NoirRowDivider
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 
