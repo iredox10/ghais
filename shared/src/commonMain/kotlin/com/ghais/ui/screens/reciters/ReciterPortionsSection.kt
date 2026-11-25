@@ -342,7 +342,10 @@ fun CreatePortionDialog(
                             modifier = Modifier
                                 .size(22.dp)
                                 .clip(CircleShape)
-                                .background(if (checked) GhaisNoir.lavenderFill() else GhaisNoir.wellFill())
+                                .then(
+                                    if (checked) Modifier.background(GhaisNoir.lavenderFill())
+                                    else Modifier.background(GhaisNoir.wellFill())
+                                )
                                 .border(
                                     1.dp,
                                     if (checked) Color.Transparent else GhaisNoir.BorderCard,
