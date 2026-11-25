@@ -91,8 +91,8 @@ class HifzListeningPlannerScreen(
                 if (startInCreator || plans.isEmpty()) {
                     HifzListeningPlan(
                         id = HifzListeningPlannerStore.newId(),
-                        reciterSlugs = listOf("husary"),
-                        surahIds = listOf(67),
+                        reciterSlugs = emptyList(),
+                        surahIds = emptyList(),
                         timesPerSession = 3,
                         sessionsPerDay = 2,
                         durationDays = 7,
@@ -127,8 +127,8 @@ class HifzListeningPlannerScreen(
                                 onClick = {
                                     editingPlan = HifzListeningPlan(
                                         id = HifzListeningPlannerStore.newId(),
-                                        reciterSlugs = listOf("husary"),
-                                        surahIds = listOf(67),
+                                        reciterSlugs = emptyList(),
+                                        surahIds = emptyList(),
                                         timesPerSession = 3,
                                         sessionsPerDay = 2,
                                         durationDays = 7,
@@ -231,7 +231,8 @@ private fun ListeningPlanCard(
 
     val reciterList = remember(plan.reciterSlugs) {
         plan.reciterSlugs.mapNotNull { slug ->
-            QuranDataRepository.getReciterBySlug(slug).nameEn.takeIf { it.isNotBlank() }
+            QuranDataRepository.getBrowseReciterBySlug(slug)?.nameEn
+                ?: QuranDataRepository.getReciterBySlug(slug).nameEn.takeIf { it.isNotBlank() }
                 ?: EveryAyahReciters.ALL.firstOrNull { it.slug == slug }?.nameEn
         }.ifEmpty { listOf("Selected Qari") }
     }

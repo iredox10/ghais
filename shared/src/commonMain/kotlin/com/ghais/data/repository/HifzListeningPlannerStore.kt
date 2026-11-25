@@ -188,9 +188,8 @@ object HifzListeningPlannerStore {
         val repeats = plan.timesPerSession.coerceIn(1, 50)
         val tracks = mutableListOf<TrackItem>()
         for (slug in plan.reciterSlugs) {
-            val reciter = QuranDataRepository.getReciterBySlug(slug)
-                ?: EveryAyahReciters.ALL.firstOrNull { it.slug == slug }?.toReciter()
-                ?: continue
+            val reciter = QuranDataRepository.getBrowseReciterBySlug(slug)?.takeIf { it.serverUrl.isNotBlank() }
+                ?: QuranDataRepository.getReciterBySlug(slug)
             for (surahId in plan.surahIds) {
                 val surah = QuranDataRepository.getSurahById(surahId) ?: continue
                 if (!reciter.isSurahAvailable(surahId)) continue
