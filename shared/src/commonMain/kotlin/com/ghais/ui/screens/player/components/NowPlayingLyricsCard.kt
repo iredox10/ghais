@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -49,6 +50,9 @@ import androidx.compose.runtime.setValue
 import com.ghais.data.repository.HifzMasteryStore
 import com.ghais.data.repository.MasteryStatus
 import com.ghais.data.repository.QuranAyahRepository
+import com.ghais.data.repository.QuranDataRepository
+import com.ghais.hifz.mutashabihatFor
+import com.ghais.hifz.splitAyahByWaqf
 import com.ghais.player.AudioEngine
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -281,6 +285,14 @@ fun NowPlayingLyricsCard(
                         )
                     }
                 }
+
+                if (!isCurrentVerseUnavailable) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    BlindedRecallPill(
+                        blindOn = blindOn,
+                        onToggle = { blindOn = !blindOn }
+                    )
+                }
             }
 
             if (isGapActive) {
@@ -354,6 +366,9 @@ fun NowPlayingLyricsCard(
             // concealed again while the blindOn preference above survives.
             var arabicRevealed by remember { mutableStateOf(false) }
             var translationRevealed by remember { mutableStateOf(false) }
+            var selectedPhraseIndex by remember { mutableStateOf<Int?>(null) }
+            val waqfPhrases = remember(activeArabic) { splitAyahByWaqf(activeArabic) }
+            val mutashabihat = remember(surahId, displayAyahNo) { mutashabihatFor(surahId, displayAyahNo) }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -371,6 +386,38 @@ fun NowPlayingLyricsCard(
                             lineHeight = 21.sp
                         )
                     } else {
+                        if (mutashabihat.isNotEmpty()) {
+                            val firstMatch = mutashabihat.first()
+                            val otherSurahName = QuranDataRepository.getSurahById(firstMatch.otherSurahId)?.nameEn
+                            val refLabel = if (!otherSurahName.isNullOrBlank()) {
+                                "$otherSurahName ${firstMatch.otherSurahId}:${firstMatch.otherAyahNo}"
+                            } else {
+                                "${firstMatch.otherSurahId}:${firstMatch.otherAyahNo}"
+                            }
+                            val extraSuffix = if (mutashabihat.size > 1) " (+${mutashabihat.size - 1})" else ""
+                            SimilarVerseBadge(
+                                text = "Similar verse · $refLabel$extraSuffix",
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+
+                        if (waqfPhrases.size > 1 && !(blindOn && !arabicRevealed)) {
+                            WaqfPhraseChipsRow(
+                                phraseCount = waqfPhrases.size,
+                                selectedIndex = selectedPhraseIndex,
+                                onSelectPhrase = { idx ->
+                                    selectedPhraseIndex = if (selectedPhraseIndex == idx) null else idx
+                                },
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+
+                        val displayedArabic = selectedPhraseIndex
+                            ?.takeIf { it in waqfPhrases.indices }
+                            ?.let { waqfPhrases[it] }
+                            ?: activeArabic
+                        val showAyahMark = selectedPhraseIndex == null || selectedPhraseIndex == waqfPhrases.lastIndex
+
                         // Arabic block runs RTL (basmalah header + verse Row); translation stays LTR.
                         if (showBasmalahHeader || activeArabic.isNotBlank()) {
                             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -404,14 +451,16 @@ fun NowPlayingLyricsCard(
                                     if (activeArabic.isNotBlank()) {
                                         if (blindOn && !arabicRevealed) {
                                             ConcealedVerseBlock(
-                                                label = "Arabic concealed — tap to reveal",
+                                                label = "Arabic concealed — tap to peek",
                                                 onReveal = { arabicRevealed = true }
                                             )
                                         } else {
                                         Text(
                                             text = buildAnnotatedString {
-                                                append(activeArabic)
-                                                appendAyahMark(displayAyahNo)
+                                                append(displayedArabic)
+                                                if (showAyahMark) {
+                                                    appendAyahMark(displayAyahNo)
+                                                }
                                             },
                                             style = GhaisTypography.quranScript,
                                             fontSize = 25.sp,
@@ -626,6 +675,123 @@ fun NowPlayingLyricsCard(
             // Tools row (loop/tafseer/learning/download) removed for minimal —
             // [onNextAyah]/[onPreviousAyah]/[onToggleAyahMode]/[onOpenTafseer]
             // kept in signature but intentionally not rendered here.
+    }
+}
+
+/**
+ * Eyes-Free / Blinded Recall toggle pill ("Hide Text" / "Tap to Peek")
+ * in Noir Glass pill styling.
+ */
+@Composable
+private fun BlindedRecallPill(
+    blindOn: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        modifier = modifier
+            .clip(GhaisShapes.pill)
+            .background(if (blindOn) GhaisNoir.Fill4 else GhaisNoir.Fill2)
+            .border(
+                1.dp,
+                if (blindOn) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                GhaisShapes.pill
+            )
+            .noirClickable { onToggle() }
+            .padding(horizontal = 9.dp, vertical = 4.dp)
+    ) {
+        Icon(
+            imageVector = if (blindOn) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+            contentDescription = if (blindOn) "Tap to Peek" else "Hide Text",
+            tint = if (blindOn) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+            modifier = Modifier.size(12.dp)
+        )
+        Text(
+            text = if (blindOn) "Tap to Peek" else "Hide Text",
+            fontSize = 11.sp,
+            fontWeight = if (blindOn) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (blindOn) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
+            maxLines = 1
+        )
+    }
+}
+
+/**
+ * Subtle Mutashabihat badge showing a similar verse reference.
+ */
+@Composable
+private fun SimilarVerseBadge(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .clip(GhaisShapes.pill)
+            .background(GhaisNoir.Fill2)
+            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+            .padding(horizontal = 9.dp, vertical = 3.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = GhaisNoir.TextSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
+ * Compact phrase indicator chips for long ayahs split by Quranic waqf marks.
+ */
+@Composable
+private fun WaqfPhraseChipsRow(
+    phraseCount: Int,
+    selectedIndex: Int?,
+    onSelectPhrase: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+    ) {
+        Text(
+            text = "Waqf",
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = GhaisNoir.TextTertiary,
+            letterSpacing = 0.5.sp
+        )
+        for (idx in 0 until phraseCount) {
+            val active = selectedIndex == idx
+            Box(
+                modifier = Modifier
+                    .clip(GhaisShapes.pill)
+                    .background(if (active) GhaisNoir.Fill4 else GhaisNoir.Fill2)
+                    .border(
+                        1.dp,
+                        if (active) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
+                        GhaisShapes.pill
+                    )
+                    .noirClickable { onSelectPhrase(idx) }
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${idx + 1}",
+                    fontSize = 10.5.sp,
+                    fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                    color = if (active) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary
+                )
+            }
+        }
     }
 }
 

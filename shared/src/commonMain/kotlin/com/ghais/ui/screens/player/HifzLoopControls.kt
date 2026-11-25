@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 // Contract owned by the parallel data agent: HifzReciterLock exposes
 // lockedSlug: StateFlow<String?>, lock(slug), unlock().
 import com.ghais.data.repository.HifzReciterLock
+import com.ghais.domain.model.HifzLoopMode
 import com.ghais.player.AudioEngine
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.screens.player.components.VoiceCompareSection
@@ -50,13 +51,37 @@ import com.ghais.ui.theme.GhaisNoir
  * CTA (startRecording returns false, getRecordingPath is null) with no
  * crash: graceful stub behavior, no gating wired.
  */
+/**
+ * Loop mode options for Hifz range memorization.
+ */
+enum class HifzLoopModeOption(val label: String) {
+    FLAT("Flat"),
+    ACCUMULATE("Accumulate"),
+    BRIDGE("Bridge"),
+    FIRST_WORD("1st-Word")
+}
+
+/**
+ * Adaptive pause scaling options alongside the manual pause stepper.
+ */
+enum class AdaptivePauseOption(val label: String, val multiplier: Float?) {
+    FIXED("Fixed", null),
+    X1_0("1.0×", 1.0f),
+    X1_25("1.25×", 1.25f),
+    X1_5("1.5×", 1.5f)
+}
+
 @Composable
 fun HifzLoopRow(
     surahId: Int,
     currentAyah: Int,
     ayahsCount: Int,
     onInteract: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    initialLoopMode: HifzLoopModeOption = HifzLoopModeOption.FLAT,
+    onLoopModeSelected: (HifzLoopModeOption) -> Unit = {},
+    initialAdaptivePause: AdaptivePauseOption = AdaptivePauseOption.FIXED,
+    onAdaptivePauseSelected: (AdaptivePauseOption) -> Unit = {}
 ) {
     val range by AudioEngine.hifzRange.collectAsState()
     val rep by AudioEngine.currentAyahRepetition.collectAsState()
@@ -73,6 +98,8 @@ fun HifzLoopRow(
     var targetLoops by remember(surahId, range?.targetLoops) {
         mutableStateOf(range?.targetLoops?.coerceAtLeast(1) ?: 1)
     }
+    var loopMode by remember(surahId, initialLoopMode) { mutableStateOf(initialLoopMode) }
+    var adaptivePause by remember(surahId, initialAdaptivePause) { mutableStateOf(initialAdaptivePause) }
     var showRecorder by remember(surahId) { mutableStateOf(false) }
 
     Column(
@@ -130,6 +157,48 @@ fun HifzLoopRow(
                 modifier = Modifier.weight(1f)
             )
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        HifzChipSelectorRow(
+            label = "Mode",
+            options = HifzLoopModeOption.entries,
+            selected = loopMode,
+            labelFor = { it.label },
+            onSelect = { mode ->
+                onInteract()
+                loopMode = mode
+                val engineMode = when (mode) {
+                    HifzLoopModeOption.FLAT -> HifzLoopMode.FLAT
+                    HifzLoopModeOption.ACCUMULATE -> HifzLoopMode.ACCUMULATION
+                    HifzLoopModeOption.BRIDGE -> HifzLoopMode.BRIDGE
+                    HifzLoopModeOption.FIRST_WORD -> HifzLoopMode.FIRST_WORD_PROMPT
+                }
+                AudioEngine.setHifzLoopMode(engineMode)
+                onLoopModeSelected(mode)
+            }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        HifzChipSelectorRow(
+            label = "Adaptive pause",
+            options = AdaptivePauseOption.entries,
+            selected = adaptivePause,
+            labelFor = { it.label },
+            onSelect = { option ->
+                onInteract()
+                adaptivePause = option
+                val multiplier = when (option) {
+                    AdaptivePauseOption.FIXED -> 0f
+                    AdaptivePauseOption.X1_0 -> 1.0f
+                    AdaptivePauseOption.X1_25 -> 1.25f
+                    AdaptivePauseOption.X1_5 -> 1.5f
+                }
+                AudioEngine.setHifzPauseMultiplier(multiplier)
+                onAdaptivePauseSelected(option)
+            }
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -448,5 +517,56 @@ fun HifzSettingsToggle(
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold
         )
+    }
+}
+
+@Composable
+private fun <T> HifzChipSelectorRow(
+    label: String,
+    options: List<T>,
+    selected: T,
+    labelFor: (T) -> String,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            color = GhaisNoir.TextTertiary,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            options.forEach { option ->
+                val active = option == selected
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (active) GhaisNoir.Fill4 else GhaisNoir.Fill2)
+                        .border(
+                            1.dp,
+                            if (active) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
+                            RoundedCornerShape(8.dp)
+                        )
+                        .noirClickable { onSelect(option) }
+                        .padding(vertical = 6.dp, horizontal = 4.dp)
+                ) {
+                    Text(
+                        text = labelFor(option),
+                        color = if (active) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
     }
 }

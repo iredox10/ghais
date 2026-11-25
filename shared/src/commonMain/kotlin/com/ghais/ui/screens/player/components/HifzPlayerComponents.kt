@@ -346,6 +346,93 @@ fun QuickMasteryPill(
 }
 
 /**
+ * 1-tap "Stumble" pill button for Ayah Mode.
+ * Marks the current ayah as [MasteryStatus.REVIEW_NEEDED] in [HifzMasteryStore]
+ * so the learner can flag a slip without breaking recitation flow.
+ */
+@Composable
+fun StumblePillButton(
+    surahId: Int,
+    ayahNo: Int,
+    onStumble: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    val masteryMap by HifzMasteryStore.masteryMap.collectAsState()
+    val isFlagged = masteryMap[surahId to ayahNo] == MasteryStatus.REVIEW_NEEDED
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .clip(GhaisShapes.pill)
+            .background(if (isFlagged) GhaisNoir.Fill4 else GhaisNoir.Fill2)
+            .border(
+                1.dp,
+                if (isFlagged) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                GhaisShapes.pill
+            )
+            .noirClickable {
+                AudioEngine.flagStumbleCurrentAyah()
+                onStumble?.invoke()
+            }
+            .padding(horizontal = 10.dp, vertical = 5.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(if (isFlagged) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = if (isFlagged) "Stumbled" else "Stumble",
+            fontSize = 11.sp,
+            fontWeight = if (isFlagged) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (isFlagged) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary
+        )
+    }
+}
+
+/**
+ * "Auto-Echo" toggle pill for [VoiceRecorderBridge] self-check recording.
+ * When enabled, automatically arms voice recording after each recitation loop
+ * for immediate self-check playback.
+ */
+@Composable
+fun AutoEchoTogglePill(
+    enabled: Boolean,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .clip(GhaisShapes.pill)
+            .background(if (enabled) GhaisNoir.Fill4 else GhaisNoir.Fill2)
+            .border(
+                1.dp,
+                if (enabled) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                GhaisShapes.pill
+            )
+            .noirClickable { onToggle(!enabled) }
+            .padding(horizontal = 10.dp, vertical = 5.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Mic,
+            contentDescription = "Auto-Echo",
+            tint = if (enabled) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+            modifier = Modifier.size(12.dp)
+        )
+        Spacer(modifier = Modifier.width(5.dp))
+        Text(
+            text = "Auto-Echo",
+            fontSize = 11.sp,
+            fontWeight = if (enabled) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (enabled) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary
+        )
+    }
+}
+
+/**
  * Voice Recording & Instant Side-by-Side Playback Panel.
  */
 @Composable
@@ -355,6 +442,7 @@ fun VoiceCompareSection(
     modifier: Modifier = Modifier
 ) {
     var isExpanded by remember { mutableStateOf(false) }
+    var autoEchoEnabled by remember { mutableStateOf(false) }
 
     val isRecording by VoiceRecorderBridge.isRecording.collectAsState()
     val recordingDurationMs by VoiceRecorderBridge.recordingDurationMs.collectAsState()
@@ -665,6 +753,23 @@ fun VoiceCompareSection(
                                 )
                             }
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AutoEchoTogglePill(
+                            enabled = autoEchoEnabled,
+                            onToggle = { autoEchoEnabled = it }
+                        )
+                        StumblePillButton(
+                            surahId = surahId,
+                            ayahNo = ayahNo
+                        )
                     }
                 }
             }
