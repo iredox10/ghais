@@ -36,28 +36,68 @@ object AuthRepository {
     }
 
     private fun TokenBundle.asSession() = AuthSession(userId, email, name)
-    private suspend fun authenticate(path: String, fields: Map<String, String>): Result<Unit> = safe {
+    private fun isValidEmail(email: String): Boolean {
+        val trimmed = email.trim()
+        val at = trimmed.indexOf('@')
+        val dot = trimmed.lastIndexOf('.')
+        return at > 0 && dot > at + 1 && dot < trimmed.length - 1 && !trimmed.contains(' ')
+    }
+
+    private suspend fun authenticate(path: String, fields: Map<String, String>): Result<TokenBundle> = safe {
         val pair = BackendHttp.authenticate(path, fields)
         BackendHttp.adopt(pair)
         _cachedSession.value = pair.asSession()
         _session.value = pair.asSession()
         _authChecked.value = true
+        pair
     }
 
     suspend fun signUp(email: String, name: String, password: String): Result<Unit> {
         if (name.isBlank()) return Result.failure(Exception("Enter your name."))
+        if (!isValidEmail(email)) return Result.failure(Exception("Enter a valid email address."))
         if (password.length < 8) return Result.failure(Exception("Password must be at least 8 characters."))
-        return authenticate("/auth/register", mapOf("email" to email.trim(), "name" to name, "password" to password))
+        return authenticate("/auth/register", mapOf("email" to email.trim(), "name" to name.trim(), "password" to password)).map { }
     }
-    suspend fun signIn(email: String, password: String) =
-        authenticate("/auth/login", mapOf("email" to email.trim(), "password" to password))
+    suspend fun signIn(email: String, password: String): Result<Unit> {
+        if (!isValidEmail(email)) return Result.failure(Exception("Enter a valid email address."))
+        if (password.isEmpty()) return Result.failure(Exception("Enter your password."))
+        return authenticate("/auth/login", mapOf("email" to email.trim(), "password" to password)).map { }
+    }
 
-    suspend fun signInWithGoogle(): Result<Unit> {
+    suspend fun signInWithGoogle(): Result<Boolean> {
         val token = safe { BackendPlatform.googleIdToken() }
         return token.fold(
-            onSuccess = { authenticate("/auth/google", mapOf("idToken" to it)) },
+            onSuccess = { idToken ->
+                authenticate("/auth/google", mapOf("idToken" to idToken)).map { it.isNewUser ?: false }
+            },
             onFailure = { Result.failure(it) },
         )
+    }
+
+    suspend fun requestPasswordReset(email: String): Result<String> {
+        if (!isValidEmail(email)) return Result.failure(Exception("Enter a valid email address."))
+        return safe {
+            val body = buildJsonObject { put("email", email.trim()) }
+            val text = BackendHttp.request(HttpMethod.Post, "/auth/forgot-password", body, authenticated = false)
+            Json.parseToJsonElement(text).jsonObject["message"]?.jsonPrimitive?.contentOrNull
+                ?: "If an account exists for that email, a reset code has been sent."
+        }
+    }
+
+    suspend fun confirmPasswordReset(email: String, code: String, newPassword: String): Result<String> {
+        if (!isValidEmail(email)) return Result.failure(Exception("Enter a valid email address."))
+        if (!code.trim().matches(Regex("^\\d{6}$"))) return Result.failure(Exception("Enter the 6-digit reset code."))
+        if (newPassword.length < 8) return Result.failure(Exception("Password must be at least 8 characters."))
+        return safe {
+            val body = buildJsonObject {
+                put("email", email.trim())
+                put("code", code.trim())
+                put("newPassword", newPassword)
+            }
+            val text = BackendHttp.request(HttpMethod.Post, "/auth/reset-password", body, authenticated = false)
+            Json.parseToJsonElement(text).jsonObject["message"]?.jsonPrimitive?.contentOrNull
+                ?: "Password updated. You can now log in."
+        }
     }
 
     suspend fun signOut(): Result<Unit> {
@@ -107,7 +147,7 @@ object AuthRepository {
     } catch (e: CancellationException) { throw e
     } catch (e: Exception) {
         val message = if (e is AuthUserException) e.message ?: "Sign-in failed. Please retry." else if (e is BackendException) when (e.code) {
-            400 -> "Check your details and try again."
+            400 -> e.message?.takeIf { !it.startsWith("Request failed") } ?: "Check your details and try again."
             401 -> "Invalid email or password."
             409 -> "An account with this email already exists. Log in instead."
             429 -> "Too many attempts. Please wait and try again."

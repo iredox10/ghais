@@ -18,6 +18,7 @@ import kotlinx.serialization.json.*
 data class TokenBundle(
     val userId: String, val email: String, val name: String,
     val accessToken: String, val refreshToken: String, val expiresIn: Long = 900,
+    val isNewUser: Boolean? = null,
 )
 
 class BackendException(val code: Int, message: String) : Exception(message)
@@ -76,7 +77,12 @@ object BackendHttp {
             if (current?.userId == before.userId) response = send(method, path, body, current.accessToken, queries)
         }
         val text = response.bodyAsText()
-        if (response.status.value !in 200..299) throw BackendException(response.status.value, "Request failed (${response.status.value}).")
+        if (response.status.value !in 200..299) {
+            val serverMessage = runCatching {
+                json.parseToJsonElement(text).jsonObject["message"]?.jsonPrimitive?.contentOrNull
+            }.getOrNull()?.takeIf { it.isNotBlank() }
+            throw BackendException(response.status.value, serverMessage ?: "Request failed (${response.status.value}).")
+        }
         return text
     }
 
