@@ -18,12 +18,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -131,6 +133,7 @@ actual object QuranDownloads {
     private val inFlight = ConcurrentHashMap.newKeySet<String>()
     private val jobs = ConcurrentHashMap<String, Job>()
     private val activeRequests = ConcurrentHashMap<String, PendingEntry>()
+    private val activeConnections = ConcurrentHashMap<String, HttpURLConnection>()
     private val pausedEntries = ConcurrentHashMap<String, PendingEntry>()
     private val networkRetryEntries = ConcurrentHashMap<String, PendingEntry>()
     private val watcherStarted = AtomicBoolean(false)
@@ -402,11 +405,20 @@ actual object QuranDownloads {
 
     private fun pauseKey(key: String) {
         val entry = activeRequests[key] ?: networkRetryEntries.remove(key) ?: return
-        jobs.remove(key)?.cancel()
-        inFlight.remove(key)
-        _progress.value = _progress.value - key
         pausedEntries[key] = entry
         _pausedKeys.value = _pausedKeys.value + key
+        _progress.value = _progress.value - key
+        jobs.remove(key)?.cancel()
+        activeConnections.remove(key)?.let { conn ->
+            scope.launch(Dispatchers.IO) {
+                try {
+                    conn.disconnect()
+                } catch (_: Exception) {
+                }
+            }
+        }
+        inFlight.remove(key)
+        activeRequests.remove(key)
         persistPendingRetries()
         refreshNotification(force = true)
     }
@@ -445,6 +457,14 @@ actual object QuranDownloads {
         allKeys.forEach { key ->
             val entry = activeRequests.remove(key) ?: pausedEntries.remove(key) ?: networkRetryEntries.remove(key)
             jobs.remove(key)?.cancel()
+            activeConnections.remove(key)?.let { conn ->
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        conn.disconnect()
+                    } catch (_: Exception) {
+                    }
+                }
+            }
             inFlight.remove(key)
             _progress.value = _progress.value - key
             _failedKeys.value = _failedKeys.value - key
@@ -516,6 +536,7 @@ actual object QuranDownloads {
         _progress.value = _progress.value + (key to -1f)
         refreshNotification(force = true)
         val job = scope.launch(Dispatchers.IO) {
+            val thisJob = coroutineContext[Job]
             val partFile = File(finalFile.parent, "${finalFile.name}.part")
             var success = false
             var keepPartForResume = false
@@ -528,6 +549,7 @@ actual object QuranDownloads {
                         break
                     } catch (io: IOException) {
                         ensureActive()
+                        if (key in _pausedKeys.value) throw CancellationException("Paused")
                         if (attempt == 0 && NetworkMonitor.isOnline.value) {
                             attempt++
                             delay(2_000L)
@@ -538,6 +560,7 @@ actual object QuranDownloads {
                     }
                 }
                 ensureActive()
+                if (key in _pausedKeys.value) throw CancellationException("Paused")
                 if (!partFile.renameTo(finalFile)) {
                     partFile.copyTo(finalFile, overwrite = true)
                     partFile.delete()
@@ -554,11 +577,12 @@ actual object QuranDownloads {
                     refreshNotification()
                 }
             } catch (e: Exception) {
-                if (e is CancellationException) {
+                if (e is CancellationException || key in _pausedKeys.value) {
                     // Explicit pause keeps .part intact; delete/cancelAll cleans it up separately.
                     keepPartForResume = key in _pausedKeys.value
                     _progress.value = _progress.value - key
-                    throw e
+                    if (e is CancellationException) throw e
+                    return@launch
                 }
                 Log.e(TAG, "Download interrupted ($key) — queuing for auto-resume", e)
                 keepPartForResume = true
@@ -574,19 +598,23 @@ actual object QuranDownloads {
                     } catch (_: Exception) {
                     }
                 }
-                activeRequests.remove(key)
-                inFlight.remove(key)
-                jobs.remove(key)
+                if (jobs[key] === thisJob) {
+                    activeRequests.remove(key)
+                    inFlight.remove(key)
+                    jobs.remove(key, thisJob)
+                }
             }
         }
         jobs[key] = job
         job.invokeOnCompletion { jobs.remove(key, job) }
     }
 
-    private fun downloadWithRangeResume(key: String, url: String, partFile: File) {
+    private suspend fun downloadWithRangeResume(key: String, url: String, partFile: File) {
         val existingBytes = if (partFile.exists() && partFile.length() > 0L) partFile.length() else 0L
         var connection: HttpURLConnection? = null
         try {
+            currentCoroutineContext().ensureActive()
+            if (key in _pausedKeys.value) throw CancellationException("Paused")
             connection = (URL(url).openConnection() as HttpURLConnection).apply {
                 instanceFollowRedirects = true
                 connectTimeout = 15_000
@@ -597,6 +625,7 @@ actual object QuranDownloads {
                 }
                 connect()
             }
+            activeConnections[key] = connection
             val code = connection.responseCode
             if (code == 416 && existingBytes > 0L) {
                 // Range not satisfiable (stale .part): restart cleanly from 0.
@@ -618,9 +647,12 @@ actual object QuranDownloads {
                 FileOutputStream(partFile, append).use { output ->
                     val buffer = ByteArray(8192)
                     while (true) {
-                        if (Thread.currentThread().isInterrupted) throw CancellationException("Interrupted")
+                        currentCoroutineContext().ensureActive()
+                        if (key in _pausedKeys.value) throw CancellationException("Paused")
                         val n = input.read(buffer)
                         if (n < 0) break
+                        currentCoroutineContext().ensureActive()
+                        if (key in _pausedKeys.value) throw CancellationException("Paused")
                         output.write(buffer, 0, n)
                         bytesRead += n
                         val p = if (total > 0L) {
@@ -628,12 +660,15 @@ actual object QuranDownloads {
                         } else {
                             -1f
                         }
-                        _progress.value = _progress.value + (key to p)
-                        refreshNotification()
+                        if (currentCoroutineContext().isActive && key !in _pausedKeys.value) {
+                            _progress.value = _progress.value + (key to p)
+                            refreshNotification()
+                        }
                     }
                 }
             }
         } finally {
+            activeConnections.remove(key, connection)
             try {
                 connection?.disconnect()
             } catch (_: Exception) {
