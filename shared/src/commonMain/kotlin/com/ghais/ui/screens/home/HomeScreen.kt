@@ -224,12 +224,17 @@ object HomeScreen : Tab {
                 }
 
                 // -------------------------------------------------------------
-                // Qari you follow — grayscale wells + chromium ring
+                // Qari you follow (or Featured Qaris when none followed)
                 // -------------------------------------------------------------
                 item {
+                    val followedSlugs by FollowStore.followedSlugs.collectAsState()
                     HomeSectionHeader(
-                        title = "Qari you follow",
-                        onSeeAll = { rootNavigator?.push(FollowedRecitersScreen) }
+                        title = if (followedSlugs.isEmpty()) "Featured Qaris" else "Qari you follow",
+                        onSeeAll = if (followedSlugs.isEmpty()) {
+                            { tabNavigator.current = RecitersScreen() }
+                        } else {
+                            { rootNavigator?.push(FollowedRecitersScreen) }
+                        }
                     )
                     HomeFollowedRow(
                         onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) },
@@ -283,14 +288,6 @@ object HomeScreen : Tab {
                         onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) },
                         onOpenPlayer = { rootNavigator?.push(NowPlayingScreen()) }
                     )
-                }
-
-                // -------------------------------------------------------------
-                // Your stats — monochrome cells, ghost hairline separators
-                // -------------------------------------------------------------
-                item {
-                    HomeSectionHeader(title = "Your stats", onSeeAll = null)
-                    HomeStatsCard()
                 }
             }
         }

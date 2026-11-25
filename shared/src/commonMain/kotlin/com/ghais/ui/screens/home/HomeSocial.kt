@@ -39,12 +39,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.data.repository.FollowStore
+import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.ReciterCloudCache
 import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.prettifySlug
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.screens.reciters.photoForSlug
 import com.ghais.ui.screens.reciters.rememberCloudPhoto
 import com.ghais.ui.theme.GhaisNoir
 import kotlin.time.Clock
@@ -81,30 +83,29 @@ fun HomeFollowedRow(
         }.distinctBy { it.first }
     }
 
-    if (resolved.isEmpty()) {
-        NoirCard(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "No Qari followed yet",
-                    color = GhaisNoir.TextPrimary,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Follow a Qari from their profile and they will appear here.",
-                    color = GhaisNoir.TextSecondary,
-                    fontSize = 12.sp
-                )
-            }
+    val displayItems = remember(resolved, cloudCatalog) {
+        if (resolved.isNotEmpty()) {
+            resolved
+        } else {
+            QuranDataRepository.getBrowseReciters()
+                .sortedBy { if (photoForSlug(it.slug) != null) 0 else 1 }
+                .take(6)
+                .map { reciter ->
+                    Triple(
+                        reciter.slug,
+                        reciter.nameEn,
+                        photoForSlug(reciter.slug).orEmpty()
+                    )
+                }
         }
-        return
     }
+
+    if (displayItems.isEmpty()) return
 
     // Stories rail: circular portraits (no ring) + a discover tile that
     // jumps to the Reciters tab. Tapping a story opens the profile.
     LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        items(resolved, key = { it.first }) { (slug, name, photoUrl) ->
+        items(displayItems, key = { it.first }) { (slug, name, photoUrl) ->
             // Cloud portrait first: the admin panel owns reciter photos, and
             // followed qaris outside the small bundled roster have no static
             // image — without this they rendered as bare monograms.
