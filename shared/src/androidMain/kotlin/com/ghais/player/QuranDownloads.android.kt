@@ -6,12 +6,12 @@ import android.net.NetworkCapabilities
 import android.util.Log
 import com.ghais.data.sync.NetworkMonitor
 import com.russhwolf.settings.Settings
+import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -27,10 +27,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import okhttp3.Call
+import okhttp3.ConnectionPool
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 /**
  * Android actual: downloads per-surah mp3s (plus per-ayah hifz mp3s) with
@@ -133,10 +139,28 @@ actual object QuranDownloads {
     private val inFlight = ConcurrentHashMap.newKeySet<String>()
     private val jobs = ConcurrentHashMap<String, Job>()
     private val activeRequests = ConcurrentHashMap<String, PendingEntry>()
-    private val activeConnections = ConcurrentHashMap<String, HttpURLConnection>()
+    private val activeCalls = ConcurrentHashMap<String, Call>()
     private val pausedEntries = ConcurrentHashMap<String, PendingEntry>()
     private val networkRetryEntries = ConcurrentHashMap<String, PendingEntry>()
     private val watcherStarted = AtomicBoolean(false)
+
+    // Bounded parallelism (4 concurrent streams) prevents choking weak cellular
+    // radios during batch downloads while saturating fast connections.
+    private val downloadSemaphore = Semaphore(4)
+
+    // Shared OkHttpClient with connection pooling + HTTP/2 multiplexing so
+    // consecutive surah/ayah files reuse existing TCP+TLS sockets (0ms handshake).
+    private val httpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectionPool(ConnectionPool(8, 5, TimeUnit.MINUTES))
+            .retryOnConnectionFailure(true)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .connectTimeout(20, TimeUnit.SECONDS)
+            .readTimeout(45, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
 
     /**
      * Must be called once from Android (e.g. MainActivity.onCreate) so the
@@ -244,9 +268,9 @@ actual object QuranDownloads {
     }
 
     private fun isWifiOnly(): Boolean = try {
-        settings.getBoolean(KEY_WIFI_ONLY, true)
+        settings.getBoolean(KEY_WIFI_ONLY, false)
     } catch (_: Exception) {
-        true
+        false
     }
 
     // Best-effort Wi-Fi transport probe (NetworkMonitor only tracks
@@ -409,14 +433,7 @@ actual object QuranDownloads {
         _pausedKeys.value = _pausedKeys.value + key
         _progress.value = _progress.value - key
         jobs.remove(key)?.cancel()
-        activeConnections.remove(key)?.let { conn ->
-            scope.launch(Dispatchers.IO) {
-                try {
-                    conn.disconnect()
-                } catch (_: Exception) {
-                }
-            }
-        }
+        activeCalls.remove(key)?.cancel()
         inFlight.remove(key)
         activeRequests.remove(key)
         persistPendingRetries()
@@ -457,14 +474,7 @@ actual object QuranDownloads {
         allKeys.forEach { key ->
             val entry = activeRequests.remove(key) ?: pausedEntries.remove(key) ?: networkRetryEntries.remove(key)
             jobs.remove(key)?.cancel()
-            activeConnections.remove(key)?.let { conn ->
-                scope.launch(Dispatchers.IO) {
-                    try {
-                        conn.disconnect()
-                    } catch (_: Exception) {
-                    }
-                }
-            }
+            activeCalls.remove(key)?.cancel()
             inFlight.remove(key)
             _progress.value = _progress.value - key
             _failedKeys.value = _failedKeys.value - key
@@ -541,22 +551,29 @@ actual object QuranDownloads {
             var success = false
             var keepPartForResume = false
             try {
-                finalFile.parentFile?.mkdirs()
-                var attempt = 0
-                while (true) {
-                    try {
-                        downloadWithRangeResume(key, url, partFile)
-                        break
-                    } catch (io: IOException) {
-                        ensureActive()
-                        if (key in _pausedKeys.value) throw CancellationException("Paused")
-                        if (attempt == 0 && NetworkMonitor.isOnline.value) {
-                            attempt++
-                            delay(2_000L)
+                downloadSemaphore.withPermit {
+                    ensureActive()
+                    if (key in _pausedKeys.value) throw CancellationException("Paused")
+                    finalFile.parentFile?.mkdirs()
+                    var attempt = 0
+                    val maxTransientRetries = 3
+                    while (true) {
+                        try {
+                            downloadWithRangeResume(key, url, partFile)
+                            break
+                        } catch (io: IOException) {
                             ensureActive()
-                            continue
+                            if (key in _pausedKeys.value) throw CancellationException("Paused")
+                            if (attempt < maxTransientRetries) {
+                                attempt++
+                                val backoffMs = 1_000L * (1 shl (attempt - 1)) // 1s, 2s, 4s
+                                delay(backoffMs)
+                                ensureActive()
+                                if (key in _pausedKeys.value) throw CancellationException("Paused")
+                                continue
+                            }
+                            throw io
                         }
-                        throw io
                     }
                 }
                 ensureActive()
@@ -611,68 +628,71 @@ actual object QuranDownloads {
 
     private suspend fun downloadWithRangeResume(key: String, url: String, partFile: File) {
         val existingBytes = if (partFile.exists() && partFile.length() > 0L) partFile.length() else 0L
-        var connection: HttpURLConnection? = null
+        currentCoroutineContext().ensureActive()
+        if (key in _pausedKeys.value) throw CancellationException("Paused")
+
+        val requestBuilder = Request.Builder().url(url).get()
+        if (existingBytes > 0L) {
+            requestBuilder.header("Range", "bytes=$existingBytes-")
+        }
+        val call = httpClient.newCall(requestBuilder.build())
+        activeCalls[key] = call
         try {
-            currentCoroutineContext().ensureActive()
-            if (key in _pausedKeys.value) throw CancellationException("Paused")
-            connection = (URL(url).openConnection() as HttpURLConnection).apply {
-                instanceFollowRedirects = true
-                connectTimeout = 15_000
-                readTimeout = 30_000
-                requestMethod = "GET"
-                if (existingBytes > 0L) {
-                    setRequestProperty("Range", "bytes=$existingBytes-")
+            call.execute().use { response ->
+                val code = response.code
+                if (code == 416 && existingBytes > 0L) {
+                    partFile.delete()
+                    throw IOException("Range 416 reset for $key")
                 }
-                connect()
-            }
-            activeConnections[key] = connection
-            val code = connection.responseCode
-            if (code == 416 && existingBytes > 0L) {
-                // Range not satisfiable (stale .part): restart cleanly from 0.
-                partFile.delete()
-                throw IOException("Range 416 reset for $key")
-            }
-            if (code !in 200..299) throw IOException("HTTP $code for $url")
+                if (!response.isSuccessful) throw IOException("HTTP $code for $url")
 
-            val append = code == 206 && existingBytes > 0L
-            val contentLen = connection.contentLengthLong
-            val total = if (contentLen > 0L) {
-                if (append) existingBytes + contentLen else contentLen
-            } else {
-                -1L
-            }
-            var bytesRead = if (append) existingBytes else 0L
+                val body = response.body ?: throw IOException("Empty body for $url")
+                val append = code == 206 && existingBytes > 0L
+                val contentLen = body.contentLength()
+                val total = if (contentLen > 0L) {
+                    if (append) existingBytes + contentLen else contentLen
+                } else {
+                    -1L
+                }
+                var bytesRead = if (append) existingBytes else 0L
+                var lastEmitMs = 0L
+                var lastPct = -1
 
-            connection.inputStream.use { input ->
-                FileOutputStream(partFile, append).use { output ->
-                    val buffer = ByteArray(8192)
-                    while (true) {
-                        currentCoroutineContext().ensureActive()
-                        if (key in _pausedKeys.value) throw CancellationException("Paused")
-                        val n = input.read(buffer)
-                        if (n < 0) break
-                        currentCoroutineContext().ensureActive()
-                        if (key in _pausedKeys.value) throw CancellationException("Paused")
-                        output.write(buffer, 0, n)
-                        bytesRead += n
-                        val p = if (total > 0L) {
-                            (bytesRead.toFloat() / total.toFloat()).coerceIn(0f, 1f)
-                        } else {
-                            -1f
+                body.byteStream().use { input ->
+                    BufferedOutputStream(FileOutputStream(partFile, append), 65_536).use { output ->
+                        val buffer = ByteArray(65_536)
+                        while (true) {
+                            currentCoroutineContext().ensureActive()
+                            if (key in _pausedKeys.value) throw CancellationException("Paused")
+                            val n = input.read(buffer)
+                            if (n < 0) break
+                            currentCoroutineContext().ensureActive()
+                            if (key in _pausedKeys.value) throw CancellationException("Paused")
+                            output.write(buffer, 0, n)
+                            bytesRead += n
+                            val p = if (total > 0L) {
+                                (bytesRead.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+                            } else {
+                                -1f
+                            }
+                            val pct = if (p >= 0f) (p * 100f).toInt() else -1
+                            val now = System.currentTimeMillis()
+                            if (currentCoroutineContext().isActive &&
+                                key !in _pausedKeys.value &&
+                                (pct != lastPct || now - lastEmitMs >= 100L)
+                            ) {
+                                lastPct = pct
+                                lastEmitMs = now
+                                _progress.value = _progress.value + (key to p)
+                                refreshNotification()
+                            }
                         }
-                        if (currentCoroutineContext().isActive && key !in _pausedKeys.value) {
-                            _progress.value = _progress.value + (key to p)
-                            refreshNotification()
-                        }
+                        output.flush()
                     }
                 }
             }
         } finally {
-            activeConnections.remove(key, connection)
-            try {
-                connection?.disconnect()
-            } catch (_: Exception) {
-            }
+            activeCalls.remove(key, call)
         }
     }
 
