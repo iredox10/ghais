@@ -23,12 +23,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
@@ -165,6 +167,31 @@ class HifzListeningPlannerScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        item(key = "planner_overview") {
+                            val completedToday = plans.count { it.isDayCompleted(epochDay) }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(GhaisShapes.row)
+                                    .background(GhaisNoir.Fill1)
+                                    .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.row)
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${plans.size} ${if (plans.size == 1) "Active Plan" else "Active Plans"}",
+                                    color = GhaisNoir.TextPrimary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "$completedToday / ${plans.size} completed today",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
                         items(plans, key = { it.id }) { plan ->
                             ListeningPlanCard(
                                 plan = plan,
@@ -187,6 +214,7 @@ class HifzListeningPlannerScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ListeningPlanCard(
     plan: HifzListeningPlan,
@@ -201,56 +229,79 @@ private fun ListeningPlanCard(
     val dayNumber = plan.currentDayNumber(epochDay)
     val progress = (doneToday.toFloat() / goalToday.toFloat()).coerceIn(0f, 1f)
 
-    val reciterNames = remember(plan.reciterSlugs) {
+    val reciterList = remember(plan.reciterSlugs) {
         plan.reciterSlugs.mapNotNull { slug ->
             QuranDataRepository.getReciterBySlug(slug).nameEn.takeIf { it.isNotBlank() }
                 ?: EveryAyahReciters.ALL.firstOrNull { it.slug == slug }?.nameEn
-        }.joinToString(", ").ifBlank { "Selected Qari" }
+        }.ifEmpty { listOf("Selected Qari") }
     }
-    val surahNames = remember(plan.surahIds) {
+    val surahList = remember(plan.surahIds) {
         plan.surahIds.mapNotNull { id ->
             QuranDataRepository.getSurahById(id)?.nameEn
-        }.joinToString(", ").ifBlank { "Selected Surahs" }
+        }.ifEmpty { listOf("Selected Surahs") }
     }
-    val reminderLabel = remember(plan.reminderEnabled, plan.reminderHour, plan.reminderMinute, dayCompleted) {
-        if (!plan.reminderEnabled) "Reminder off"
-        else if (dayCompleted) "Today's goal complete ✓"
+    val cardTitle = remember(plan.title, surahList) {
+        plan.title.trim().takeIf { it.isNotEmpty() } ?: run {
+            val first = surahList.firstOrNull() ?: "Quran"
+            if (surahList.size > 1) "$first +${surahList.size - 1}" else first
+        }
+    }
+    val reminderValue = remember(plan.reminderEnabled, plan.reminderHour, plan.reminderMinute) {
+        if (!plan.reminderEnabled) "Off"
         else {
             val hh = plan.reminderHour.toString().padStart(2, '0')
             val mm = plan.reminderMinute.toString().padStart(2, '0')
-            "Reminder at $hh:$mm if incomplete"
+            "$hh:$mm"
         }
     }
 
     NoirCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
+            // Top badges + actions
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = plan.displayTitle { id ->
-                            QuranDataRepository.getSurahById(id)?.nameEn ?: "Surah $id"
-                        },
-                        color = GhaisNoir.TextPrimary,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = "Day $dayNumber of ${plan.durationDays} • ${plan.completedDaysCount()} days completed",
-                        color = GhaisNoir.TextTertiary,
-                        fontSize = 12.sp
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                            .padding(horizontal = 9.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "DAY $dayNumber / ${plan.durationDays}",
+                            color = GhaisNoir.TextSecondary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    if (dayCompleted) {
+                        Box(
+                            modifier = Modifier
+                                .clip(GhaisShapes.pill)
+                                .background(GhaisNoir.Fill4)
+                                .border(1.dp, GhaisNoir.SpecularTop, GhaisShapes.pill)
+                                .padding(horizontal = 9.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "✓ DONE TODAY",
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
                             .clip(CircleShape)
                             .background(GhaisNoir.Fill2)
                             .noirClickable(onEdit),
@@ -260,12 +311,12 @@ private fun ListeningPlanCard(
                             imageVector = Icons.Filled.Edit,
                             contentDescription = "Edit plan",
                             tint = GhaisNoir.TextSecondary,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(30.dp)
                             .clip(CircleShape)
                             .background(GhaisNoir.Fill2)
                             .noirClickable(onDelete),
@@ -275,7 +326,7 @@ private fun ListeningPlanCard(
                             imageVector = Icons.Filled.Delete,
                             contentDescription = "Delete plan",
                             tint = GhaisNoir.TextTertiary,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                 }
@@ -283,64 +334,188 @@ private fun ListeningPlanCard(
 
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Qaris: $reciterNames",
-                color = GhaisNoir.TextSecondary,
-                fontSize = 12.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = "Surahs: $surahNames",
-                color = GhaisNoir.TextSecondary,
-                fontSize = 12.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = "${plan.timesPerSession}× repeat per session • $doneToday / $goalToday sessions today",
+                text = cardTitle,
                 color = GhaisNoir.TextPrimary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(6.dp))
-            NoirSegmentedProgress(
-                progress = progress,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(6.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Notifications,
-                    contentDescription = null,
-                    tint = if (dayCompleted) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                    modifier = Modifier.size(14.dp)
-                )
-                Text(
-                    text = reminderLabel,
-                    color = if (dayCompleted) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                    fontSize = 11.sp
-                )
-            }
 
-            Spacer(Modifier.height(12.dp))
+            // 3-stat bento strip
+            Spacer(Modifier.height(10.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ChromePillButton(
-                    text = if (dayCompleted) "Listen Again" else "Listen Session",
-                    leadingIcon = Icons.Filled.PlayArrow,
-                    onClick = onListen,
+                PlanStatTile(
+                    label = "REPEAT",
+                    value = "${plan.timesPerSession}×",
+                    modifier = Modifier.weight(1f)
+                )
+                PlanStatTile(
+                    label = "TODAY",
+                    value = "$doneToday / $goalToday",
+                    modifier = Modifier.weight(1f)
+                )
+                PlanStatTile(
+                    label = "REMINDER",
+                    value = reminderValue,
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            // Qaris chips
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = null,
+                    tint = GhaisNoir.TextTertiary,
+                    modifier = Modifier.size(14.dp)
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    val visibleReciters = reciterList.take(2)
+                    visibleReciters.forEach { name ->
+                        PlanMetaChip(text = name)
+                    }
+                    if (reciterList.size > visibleReciters.size) {
+                        PlanMetaChip(text = "+${reciterList.size - visibleReciters.size}")
+                    }
+                }
+            }
+
+            // Surahs chips
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                    contentDescription = null,
+                    tint = GhaisNoir.TextTertiary,
+                    modifier = Modifier.size(14.dp)
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    val visibleSurahs = surahList.take(4)
+                    visibleSurahs.forEach { name ->
+                        PlanMetaChip(text = name)
+                    }
+                    if (surahList.size > visibleSurahs.size) {
+                        PlanMetaChip(text = "+${surahList.size - visibleSurahs.size} more")
+                    }
+                }
+            }
+
+            // Progress + compact Listen action
+            Spacer(Modifier.height(12.dp))
+            NoirSegmentedProgress(
+                progress = progress,
+                trackHeight = 5.dp,
+                lavender = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${plan.completedDaysCount()} of ${plan.durationDays} days completed",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 11.sp
+                )
+                Row(
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.chromeFill())
+                        .border(1.dp, Color.White.copy(alpha = 0.35f), GhaisShapes.pill)
+                        .noirClickable(onListen)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = null,
+                        tint = GhaisNoir.OnChrome,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = if (dayCompleted) "Listen Again" else "Listen",
+                        color = GhaisNoir.OnChrome,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun PlanStatTile(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(GhaisShapes.row)
+            .background(GhaisNoir.insetFill())
+            .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.row)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(
+            text = label,
+            color = GhaisNoir.TextTertiary,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = value,
+            color = GhaisNoir.TextPrimary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun PlanMetaChip(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(GhaisShapes.pill)
+            .background(GhaisNoir.Fill2)
+            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+            .padding(horizontal = 9.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = text,
+            color = GhaisNoir.TextSecondary,
+            fontSize = 11.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
