@@ -17,14 +17,26 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.window.Dialog
+import com.ghais.ui.components.noir.GhostPillButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -91,13 +103,47 @@ fun AuthScreenContent(
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
     var isSignup by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var infoMessage by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
     var googleLoading by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
+
+    fun submitEmailAuth() {
+        if (loading || googleLoading) return
+        focusManager.clearFocus()
+        errorMessage = null
+        infoMessage = null
+        val wasSignup = isSignup
+        loading = true
+        scope.launch {
+            val result = if (wasSignup) {
+                AuthRepository.signUp(
+                    email = email.trim(),
+                    name = name.trim(),
+                    password = password,
+                )
+            } else {
+                AuthRepository.signIn(
+                    email = email.trim(),
+                    password = password,
+                )
+            }
+            loading = false
+            result
+                .onSuccess { onAuthenticated(wasSignup) }
+                .onFailure {
+                    errorMessage = it.message?.takeIf { msg -> msg.isNotBlank() }
+                        ?: "Authentication failed. Please try again."
+                }
+        }
+    }
 
     val isOnline by NetworkMonitor.isOnline.collectAsState()
 
@@ -245,6 +291,10 @@ fun AuthScreenContent(
                     onValueChange = { name = it },
                     label = { Text("Name") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                    ),
                     shape = fieldShape,
                     colors = fieldColors,
                     modifier = Modifier.fillMaxWidth(),
@@ -256,6 +306,13 @@ fun AuthScreenContent(
                 onValueChange = { email = it },
                 label = { Text("Email") },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next,
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
                 shape = fieldShape,
                 colors = fieldColors,
                 modifier = Modifier.fillMaxWidth(),
@@ -266,11 +323,69 @@ fun AuthScreenContent(
                 onValueChange = { password = it },
                 label = { Text("Password") },
                 singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (passwordVisible) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) {
+                                Icons.Filled.VisibilityOff
+                            } else {
+                                Icons.Filled.Visibility
+                            },
+                            contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                            tint = GhaisNoir.TextTertiary,
+                        )
+                    }
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = { submitEmailAuth() }
+                ),
                 shape = fieldShape,
                 colors = fieldColors,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            if (!isSignup) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    Text(
+                        text = "Forgot password?",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clip(GhaisShapes.pill)
+                            .noirClickable {
+                                errorMessage = null
+                                showResetDialog = true
+                            }
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                    )
+                }
+            }
+
+            if (infoMessage != null) {
+                Spacer(Modifier.height(10.dp))
+                NoirInsetField(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = infoMessage.orEmpty(),
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
 
             if (errorMessage != null) {
                 Spacer(Modifier.height(12.dp))
@@ -329,36 +444,20 @@ fun AuthScreenContent(
             } else {
                 ChromePillButton(
                     text = if (isSignup) "Create account" else "Log in",
-                    onClick = {
-                        if (loading || googleLoading) return@ChromePillButton
-                        errorMessage = null
-                        val wasSignup = isSignup
-                        loading = true
-                        scope.launch {
-                            val result = if (wasSignup) {
-                                AuthRepository.signUp(
-                                    email = email.trim(),
-                                    name = name.trim(),
-                                    password = password,
-                                )
-                            } else {
-                                AuthRepository.signIn(
-                                    email = email.trim(),
-                                    password = password,
-                                )
-                            }
-                            loading = false
-                            result
-                                .onSuccess { onAuthenticated(wasSignup) }
-                                .onFailure {
-                                    errorMessage = it.message?.takeIf { msg -> msg.isNotBlank() }
-                                        ?: "Authentication failed. Please try again."
-                                }
-                        }
-                    },
+                    onClick = ::submitEmailAuth,
                     enabled = !loading && !googleLoading,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                if (isSignup) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = "By creating an account, you agree to our Terms & Privacy Policy.",
+                        color = GhaisNoir.TextTertiary,
+                        fontSize = 11.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -417,20 +516,14 @@ fun AuthScreenContent(
                         .noirClickable(onClick = {
                             if (loading || googleLoading) return@noirClickable
                             errorMessage = null
-                            // Snapshot BEFORE the round-trip: the successful
-                            // sign-in overwrites cachedSession with the account
-                            // that just logged in, which would erase the only
-                            // evidence that this device knew someone else.
-                            val userIdCachedBefore = AuthRepository.cachedSession.value?.userId
+                            infoMessage = null
                             googleLoading = true
                             scope.launch {
                                 val result = AuthRepository.signInWithGoogle()
                                 googleLoading = false
                                 result
-                                    .onSuccess {
-                                        onAuthenticated(
-                                            resolveGoogleIsNewAccount(userIdCachedBefore),
-                                        )
+                                    .onSuccess { isNewUser ->
+                                        onAuthenticated(isNewUser)
                                     }
                                     .onFailure {
                                         errorMessage = it.message?.takeIf { msg -> msg.isNotBlank() }
@@ -483,42 +576,160 @@ fun AuthScreenContent(
             Spacer(Modifier.height(12.dp))
         }
     }
+
+    if (showResetDialog) {
+        PasswordResetDialog(
+            initialEmail = email,
+            onDismiss = { showResetDialog = false },
+            onResetSuccess = { msg ->
+                showResetDialog = false
+                infoMessage = msg
+            },
+        )
+    }
 }
 
-/**
- * Decides whether the Google account that just signed in is brand new.
- *
- * ## Signal
- * [AuthRepository.cachedSession] — the last userId this device persisted —
- * sampled *before* the OAuth round-trip. Purely local: no network, so it can
- * never hang the sign-in path. `AuthRepository` exposes no account
- * `createdAt` and no database probe, so a device-local comparison is the only
- * newness signal reachable from this file.
- *
- * ## Outcome table
- * | Pre-sign-in cached userId | Signed-in userId | Reported |
- * |---|---|---|
- * | null (fresh install / after sign-out) | any | `true` — nothing here has ever been established |
- * | `A` | `B` | `true` — account switch to an account this device never held |
- * | `A` | `A` | `false` — returning login on this device |
- * | `A` | null (refresh failed) | `false` — mirror the pre-sign-in state, do not claim newness we cannot prove |
- * | null | null (refresh failed) | `true` — device held no prior account; fail open |
- *
- * ## Failure direction
- * Fails OPEN, deliberately: any case where newness cannot be *disproven*
- * reports `true`, so a new Google user always reaches onboarding instead of
- * landing on Home with a `null` goal. The cost of failing open is that a
- * returning user who signs in on a *different* device than the one they last
- * used sees onboarding once more — cosmetic and self-correcting (completing it
- * sets the per-user done flag), whereas failing closed would permanently
- * strand a new user with no goal.
- */
-private fun resolveGoogleIsNewAccount(userIdCachedBefore: String?): Boolean {
-    val userIdNow = AuthRepository.session.value?.userId
-    return when {
-        userIdNow == null -> userIdCachedBefore == null
-        userIdCachedBefore == null -> true
-        else -> userIdNow != userIdCachedBefore
+@Composable
+private fun PasswordResetDialog(
+    initialEmail: String,
+    onDismiss: () -> Unit,
+    onResetSuccess: (String) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    var resetEmail by remember { mutableStateOf(initialEmail) }
+    var code by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var codeSent by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var dialogError by remember { mutableStateOf<String?>(null) }
+
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = GhaisNoir.TextPrimary,
+        unfocusedTextColor = GhaisNoir.TextPrimary,
+        focusedLabelColor = GhaisNoir.TextTertiary,
+        unfocusedLabelColor = GhaisNoir.TextDisabled,
+        focusedBorderColor = Color.White,
+        unfocusedBorderColor = GhaisNoir.BorderCard,
+        cursorColor = Color.White,
+        focusedContainerColor = Color.Transparent,
+        unfocusedContainerColor = Color.Transparent,
+    )
+    val fieldShape = RoundedCornerShape(20.dp)
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .background(GhaisNoir.CanvasTop)
+                .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(28.dp))
+                .padding(20.dp),
+        ) {
+            Text(
+                text = if (codeSent) "Enter reset code" else "Reset password",
+                color = GhaisNoir.TextPrimary,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = if (codeSent) {
+                    "Enter the 6-digit code sent to $resetEmail and choose a new password."
+                } else {
+                    "We'll send a 6-digit reset code to your email."
+                },
+                color = GhaisNoir.TextTertiary,
+                fontSize = 13.sp,
+            )
+            Spacer(Modifier.height(14.dp))
+
+            OutlinedTextField(
+                value = resetEmail,
+                onValueChange = { resetEmail = it },
+                label = { Text("Email") },
+                singleLine = true,
+                enabled = !codeSent && !busy,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                shape = fieldShape,
+                colors = fieldColors,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            if (codeSent) {
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = code,
+                    onValueChange = { code = it.filter(Char::isDigit).take(6) },
+                    label = { Text("6-digit code") },
+                    singleLine = true,
+                    enabled = !busy,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = fieldShape,
+                    colors = fieldColors,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    label = { Text("New password (min 8 chars)") },
+                    singleLine = true,
+                    enabled = !busy,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    shape = fieldShape,
+                    colors = fieldColors,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            if (dialogError != null) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = dialogError.orEmpty(),
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 12.sp,
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                GhostPillButton(
+                    text = "Cancel",
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                )
+                ChromePillButton(
+                    text = when {
+                        busy -> "Please wait"
+                        codeSent -> "Update"
+                        else -> "Send code"
+                    },
+                    enabled = !busy,
+                    onClick = {
+                        if (busy) return@ChromePillButton
+                        dialogError = null
+                        busy = true
+                        scope.launch {
+                            if (!codeSent) {
+                                AuthRepository.requestPasswordReset(resetEmail)
+                                    .onSuccess { codeSent = true }
+                                    .onFailure { dialogError = it.message }
+                            } else {
+                                AuthRepository.confirmPasswordReset(resetEmail, code, newPassword)
+                                    .onSuccess { msg -> onResetSuccess(msg) }
+                                    .onFailure { dialogError = it.message }
+                            }
+                            busy = false
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
     }
 }
 
