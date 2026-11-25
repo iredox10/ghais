@@ -1,10 +1,13 @@
 package com.ghais.player
 
+import com.ghais.data.repository.HifzMasteryStore
+import com.ghais.data.repository.MasteryStatus
 import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.PlaybackSettings as PlaybackPrefs
 import com.ghais.ui.screens.reciters.resolveReciterPhoto
 import com.ghais.data.seed.QuranData
+import com.ghais.domain.model.HifzLoopMode
 import com.ghais.domain.model.HifzRange
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.RepeatMode
@@ -61,7 +64,9 @@ internal fun buildHifzRange(
     endAyah: Int,
     targetLoops: Int = 1,
     repeatPerAyah: Int = 1,
-    pauseBetweenMs: Long = 0L
+    pauseBetweenMs: Long = 0L,
+    loopMode: HifzLoopMode = HifzLoopMode.FLAT,
+    pauseMultiplier: Float = 0f
 ): HifzRange = HifzRange(
     surahId = surahId,
     startAyah = minOf(startAyah, endAyah).coerceAtLeast(1),
@@ -69,7 +74,9 @@ internal fun buildHifzRange(
     targetLoops = targetLoops,
     currentLoop = 1,
     repeatPerAyah = clampRepeatPerAyah(repeatPerAyah),
-    pauseBetweenMs = clampPauseBetweenMs(pauseBetweenMs)
+    pauseBetweenMs = clampPauseBetweenMs(pauseBetweenMs),
+    loopMode = loopMode,
+    pauseMultiplier = pauseMultiplier.coerceAtLeast(0f)
 )
 
 /**
@@ -212,6 +219,18 @@ object AudioEngine {
     private val _hifzRange = MutableStateFlow<HifzRange?>(null)
     val hifzRange: StateFlow<HifzRange?> = _hifzRange.asStateFlow()
 
+    private val _hifzLoopMode = MutableStateFlow(HifzLoopMode.FLAT)
+    val hifzLoopMode: StateFlow<HifzLoopMode> = _hifzLoopMode.asStateFlow()
+
+    private val _hifzPauseMultiplier = MutableStateFlow(0f)
+    val hifzPauseMultiplier: StateFlow<Float> = _hifzPauseMultiplier.asStateFlow()
+
+    private var accumulationAnchorAyah: Int = 1
+    private var accumulationChainCursor: Int = 1
+    private var isAccumulationChainPhase: Boolean = false
+    private var needsBridgeSeek: Boolean = false
+    private var firstWordCutoffTriggered: Boolean = false
+
     private val _ayahRepeatRemaining = MutableStateFlow(0)
     /**
      * N-times ayah repeat counter: replays left for the current ayah.
@@ -253,6 +272,24 @@ object AudioEngine {
                 _playbackState.update { state ->
                     state.copy(currentTrackInfo = state.currentTrackInfo.copy(progressMs = safePos))
                 }
+                val activeRange = _hifzRange.value
+                val track = _currentTrack.value
+                if (_isPlaying.value &&
+                    _isAyahMode.value &&
+                    !firstWordCutoffTriggered &&
+                    activeRange != null &&
+                    activeRange.loopMode == HifzLoopMode.FIRST_WORD_PROMPT &&
+                    track != null &&
+                    track.surahId == activeRange.surahId &&
+                    duration > 0L
+                ) {
+                    val cutoffMs = firstWordPromptCutoffMs(duration)
+                    if (cutoffMs > 0L && safePos >= cutoffMs) {
+                        firstWordCutoffTriggered = true
+                        PlayerBridge.pause()
+                        handleAyahTrackEnd()
+                    }
+                }
                 } catch (_: Exception) {
                 }
             }
@@ -266,6 +303,15 @@ object AudioEngine {
                     _durationMs.value = merged
                     _playbackState.update { state ->
                         state.copy(currentTrackInfo = state.currentTrackInfo.copy(durationMs = merged))
+                    }
+                }
+                if (needsBridgeSeek && merged > 0L) {
+                    needsBridgeSeek = false
+                    val bridgePos = bridgeStartPositionMs(merged)
+                    if (bridgePos > 0L) {
+                        pendingSeekMs = bridgePos
+                        pendingSeekTries = 40
+                        seekToInternal(bridgePos)
                     }
                 }
                 } catch (_: Exception) {
@@ -676,9 +722,15 @@ object AudioEngine {
     private fun executeWithHifzPause(
         pauseBetweenMs: Long,
         lastAyahDurationMs: Long,
+        pauseMultiplier: Float = 0f,
         action: () -> Unit
     ) {
-        if (pauseBetweenMs <= 0L) {
+        val effectivePauseMs = computeAdaptivePauseMs(
+            ayahDurationMs = lastAyahDurationMs,
+            fixedPauseMs = clampPauseBetweenMs(pauseBetweenMs),
+            multiplier = pauseMultiplier
+        )
+        if (effectivePauseMs <= 0L) {
             executeWithRecitationGap(lastAyahDurationMs, action)
             return
         }
@@ -689,10 +741,10 @@ object AudioEngine {
         }
         pendingGapAction = action
         _isRecitationGapActive.value = true
-        _recitationGapCountdown.value = hifzPauseCountdownSeconds(pauseBetweenMs)
+        _recitationGapCountdown.value = hifzPauseCountdownSeconds(effectivePauseMs)
 
         gapJob = scope.launch(engineExceptionHandler) {
-            var remainingMs = clampPauseBetweenMs(pauseBetweenMs)
+            var remainingMs = effectivePauseMs.coerceIn(0L, HIFZ_ADAPTIVE_MAX_PAUSE_MS)
             while (remainingMs > 0L) {
                 _recitationGapCountdown.value = hifzPauseCountdownSeconds(remainingMs)
                 if (!_isPlaying.value) {
@@ -752,22 +804,70 @@ object AudioEngine {
         endAyah: Int,
         targetLoops: Int,
         repeatPerAyah: Int,
-        pauseBetweenMs: Long
+        pauseBetweenMs: Long,
+        loopMode: HifzLoopMode = _hifzLoopMode.value,
+        pauseMultiplier: Float = _hifzPauseMultiplier.value
     ) {
-        _hifzRange.value = buildHifzRange(
+        val normalized = buildHifzRange(
             surahId = surahId,
             startAyah = startAyah,
             endAyah = endAyah,
             targetLoops = targetLoops,
             repeatPerAyah = repeatPerAyah,
-            pauseBetweenMs = pauseBetweenMs
+            pauseBetweenMs = pauseBetweenMs,
+            loopMode = loopMode,
+            pauseMultiplier = pauseMultiplier
         )
+        _hifzLoopMode.value = normalized.loopMode
+        _hifzPauseMultiplier.value = normalized.pauseMultiplier
+        _hifzRange.value = normalized
+        resetAccumulationState(normalized.startAyah)
         _currentAyahRepetition.value = 1
         cancelGap()
     }
 
+    fun setHifzLoopMode(mode: HifzLoopMode) {
+        _hifzLoopMode.value = mode
+        _hifzRange.update { range ->
+            range?.also { resetAccumulationState(it.startAyah) }?.copy(loopMode = mode)
+        }
+        _currentAyahRepetition.value = 1
+    }
+
+    fun setHifzPauseMultiplier(multiplier: Float) {
+        val clamped = multiplier.coerceAtLeast(0f)
+        _hifzPauseMultiplier.value = clamped
+        _hifzRange.update { range ->
+            range?.copy(pauseMultiplier = clamped)
+        }
+    }
+
+    /**
+     * Flags a stumble on the current ayah: adds +2 immediate repetitions
+     * and marks the ayah as [MasteryStatus.REVIEW_NEEDED] in [HifzMasteryStore].
+     */
+    fun flagStumbleCurrentAyah() {
+        val current = _currentTrack.value ?: return
+        if (current.ayahNo <= 0) return
+        _ayahRepeatRemaining.update { it + 2 }
+        try {
+            HifzMasteryStore.setStatus(current.surahId, current.ayahNo, MasteryStatus.REVIEW_NEEDED)
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun resetAccumulationState(startAyah: Int = 1) {
+        val safeStart = startAyah.coerceAtLeast(1)
+        accumulationAnchorAyah = safeStart
+        accumulationChainCursor = safeStart
+        isAccumulationChainPhase = false
+    }
+
     fun clearHifzRange() {
         _hifzRange.value = null
+        resetAccumulationState(1)
+        needsBridgeSeek = false
+        firstWordCutoffTriggered = false
     }
 
     fun resetAyahRepetition() {
@@ -856,7 +956,27 @@ object AudioEngine {
         _stationLabel.value = queueManager.stationLabel
 
         val ayahTrack = buildAyahTrack(surahId, validAyahNo, reciter.slug, reciter.nameEn)
-        pendingSeekMs = startPositionMs.coerceAtLeast(0L)
+        firstWordCutoffTriggered = false
+        val activeRange = _hifzRange.value
+        val isBridgeActive = activeRange != null &&
+            activeRange.surahId == surahId &&
+            activeRange.loopMode == HifzLoopMode.BRIDGE
+        val effectiveStartMs = if (startPositionMs > 0L) {
+            needsBridgeSeek = false
+            startPositionMs
+        } else if (isBridgeActive) {
+            if (ayahTrack.durationMs > 0L) {
+                needsBridgeSeek = false
+                bridgeStartPositionMs(ayahTrack.durationMs)
+            } else {
+                needsBridgeSeek = true
+                0L
+            }
+        } else {
+            needsBridgeSeek = false
+            0L
+        }
+        pendingSeekMs = effectiveStartMs.coerceAtLeast(0L)
         pendingSeekTries = if (pendingSeekMs > 0L) 40 else 0
         startPlayback(ayahTrack)
         } catch (_: Exception) {
@@ -1421,17 +1541,61 @@ object AudioEngine {
         // The global ayah-repetition target below only applies outside ranges.
         val range = _hifzRange.value
         if (range != null && range.surahId == surahId) {
+            if (range.loopMode == HifzLoopMode.ACCUMULATION) {
+                when (
+                    val step = nextAccumulationStep(
+                        surahId = surahId,
+                        startAyah = range.startAyah,
+                        endAyah = range.endAyah,
+                        repeatPerAyah = range.repeatPerAyah,
+                        anchorAyah = accumulationAnchorAyah,
+                        chainCursor = accumulationChainCursor,
+                        isChainPhase = isAccumulationChainPhase,
+                        currentRepetition = _currentAyahRepetition.value,
+                        targetLoops = range.targetLoops,
+                        currentLoop = range.currentLoop
+                    )
+                ) {
+                    is AccumulationStep.PlayAyah -> {
+                        accumulationAnchorAyah = step.anchorAyah
+                        accumulationChainCursor = step.chainCursor
+                        isAccumulationChainPhase = step.isChainPhase
+                        _currentAyahRepetition.value = step.nextRepetition
+                        executeWithHifzPause(range.pauseBetweenMs, lastDurationMs, range.pauseMultiplier) {
+                            playAyahInternal(step.surahId, step.ayahNo, reciterSlug)
+                        }
+                        return
+                    }
+                    is AccumulationStep.RestartRange -> {
+                        _hifzRange.value = range.copy(currentLoop = step.nextLoop)
+                        resetAccumulationState(step.startAyah)
+                        _currentAyahRepetition.value = 1
+                        executeWithHifzPause(range.pauseBetweenMs, lastDurationMs, range.pauseMultiplier) {
+                            playAyahInternal(step.surahId, step.startAyah, reciterSlug)
+                        }
+                        return
+                    }
+                    is AccumulationStep.CompleteRange -> {
+                        executeWithHifzPause(range.pauseBetweenMs, lastDurationMs, range.pauseMultiplier) {
+                            SleepTimer.onQueueEnded()
+                            stopPlayback()
+                        }
+                        return
+                    }
+                }
+            }
+
             when (val step = decideHifzTransition(range, surahId, currentAyah, _currentAyahRepetition.value)) {
                 is HifzTransition.ReplayAyah -> {
                     _currentAyahRepetition.value = step.repetition
-                    executeWithHifzPause(range.pauseBetweenMs, lastDurationMs) {
+                    executeWithHifzPause(range.pauseBetweenMs, lastDurationMs, range.pauseMultiplier) {
                         playAyahInternal(surahId, currentAyah, reciterSlug)
                     }
                     return
                 }
                 is HifzTransition.AdvanceAyah -> {
                     _currentAyahRepetition.value = 1
-                    executeWithHifzPause(range.pauseBetweenMs, lastDurationMs) {
+                    executeWithHifzPause(range.pauseBetweenMs, lastDurationMs, range.pauseMultiplier) {
                         playAyahInternal(step.surahId, step.ayahNo, reciterSlug)
                     }
                     return
@@ -1439,13 +1603,13 @@ object AudioEngine {
                 is HifzTransition.RestartRange -> {
                     _hifzRange.value = range.copy(currentLoop = step.nextLoop)
                     _currentAyahRepetition.value = 1
-                    executeWithHifzPause(range.pauseBetweenMs, lastDurationMs) {
+                    executeWithHifzPause(range.pauseBetweenMs, lastDurationMs, range.pauseMultiplier) {
                         playAyahInternal(step.surahId, step.startAyah, reciterSlug)
                     }
                     return
                 }
                 is HifzTransition.CompleteRange -> {
-                    executeWithHifzPause(range.pauseBetweenMs, lastDurationMs) {
+                    executeWithHifzPause(range.pauseBetweenMs, lastDurationMs, range.pauseMultiplier) {
                         SleepTimer.onQueueEnded()
                         stopPlayback()
                     }

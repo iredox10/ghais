@@ -317,6 +317,14 @@ enum class RepeatMode {
 }
 
 @Serializable
+enum class HifzLoopMode {
+    FLAT,
+    ACCUMULATION,
+    BRIDGE,
+    FIRST_WORD_PROMPT
+}
+
+@Serializable
 data class HifzRange(
     val surahId: Int,
     val startAyah: Int,
@@ -324,6 +332,8 @@ data class HifzRange(
     val targetLoops: Int = 1,
     val currentLoop: Int = 1,
     val repeatPerAyah: Int = 1,
-    val pauseBetweenMs: Long = 0L
+    val pauseBetweenMs: Long = 0L,
+    val loopMode: HifzLoopMode = HifzLoopMode.FLAT,
+    val pauseMultiplier: Float = 0f
 )
 
