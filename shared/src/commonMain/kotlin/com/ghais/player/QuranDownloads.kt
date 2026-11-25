@@ -54,9 +54,16 @@ expect object QuranDownloads {
     val progress: StateFlow<Map<String, Float>>
     /** Keys whose last download attempt failed. */
     val failedKeys: StateFlow<Set<String>>
+    /** Keys explicitly paused by the user (resumable from partial bytes). */
+    val pausedKeys: StateFlow<Set<String>>
     fun isDownloaded(slug: String, surahId: Int): Boolean
     fun progressOf(slug: String, surahId: Int): Float?
     fun download(slug: String, surahId: Int, url: String)
+    fun pause(slug: String, surahId: Int)
+    fun resume(slug: String, surahId: Int)
+    fun pauseAll()
+    fun resumeAll()
+    fun cancelAll()
     fun delete(slug: String, surahId: Int)
     /** Local playback URI (file://...) or null when not downloaded. */
     fun localUri(slug: String, surahId: Int): String?

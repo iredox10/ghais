@@ -63,6 +63,11 @@ actual object QuranDownloads {
     private val _failedKeys = MutableStateFlow(emptySet<String>())
     actual val failedKeys: StateFlow<Set<String>> = _failedKeys.asStateFlow()
 
+    private val _pausedKeys = MutableStateFlow(emptySet<String>())
+    actual val pausedKeys: StateFlow<Set<String>> = _pausedKeys.asStateFlow()
+
+    private val pausedUrls = mutableMapOf<String, Pair<String, String>>()
+
     private val lock = Any()
     private val inFlight = mutableSetOf<String>()
     private val tasks = mutableMapOf<String, NSURLSessionDataTask>()
@@ -152,7 +157,59 @@ actual object QuranDownloads {
         _progress.value[DownloadKeys.key(slug, surahId)]
 
     actual fun download(slug: String, surahId: Int, url: String) {
-        startDownload(DownloadKeys.key(slug, surahId), url, fileFor(slug, surahId))
+        val key = DownloadKeys.key(slug, surahId)
+        _pausedKeys.value = _pausedKeys.value - key
+        startDownload(key, url, fileFor(slug, surahId))
+    }
+
+    actual fun pause(slug: String, surahId: Int) {
+        val key = DownloadKeys.key(slug, surahId)
+        val task = synchronized(lock) { tasks.remove(key) } ?: return
+        val url = task.originalRequest?.URL?.absoluteString ?: return
+        task.cancel()
+        synchronized(lock) { inFlight.remove(key) }
+        _progress.value = _progress.value - key
+        pausedUrls[key] = url to fileFor(slug, surahId)
+        _pausedKeys.value = _pausedKeys.value + key
+    }
+
+    actual fun resume(slug: String, surahId: Int) {
+        val key = DownloadKeys.key(slug, surahId)
+        val (url, path) = pausedUrls.remove(key) ?: return
+        _pausedKeys.value = _pausedKeys.value - key
+        startDownload(key, url, path)
+    }
+
+    actual fun pauseAll() {
+        val keys = synchronized(lock) { tasks.keys.toList() }
+        keys.forEach { key ->
+            val parts = key.split('/')
+            if (parts.size == 2) {
+                val id = parts[1].toIntOrNull() ?: return@forEach
+                pause(parts[0], id)
+            }
+        }
+    }
+
+    actual fun resumeAll() {
+        pausedUrls.keys.toList().forEach { key ->
+            val (url, path) = pausedUrls.remove(key) ?: return@forEach
+            _pausedKeys.value = _pausedKeys.value - key
+            startDownload(key, url, path)
+        }
+    }
+
+    actual fun cancelAll() {
+        val allTasks = synchronized(lock) {
+            val copy = tasks.values.toList()
+            tasks.clear()
+            inFlight.clear()
+            copy
+        }
+        allTasks.forEach { it.cancel() }
+        pausedUrls.clear()
+        _pausedKeys.value = emptySet()
+        _progress.value = emptyMap()
     }
 
     actual fun isAyahDownloaded(slug: String, surahId: Int, ayahNo: Int): Boolean =
