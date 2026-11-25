@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,15 +51,13 @@ import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.EveryAyahReciter
 import com.ghais.data.seed.EveryAyahReciters
 import com.ghais.data.repository.HifzMasteryStore
-import com.ghais.flags.HookFlags
-import com.ghais.analytics.HookAnalytics
-import com.ghais.analytics.HookEvents
 import com.ghais.hifz.quests.QuestRow
 import com.ghais.hifz.quests.questsFor
 import kotlin.time.Clock
 import com.ghais.player.AudioEngine
 import com.ghais.player.DownloadKeys
 import com.ghais.player.QuranDownloads
+import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
@@ -95,17 +92,36 @@ object MemorizationScreen : Tab {
         var searchQuery by remember { mutableStateOf("") }
 
         val reciters = remember(searchQuery) {
+            val ordered = EveryAyahReciters.ALL.sortedBy { reciter ->
+                val s = reciter.style.lowercase()
+                if (s.contains("teacher") || s.contains("mu'allim") || s.contains("muallim")) 0 else 1
+            }
             if (searchQuery.isBlank()) {
-                EveryAyahReciters.ALL
+                ordered
             } else {
                 val q = searchQuery.trim().lowercase()
-                EveryAyahReciters.ALL.filter { reciter ->
+                ordered.filter { reciter ->
                     reciter.nameEn.lowercase().contains(q) ||
                         reciter.nameAr.contains(q) ||
                         reciter.country.lowercase().contains(q) ||
                         reciter.style.lowercase().contains(q)
                 }
             }
+        }
+
+        val masteredCount by HifzMasteryStore.totalMasteredCount.collectAsState()
+        val todayReviewed by HifzMasteryStore.todayReviewedCount.collectAsState()
+        val dailyGoal by HifzMasteryStore.dailyGoalCount.collectAsState()
+        val weakAyahs by HifzMasteryStore.weakAyahs.collectAsState()
+        val masteryMap by HifzMasteryStore.masteryMap.collectAsState()
+        val epochDay = Clock.System.now().toEpochMilliseconds() / 86_400_000L
+        val dailyQuests = remember(masteryMap, todayReviewed, dailyGoal, epochDay) {
+            questsFor(
+                mastery = masteryMap,
+                todayReviewed = todayReviewed,
+                dailyGoal = dailyGoal,
+                epochDay = epochDay,
+            )
         }
 
         val currentTrack by AudioEngine.currentTrack.collectAsState()
@@ -193,6 +209,55 @@ object MemorizationScreen : Tab {
                         }
 
                         Spacer(Modifier.height(12.dp))
+
+                        NoirCard(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Today's Hifz",
+                                            color = GhaisNoir.TextPrimary,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(Modifier.height(2.dp))
+                                        Text(
+                                            text = "$masteredCount mastered • $todayReviewed/$dailyGoal reviewed today",
+                                            color = GhaisNoir.TextTertiary,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                    val firstWeak = weakAyahs.firstOrNull()
+                                    if (firstWeak != null) {
+                                        val teacherSlug = reciters.firstOrNull()?.slug ?: "husary"
+                                        GhostPillButton(
+                                            text = "Review due",
+                                            onClick = {
+                                                AudioEngine.playSurahInAyahMode(
+                                                    surahId = firstWeak.first,
+                                                    reciterSlug = teacherSlug,
+                                                    startAyahNo = firstWeak.second
+                                                )
+                                                rootNavigator?.push(NowPlayingScreen())
+                                            }
+                                        )
+                                    }
+                                }
+                                dailyQuests.firstOrNull()?.let { primaryQuest ->
+                                    Spacer(Modifier.height(10.dp))
+                                    QuestRow(
+                                        quest = primaryQuest,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(14.dp))
                     }
                 }
 
