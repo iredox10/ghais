@@ -24,7 +24,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.remember
 import com.ghais.data.repository.FavoritesStore
+import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
@@ -46,6 +48,10 @@ fun HomePlaylistsRow(
     onDownloads: () -> Unit,
 ) {
     val favorites by FavoritesStore.favoriteTracks.collectAsState()
+    val downloadedKeys by QuranDownloads.downloadedKeys.collectAsState()
+    val offlineCount = remember(downloadedKeys) {
+        downloadedKeys.count { key -> key.count { it == '/' } == 1 }
+    }
 
     Row(
         modifier = Modifier
@@ -66,9 +72,9 @@ fun HomePlaylistsRow(
         )
         NoirCollectionCell(
             icon = Icons.Filled.Headphones,
-            contentDescription = "Focus and Work",
-            label = "Focus",
-            sub = "Deep work",
+            contentDescription = "Reflection and Calm",
+            label = "Reflect",
+            sub = "Calm focus",
             onClick = onFocusWork,
             modifier = Modifier.weight(1f)
         )
@@ -84,7 +90,7 @@ fun HomePlaylistsRow(
             icon = Icons.Filled.Download,
             contentDescription = "Downloads",
             label = "Offline",
-            sub = "Saved",
+            sub = "$offlineCount saved",
             onClick = onDownloads,
             modifier = Modifier.weight(1f)
         )

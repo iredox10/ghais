@@ -32,9 +32,13 @@ import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import com.ghais.data.repository.DevotionalRepository
+import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.UserUsageRepository
+import com.ghais.data.repository.toFullSurahTrackItem
 import com.ghais.data.repository.toTrackItems
+import com.ghais.ui.screens.memorization.MemorizationScreen
+import com.ghais.ui.screens.mushaf.MushafScreen
 import com.ghais.data.seed.JumpBackInItem
 import com.ghais.devotion.DevotionStreak
 import com.ghais.devotion.StreakRestoreHost
@@ -107,6 +111,22 @@ object HomeScreen : Tab {
                         onProfileClick = { tabNavigator.current = ProfileScreen },
                         onSearchClick = { rootNavigator?.push(SearchScreen()) },
                         onStatsClick = { rootNavigator?.push(StatsScreen) }
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    NoirHomeGreeting()
+                    Spacer(Modifier.height(12.dp))
+                    HomeQuickAccessRow(
+                        onMushaf = { tabNavigator.current = MushafScreen },
+                        onHifz = { tabNavigator.current = MemorizationScreen },
+                        onSunnah = {
+                            val slug = FollowStore.followedSlugs.value.firstOrNull() ?: "mishary"
+                            val reciter = QuranDataRepository.getReciterBySlug(slug)
+                            val mulk = QuranDataRepository.getSurahById(67)
+                            if (mulk != null) {
+                                AudioEngine.playQueue(listOf(mulk.toFullSurahTrackItem(reciter)), startIndex = 0)
+                                rootNavigator?.push(NowPlayingScreen())
+                            }
+                        }
                     )
                     Spacer(Modifier.height(16.dp))
                     val history by UserUsageRepository.history.collectAsState()
