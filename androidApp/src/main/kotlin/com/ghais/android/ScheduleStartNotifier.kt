@@ -9,6 +9,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
+import com.ghais.data.repository.HifzListeningPlannerStore
+import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.RecitationSchedule
 import com.ghais.notify.channelForScheduleId
 import com.ghais.notify.copyFor
@@ -51,16 +53,35 @@ object ScheduleStartNotifier {
                 Log.w(TAG, "time format failed for ${schedule.id}", e)
                 "--:--"
             }
-            // Doctrine channels resolve their gentle per-channel copy; user
-            // schedules keep the legacy fixed words.
+            val hifzPlan = try {
+                HifzListeningPlannerStore.planIdFromScheduleId(schedule.id)
+                    ?.let { HifzListeningPlannerStore.getPlan(it) }
+            } catch (_: Exception) {
+                null
+            }
             val copy = try {
                 channelForScheduleId(schedule.id)?.let { copyFor(it) }
             } catch (_: Exception) {
                 null
             }
+            val (title, text) = if (hifzPlan != null) {
+                val epochDay = HifzListeningPlannerStore.currentEpochDay()
+                val done = hifzPlan.sessionsDoneOn(epochDay)
+                val remaining = (hifzPlan.sessionsPerDay - done).coerceAtLeast(1)
+                val dayNo = hifzPlan.currentDayNumber(epochDay)
+                val planLabel = hifzPlan.displayTitle { id ->
+                    QuranDataRepository.getSurahById(id)?.nameEn ?: "Surah $id"
+                }
+                "Hifz Listening Plan Reminder" to
+                    "$planLabel — $remaining of ${hifzPlan.sessionsPerDay} sessions left today (Day $dayNo/${hifzPlan.durationDays})"
+            } else if (copy != null) {
+                copy.title to "${copy.body} ($time)"
+            } else {
+                "Recitation scheduled" to "Your recitation is set for $time — open to review"
+            }
             val builder = Notification.Builder(context, CHANNEL_ID)
-                .setContentTitle(copy?.title ?: "Recitation scheduled")
-                .setContentText(if (copy != null) "${copy.body} ($time)" else "Your recitation is set for $time — open to review")
+                .setContentTitle(title)
+                .setContentText(text)
                 .setSmallIcon(R.drawable.ghaith_mark)
                 .setAutoCancel(true)
             launchIntent(context, schedule.id.hashCode())?.let { builder.setContentIntent(it) }

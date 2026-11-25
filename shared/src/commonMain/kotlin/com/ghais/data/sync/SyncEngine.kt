@@ -16,6 +16,7 @@ import com.ghais.data.repository.EditorialPlaylistItem
 import com.ghais.data.repository.EditorialRepository
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
+import com.ghais.data.repository.HifzListeningPlannerStore
 import com.ghais.data.repository.HifzMasteryStore
 import com.ghais.data.repository.KhatmaStore
 import com.ghais.data.repository.MasteryStatus
@@ -331,6 +332,7 @@ object SyncEngine {
                 // and `syncNow` only ever runs signed-in, so the owner passed is
                 // always a real account — never "local".
                 HifzMasteryStore.setOwner(userId)
+                HifzListeningPlannerStore.setOwner(userId)
                 val cloudHasData = pullHifzMastery(db, userId)
                 pushHifzMastery(db, userId, cloudHasData)
             }

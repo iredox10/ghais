@@ -3,6 +3,7 @@ package com.ghais.android
 import android.content.Context
 import android.util.Log
 import com.ghais.data.auth.AuthRepository
+import com.ghais.data.repository.HifzListeningPlannerStore
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.repository.RecitationSchedule
 import com.ghais.data.repository.ScheduleEngine
@@ -87,6 +88,10 @@ object SchedulePlayback {
                 return
             }
             if (!found.autoStart) {
+                if (!HifzListeningPlannerStore.shouldNotifyIncomplete(found.id)) {
+                    Log.i(TAG, "Schedule $scheduleId listening plan already completed for today; skipping reminder.")
+                    return
+                }
                 Log.i(TAG, "Schedule $scheduleId autoStart=false; showing reminder.")
                 try {
                     ScheduleStartNotifier.showReminder(appContext, found)
@@ -205,6 +210,7 @@ object SchedulePlayback {
         try {
             val owner = AuthRepository.cachedSession.value?.userId ?: return
             SchedulesStore.setOwner(owner)
+            HifzListeningPlannerStore.setOwner(owner)
         } catch (e: Exception) {
             Log.w(TAG, "Owner bind failed; using local namespace.", e)
         }

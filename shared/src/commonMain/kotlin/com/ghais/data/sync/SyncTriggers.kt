@@ -5,6 +5,7 @@ import com.ghais.data.repository.CustomRoutinesStore
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.KhatmaStore
+import com.ghais.data.repository.HifzListeningPlannerStore
 import com.ghais.data.repository.HifzMasteryStore
 import com.ghais.data.repository.OnboardingStore
 import com.ghais.data.repository.PreAuthUsage
@@ -197,6 +198,7 @@ object SyncTriggers {
                 rebind { OnboardingStore.setOwner(owner) }
                 rebind { ReciterSearchHistoryStore.setOwner(owner) }
                 rebind { HifzMasteryStore.setOwner(owner) }
+                rebind { HifzListeningPlannerStore.setOwner(owner) }
                 rebind { SearchHistoryStore.setOwner(owner) }
                 rebind { QuranDownloads.setOwner(owner) }
                 if (comingFromSignedOut) {
