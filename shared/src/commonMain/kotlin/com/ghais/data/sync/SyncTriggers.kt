@@ -170,6 +170,7 @@ object SyncTriggers {
                 val localRoutines = if (comingFromSignedOut) CustomRoutinesStore.routines.value else emptyList()
                 val localSchedules = if (comingFromSignedOut) SchedulesStore.schedules.value else emptyList()
                 val localKhatmaPlans = if (comingFromSignedOut) KhatmaStore.plans.value else emptyList()
+                val localListeningPlans = if (comingFromSignedOut) HifzListeningPlannerStore.plans.value else emptyList()
                 val localGoal = if (comingFromSignedOut) OnboardingStore.goal.value else null
                 val localMinutes = if (comingFromSignedOut) OnboardingStore.dailyGoalMinutes.value else 15
                 // Listening history + stats live in the same "local" namespace
@@ -221,6 +222,9 @@ object SyncTriggers {
                     if (KhatmaStore.plans.value.isEmpty()) {
                         localKhatmaPlans.forEach { KhatmaStore.add(it) }
                     }
+                    if (HifzListeningPlannerStore.plans.value.isEmpty()) {
+                        localListeningPlans.forEach { HifzListeningPlannerStore.savePlan(it) }
+                    }
                     if (localGoal != null && OnboardingStore.goal.value == null) {
                         OnboardingStore.setGoal(localGoal)
                     }
@@ -252,10 +256,17 @@ object SyncTriggers {
                 .collectLatest { userId ->
                     if (userId == null) return@collectLatest
                     delay(LOGIN_PULL_SETTLE_MS)
-                    // Adoption runs only behind a pass that actually
-                    // completed, so it can never outrun the cloud restore.
-                    if (pullLoginWithRetry(userId)) {
-                        adoptPendingPreAuthUsage(userId)
+                    // Adoption runs after the login pull attempt (even if
+                    // offline/failed) so guest listening history & stats are
+                    // never dropped when creating an account.
+                    val pulled = try {
+                        pullLoginWithRetry(userId)
+                    } catch (_: Exception) {
+                        false
+                    }
+                    val adopted = adoptPendingPreAuthUsage(userId)
+                    if (adopted && pulled) {
+                        pushIfEligible()
                     }
                 }
         }
@@ -426,30 +437,11 @@ object SyncTriggers {
      *   `KEY_PREAUTH_ADOPTED` latch) and must UNION rather than replace, so
      *   the emptiness guard above stays the authority on what may be adopted.
      */
-    private suspend fun adoptPendingPreAuthUsage(userId: String) {
-        val binding = ownerBinding.value ?: return
-        val preAuth = binding.preAuthUsage ?: return
-        if (binding.owner != userId) return
-        if (!usageNamespaceIsEmpty()) return
-        UserUsageRepository.adoptPreAuthUsage(preAuth)
-    }
-
-    /**
-     * True while this owner's usage namespace is still at fresh-install
-     * defaults — exactly the condition under which the sync pull is willing to
-     * restore usage from the cloud. Mirrors the guards in
-     * `SyncEngine.pullHistoryIfEmpty` and `SyncEngine.isLocalStatsEmpty` (same
-     * `<= 1` thresholds) so a pre-auth snapshot can never sneak in ahead of a
-     * cloud restore.
-     */
-    private fun usageNamespaceIsEmpty(): Boolean {
-        val s = UserUsageRepository.stats.value
-        val statsEmpty = s.totalSecondsListened <= 0L &&
-            s.minutesToday <= 0 &&
-            s.daysStreak <= 1 &&
-            s.uniqueRecitersCount <= 1 &&
-            s.uniqueSurahsCount <= 1
-        return statsEmpty && UserUsageRepository.history.value.isEmpty()
+    private suspend fun adoptPendingPreAuthUsage(userId: String): Boolean {
+        val binding = ownerBinding.value ?: return false
+        val preAuth = binding.preAuthUsage ?: return false
+        if (binding.owner != userId) return false
+        return UserUsageRepository.adoptPreAuthUsage(preAuth)
     }
 
     /** The one push gate for every trigger: a session, a network, one pass. */
