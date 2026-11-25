@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -60,12 +61,13 @@ fun HomePlumHero(
     subtitle: String,
     imageUrl: String,          // the QARI photo (was coverUrl)
     monogram: String,
-    ctaLabel: String,          // "Play" or "Resume" (caller decides)
+    ctaLabel: String,          // "Play", "Resume", or "Pause" (caller decides)
     onPlay: () -> Unit,
     onOpen: () -> Unit,
     onSeeAll: () -> Unit,      // NEW — right-aligned history entry point
     modifier: Modifier = Modifier,
     progress: Float = 0f,
+    isPlaying: Boolean = false,
 ) {
     val clamped = progress.coerceIn(0f, 1f)
     Column(
@@ -176,7 +178,7 @@ fun HomePlumHero(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Icon(
-                imageVector = Icons.Filled.PlayArrow,
+                imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                 contentDescription = null,
                 tint = GhaisNoir.LavenderInk,
                 modifier = Modifier.size(16.dp)

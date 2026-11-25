@@ -117,13 +117,16 @@ object HomeScreen : Tab {
                     val playingTrack by AudioEngine.currentTrack.collectAsState()
                     if (latest != null) {
                         val heroSubtitle = latest.subtitle.trim()
-                        // Same identity rule as resumeHistoryEntry below:
-                        // compare the canonical reciter slug, not the
-                        // (possibly aliased) stored one.
-                        val heroReciter = QuranDataRepository.getReciterBySlug(latest.reciterSlug)
-                        val heroPlaying = isPlaying &&
-                            playingTrack?.surahId == latest.surahId &&
-                            playingTrack?.reciterSlug == (heroReciter?.slug ?: latest.reciterSlug)
+                        val heroPlaying = if (latest.reciterSlug == DEVOTIONAL_TRACK_SLUG) {
+                            isPlaying && playingTrack?.reciterSlug == DEVOTIONAL_TRACK_SLUG &&
+                                playingTrack?.surahNameEn == latest.title
+                        } else {
+                            // Compare the canonical reciter slug, not the (possibly aliased) stored one.
+                            val heroReciter = QuranDataRepository.getReciterBySlug(latest.reciterSlug)
+                            isPlaying &&
+                                playingTrack?.surahId == latest.surahId &&
+                                playingTrack?.reciterSlug == heroReciter.slug
+                        }
                         HomePlumHero(
                             eyebrow = "Jump back in",
                             title = latest.title,
@@ -132,23 +135,27 @@ object HomeScreen : Tab {
                             // cover art only survives as the never-blank fallback.
                             imageUrl = rememberJumpBackInHeroImage(latest),
                             monogram = latest.title.firstOrNull { it.isLetter() }?.uppercase() ?: "Q",
-                            // Live CTA: "Playing" only while THIS exact
-                            // qari+surah is actively playing; "Resume" when
-                            // paused with a saved position; "Play" otherwise.
+                            // Live CTA: "Pause" while THIS exact item is playing,
+                            // "Resume" when paused with saved position, "Play" otherwise.
                             ctaLabel = when {
-                                heroPlaying -> "Playing"
+                                heroPlaying -> "Pause"
                                 latest.positionMs > 0L -> "Resume"
                                 else -> "Play"
                             },
                             progress = latest.progress.coerceIn(0f, 1f),
+                            isPlaying = heroPlaying,
                             onPlay = {
-                                resumeHistoryEntry(
-                                    entry = latest,
-                                    openPlayer = { rootNavigator?.push(NowPlayingScreen()) },
-                                    openDevotion = { itemId ->
-                                        rootNavigator?.push(DevotionPlayerScreen(itemId = itemId))
-                                    }
-                                )
+                                if (heroPlaying) {
+                                    AudioEngine.pause()
+                                } else {
+                                    resumeHistoryEntry(
+                                        entry = latest,
+                                        openPlayer = { rootNavigator?.push(NowPlayingScreen()) },
+                                        openDevotion = { itemId ->
+                                            rootNavigator?.push(DevotionPlayerScreen(itemId = itemId))
+                                        }
+                                    )
+                                }
                             },
                             onOpen = { rootNavigator?.push(NowPlayingScreen()) },
                             onSeeAll = { rootNavigator?.push(HistoryScreen) }
