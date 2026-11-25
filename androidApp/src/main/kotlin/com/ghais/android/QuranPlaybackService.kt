@@ -33,6 +33,7 @@ import com.ghais.player.AudioEngine
 import com.ghais.player.PlaybackResumeStore
 import com.ghais.player.PlayerBridge
 import com.ghais.player.SleepTimer
+import com.ghais.ui.screens.reciters.resolveReciterPhoto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -118,9 +119,10 @@ class QuranPlaybackService : MediaSessionService() {
          * AudioEngine.nextRepeatMode — the only sibling (UI PlayerControls)
          * intentionally skips AYAH with the same mapping.
          */
-        fun nextShadeRepeatMode(current: RepeatMode): RepeatMode = when (current) {
-            RepeatMode.OFF -> RepeatMode.SURAH
-            RepeatMode.SURAH -> RepeatMode.QUEUE
+        fun nextShadeRepeatMode(current: RepeatMode, isAyahMode: Boolean = false): RepeatMode = when {
+            current == RepeatMode.OFF && isAyahMode -> RepeatMode.AYAH
+            current == RepeatMode.OFF -> RepeatMode.SURAH
+            current == RepeatMode.SURAH || current == RepeatMode.AYAH -> RepeatMode.QUEUE
             else -> RepeatMode.OFF
         }
 
@@ -311,10 +313,12 @@ class QuranPlaybackService : MediaSessionService() {
                 ACTION_PAUSE -> AudioEngine.pause()
                 ACTION_NEXT -> AudioEngine.next()
                 ACTION_PREV -> AudioEngine.previous()
-                ACTION_SEEK_FORWARD ->
-                    AudioEngine.seekTo(
-                        try { AudioEngine.currentPositionMs.value } catch (_: Exception) { 0L } + SEEK_STEP_MS,
-                    )
+                ACTION_SEEK_FORWARD -> {
+                    val pos = try { AudioEngine.currentPositionMs.value } catch (_: Exception) { 0L }
+                    val dur = try { AudioEngine.durationMs.value } catch (_: Exception) { 0L }
+                    val target = pos + SEEK_STEP_MS
+                    AudioEngine.seekTo(if (dur > 0L) target.coerceAtMost(dur) else target)
+                }
                 ACTION_SEEK_BACK ->
                     AudioEngine.seekTo(
                         (
@@ -431,7 +435,7 @@ class QuranPlaybackService : MediaSessionService() {
                     }
                     CUSTOM_REPEAT_CYCLE -> {
                         val current = AudioEngine.playbackState.value.settings.repeatMode
-                        AudioEngine.setRepeatMode(nextShadeRepeatMode(current))
+                        AudioEngine.setRepeatMode(nextShadeRepeatMode(current, AudioEngine.isAyahMode.value))
                         try { refreshShadeButtons() } catch (_: Exception) { }
                         try { refreshNotification() } catch (_: Exception) { }
                         Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
@@ -453,8 +457,10 @@ class QuranPlaybackService : MediaSessionService() {
         }
         serviceScope.launch {
             while (true) {
-                PlaybackResumeStore.save(applicationContext)
                 kotlinx.coroutines.delay(5_000L)
+                if (AudioEngine.isPlaying.value && AudioEngine.currentTrack.value != null) {
+                    PlaybackResumeStore.save(applicationContext)
+                }
             }
         }
 
@@ -477,13 +483,15 @@ class QuranPlaybackService : MediaSessionService() {
                             )
                         } catch (_: Exception) { }
                         try {
-                            applyArtworkToSession(try { AmbientVideoArt.artworkUri.value } catch (_: Exception) { null })
+                            applyArtworkToSession(resolveArtworkUri(track.reciterSlug))
                         } catch (_: Exception) { }
                         player?.let { p ->
                             try {
+                                val resolvedArt = resolveArtworkUri(track.reciterSlug)
                                 p.playlistMetadata = MediaMetadata.Builder()
                                     .setTitle(title)
                                     .setArtist(artist)
+                                    .setArtworkUri(resolvedArt)
                                     .build()
                             } catch (_: Exception) { }
                         }
@@ -545,7 +553,8 @@ class QuranPlaybackService : MediaSessionService() {
         serviceScope.launch {
             try {
                 AmbientVideoArt.artworkUri.collect { uri ->
-                    try { applyArtworkToSession(uri) } catch (_: Exception) { }
+                    val slug = try { AudioEngine.currentTrack.value?.reciterSlug } catch (_: Exception) { null }
+                    try { applyArtworkToSession(resolveArtworkUri(slug, uri)) } catch (_: Exception) { }
                     try { refreshNotification() } catch (_: Exception) { }
                 }
             } catch (_: Exception) { }
@@ -636,20 +645,29 @@ class QuranPlaybackService : MediaSessionService() {
         return buttons
     }
 
+    private fun resolveArtworkUri(reciterSlug: String?, ambientUri: Uri? = null): Uri {
+        val photoUrl = try { resolveReciterPhoto(reciterSlug) } catch (_: Exception) { null }
+        if (!photoUrl.isNullOrBlank()) {
+            return try { Uri.parse(photoUrl) } catch (_: Exception) { fallbackArtworkUri() }
+        }
+        val ambient = ambientUri ?: try { AmbientVideoArt.artworkUri.value } catch (_: Exception) { null }
+        return ambient ?: fallbackArtworkUri()
+    }
+
     /**
-     * Points the current item artwork at the ambient frame (or the ghaith_logo
-     * fallback). Mirrors PlayerBridge.updateMetadata's safe rule: never
-     * replaces the item while playing — position/timeline is preserved, and
-     * art lands on the next safe window instead.
+     * Points the current item artwork at the Qari portrait / ambient frame
+     * (or ghaith_art fallback) via [NotificationPlayer.overrideArtworkUri]
+     * without replacing the MediaItem mid-playback (preserving timeline/seeks).
      */
     private fun applyArtworkToSession(artUri: Uri?) {
         try {
+            val target = artUri ?: fallbackArtworkUri()
+            notificationPlayer?.overrideArtworkUri = target
             val p = player ?: return
             if (p.mediaItemCount == 0) return
             if (p.isPlaying || p.playWhenReady || p.playbackState == Player.STATE_BUFFERING) return
             val index = p.currentMediaItemIndex.coerceIn(0, p.mediaItemCount - 1)
             val current = p.getMediaItemAt(index)
-            val target = artUri ?: fallbackArtworkUri()
             val currentArtwork = try { current.mediaMetadata.artworkUri?.toString() } catch (_: Exception) { null }
             if (currentArtwork == target.toString()) return
             val resumePos = try { p.currentPosition.coerceAtLeast(0L) } catch (_: Exception) { 0L }
@@ -704,6 +722,8 @@ class QuranPlaybackService : MediaSessionService() {
                 .setContentText(initialSubtitle)
                 .setSmallIcon(R.drawable.ghaith_mark)
                 .setLargeIcon(android.graphics.BitmapFactory.decodeResource(resources, R.drawable.ghaith_art))
+                .setContentIntent(sessionActivityIntent())
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setOngoing(true)
                 .build()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

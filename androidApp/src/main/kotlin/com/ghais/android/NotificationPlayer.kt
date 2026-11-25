@@ -1,6 +1,8 @@
 package com.ghais.android
 
+import android.net.Uri
 import androidx.media3.common.FlagSet
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.PlaybackParameters
@@ -11,6 +13,7 @@ import com.ghais.player.AudioEngine
 
 internal interface NotificationPlaybackControls {
     val positionMs: Long
+    val durationMs: Long get() = 0L
     val repeatMode: RepeatMode
     val shuffle: Boolean
     fun resume()
@@ -26,6 +29,7 @@ internal interface NotificationPlaybackControls {
 
 internal object EngineNotificationControls : NotificationPlaybackControls {
     override val positionMs get() = AudioEngine.currentPositionMs.value
+    override val durationMs get() = AudioEngine.durationMs.value
     override val repeatMode get() = AudioEngine.playbackState.value.settings.repeatMode
     override val shuffle get() = AudioEngine.playbackState.value.settings.shuffle
     override fun resume() = AudioEngine.resume()
@@ -45,6 +49,16 @@ internal class NotificationPlayer(player: Player, private val controls: Notifica
     private val settingListeners = linkedSetOf<Player.Listener>()
     private var publishedRepeat = repeatMode
     private var publishedShuffle = shuffleModeEnabled
+
+    @Volatile
+    var overrideArtworkUri: Uri? = null
+
+    override fun getMediaMetadata(): MediaMetadata {
+        val base = super.getMediaMetadata()
+        val art = overrideArtworkUri ?: return base
+        return if (base.artworkUri == art) base
+        else base.buildUpon().setArtworkUri(art).build()
+    }
 
     override fun addListener(listener: Player.Listener) {
         settingListeners.add(listener)
@@ -160,7 +174,9 @@ internal class NotificationPlayer(player: Player, private val controls: Notifica
 
             override fun seekForward() {
                 try {
-                    controls.seekTo(controls.positionMs + 10_000L)
+                    val target = controls.positionMs + 10_000L
+                    val maxPos = controls.durationMs.takeIf { it > 0L }
+                    controls.seekTo(if (maxPos != null) target.coerceAtMost(maxPos) else target)
                 } catch (_: Exception) { }
             }
 
