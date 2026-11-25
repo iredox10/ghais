@@ -17,10 +17,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ghais.data.auth.BackendConfig
 import com.ghais.data.auth.AuthRepository
 import com.ghais.data.sync.NetworkMonitor
@@ -52,23 +57,13 @@ import com.ghais.ui.theme.GhaisTypography
 import kotlinx.coroutines.launch
 
 /**
- * Voyager screen wrapper for the auth gate.
- *
- * Auth is mandatory — there is no guest mode.
+ * Voyager screen wrapper for authentication (guest-first; dismissible when pushed).
  *
  * @param onAuthenticated called on successful sign-in / sign-up (host pops/dismisses the gate).
  * `true` when a brand-new account was just created (host replays onboarding);
  * `false` for returning logins (host goes straight home).
- *
- * Email: `true` iff the Sign-up tab was used — Appwrite rejects an existing
- * email with 409, so a successful `signUp` is always a fresh account.
- *
- * Google: there is no local "signup" intent to read, so newness is resolved by
- * [resolveGoogleIsNewAccount] against the userId this device had cached
- * *before* the OAuth round-trip. It fails OPEN (reports `true`) whenever the
- * device holds no prior account, so a new Google user is never dropped on Home
- * with a `null` goal.
- * @param onGuest legacy no-op kept for backward compatibility; no guest affordance is rendered.
+ * @param onGuest optional callback invoked when the user chooses to continue without signing in
+ * (defaults to popping the current navigator when pushed).
  */
 class AuthScreen(
     private val onAuthenticated: (Boolean) -> Unit = {},
@@ -76,9 +71,14 @@ class AuthScreen(
 ) : Screen {
     @Composable
     override fun Content() {
+        val navigator = LocalNavigator.current
         AuthScreenContent(
             onAuthenticated = onAuthenticated,
-            onGuest = onGuest,
+            onGuest = {
+                onGuest()
+                if (navigator?.canPop == true) navigator.pop()
+            },
+            canDismiss = navigator?.canPop == true,
         )
     }
 }
@@ -87,6 +87,7 @@ class AuthScreen(
 fun AuthScreenContent(
     onAuthenticated: (Boolean) -> Unit,
     onGuest: () -> Unit = {},
+    canDismiss: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -108,10 +109,35 @@ fun AuthScreenContent(
                 .fillMaxSize()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 32.dp),
+                .padding(horizontal = 24.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = if (canDismiss) Arrangement.Top else Arrangement.Center,
         ) {
+            if (canDismiss) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderCard, CircleShape)
+                            .noirClickable(onClick = onGuest),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = GhaisNoir.TextPrimary,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(12.dp))
+            }
             // Hero — monochrome mark well.
             Box(
                 modifier = Modifier
@@ -438,6 +464,20 @@ fun AuthScreenContent(
                         )
                     }
                 }
+            }
+
+            if (canDismiss) {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "Continue as guest",
+                    color = GhaisNoir.TextTertiary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .noirClickable(onClick = onGuest)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
             }
 
             Spacer(Modifier.height(12.dp))

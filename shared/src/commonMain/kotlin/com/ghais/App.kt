@@ -41,7 +41,6 @@ import com.ghais.ui.components.MiniPlayer
 import com.ghais.ui.components.isFullScreenPlayer
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.navigation.MainScreen
-import com.ghais.ui.screens.auth.AuthScreen
 import com.ghais.ui.screens.onboarding.OnboardingScreen
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.splash.SplashScreen
@@ -57,19 +56,6 @@ fun App() {
         val cachedSession by AuthRepository.cachedSession.collectAsState()
         val doneForUser by OnboardingStore.isDoneForCurrentUser.collectAsState()
         var forceOnboarding by remember { mutableStateOf(false) }
-        // Explicit sign-out gate: guests browse freely, but tapping Log out
-        // must land on auth (old mandatory-gate feel for that action only).
-        // Latched when a live session drops to null; cleared on auth.
-        var showAuth by remember { mutableStateOf(false) }
-        var hadSession by remember { mutableStateOf(false) }
-        LaunchedEffect(session) {
-            if (session != null) {
-                hadSession = true
-                showAuth = false
-            } else if (hadSession) {
-                showAuth = true
-            }
-        }
         val signedInUserId = session?.userId ?: cachedSession?.userId
         // Every launch effect below runs network / disk work on first
         // composition: an uncaught throw here kills the process with no
@@ -125,18 +111,6 @@ fun App() {
         // network validation continues after Home is visible.
         if (!checked) {
             SplashScreen.Content()
-        } else if (showAuth) {
-            // Sign-out also clears any pending onboarding replay.
-            if (forceOnboarding) forceOnboarding = false
-            AuthScreen(
-                onAuthenticated = { isNewAccount ->
-                    showAuth = false
-                    if (isNewAccount) {
-                        OnboardingStore.restartForNewUser()
-                        forceOnboarding = true
-                    }
-                },
-            ).Content()
         } else if (forceOnboarding) {
             OnboardingScreen.Content()
         } else {
