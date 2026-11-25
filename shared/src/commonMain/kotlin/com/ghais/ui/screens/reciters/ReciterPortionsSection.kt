@@ -5,6 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -203,6 +205,7 @@ private fun PortionChipCard(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CreatePortionDialog(
     onDismiss: () -> Unit,
@@ -273,6 +276,65 @@ fun CreatePortionDialog(
                 colors = fieldColors,
                 modifier = Modifier.fillMaxWidth(),
             )
+            Spacer(Modifier.height(10.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                val quickPortions = listOf(
+                    "Juz 'Amma" to (78..114).toList(),
+                    "Juz Tabarak" to (67..77).toList(),
+                    "Juz Qad Sami'" to (58..66).toList(),
+                    "Last 10" to (105..114).toList(),
+                    "Al-Kahf" to listOf(18),
+                    "Yasin" to listOf(36),
+                    "Al-Mulk" to listOf(67),
+                )
+                quickPortions.forEach { (label, ids) ->
+                    val allIn = ids.all { it in selectedIds }
+                    Box(
+                        modifier = Modifier
+                            .clip(GhaisShapes.pill)
+                            .then(
+                                if (allIn) Modifier.background(GhaisNoir.cardFillActive())
+                                else Modifier.background(GhaisNoir.Fill2)
+                            )
+                            .border(
+                                1.dp,
+                                if (allIn) GhaisNoir.Lavender.copy(alpha = 0.5f) else GhaisNoir.BorderGhost,
+                                GhaisShapes.pill,
+                            )
+                            .noirClickable {
+                                selectedIds = if (allIn) selectedIds - ids.toSet() else selectedIds + ids
+                            }
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                    ) {
+                        Text(
+                            text = label,
+                            color = if (allIn) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
+                            fontSize = 11.sp,
+                            fontWeight = if (allIn) FontWeight.SemiBold else FontWeight.Medium,
+                        )
+                    }
+                }
+                if (selectedIds.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.Fill2)
+                            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                            .noirClickable { selectedIds = emptySet() }
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                    ) {
+                        Text(
+                            text = "Clear",
+                            color = GhaisNoir.TextTertiary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(10.dp))
             Box(
                 modifier = Modifier
