@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ghais.ui.components.noir.ChromePillButton
+import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.IconWell
 import com.ghais.ui.components.noir.NoirCard
 import com.ghais.ui.theme.GhaisNoir
@@ -106,46 +106,36 @@ fun StreakRestoreCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconWell(
                     icon = Icons.Filled.LocalFireDepartment,
-                    size = 44.dp,
-                    iconSize = 22.dp,
+                    size = 36.dp,
+                    iconSize = 18.dp,
                     contentDescription = "Restore devotion",
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = restoreHeadlineText(restoreTargetDays, total),
+                        text = "Restore $restoreTargetDays-day streak",
                         color = GhaisNoir.TextPrimary,
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(2.dp))
                     Text(
-                        text = "Your $restoreTargetDays days are safe — no starting over.",
-                        color = GhaisNoir.TextSecondary,
+                        text = restoreProgressText(gentleDone, total),
+                        color = GhaisNoir.TextTertiary,
                         fontSize = 12.sp,
                     )
                 }
-            }
-            Spacer(Modifier.height(14.dp))
-            RestoreProgressTrack(progress = restoreProgress(gentleDone, total))
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = restoreProgressText(gentleDone, total),
-                    color = GhaisNoir.TextTertiary,
-                    fontSize = 12.sp,
-                    modifier = Modifier.weight(1f),
-                )
-                ChromePillButton(
-                    text = "Begin today",
+                Spacer(Modifier.width(10.dp))
+                GhostPillButton(
+                    text = "Resume",
                     onClick = onBegin,
                 )
             }
+            Spacer(Modifier.height(10.dp))
+            RestoreProgressTrack(progress = restoreProgress(gentleDone, total))
         }
     }
+    Spacer(Modifier.height(14.dp))
 }
 
 /** Monochrome progress track — depth from fill alpha, never hue. */
@@ -154,16 +144,16 @@ private fun RestoreProgressTrack(progress: Float) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(8.dp)
+            .height(3.dp)
             .clip(GhaisShapes.pill)
             .background(GhaisNoir.Fill2),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth(progress.coerceIn(0f, 1f))
-                .height(8.dp)
+                .height(3.dp)
                 .clip(GhaisShapes.pill)
-                .background(Color.White.copy(alpha = 0.85f)),
+                .background(Color.White.copy(alpha = 0.65f)),
         )
     }
 }
