@@ -123,13 +123,14 @@ fun currentAffinities(): Map<String, Float> = try {
 
 class ReciterSearchScreen(
     private val initialFilters: ReciterFilterState = ReciterFilterState(),
+    private val initialQuery: String = "",
 ) : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val rootNavigator = LocalRootNavigator.current ?: navigator.parent ?: navigator
-        var query by remember { mutableStateOf("") }
-        var debouncedQuery by remember { mutableStateOf("") }
+        var query by remember { mutableStateOf(initialQuery) }
+        var debouncedQuery by remember { mutableStateOf(initialQuery) }
         // Refinement filters (moved off the browse scroll): docked under
         // the query field, always visible, combined before ranking.
         var filterState by remember { mutableStateOf(initialFilters) }

@@ -126,10 +126,9 @@ class RecitersScreen : Tab {
         // catalog sync instead of only in search. Reactive to the cache.
         val browseReciters = rememberBrowseReciters()
 
-        // Engagement hook: taste quiz (A1). Refinement filters
-        // live on the search screen; browse here is unfiltered discovery.
+        // Engagement hook: taste quiz (A1) — never auto-pops on first visit.
         val taste by TasteStore.taste.collectAsState()
-        var showTasteQuiz by remember { mutableStateOf(!taste.completed) }
+        var showTasteQuiz by remember { mutableStateOf(false) }
 
         // Header search state. WHY caller-owned: NoirHeaderSearch's contract
         // puts the expansion boolean (and the query) in the screen so sibling
@@ -153,10 +152,10 @@ class RecitersScreen : Tab {
          * The blank check is what keeps NoirHeaderSearch's own clear well
          * (which reports onQueryChange("")) from re-triggering navigation.
          */
-        fun openReciterSearch() {
+        fun openReciterSearch(initialQuery: String = "") {
             searchExpanded = false
             searchQuery = ""
-            rootNavigator?.push(ReciterSearchScreen())
+            rootNavigator?.push(ReciterSearchScreen(initialQuery = initialQuery))
         }
 
         // Grouped on the flag-insensitive country key so an admin-created
@@ -324,18 +323,17 @@ class RecitersScreen : Tab {
                             // living in the bar's trailing slot (single-row
                             // morph; see NoirRecitersHeader kdoc).
                             NoirRecitersHeader(
-                                onBack = { tabNavigator.current = HomeScreen },
                                 expanded = searchExpanded,
                                 onExpandedChange = { searchExpanded = it },
                                 query = searchQuery,
                                 onQueryChange = { next ->
-                                    searchQuery = next
-                                    // First non-blank keystroke commits: push
-                                    // straight into the dedicated search screen
-                                    // (see openReciterSearch trigger rules).
-                                    if (next.isNotBlank()) openReciterSearch()
+                                    if (next.isNotBlank()) {
+                                        openReciterSearch(initialQuery = next)
+                                    } else {
+                                        searchQuery = next
+                                    }
                                 },
-                                onOpenSearch = ::openReciterSearch
+                                onOpenSearch = { openReciterSearch(initialQuery = searchQuery) }
                             )
                             Spacer(Modifier.height(20.dp))
                         }
@@ -621,7 +619,6 @@ private val NoirReelCardShape = RoundedCornerShape(28.dp)
  */
 @Composable
 private fun NoirRecitersHeader(
-    onBack: () -> Unit,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     query: String,
@@ -630,8 +627,6 @@ private fun NoirRecitersHeader(
 ) {
     NoirNavBar(
         title = "Reciters",
-        onBack = onBack,
-        backIcon = Icons.AutoMirrored.Filled.ArrowBack,
         actions = {
             NoirHeaderSearch(
                 expanded = expanded,
