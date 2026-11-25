@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -126,6 +127,10 @@ class RecitersScreen : Tab {
         // catalog sync instead of only in search. Reactive to the cache.
         val browseReciters = rememberBrowseReciters()
 
+        LaunchedEffect(Unit) {
+            ChartsRepository.refresh()
+        }
+
         // Engagement hook: taste quiz (A1) — never auto-pops on first visit.
         val taste by TasteStore.taste.collectAsState()
         var showTasteQuiz by remember { mutableStateOf(false) }
@@ -200,7 +205,7 @@ class RecitersScreen : Tab {
         val historySlugs = remember(usageHistory) {
             usageHistory.map { it.reciterSlug }.toSet()
         }
-        val shelfEpochDay = remember { currentEpochDay() }
+        val shelfEpochDay = currentEpochDay()
         val shelfBySlug = remember(browseReciters) {
             browseReciters.associateBy { it.slug }
         }
@@ -222,7 +227,7 @@ class RecitersScreen : Tab {
                 emptyList()
             }
         }
-        val ritualWeek = remember { weekSeed(currentEpochDay()) }
+        val ritualWeek = weekSeed(shelfEpochDay)
         val ritual = remember(
             browseReciters, ritualWeek, affinities,
             historySlugs, followedSlugs
@@ -304,6 +309,7 @@ class RecitersScreen : Tab {
             }
             if (tracks.isNotEmpty()) {
                 AudioEngine.playQueue(tracks, startIndex = 0)
+                rootNavigator?.push(NowPlayingScreen())
             }
         }
 
@@ -396,19 +402,17 @@ class RecitersScreen : Tab {
                         }
 
                         SectionId.VOICE_OF_DAY -> item(key = "noir_voice_of_day") {
-                            val epochDay = remember { currentEpochDay() }
+                            val epochDay = shelfEpochDay
                             val voice = remember(browseReciters, epochDay) {
                                 voiceOfDay(browseReciters, epochDay)
                             }
                             // Weekly most heard (device history, last 7
                             // days); falls back to the deterministic voice
                             // when empty.
-                            val nowMs = remember {
-                                try {
-                                    kotlin.time.Clock.System.now().toEpochMilliseconds()
-                                } catch (_: Exception) {
-                                    epochDay * 86_400_000L
-                                }
+                            val nowMs = try {
+                                kotlin.time.Clock.System.now().toEpochMilliseconds()
+                            } catch (_: Exception) {
+                                epochDay * 86_400_000L
                             }
                             val heardEntries = remember(usageHistory, nowMs, browseReciters) {
                                 try {
@@ -694,7 +698,11 @@ private fun NoirReciterCard(
 ) {
     val currentTrack by AudioEngine.currentTrack.collectAsState()
     val isPlaying by AudioEngine.isPlaying.collectAsState()
-    val isCurrentReciter = currentTrack?.reciterSlug == reciter.slug
+    val canonicalSlug = remember(reciter.slug) {
+        QuranDataRepository.getReciterBySlug(reciter.slug).slug
+    }
+    val isCurrentReciter = currentTrack?.reciterSlug == reciter.slug ||
+        currentTrack?.reciterSlug == canonicalSlug
     val activelyPlaying = isCurrentReciter && isPlaying
 
     // Full-bleed portrait card — same anatomy as the shared reel card:
@@ -725,10 +733,10 @@ private fun NoirReciterCard(
                     )
                     .background(GhaisNoir.wellFill())
             ) {
-                val cloudPhoto = rememberCloudPhoto(reciter.slug)
-                if (photoUrl != null || cloudPhoto != null) {
+                val resolvedPhoto = photoUrl ?: rememberCloudPhoto(reciter.slug)
+                if (resolvedPhoto != null) {
                     AsyncImage(
-                        model = cloudPhoto ?: photoUrl,
+                        model = resolvedPhoto,
                         contentDescription = reciter.nameEn,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
