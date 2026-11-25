@@ -73,7 +73,9 @@ export default async function googleRoutes(app: FastifyInstance) {
     }
 
     // 3. Fresh Google user.
+    let isNewUser = false;
     if (!user) {
+      isNewUser = true;
       const id = randomBytes(10).toString('hex');
       rows = (await query<UserRow>(
         `INSERT INTO users(id, email, password_hash, name, provider, google_sub)
@@ -84,6 +86,7 @@ export default async function googleRoutes(app: FastifyInstance) {
       user = rows[0];
     }
 
-    return issueTokenPair(user);
+    const pair = await issueTokenPair(user);
+    return { ...pair, isNewUser };
   });
 }

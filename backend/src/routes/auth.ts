@@ -1,6 +1,6 @@
-// Email + password auth: register, login, refresh (rotating), me.
+// Email + password auth: register, login, refresh (rotating), me, password reset.
 import bcrypt from 'bcryptjs';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes, randomInt } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { query } from '../db.js';
@@ -26,6 +26,18 @@ const loginSchema = z.object({
 });
 
 const refreshSchema = z.object({ refreshToken: z.string().min(32).max(200) });
+
+const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+});
+
+const resetPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  code: z.string().trim().regex(/^\d{6}$/),
+  newPassword: z.string().min(8).max(72),
+});
+
+const sha256 = (value: string) => createHash('sha256').update(value).digest('hex');
 
 function bad(reply: { code(n: number): { send(b: unknown): unknown } }, message: string) {
   return reply.code(400).send({ message });
@@ -112,5 +124,63 @@ export default async function authRoutes(app: FastifyInstance) {
     }
     await revokeAllUserTokens(claims.userId);
     return reply.code(204).send();
+  });
+
+  app.post('/forgot-password', async (req, reply) => {
+    const parsed = forgotPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return bad(reply, 'Enter a valid email address.');
+    }
+    const { email } = parsed.data;
+    const { rows } = await query<{ id: string }>('SELECT id FROM users WHERE email = $1', [email]);
+    const user = rows[0];
+    if (user) {
+      await query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
+      const code = String(randomInt(100000, 1000000));
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+      await query(
+        'INSERT INTO password_reset_tokens(id, user_id, code_hash, expires_at) VALUES ($1,$2,$3,$4)',
+        [randomBytes(10).toString('hex'), user.id, sha256(code), expiresAt],
+      );
+      if (process.env.NODE_ENV !== 'production') {
+        req.log.info({ email, code }, 'dev password reset code generated');
+      }
+    }
+    return {
+      ok: true,
+      message: 'If an account exists for that email, a 6-digit reset code has been sent.',
+    };
+  });
+
+  app.post('/reset-password', async (req, reply) => {
+    const parsed = resetPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return bad(reply, 'Enter a valid email, 6-digit code, and password (min 8 chars).');
+    }
+    const { email, code, newPassword } = parsed.data;
+    const { rows: userRows } = await query<{ id: string }>(
+      'SELECT id FROM users WHERE email = $1',
+      [email],
+    );
+    const user = userRows[0];
+    if (!user) {
+      return reply.code(400).send({ message: 'Invalid or expired reset code.' });
+    }
+    const { rows: tokenRows } = await query<{ id: string; expires_at: Date }>(
+      'SELECT id, expires_at FROM password_reset_tokens WHERE user_id = $1 AND code_hash = $2',
+      [user.id, sha256(code)],
+    );
+    const resetRow = tokenRows[0];
+    if (!resetRow || resetRow.expires_at.getTime() < Date.now()) {
+      return reply.code(400).send({ message: 'Invalid or expired reset code.' });
+    }
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await query(
+      'UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2',
+      [passwordHash, user.id],
+    );
+    await query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
+    await revokeAllUserTokens(user.id);
+    return { ok: true, message: 'Password updated. You can now log in.' };
   });
 }
