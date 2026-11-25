@@ -421,11 +421,10 @@ data class MemorizationReciterScreen(val reciterSlug: String) : Screen {
             if (showCreatePortion) {
                 CreatePortionDialog(
                     onDismiss = { showCreatePortion = false },
-                    onCreate = { name, fromSurah, toSurah ->
-                        PortionsStore.addRange(
+                    onCreate = { name, surahIds ->
+                        PortionsStore.addCustom(
                             name = name,
-                            fromSurah = fromSurah,
-                            toSurah = toSurah,
+                            surahIds = surahIds,
                             reciterSlug = reciter.slug,
                         )
                         showCreatePortion = false

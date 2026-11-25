@@ -8,20 +8,23 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -29,7 +32,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -37,6 +39,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -110,11 +114,10 @@ fun ReciterPortionsSection(
     if (showCreateDialog) {
         CreatePortionDialog(
             onDismiss = { showCreateDialog = false },
-            onCreate = { name, fromSurah, toSurah ->
-                PortionsStore.addRange(
+            onCreate = { name, surahIds ->
+                PortionsStore.addCustom(
                     name = name,
-                    fromSurah = fromSurah,
-                    toSurah = toSurah,
+                    surahIds = surahIds,
                     reciterSlug = reciter.slug,
                 )
                 showCreateDialog = false
@@ -203,14 +206,22 @@ private fun PortionChipCard(
 @Composable
 fun CreatePortionDialog(
     onDismiss: () -> Unit,
-    onCreate: (name: String, fromSurah: Int, toSurah: Int) -> Unit,
+    onCreate: (name: String, surahIds: List<Int>) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
-    var fromSurah by remember { mutableIntStateOf(1) }
-    var toSurah by remember { mutableIntStateOf(18) }
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
 
-    val fromName = QuranDataRepository.getSurahById(fromSurah)?.nameEn ?: "Surah $fromSurah"
-    val toName = QuranDataRepository.getSurahById(toSurah)?.nameEn ?: "Surah $toSurah"
+    val allSurahs = remember { QuranDataRepository.getSurahs() }
+    val filteredSurahs = remember(allSurahs, searchQuery) {
+        val q = searchQuery.trim().lowercase()
+        if (q.isEmpty()) allSurahs
+        else allSurahs.filter { s ->
+            s.nameEn.lowercase().contains(q) ||
+                s.nameAr.contains(q) ||
+                s.id.toString() == q
+        }
+    }
 
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedTextColor = GhaisNoir.TextPrimary,
@@ -228,58 +239,145 @@ fun CreatePortionDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight(0.82f)
                 .clip(RoundedCornerShape(28.dp))
                 .background(GhaisNoir.CanvasTop)
                 .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(28.dp))
                 .padding(20.dp),
         ) {
-            Text(
-                text = "Create custom portion",
-                color = GhaisNoir.TextPrimary,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = "Pick any surah range to listen to as your own portion.",
-                color = GhaisNoir.TextTertiary,
-                fontSize = 13.sp,
-            )
-            Spacer(Modifier.height(14.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "Create custom portion",
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = "${selectedIds.size} selected",
+                    color = GhaisNoir.Lavender,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(Modifier.height(10.dp))
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
                 label = { Text("Portion name (e.g. Morning Wird)") },
                 singleLine = true,
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(18.dp),
                 colors = fieldColors,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(14.dp))
-            SurahStepperRow(
-                label = "From",
-                surahId = fromSurah,
-                surahName = fromName,
-                onMinus = {
-                    val next = (fromSurah - 1).coerceAtLeast(1)
-                    fromSurah = next
-                    if (toSurah < next) toSurah = next
-                },
-                onPlus = {
-                    val next = (fromSurah + 1).coerceAtMost(114)
-                    fromSurah = next
-                    if (toSurah < next) toSurah = next
-                },
-            )
             Spacer(Modifier.height(10.dp))
-            SurahStepperRow(
-                label = "To",
-                surahId = toSurah,
-                surahName = toName,
-                onMinus = { toSurah = (toSurah - 1).coerceAtLeast(fromSurah) },
-                onPlus = { toSurah = (toSurah + 1).coerceAtMost(114) },
-            )
-            Spacer(Modifier.height(18.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .clip(GhaisShapes.pill)
+                    .background(GhaisNoir.insetFill())
+                    .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.pill)
+                    .padding(horizontal = 14.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Search,
+                        contentDescription = "Search surahs",
+                        tint = GhaisNoir.TextTertiary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    BasicTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        textStyle = TextStyle(color = GhaisNoir.TextPrimary, fontSize = 13.sp),
+                        cursorBrush = SolidColor(Color.White),
+                        decorationBox = { innerTextField ->
+                            if (searchQuery.isEmpty()) {
+                                Text(
+                                    text = "Search surah by name or number...",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 13.sp,
+                                )
+                            }
+                            innerTextField()
+                        },
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                items(filteredSurahs, key = { it.id }) { surah ->
+                    val checked = surah.id in selectedIds
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(GhaisShapes.row)
+                            .background(if (checked) GhaisNoir.cardFillActive() else GhaisNoir.Fill2)
+                            .border(
+                                1.dp,
+                                if (checked) GhaisNoir.Lavender.copy(alpha = 0.5f) else GhaisNoir.BorderGhost,
+                                GhaisShapes.row,
+                            )
+                            .noirClickable {
+                                selectedIds = if (checked) selectedIds - surah.id else selectedIds + surah.id
+                            }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .clip(CircleShape)
+                                .background(if (checked) GhaisNoir.lavenderFill() else GhaisNoir.wellFill())
+                                .border(
+                                    1.dp,
+                                    if (checked) Color.Transparent else GhaisNoir.BorderCard,
+                                    CircleShape,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (checked) {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = GhaisNoir.LavenderInk,
+                                    modifier = Modifier.size(13.dp),
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text = "${surah.id}. ${surah.nameEn}",
+                            color = GhaisNoir.TextPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = if (checked) FontWeight.Bold else FontWeight.Medium,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = surah.nameAr,
+                            color = GhaisNoir.TextTertiary,
+                            fontSize = 13.sp,
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(14.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -291,78 +389,11 @@ fun CreatePortionDialog(
                 )
                 ChromePillButton(
                     text = "Save",
-                    onClick = { onCreate(name, fromSurah, toSurah) },
+                    enabled = selectedIds.isNotEmpty(),
+                    onClick = { onCreate(name, selectedIds.sorted()) },
                     modifier = Modifier.weight(1f),
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun SurahStepperRow(
-    label: String,
-    surahId: Int,
-    surahName: String,
-    onMinus: () -> Unit,
-    onPlus: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(GhaisShapes.row)
-            .background(GhaisNoir.Fill2)
-            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.row)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                color = GhaisNoir.TextTertiary,
-                fontSize = 11.sp,
-            )
-            Text(
-                text = "$surahId. $surahName",
-                color = GhaisNoir.TextPrimary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(GhaisNoir.wellFill())
-                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
-                .noirClickable(onClick = onMinus),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Remove,
-                contentDescription = "Previous surah",
-                tint = GhaisNoir.TextPrimary,
-                modifier = Modifier.size(16.dp),
-            )
-        }
-        Spacer(Modifier.width(8.dp))
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(GhaisNoir.wellFill())
-                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
-                .noirClickable(onClick = onPlus),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Add,
-                contentDescription = "Next surah",
-                tint = GhaisNoir.TextPrimary,
-                modifier = Modifier.size(16.dp),
-            )
         }
     }
 }

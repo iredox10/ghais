@@ -85,22 +85,32 @@ object PortionsStore {
         }
     }
 
-    fun addRange(name: String, fromSurah: Int, toSurah: Int, reciterSlug: String? = null) {
-        val start = fromSurah.coerceIn(1, 114)
-        val end = toSurah.coerceIn(start, 114)
+    fun addCustom(name: String, surahIds: List<Int>, reciterSlug: String? = null) {
+        val cleanIds = surahIds.filter { it in 1..114 }.distinct().sorted()
+        if (cleanIds.isEmpty()) return
         val cleanName = name.trim().ifBlank {
-            if (start == end) "Surah $start" else "Surahs $start–$end"
+            when {
+                cleanIds.size == 1 -> QuranDataRepository.getSurahById(cleanIds.first())?.nameEn ?: "Surah ${cleanIds.first()}"
+                cleanIds == (cleanIds.first()..cleanIds.last()).toList() -> "Surahs ${cleanIds.first()}–${cleanIds.last()}"
+                else -> "${cleanIds.size} Surahs"
+            }
         }
         val portion = QuranPortion(
             id = "custom-${kotlin.time.Clock.System.now().toEpochMilliseconds()}",
             name = cleanName,
-            surahIds = (start..end).toList(),
+            surahIds = cleanIds,
             reciterSlug = reciterSlug?.takeIf { it.isNotBlank() },
             isCustom = true,
         )
         val updated = listOf(portion) + _customPortions.value
         _customPortions.value = updated
         persist(updated)
+    }
+
+    fun addRange(name: String, fromSurah: Int, toSurah: Int, reciterSlug: String? = null) {
+        val start = fromSurah.coerceIn(1, 114)
+        val end = toSurah.coerceIn(start, 114)
+        addCustom(name, (start..end).toList(), reciterSlug)
     }
 
     fun remove(id: String) {
