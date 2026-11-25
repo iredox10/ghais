@@ -172,13 +172,9 @@ class HifzListeningPlannerScreen(
                                 onListen = {
                                     val tracks = HifzListeningPlannerStore.buildSessionTracks(plan)
                                     if (tracks.isNotEmpty()) {
-                                        AudioEngine.playQueue(tracks, startIndex = 0)
-                                        HifzListeningPlannerStore.recordSessionCompleted(plan.id, epochDay)
+                                        AudioEngine.playListeningPlan(plan.id, tracks)
                                         rootNavigator?.push(NowPlayingScreen())
                                     }
-                                },
-                                onMarkDone = {
-                                    HifzListeningPlannerStore.recordSessionCompleted(plan.id, epochDay)
                                 },
                                 onEdit = { editingPlan = plan },
                                 onDelete = { HifzListeningPlannerStore.deletePlan(plan.id) },
@@ -196,7 +192,6 @@ private fun ListeningPlanCard(
     plan: HifzListeningPlan,
     epochDay: Long,
     onListen: () -> Unit,
-    onMarkDone: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -208,7 +203,7 @@ private fun ListeningPlanCard(
 
     val reciterNames = remember(plan.reciterSlugs) {
         plan.reciterSlugs.mapNotNull { slug ->
-            QuranDataRepository.getReciterBySlug(slug)?.nameEn
+            QuranDataRepository.getReciterBySlug(slug).nameEn.takeIf { it.isNotBlank() }
                 ?: EveryAyahReciters.ALL.firstOrNull { it.slug == slug }?.nameEn
         }.joinToString(", ").ifBlank { "Selected Qari" }
     }
@@ -339,15 +334,10 @@ private fun ListeningPlanCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ChromePillButton(
-                    text = "Listen",
+                    text = if (dayCompleted) "Listen Again" else "Listen Session",
                     leadingIcon = Icons.Filled.PlayArrow,
                     onClick = onListen,
                     modifier = Modifier.weight(1f)
-                )
-                GhostPillButton(
-                    text = if (dayCompleted) "Done ✓" else "+1 Session",
-                    active = dayCompleted,
-                    onClick = onMarkDone
                 )
             }
         }
@@ -376,9 +366,7 @@ private fun PlanEditorBody(
     var surahQuery by remember { mutableStateOf("") }
 
     val allReciters = remember {
-        val teacherFirst = EveryAyahReciters.ALL.map { it.toReciter() }
-        val existingSlugs = teacherFirst.map { it.slug }.toHashSet()
-        teacherFirst + QuranDataRepository.getReciters().filter { it.slug !in existingSlugs }
+        QuranDataRepository.getBrowseReciters()
     }
     val filteredReciters = remember(qariQuery, allReciters) {
         val q = qariQuery.trim().lowercase()
@@ -438,6 +426,23 @@ private fun PlanEditorBody(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
+                    if (selectedReciters.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            selectedReciters.forEach { slug ->
+                                val name = allReciters.firstOrNull { it.slug == slug }?.nameEn
+                                    ?: QuranDataRepository.getReciterBySlug(slug).nameEn
+                                PresetChip(
+                                    label = "$name ✕",
+                                    selected = true,
+                                    onClick = { selectedReciters = selectedReciters - slug }
+                                )
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(8.dp))
                     NoirSearchField(
                         value = qariQuery,
@@ -491,11 +496,34 @@ private fun PlanEditorBody(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        PresetChip("Al-Fatihah") { selectedSurahs = (selectedSurahs + 1).distinct() }
-                        PresetChip("Al-Kahf") { selectedSurahs = (selectedSurahs + 18).distinct() }
-                        PresetChip("Yasin") { selectedSurahs = (selectedSurahs + 36).distinct() }
-                        PresetChip("Al-Mulk") { selectedSurahs = (selectedSurahs + 67).distinct() }
-                        PresetChip("Last 10") { selectedSurahs = (selectedSurahs + (105..114)).distinct() }
+                        val portions = listOf(
+                            "Juz 'Amma (78–114)" to (78..114).toList(),
+                            "Juz Tabarak (67–77)" to (67..77).toList(),
+                            "Juz Qad Sami' (58–66)" to (58..66).toList(),
+                            "Juz Adh-Dhariyat (51–57)" to (51..57).toList(),
+                            "Last 10 (105–114)" to (105..114).toList(),
+                            "Al-Fatihah" to listOf(1),
+                            "Al-Baqarah" to listOf(2),
+                            "Al-Kahf" to listOf(18),
+                            "Yasin" to listOf(36),
+                            "Ar-Rahman" to listOf(55),
+                            "Al-Waqi'ah" to listOf(56),
+                            "Al-Mulk" to listOf(67),
+                        )
+                        portions.forEach { (label, ids) ->
+                            val allIn = ids.all { it in selectedSurahs }
+                            PresetChip(
+                                label = label,
+                                selected = allIn,
+                                onClick = {
+                                    selectedSurahs = if (allIn) {
+                                        selectedSurahs - ids.toSet()
+                                    } else {
+                                        (selectedSurahs + ids).distinct()
+                                    }
+                                }
+                            )
+                        }
                         PresetChip("Clear") { selectedSurahs = emptyList() }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -782,21 +810,26 @@ private fun SelectableRow(
 @Composable
 private fun PresetChip(
     label: String,
+    selected: Boolean = false,
     onClick: () -> Unit,
 ) {
     Box(
         modifier = Modifier
             .clip(GhaisShapes.pill)
-            .background(GhaisNoir.Fill2)
-            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+            .background(if (selected) GhaisNoir.Fill4 else GhaisNoir.Fill2)
+            .border(
+                1.dp,
+                if (selected) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
+                GhaisShapes.pill
+            )
             .noirClickable(onClick)
             .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {
         Text(
             text = label,
-            color = GhaisNoir.TextSecondary,
+            color = if (selected) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
             fontSize = 11.sp,
-            fontWeight = FontWeight.Medium
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
         )
     }
 }

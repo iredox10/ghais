@@ -308,11 +308,17 @@ object MemorizationScreen : Tab {
                                             fontWeight = FontWeight.Bold
                                         )
                                         Spacer(Modifier.height(2.dp))
+                                        val reciterSummary = remember(activePlan?.reciterSlugs) {
+                                            activePlan?.reciterSlugs?.mapNotNull { slug ->
+                                                QuranDataRepository.getReciterBySlug(slug).nameEn
+                                            }?.joinToString(", ") ?: ""
+                                        }
                                         Text(
                                             text = if (activePlan != null) {
                                                 val done = activePlan.sessionsDoneOn(epochDay)
                                                 val dayNo = activePlan.currentDayNumber(epochDay)
-                                                "${activePlan.displayTitle { id -> QuranDataRepository.getSurahById(id)?.nameEn ?: "Surah $id" }} • $done/${activePlan.sessionsPerDay} today (Day $dayNo/${activePlan.durationDays})"
+                                                val qariPart = if (reciterSummary.isNotBlank()) " • $reciterSummary" else ""
+                                                "${activePlan.displayTitle { id -> QuranDataRepository.getSurahById(id)?.nameEn ?: "Surah $id" }}$qariPart • $done/${activePlan.sessionsPerDay} today (Day $dayNo/${activePlan.durationDays})"
                                             } else {
                                                 "Pick Qaris, Surahs, daily repeats & days with incomplete-day reminders"
                                             },
@@ -346,8 +352,7 @@ object MemorizationScreen : Tab {
                                             onClick = {
                                                 val tracks = HifzListeningPlannerStore.buildSessionTracks(activePlan)
                                                 if (tracks.isNotEmpty()) {
-                                                    AudioEngine.playQueue(tracks, startIndex = 0)
-                                                    HifzListeningPlannerStore.recordSessionCompleted(activePlan.id, epochDay)
+                                                    AudioEngine.playListeningPlan(activePlan.id, tracks)
                                                     rootNavigator?.push(NowPlayingScreen())
                                                 }
                                             },

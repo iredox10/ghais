@@ -1,5 +1,6 @@
 package com.ghais.player
 
+import com.ghais.data.repository.HifzListeningPlannerStore
 import com.ghais.data.repository.HifzMasteryStore
 import com.ghais.data.repository.MasteryStatus
 import com.ghais.data.repository.QuranAyahRepository
@@ -425,8 +426,10 @@ object AudioEngine {
     // but a fully-broken reciter folder doesn't loop forever.
     private var consecutiveErrors: Int = 0
     private val maxAutoSkipErrors: Int = 10
+    private var activeListeningPlanId: String? = null
 
     fun playTrack(track: TrackItem, startPositionMs: Long = 0L) {
+        activeListeningPlanId = null
         clearAyahRepeat()
         val isAyah = track.ayahNo > 0 && !track.isFullSurah
         _isAyahMode.value = isAyah
@@ -446,6 +449,7 @@ object AudioEngine {
     }
 
     fun playQueue(tracks: List<TrackItem>, startIndex: Int = 0, startPositionMs: Long = 0L) {
+        activeListeningPlanId = null
         if (tracks.isEmpty()) {
             clear()
             return
@@ -1693,6 +1697,10 @@ object AudioEngine {
         // Autoplay off: stop at queue end even if repeat QUEUE would wrap.
         // Manual next/previous (forceAdvance) bypasses this gate.
         if (!PlaybackPrefs.autoplayNext.value && isQueueEndForAutoplay()) {
+            activeListeningPlanId?.let { planId ->
+                activeListeningPlanId = null
+                HifzListeningPlannerStore.recordSessionCompleted(planId)
+            }
             SleepTimer.onQueueEnded()
             stopPlayback()
             return
@@ -1702,10 +1710,24 @@ object AudioEngine {
             _currentIndex.value = queueManager.currentIndex
             startPlayback(nextTrack)
         } else {
+            activeListeningPlanId?.let { planId ->
+                activeListeningPlanId = null
+                HifzListeningPlannerStore.recordSessionCompleted(planId)
+            }
             SleepTimer.onSurahEnded()
             SleepTimer.onQueueEnded()
             stopPlayback()
         }
+    }
+
+    /**
+     * Starts a Hifz listening planner session. Progress is recorded ONLY when
+     * the queued surahs/repeats naturally finish in [handleSurahTrackEnd].
+     */
+    fun playListeningPlan(planId: String, tracks: List<TrackItem>) {
+        if (tracks.isEmpty()) return
+        playQueue(tracks, startIndex = 0)
+        activeListeningPlanId = planId
     }
 
     private fun effectiveDuration(): Long {
