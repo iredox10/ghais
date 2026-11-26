@@ -2962,5 +2962,58 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             country = "Nigeria 🇳🇬",
             serverUrl = "https://media.way2quran.com/abdullah-aba-zaria/hafs-an-asim/",
             availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
+        ),
+        Reciter(
+            slug = "mohamed-refaat",
+            nameEn = "Mohamed Refaat",
+            nameAr = "محمد رفعت",
+            riwayah = "Hafs",
+            style = "mujawwad",
+            tempo = "slow",
+            imageUrl = "https://media.way2quran.com/imgs/mohamed-refaat.jpg?v=1777579622919",
+            audioFolder = "",
+            country = "Egypt 🇪🇬",
+            serverUrl = "https://media.way2quran.com/mohamed-refaat/hafs-an-asim/",
+            availableSurahList = "1,10,11,12,17,18,19,20,48,54,55,56,69,72,73,75,76,77,78,79,81,82,83,85,86,87,88,89,96,97,98,99,100,101,102,103,104,105,106",
+            surahFileMap = """{"97":"97.mp3","99":"99.mp3"}"""
+        ),
+        Reciter(
+            slug = "muhammad-taha-al-junaid",
+            nameEn = "Muhammad Taha Al-Junayd",
+            nameAr = "محمد طه الجنيد",
+            riwayah = "Hafs",
+            style = "murattal",
+            tempo = "medium",
+            imageUrl = "https://media.way2quran.com/imgs/muhammad-taha-al-junaid.jpg?v=1780249214963",
+            audioFolder = "",
+            country = "Bahrain 🇧🇭",
+            serverUrl = "https://media.way2quran.com/muhammad-taha-al-junaid/hafs-an-asim/",
+            availableSurahList = "1,2,12,18,36,39,40,46,47,48,49,50,51,52,53,54,55,56,57,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
+        ),
+        Reciter(
+            slug = "muzammil-hasballah",
+            nameEn = "Muzammil Hasballah",
+            nameAr = "مزمل حسب الله",
+            riwayah = "Hafs",
+            style = "murattal",
+            tempo = "medium",
+            imageUrl = "https://media.way2quran.com/imgs/muzammil-hasballah.jpg?v=1783340500382",
+            audioFolder = "",
+            country = "Indonesia 🇮🇩",
+            serverUrl = "https://media.way2quran.com/muzammil-hasballah/hafs-an-asim/",
+            availableSurahList = "1,18,25,36,55,67,75,78,79,80,81,82,83,84,85,86,87,88,89,90,91,93,94,95,96,97,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
+        ),
+        Reciter(
+            slug = "hassan-saleh",
+            nameEn = "Hassan Mohamed Saleh",
+            nameAr = "حسن محمد صالح",
+            riwayah = "Hafs",
+            style = "murattal",
+            tempo = "medium",
+            imageUrl = "https://media.way2quran.com/imgs/hassan-saleh.jpg?v=1780947379384",
+            audioFolder = "",
+            country = "Egypt 🇪🇬",
+            serverUrl = "https://media.way2quran.com/hassan-saleh/hafs-an-asim/",
+            availableSurahList = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114"
         )
 )
