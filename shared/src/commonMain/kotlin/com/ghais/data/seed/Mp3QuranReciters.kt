@@ -2910,5 +2910,44 @@ val ALL_MP3QURAN_RECITERS: List<Reciter> = listOf(
             country = "Morocco 🇲🇦",
             serverUrl = "https://cdn.mp3quran.net/audio/younes-souilass/r1/",
             availableSurahList = "1,2,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,45,46,47,48,50,51,52,53,54,56,57,67,71,73,76,77,78,79,80,81,82,86,89,90,91,93,95,97,112"
+        ),
+        Reciter(
+            slug = "omar-diaa-al-din",
+            nameEn = "Omar Bn DiaaAldeen",
+            nameAr = "عمر بن ضياء الدين",
+            riwayah = "Hafs",
+            style = "murattal",
+            tempo = "medium",
+            imageUrl = "https://media.way2quran.com/imgs/omar-diaa-al-din.jpg?v=1783684276348",
+            audioFolder = "",
+            country = "Egypt 🇪🇬",
+            serverUrl = "https://media.way2quran.com/omar-diaa-al-din/hafs-an-asim/",
+            availableSurahList = "2,3,4,5,6,8,9,10,12,15,17,18,19,20,23,24,25,29,31,32,33,34,35,40,44,47,49,50,53,55,56,57,58,59,60,62,63,64,66,67,68,69,70,71,72,73,74,75,76,77,78"
+        ),
+        Reciter(
+            slug = "abdul-rahman-musaad",
+            nameEn = "Abdul Rahman Mossad",
+            nameAr = "عبد الرحمن مسعد",
+            riwayah = "Hafs",
+            style = "murattal",
+            tempo = "slow",
+            imageUrl = "https://media.way2quran.com/imgs/abdul-rahman-musaad.jpeg?v=1793980355785",
+            audioFolder = "",
+            country = "Egypt 🇪🇬",
+            serverUrl = "https://media.way2quran.com/abdul-rahman-musaad/hafs-an-asim/",
+            availableSurahList = "2,3,5,7,10,11,13,14,15,16,17,19,21,23,24,25,27,29,30,32,39,49,67,73,78,87,88,93,94,95,100,101,107,112,113,114",
+            surahFileMap = """{"2":"002-001.mp3","3":"003-001.mp3","5":"005-001.mp3","7":"007-001.mp3","10":"010-001.mp3","13":"013-001.mp3","14":"014-001.mp3","16":"016-001.mp3","19":"019-001.mp3","21":"021-001.mp3","23":"023-001.mp3","24":"024-001.mp3","27":"027-001.mp3","29":"029-001.mp3","30":"030-001.mp3","39":"039-001.mp3"}"""
+        ),
+        Reciter(
+            slug = "ibrahim-idris",
+            nameEn = "Ibrahim Idris",
+            nameAr = "إبراهيم إدريس",
+            riwayah = "Hafs",
+            style = "murattal",
+            tempo = "medium",
+            audioFolder = "",
+            country = "United Kingdom 🇬🇧",
+            serverUrl = "https://podcasts.qurancentral.com/ibi-idris/",
+            availableSurahList = "78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111"
         )
 )
