@@ -53,16 +53,16 @@ fun ShelfRow(
         Text(
             text = shelf.title,
             color = GhaisNoir.TextPrimary,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.ExtraBold,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = shelf.subtitle,
-            color = GhaisNoir.TextSecondary,
-            fontSize = 13.sp,
+            color = GhaisNoir.TextTertiary,
+            fontSize = 12.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
