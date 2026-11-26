@@ -533,7 +533,8 @@ class RecitersScreen : Tab {
                                     label = "Browse nations • ${groups.size}",
                                     actionLabel = if (nationsExpanded) "Show less"
                                     else "All ${groups.size} nations",
-                                    onAction = { nationsExpanded = !nationsExpanded }
+                                    onAction = { nationsExpanded = !nationsExpanded },
+                                    large = true,
                                 )
                                 Spacer(Modifier.height(12.dp))
                             }
@@ -726,7 +727,8 @@ private fun NoirNationReel(
         NoirSectionHeader(
             label = "$nation • ${reciters.size}",
             actionLabel = "See all",
-            onAction = onSeeAll
+            onAction = onSeeAll,
+            large = true,
         )
         LazyRow(
             contentPadding = PaddingValues(horizontal = 2.dp),

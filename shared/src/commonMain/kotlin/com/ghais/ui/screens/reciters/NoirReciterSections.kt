@@ -39,6 +39,7 @@ fun NoirReciterSectionHeader(
         modifier = modifier,
         actionLabel = if (onSeeAll != null) "See all" else null,
         onAction = onSeeAll,
+        large = true,
     )
 }
 

@@ -79,7 +79,8 @@ fun WeeklyMostHeardSection(
         // be wrong somewhere every single day.
         NoirSectionHeader(
             label = if (dateLabel.isBlank()) "Weekly most heard"
-            else "Weekly most heard • last 7 days"
+            else "Weekly most heard • last 7 days",
+            large = true,
         )
         // Top-three podium (leaderboard-ref): 2nd • 1st • 3rd, winner
         // raised center with a trophy. Each taps through to that qari's

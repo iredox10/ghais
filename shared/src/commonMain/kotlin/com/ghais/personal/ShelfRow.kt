@@ -53,8 +53,8 @@ fun ShelfRow(
         Text(
             text = shelf.title,
             color = GhaisNoir.TextPrimary,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.ExtraBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

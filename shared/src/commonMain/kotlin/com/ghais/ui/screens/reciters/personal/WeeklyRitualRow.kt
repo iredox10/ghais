@@ -45,7 +45,8 @@ fun WeeklyRitualRow(
     Column(modifier = modifier) {
         NoirSectionHeader(
             label = ritualTitle(weekSeed),
-            modifier = Modifier.padding(bottom = 0.dp)
+            modifier = Modifier.padding(bottom = 0.dp),
+            large = true,
         )
         Text(
             text = "Fresh every Monday",
