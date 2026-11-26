@@ -62,7 +62,14 @@ import kotlin.time.Clock
 
 @Composable
 fun SchedulesProtonSection() {
-    val schedules by SchedulesStore.schedules.collectAsState()
+    val allSchedules by SchedulesStore.schedules.collectAsState()
+    val schedules = remember(allSchedules) {
+        allSchedules.filter { s ->
+            !s.id.startsWith("notify-") &&
+                !s.id.startsWith("hifz-plan-") &&
+                s.id != "settings-daily-reminder"
+        }
+    }
     var showEditor by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<RecitationSchedule?>(null) }
     var exactAllowed by remember { mutableStateOf(true) }

@@ -43,6 +43,10 @@ import com.ghais.data.share.openSupportMail
 import com.ghais.analytics.HookAnalytics
 import com.ghais.analytics.HookEvents
 import com.ghais.flags.HookFlags
+import com.ghais.notify.NotifyChannel
+import com.ghais.notify.NotifyScheduler
+import com.ghais.player.AudioEngine
+import com.ghais.ui.screens.profile.glass.EditProfileDialogGlass
 import com.ghais.ui.screens.profile.identity.AchievementStats
 import com.ghais.ui.screens.profile.identity.AchievementsShelf
 import com.ghais.ui.screens.profile.identity.unlockedAchievements
@@ -155,7 +159,7 @@ object ProfileScreen : Tab {
             rootNavigator?.push(
                 AuthScreen(onAuthenticated = { _ ->
                     OnboardingStore.markDoneForCurrentUser()
-                    rootNavigator?.pop()
+                    rootNavigator.pop()
                     tabNavigator.current = HomeScreen
                 })
             )
@@ -182,6 +186,10 @@ object ProfileScreen : Tab {
             mutableStateOf(settings.migratedProfileBoolean(PREF_DHIKR_ALERT, true))
         }
 
+        var showEditProfile by remember { mutableStateOf(false) }
+        val currentTrack by AudioEngine.currentTrack.collectAsState()
+        val bottomDockPadding = if (currentTrack != null) 200.dp else 120.dp
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -196,7 +204,7 @@ object ProfileScreen : Tab {
             AuroraBackdrop()
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 120.dp)
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = bottomDockPadding)
             ) {
                 // -----------------------------------------------------------------
                 // 0. Noir header — editorial greeting
@@ -216,7 +224,7 @@ object ProfileScreen : Tab {
                         displayName = session?.name?.ifBlank { null } ?: userName,
                         email = session?.email,
                         isGuest = session == null,
-                        onClick = if (session == null) openLogin else signOut
+                        onClick = if (session == null) openLogin else ({ showEditProfile = true })
                     )
                     Spacer(modifier = Modifier.height(18.dp))
                 }
@@ -299,6 +307,11 @@ object ProfileScreen : Tab {
                             onCheckedChange = {
                                 dailyDhikrReminder = it
                                 settings.putBoolean(PREF_DHIKR_ALERT, it)
+                                if (it) {
+                                    NotifyScheduler.scheduleDaily(7, 30, NotifyChannel.DEVOTION_REMINDER)
+                                } else {
+                                    NotifyScheduler.cancel(NotifyChannel.DEVOTION_REMINDER)
+                                }
                             }
                         )
 
@@ -380,6 +393,22 @@ object ProfileScreen : Tab {
             }
             // Film grain over everything (last = on top).
             NoirGrainOverlay()
+            if (showEditProfile) {
+                EditProfileDialogGlass(
+                    initialName = userName,
+                    initialBio = userBio,
+                    onSave = { newName, newBio ->
+                        val cleanName = newName.trim().ifBlank { userName }
+                        val cleanBio = newBio.trim()
+                        userName = cleanName
+                        userBio = cleanBio
+                        settings.putString(PREF_USER_NAME, cleanName)
+                        settings.putString(PREF_USER_BIO, cleanBio)
+                        showEditProfile = false
+                    },
+                    onDismiss = { showEditProfile = false }
+                )
+            }
         }
     }
 }
