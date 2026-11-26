@@ -43,7 +43,10 @@ fun WeeklyRitualRow(
     if (reciters.isEmpty()) return
 
     Column(modifier = modifier) {
-        NoirSectionHeader(label = ritualTitle(weekSeed))
+        NoirSectionHeader(
+            label = ritualTitle(weekSeed),
+            modifier = Modifier.padding(bottom = 0.dp)
+        )
         Text(
             text = "Fresh every Monday",
             color = GhaisNoir.TextTertiary,

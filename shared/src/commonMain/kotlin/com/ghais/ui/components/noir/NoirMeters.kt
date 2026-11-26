@@ -74,7 +74,7 @@ fun NoirSectionHeader(
         Text(
             text = label,
             color = GhaisNoir.TextPrimary,
-            fontSize = 15.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Bold
         )
         if (actionLabel != null && onAction != null) {

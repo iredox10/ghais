@@ -79,8 +79,8 @@ fun NationReelBlock(
             Text(
                 text = nation,
                 color = GhaisNoir.TextPrimary,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.ExtraBold,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false)
