@@ -258,7 +258,7 @@ fun QueueSheet(
                             Text(
                                 text = "Search surahs or reciter",
                                 color = GhaisNoir.TextDisabled,
-                                fontSize = 13.5.sp
+                                fontSize = 14.sp
                             )
                         }
                         BasicTextField(
@@ -266,7 +266,7 @@ fun QueueSheet(
                             onValueChange = { query = it },
                             textStyle = TextStyle(
                                 color = GhaisNoir.TextPrimary,
-                                fontSize = 13.5.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium
                             ),
                             cursorBrush = SolidColor(GhaisNoir.TextPrimary),

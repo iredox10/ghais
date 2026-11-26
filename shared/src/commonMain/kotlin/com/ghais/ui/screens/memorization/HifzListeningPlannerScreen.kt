@@ -278,7 +278,7 @@ private fun ListeningPlanCard(
                         Text(
                             text = "DAY $dayNumber / ${plan.durationDays}",
                             color = GhaisNoir.TextSecondary,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -293,7 +293,7 @@ private fun ListeningPlanCard(
                             Text(
                                 text = "✓ DONE TODAY",
                                 color = GhaisNoir.TextPrimary,
-                                fontSize = 10.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -486,7 +486,7 @@ private fun PlanStatTile(
         Text(
             text = label,
             color = GhaisNoir.TextTertiary,
-            fontSize = 9.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold
         )
         Spacer(Modifier.height(2.dp))

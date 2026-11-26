@@ -220,7 +220,7 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                             Text(
                                 text = "SURAH ${surah.id} • ${surah.revelationType.uppercase()}",
                                 color = GhaisNoir.TextTertiary,
-                                fontSize = 10.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 letterSpacing = 1.2.sp
                             )
@@ -425,7 +425,7 @@ private fun SurahNoirHeroPlate(
                     Text(
                         text = "SURAH",
                         color = GhaisNoir.TextTertiary,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = 1.2.sp
                     )
@@ -663,7 +663,7 @@ private fun RangePlaySheet(
             Text(
                 text = "QUICK PRESETS",
                 color = GhaisNoir.TextTertiary,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.sp
             )
@@ -727,7 +727,7 @@ private fun RangePlaySheet(
                     Text(
                         text = "START AYAH",
                         color = GhaisNoir.TextTertiary,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = 1.sp
                     )
@@ -769,7 +769,7 @@ private fun RangePlaySheet(
                     Text(
                         text = "END AYAH",
                         color = GhaisNoir.TextTertiary,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = 1.sp
                     )
@@ -805,7 +805,7 @@ private fun RangePlaySheet(
             Text(
                 text = "LOOP REPETITIONS",
                 color = GhaisNoir.TextTertiary,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.sp
             )

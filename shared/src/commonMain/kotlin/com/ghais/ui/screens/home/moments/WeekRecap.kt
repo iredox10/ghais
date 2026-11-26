@@ -167,7 +167,7 @@ fun WeekRecapCard(
             Text(
                 text = "WEEKLY RECAP",
                 color = GhaisNoir.TextTertiary,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.2.sp,
             )

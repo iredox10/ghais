@@ -356,7 +356,7 @@ private fun ReciterSearchBar(
                     Text(
                         text = "Search by reciter, Arabic name, country...",
                         color = GhaisNoir.TextDisabled,
-                        fontSize = 13.5.sp
+                        fontSize = 14.sp
                     )
                 }
                 BasicTextField(
@@ -364,7 +364,7 @@ private fun ReciterSearchBar(
                     onValueChange = onQueryChange,
                     textStyle = TextStyle(
                         color = GhaisNoir.TextPrimary,
-                        fontSize = 13.5.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     ),
                     cursorBrush = SolidColor(GhaisNoir.TextPrimary),

@@ -176,7 +176,7 @@ fun NoirBadgeDot(count: Int, modifier: Modifier = Modifier) {
         Text(
             text = if (count > 99) "99+" else count.toString(),
             color = GhaisNoir.OnChrome,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1
         )

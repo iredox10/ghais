@@ -286,7 +286,7 @@ private fun AchievementBadge(
                     Text(
                         text = tierLabel(def.tier),
                         color = GhaisNoir.TextTertiary,
-                        fontSize = 9.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.8.sp,
                         maxLines = 1
@@ -296,7 +296,7 @@ private fun AchievementBadge(
             Spacer(Modifier.height(10.dp))
             Text(
                 text = def.title,
-                fontSize = 13.5.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = if (unlocked) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary,
                 maxLines = 1,
@@ -305,7 +305,7 @@ private fun AchievementBadge(
             Spacer(Modifier.height(2.dp))
             Text(
                 text = if (unlocked) def.desc else "Locked • ${def.desc}",
-                fontSize = 11.5.sp,
+                fontSize = 12.sp,
                 color = GhaisNoir.TextTertiary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis

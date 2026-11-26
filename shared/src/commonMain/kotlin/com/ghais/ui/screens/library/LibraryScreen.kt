@@ -640,7 +640,7 @@ private fun NoirRoutinesTile(onClick: () -> Unit) {
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "Your custom recitation routines",
-                fontSize = 12.5.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 lineHeight = 16.5.sp,
                 color = GhaisNoir.TextSecondary,
@@ -725,7 +725,7 @@ private fun NoirKhatmaTile(
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "Quran completion plans",
-                fontSize = 12.5.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 lineHeight = 16.5.sp,
                 color = GhaisNoir.TextSecondary,
@@ -809,7 +809,7 @@ private fun NoirMushafTile(
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "Read with juz & page marks",
-                fontSize = 12.5.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 lineHeight = 16.5.sp,
                 color = GhaisNoir.TextSecondary,
@@ -944,7 +944,7 @@ private fun NoirDownloadsTile(
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "Your offline recitations",
-                fontSize = 12.5.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 lineHeight = 16.5.sp,
                 color = GhaisNoir.TextSecondary,
@@ -1024,7 +1024,7 @@ private fun NoirCreatePlaylistTile(onClick: () -> Unit) {
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "Name your own collection of recitations",
-                fontSize = 12.5.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 lineHeight = 16.5.sp,
                 color = GhaisNoir.TextSecondary,
@@ -1130,7 +1130,7 @@ private fun NoirUserPlaylistTile(
             Spacer(Modifier.height(4.dp))
             Text(
                 text = if (trackCount == 0) "No tracks yet — open to add recitations" else countText,
-                fontSize = 12.5.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 lineHeight = 16.5.sp,
                 color = GhaisNoir.TextSecondary,
@@ -1285,7 +1285,7 @@ private fun NoirLibraryTile(
             Spacer(Modifier.height(4.dp))
             Text(
                 text = playlist.description,
-                fontSize = 12.5.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 lineHeight = 16.5.sp,
                 color = GhaisNoir.TextSecondary,
@@ -1420,7 +1420,7 @@ private fun NoirLibraryBadge(category: String) {
         Text(
             text = category.uppercase(),
             color = GhaisNoir.TextSecondary,
-            fontSize = 10.5.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.9.sp,
             maxLines = 1
@@ -1590,7 +1590,7 @@ private fun NoirEditorialTile(
             Spacer(Modifier.height(4.dp))
             Text(
                 text = playlist.description.ifBlank { "A curated editorial collection" },
-                fontSize = 12.5.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 lineHeight = 16.5.sp,
                 color = GhaisNoir.TextSecondary,

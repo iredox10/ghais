@@ -68,7 +68,7 @@ fun NoirListRow(
                     Text(
                         text = badgeCount.coerceAtMost(9).toString(),
                         color = GhaisNoir.OnChrome,
-                        fontSize = 9.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }

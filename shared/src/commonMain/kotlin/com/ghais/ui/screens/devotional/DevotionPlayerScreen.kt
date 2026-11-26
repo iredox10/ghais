@@ -750,7 +750,7 @@ private fun ColumnScope.ReaderBody(
             Text(
                 text = "REFERENCE",
                 color = GhaisNoir.TextTertiary,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.4.sp
             )
@@ -767,7 +767,7 @@ private fun ColumnScope.ReaderBody(
             Text(
                 text = "CATEGORY",
                 color = GhaisNoir.TextTertiary,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.4.sp
             )
@@ -950,7 +950,7 @@ private fun ListeningBody(
                 Text(
                     text = errorMessage,
                     color = GhaisNoir.TextSecondary,
-                    fontSize = 12.5.sp,
+                    fontSize = 12.sp,
                     lineHeight = 17.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -1013,7 +1013,7 @@ private fun ReadOnlyBody(
         Text(
             text = "No audio for this ${kind.unitWord.dropLast(1)} yet — read along.",
             color = GhaisNoir.TextTertiary,
-            fontSize = 12.5.sp,
+            fontSize = 12.sp,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(14.dp))
@@ -1052,7 +1052,7 @@ private fun PreparingAudio() {
         Text(
             text = "Preparing audio…",
             color = GhaisNoir.TextDisabled,
-            fontSize = 12.5.sp,
+            fontSize = 12.sp,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -1112,7 +1112,7 @@ private fun QuietCenter(
         Text(
             text = hint,
             color = GhaisNoir.TextSecondary,
-            fontSize = 12.5.sp,
+            fontSize = 12.sp,
             lineHeight = 18.sp,
             textAlign = TextAlign.Center
         )

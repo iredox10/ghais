@@ -112,7 +112,7 @@ object BroadcastsScreen : Screen {
                             Text(
                                 text = "New broadcasts from Ghaith will appear here.",
                                 color = GhaisNoir.TextSecondary,
-                                fontSize = 12.5.sp,
+                                fontSize = 12.sp,
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -202,7 +202,7 @@ private fun BroadcastRow(
             Text(
                 text = item.body,
                 color = GhaisNoir.TextSecondary,
-                fontSize = 13.5.sp
+                fontSize = 14.sp
             )
         }
     }

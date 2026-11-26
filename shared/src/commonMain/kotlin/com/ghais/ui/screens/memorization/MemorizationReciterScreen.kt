@@ -578,7 +578,7 @@ private fun SurahMasteryHeatmapBar(
         Text(
             text = "${masteredCount}M · ${weakCount}W · ${learningCount}L",
             color = GhaisNoir.TextTertiary,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1
         )

@@ -159,7 +159,7 @@ private fun FilterGroupRow(
         Text(
             text = label.uppercase(),
             color = GhaisNoir.TextTertiary,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
         )

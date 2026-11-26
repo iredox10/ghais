@@ -679,7 +679,7 @@ private fun HifzSrsTierRow(
                     Text(
                         text = plan.subtitle,
                         color = GhaisNoir.TextTertiary,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

@@ -283,7 +283,7 @@ object HistoryScreen : Screen {
                             Text(
                                 text = "Your listening history from the last 30 days will appear here.",
                                 color = GhaisNoir.TextSecondary,
-                                fontSize = 12.5.sp,
+                                fontSize = 12.sp,
                                 textAlign = TextAlign.Center
                             )
                         }

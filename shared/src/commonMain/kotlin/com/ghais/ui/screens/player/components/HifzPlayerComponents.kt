@@ -283,7 +283,7 @@ fun RangeLoopBadge(
             Text(
                 text = "RANGE: ${range.startAyah}–${range.endAyah} ($loopStr)",
                 color = GhaisNoir.TextPrimary,
-                fontSize = 11.5.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.8.sp
             )
@@ -333,7 +333,7 @@ fun QuickMasteryPill(
     ) {
         Text(
             text = symbol,
-            fontSize = 9.sp
+            fontSize = 11.sp
         )
         Spacer(modifier = Modifier.width(5.dp))
         Text(
@@ -502,7 +502,7 @@ fun VoiceCompareSection(
                         Text(
                             text = if (hasRecording) "Recitation recorded • Tap to compare"
                             else "Record your voice to test Tajweed",
-                            fontSize = 10.5.sp,
+                            fontSize = 11.sp,
                             color = GhaisNoir.TextTertiary
                         )
                     }
@@ -517,7 +517,7 @@ fun VoiceCompareSection(
                 ) {
                     Text(
                         text = if (isExpanded) "Hide" else "Open",
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = GhaisNoir.TextSecondary
                     )
@@ -622,7 +622,7 @@ fun VoiceCompareSection(
                             Text(
                                 text = "Record My Recitation",
                                 color = GhaisNoir.OnChrome,
-                                fontSize = 12.5.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }

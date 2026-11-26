@@ -844,7 +844,7 @@ private fun SearchInsetField(
                     Text(
                             text = "Search surahs, reciters, duas, ayahs...",
                         color = GhaisNoir.TextDisabled,
-                        fontSize = 13.5.sp
+                        fontSize = 14.sp
                     )
                 }
                 BasicTextField(
@@ -852,7 +852,7 @@ private fun SearchInsetField(
                     onValueChange = onQueryChange,
                     textStyle = TextStyle(
                         color = GhaisNoir.TextPrimary,
-                        fontSize = 13.5.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     ),
                     cursorBrush = SolidColor(GhaisNoir.TextPrimary),
@@ -1342,7 +1342,7 @@ private fun ReciterNoirRow(
                     Text(
                         text = "30s",
                         color = GhaisNoir.TextSecondary,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -1669,7 +1669,7 @@ private fun SearchEmptyWell(
             Text(
                 text = hint,
                 color = GhaisNoir.TextSecondary,
-                fontSize = 12.5.sp,
+                fontSize = 12.sp,
                 textAlign = TextAlign.Center
             )
         }

@@ -371,7 +371,7 @@ private fun EmptyState(
             Text(
                 text = hint,
                 color = GhaisNoir.TextSecondary,
-                fontSize = 12.5.sp,
+                fontSize = 12.sp,
                 textAlign = TextAlign.Center
             )
         }

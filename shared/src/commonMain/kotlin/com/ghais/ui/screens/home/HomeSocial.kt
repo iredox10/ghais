@@ -234,7 +234,7 @@ fun HomeStatsCard() {
                 }
             }
             Spacer(Modifier.height(18.dp))
-            Text(text = "Last 7 days • UTC", color = GhaisNoir.TextTertiary, fontSize = 10.sp)
+            Text(text = "Last 7 days • UTC", color = GhaisNoir.TextTertiary, fontSize = 11.sp)
             Spacer(Modifier.height(6.dp))
             // 7-day minutes chart — flat bars are silent days, never gaps.
             Row(
@@ -268,7 +268,7 @@ fun HomeStatsCard() {
                         Text(
                             text = if (isToday) "${minutes}m" else dayLetterOf(day),
                             color = if (isToday) GhaisNoir.Lavender else GhaisNoir.TextTertiary,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
                         )
                     }

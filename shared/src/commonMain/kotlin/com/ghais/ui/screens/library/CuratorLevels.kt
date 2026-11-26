@@ -112,7 +112,7 @@ fun CuratorBadge(
         Text(
             text = level.title.uppercase(),
             color = GhaisNoir.TextPrimary,
-            fontSize = 11.5.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.9.sp,
             maxLines = 1
@@ -121,7 +121,7 @@ fun CuratorBadge(
         Text(
             text = "${curatorScore(playlistsCreated, tracksSaved)} pts",
             color = GhaisNoir.TextTertiary,
-            fontSize = 11.5.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1
         )

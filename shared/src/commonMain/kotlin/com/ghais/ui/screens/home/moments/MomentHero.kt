@@ -69,7 +69,7 @@ fun MomentHeroCard(
             Text(
                 text = suggestion.moment.name.replace('_', ' '),
                 color = GhaisNoir.TextTertiary,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.2.sp,
             )

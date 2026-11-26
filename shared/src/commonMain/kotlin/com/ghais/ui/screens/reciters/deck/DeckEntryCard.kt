@@ -66,7 +66,7 @@ fun DeckEntryCard(
                 text = if (doneToday) "TODAY'S VOICES • DONE"
                 else "TODAY'S VOICES • $totalCount FRESH",
                 color = GhaisNoir.Lavender,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.2.sp,
                 maxLines = 1

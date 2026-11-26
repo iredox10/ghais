@@ -131,7 +131,7 @@ private fun NoirCollectionCell(
         Text(
             text = sub,
             color = GhaisNoir.TextTertiary,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             maxLines = 1
         )
     }

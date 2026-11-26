@@ -249,7 +249,7 @@ object StatsScreen : Screen {
                         Text(
                             text = "YOUR QURAN JOURNEY",
                             color = Color.White.copy(alpha = 0.72f),
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = 1.2.sp
                         )
@@ -323,7 +323,7 @@ object StatsScreen : Screen {
                                     Text(
                                         text = "${todayMinutes.toInt()}/${goalMin}m",
                                         color = Color.White.copy(alpha = 0.72f),
-                                        fontSize = 10.sp
+                                        fontSize = 11.sp
                                     )
                                 }
                             }
@@ -585,7 +585,7 @@ object StatsScreen : Screen {
                                                 text = "#$surahRank",
                                                 color = if (surahRank == 1) GhaisNoir.LavenderInk
                                                 else GhaisNoir.TextSecondary,
-                                                fontSize = 10.sp,
+                                                fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold
                                             )
                                         }
@@ -862,7 +862,7 @@ private fun InsightBars(
                         Text(
                             text = labels[i],
                             color = if (isSel || isToday) GhaisNoir.Lavender else GhaisNoir.TextTertiary,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = if (isSel || isToday) FontWeight.Bold else FontWeight.Normal
                         )
                     }

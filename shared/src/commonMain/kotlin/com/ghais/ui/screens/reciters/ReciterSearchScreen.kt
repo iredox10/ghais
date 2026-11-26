@@ -295,7 +295,7 @@ class ReciterSearchScreen(
                                 Text(
                                     text = "Reciters you play will show up here",
                                     color = GhaisNoir.TextSecondary,
-                                    fontSize = 12.5.sp,
+                                    fontSize = 12.sp,
                                     textAlign = TextAlign.Center
                                 )
                             }
@@ -342,7 +342,7 @@ class ReciterSearchScreen(
                             Text(
                                 text = "Try a reciter name or country",
                                 color = GhaisNoir.TextSecondary,
-                                fontSize = 12.5.sp,
+                                fontSize = 12.sp,
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -499,7 +499,7 @@ private fun ReciterSearchField(
                     Text(
                         text = "Search reciters...",
                         color = GhaisNoir.TextDisabled,
-                        fontSize = 13.5.sp
+                        fontSize = 14.sp
                     )
                 }
                 BasicTextField(
@@ -507,7 +507,7 @@ private fun ReciterSearchField(
                     onValueChange = onQueryChange,
                     textStyle = TextStyle(
                         color = GhaisNoir.TextPrimary,
-                        fontSize = 13.5.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     ),
                     cursorBrush = SolidColor(GhaisNoir.TextPrimary),
@@ -721,7 +721,7 @@ private fun ForYouBadge() {
         Text(
             text = "FOR YOU",
             color = GhaisNoir.TextSecondary,
-            fontSize = 10.5.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.9.sp,
             maxLines = 1

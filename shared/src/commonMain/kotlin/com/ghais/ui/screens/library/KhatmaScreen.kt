@@ -208,7 +208,7 @@ object KhatmaScreen : Screen {
                                                 Text(
                                                     text = "NO PLAN YET",
                                                     color = GhaisNoir.TextTertiary,
-                                                    fontSize = 10.sp,
+                                                    fontSize = 11.sp,
                                                     fontWeight = FontWeight.SemiBold,
                                                     letterSpacing = 1.2.sp
                                                 )
@@ -297,7 +297,7 @@ object KhatmaScreen : Screen {
                                                 Text(
                                                     text = plan.title.uppercase(),
                                                     color = GhaisNoir.TextTertiary,
-                                                    fontSize = 10.sp,
+                                                    fontSize = 11.sp,
                                                     fontWeight = FontWeight.SemiBold,
                                                     letterSpacing = 1.2.sp,
                                                     maxLines = 1
@@ -364,7 +364,7 @@ object KhatmaScreen : Screen {
                                             Text(
                                                 text = if (complete) "COMPLETE" else "PLAN NEEDS ATTENTION",
                                                 color = GhaisNoir.TextTertiary,
-                                                fontSize = 10.sp,
+                                                fontSize = 11.sp,
                                                 fontWeight = FontWeight.SemiBold,
                                                 letterSpacing = 1.2.sp
                                             )
@@ -390,7 +390,7 @@ object KhatmaScreen : Screen {
                                             Text(
                                                 text = "TODAY'S TARGET • ${shown.ayahCount} AYAHS",
                                                 color = GhaisNoir.TextTertiary,
-                                                fontSize = 10.sp,
+                                                fontSize = 11.sp,
                                                 fontWeight = FontWeight.SemiBold,
                                                 letterSpacing = 1.2.sp
                                             )
@@ -750,7 +750,7 @@ private fun KhatmaField(
         Text(
             text = label.uppercase(),
             color = GhaisNoir.TextTertiary,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
             letterSpacing = 1.2.sp
         )

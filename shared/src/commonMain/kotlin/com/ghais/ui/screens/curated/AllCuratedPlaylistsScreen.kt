@@ -450,7 +450,7 @@ private fun CuratedPlaylistCard(
                     Text(
                         text = playlist.tag,
                         color = GhaisNoir.TextPrimary,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1
                     )
@@ -513,7 +513,7 @@ private fun CuratedPlaylistCard(
                 Text(
                     text = "${playlist.trackCount} tracks • ${playlist.durationText}",
                     color = GhaisNoir.TextSecondary,
-                    fontSize = 10.5.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1
                 )

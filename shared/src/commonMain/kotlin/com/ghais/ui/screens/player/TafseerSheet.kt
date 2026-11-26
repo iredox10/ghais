@@ -413,7 +413,7 @@ fun TafseerSheet(
                             Text(
                                 text = "UTHMANI",
                                 color = GhaisNoir.TextTertiary,
-                                fontSize = 10.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.sp
                             )
@@ -574,7 +574,7 @@ fun TafseerSheet(
                 Text(
                     text = selectedSource.description,
                     color = GhaisNoir.TextTertiary,
-                    fontSize = 11.5.sp,
+                    fontSize = 12.sp,
                     lineHeight = 16.sp,
                     modifier = Modifier.padding(horizontal = 4.dp)
                 )
@@ -604,7 +604,7 @@ fun TafseerSheet(
                         Text(
                             text = selectedSource.author,
                             color = GhaisNoir.TextPrimary,
-                            fontSize = 13.5.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
                         )
 
@@ -731,7 +731,7 @@ private fun TafseerTranslationCard(
             Text(
                 text = editionName?.let { "TRANSLATION · $it" } ?: "TRANSLATION",
                 color = GhaisNoir.TextTertiary,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp,
                 maxLines = 1,
@@ -778,7 +778,7 @@ private fun TafseerSourcePill(
         Text(
             text = label,
             color = textColor,
-            fontSize = 12.5.sp,
+            fontSize = 12.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis

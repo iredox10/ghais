@@ -191,7 +191,7 @@ private fun ResurrectionCard(
             Spacer(Modifier.height(2.dp))
             Text(
                 text = "Saved • Unplayed",
-                fontSize = 11.5.sp,
+                fontSize = 12.sp,
                 color = GhaisNoir.TextTertiary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

@@ -310,7 +310,7 @@ private fun CountrySectionHeader(
             text = country,
             style = GhaisTypography.labelMedium,
             color = GhaisNoir.TextSecondary,
-            fontSize = 12.5.sp,
+            fontSize = 12.sp,
             letterSpacing = 0.6.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -362,7 +362,7 @@ private fun TranslationRow(
             Text(
                 text = editionSecondaryLine(edition),
                 color = GhaisNoir.TextSecondary,
-                fontSize = 12.5.sp,
+                fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

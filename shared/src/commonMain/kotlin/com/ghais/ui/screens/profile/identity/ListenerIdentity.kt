@@ -192,7 +192,7 @@ fun IdentityCard(
                     Text(
                         text = title.uppercase(),
                         color = GhaisNoir.TextSecondary,
-                        fontSize = 10.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.9.sp,
                         maxLines = 1

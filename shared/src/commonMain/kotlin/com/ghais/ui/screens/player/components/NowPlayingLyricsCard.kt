@@ -203,7 +203,7 @@ fun NowPlayingLyricsCard(
                 ) {
                     Text(
                         text = "RANGE ${range.startAyah}–${range.endAyah} • LOOP $loopStr",
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.8.sp,
                         color = GhaisNoir.TextTertiary,
@@ -380,7 +380,7 @@ fun NowPlayingLyricsCard(
                     if (isCurrentVerseUnavailable) {
                         Text(
                             text = if (surahId in loadingSurahs) "Loading ayah…" else "Ayah unavailable offline",
-                            fontSize = 14.5.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Normal,
                             color = GhaisNoir.TextTertiary,
                             lineHeight = 21.sp
@@ -513,7 +513,7 @@ fun NowPlayingLyricsCard(
                             } else {
                                 Text(
                                     text = translationText,
-                                    fontSize = 14.5.sp,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Normal,
                                     color = GhaisNoir.TextSecondary,
                                     lineHeight = 21.sp
@@ -764,7 +764,7 @@ private fun WaqfPhraseChipsRow(
     ) {
         Text(
             text = "Waqf",
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
             color = GhaisNoir.TextTertiary,
             letterSpacing = 0.5.sp
@@ -786,7 +786,7 @@ private fun WaqfPhraseChipsRow(
             ) {
                 Text(
                     text = "${idx + 1}",
-                    fontSize = 10.5.sp,
+                    fontSize = 11.sp,
                     fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
                     color = if (active) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary
                 )
@@ -852,7 +852,7 @@ private fun SelfGradeButton(
     ) {
         Text(
             text = text,
-            fontSize = 12.5.sp,
+            fontSize = 12.sp,
             fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
             color = if (active) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary
         )
@@ -1203,7 +1203,7 @@ fun NowPlayingControlsBar(
             if (isRepeat) {
                 Text(
                     text = "∞",
-                    fontSize = 9.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = GhaisNoir.TextSecondary,
                     modifier = Modifier

@@ -169,7 +169,7 @@ fun HomeDailyMixShelf(onOpenPlayer: () -> Unit) {
                 Text(
                     text = "DAILY MIX",
                     color = GhaisNoir.TextTertiary,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 1.2.sp
                 )
@@ -329,7 +329,7 @@ fun HomeTopQarisShelf(onReciter: (String) -> Unit) {
                     Text(
                         text = "#$rank",
                         color = if (rank == 1) GhaisNoir.LavenderInk else GhaisNoir.TextSecondary,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }

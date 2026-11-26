@@ -310,7 +310,7 @@ private fun PlaylistNoirHeroPlate(
             Text(
                 text = "COLLECTION",
                 color = GhaisNoir.TextTertiary,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.2.sp
             )
@@ -654,7 +654,7 @@ private fun UserPlaylistDetailsContent(
                                         Text(
                                             text = "PLAYLIST",
                                             color = GhaisNoir.TextTertiary,
-                                            fontSize = 10.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             letterSpacing = 1.2.sp
                                         )

@@ -759,31 +759,31 @@ private fun MushafControlCapsule(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "JUZ",
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = GhaisNoir.TextTertiary
                     )
                     Spacer(modifier = Modifier.width(3.dp))
                     Text(
                         text = juzNo.toString(),
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = GhaisNoir.TextPrimary
                     )
                     Text(
                         text = " • ",
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         color = GhaisNoir.TextTertiary
                     )
                     Text(
                         text = "P.",
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = GhaisNoir.TextTertiary
                     )
                     Text(
                         text = pageNo.toString(),
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = GhaisNoir.TextPrimary
                     )
@@ -814,7 +814,7 @@ private fun MushafControlCapsule(
                         )
                         Text(
                             text = "${arabicFontSize}pt",
-                            fontSize = 8.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = GhaisNoir.TextTertiary,
                             lineHeight = 9.sp
@@ -869,7 +869,7 @@ private fun MushafControlCapsule(
                         Spacer(modifier = Modifier.width(3.dp))
                         Text(
                             text = "Tajweed",
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isTajweed) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary
                         )
@@ -1021,7 +1021,7 @@ private fun SurahHeaderBanner(
                         )
                         Text(
                             text = surah.nameEn.uppercase(),
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             letterSpacing = 2.5.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = GhaisNoir.TextTertiary
@@ -1205,7 +1205,7 @@ private fun AyahBlock(
                             )
                             Text(
                                 text = "RECITING NOW",
-                                fontSize = 10.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = GhaisNoir.TextPrimary,
                                 letterSpacing = 0.8.sp
@@ -1216,7 +1216,7 @@ private fun AyahBlock(
                     if (ayah.isPlaceholder) {
                         Text(
                             text = "OFFLINE",
-                            fontSize = 9.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp,
                             color = GhaisNoir.TextTertiary,
