@@ -171,13 +171,13 @@ object AudioEngine {
     private val _currentPositionMs = MutableStateFlow(0L)
     val currentPositionMs: StateFlow<Long> = _currentPositionMs.asStateFlow()
 
-    private val _playbackSpeed = MutableStateFlow(1.0f)
+    private val _playbackSpeed = MutableStateFlow(PlaybackPrefs.getSpeed())
     val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
 
     private val _durationMs = MutableStateFlow(0L)
     val durationMs: StateFlow<Long> = _durationMs.asStateFlow()
 
-    private val _volume = MutableStateFlow(1.0f)
+    private val _volume = MutableStateFlow(PlaybackPrefs.getVolume())
     val volume: StateFlow<Float> = _volume.asStateFlow()
 
     private val _engineError = MutableStateFlow<String?>(null)
@@ -202,13 +202,13 @@ object AudioEngine {
     val stationLabel: StateFlow<String?> = _stationLabel.asStateFlow()
 
     // --- Hifz & Memorization StateFlows ---
-    private val _ayahRepetitionTarget = MutableStateFlow(1)
+    private val _ayahRepetitionTarget = MutableStateFlow(PlaybackPrefs.getAyahRepetitionTarget())
     val ayahRepetitionTarget: StateFlow<Int> = _ayahRepetitionTarget.asStateFlow()
 
     private val _currentAyahRepetition = MutableStateFlow(1)
     val currentAyahRepetition: StateFlow<Int> = _currentAyahRepetition.asStateFlow()
 
-    private val _recitationGapSeconds = MutableStateFlow(0)
+    private val _recitationGapSeconds = MutableStateFlow(PlaybackPrefs.getRecitationGapSeconds())
     val recitationGapSeconds: StateFlow<Int> = _recitationGapSeconds.asStateFlow()
 
     private val _isRecitationGapActive = MutableStateFlow(false)
@@ -220,10 +220,10 @@ object AudioEngine {
     private val _hifzRange = MutableStateFlow<HifzRange?>(null)
     val hifzRange: StateFlow<HifzRange?> = _hifzRange.asStateFlow()
 
-    private val _hifzLoopMode = MutableStateFlow(HifzLoopMode.FLAT)
+    private val _hifzLoopMode = MutableStateFlow(PlaybackPrefs.getHifzLoopMode())
     val hifzLoopMode: StateFlow<HifzLoopMode> = _hifzLoopMode.asStateFlow()
 
-    private val _hifzPauseMultiplier = MutableStateFlow(0f)
+    private val _hifzPauseMultiplier = MutableStateFlow(PlaybackPrefs.getHifzPauseMultiplier())
     val hifzPauseMultiplier: StateFlow<Float> = _hifzPauseMultiplier.asStateFlow()
 
     private var accumulationAnchorAyah: Int = 1
@@ -244,6 +244,22 @@ object AudioEngine {
     private var pendingGapAction: (() -> Unit)? = null
 
     init {
+        val savedRepeat = PlaybackPrefs.getRepeatMode()
+        val savedShuffle = PlaybackPrefs.getShuffle()
+        val savedSpeed = _playbackSpeed.value
+        queueManager.setRepeatMode(savedRepeat)
+        if (savedShuffle != queueManager.isShuffle) {
+            queueManager.toggleShuffle()
+        }
+        _playbackState.update { state ->
+            state.copy(
+                settings = state.settings.copy(
+                    speed = savedSpeed,
+                    repeatMode = savedRepeat,
+                    shuffle = savedShuffle,
+                )
+            )
+        }
         PlayerBridge.setOnTrackEndListener { onBridgeTrackEnd() }
         scope.launch(engineExceptionHandler) {
             PlayerBridge.positionMs.collect { pos ->
@@ -772,20 +788,24 @@ object AudioEngine {
 
     // --- Public Hifz Control APIs ---
     fun setAyahRepetitionTarget(target: Int) {
-        _ayahRepetitionTarget.value = when {
+        val clean = when {
             target == -1 -> -1
             target < 1 -> 1
             else -> target
         }
+        _ayahRepetitionTarget.value = clean
+        PlaybackPrefs.setAyahRepetitionTarget(clean)
         _currentAyahRepetition.value = 1
     }
 
     fun setRecitationGapSeconds(seconds: Int) {
-        _recitationGapSeconds.value = when {
+        val clean = when {
             seconds == -1 -> -1
             seconds < 0 -> 0
             else -> seconds
         }
+        _recitationGapSeconds.value = clean
+        PlaybackPrefs.setRecitationGapSeconds(clean)
     }
 
     fun setHifzRange(startAyah: Int, endAyah: Int, targetLoops: Int = 1) {
@@ -832,6 +852,7 @@ object AudioEngine {
 
     fun setHifzLoopMode(mode: HifzLoopMode) {
         _hifzLoopMode.value = mode
+        PlaybackPrefs.setHifzLoopMode(mode)
         _hifzRange.update { range ->
             range?.also { resetAccumulationState(it.startAyah) }?.copy(loopMode = mode)
         }
@@ -841,6 +862,7 @@ object AudioEngine {
     fun setHifzPauseMultiplier(multiplier: Float) {
         val clamped = multiplier.coerceAtLeast(0f)
         _hifzPauseMultiplier.value = clamped
+        PlaybackPrefs.setHifzPauseMultiplier(clamped)
         _hifzRange.update { range ->
             range?.copy(pauseMultiplier = clamped)
         }
@@ -1171,6 +1193,7 @@ object AudioEngine {
     fun setSpeed(speed: Float) {
         val clamped = speed.coerceIn(0.25f, 3.0f)
         _playbackSpeed.value = clamped
+        PlaybackPrefs.setSpeed(clamped)
         PlayerBridge.setSpeed(clamped)
         _playbackState.update { state ->
             state.copy(settings = state.settings.copy(speed = clamped))
@@ -1182,11 +1205,13 @@ object AudioEngine {
     fun setVolume(volume: Float) {
         val clamped = volume.coerceIn(0f, 1f)
         _volume.value = clamped
+        PlaybackPrefs.setVolume(clamped)
         PlayerBridge.setVolume(clamped)
     }
 
     fun setRepeatMode(mode: RepeatMode) {
         queueManager.setRepeatMode(mode)
+        PlaybackPrefs.setRepeatMode(mode)
         _playbackState.update { state ->
             state.copy(settings = state.settings.copy(repeatMode = mode))
         }
@@ -1194,6 +1219,7 @@ object AudioEngine {
 
     fun toggleShuffle() {
         queueManager.toggleShuffle()
+        PlaybackPrefs.setShuffle(queueManager.isShuffle)
         _queue.value = queueManager.queue
         _currentIndex.value = queueManager.currentIndex
         _stationLabel.value = queueManager.stationLabel
@@ -1394,9 +1420,7 @@ object AudioEngine {
     fun clear() {
         stopPlayback()
         clearHifzRange()
-        _ayahRepetitionTarget.value = 1
         _currentAyahRepetition.value = 1
-        _recitationGapSeconds.value = 0
         queueManager.clear()
         _queue.value = emptyList()
         _currentIndex.value = -1
@@ -1456,6 +1480,8 @@ object AudioEngine {
         // as a backstop for mid-play item replacements.
         val resumeAt = pendingSeekMs.also { pendingSeekMs = 0L; pendingSeekTries = 0 }
         PlayerBridge.play(playbackUri, resumeAt)
+        PlayerBridge.setSpeed(_playbackSpeed.value)
+        PlayerBridge.setVolume(_volume.value)
         } catch (_: Exception) {
             // Bridge/URI failure must surface as a friendly engine error,
             // never as a crash on the caller thread.
