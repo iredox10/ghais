@@ -44,6 +44,7 @@ import com.ghais.ui.navigation.MainScreen
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.splash.SplashScreen
 import com.ghais.ui.theme.GhaisTheme
+import com.russhwolf.settings.Settings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
@@ -55,6 +56,25 @@ fun App() {
         val cachedSession by AuthRepository.cachedSession.collectAsState()
         val doneForUser by OnboardingStore.isDoneForCurrentUser.collectAsState()
         val signedInUserId = session?.userId ?: cachedSession?.userId
+        val appSettings = remember { Settings() }
+        var hasSeenSplash by remember {
+            mutableStateOf(
+                try {
+                    appSettings.getBoolean("ghais_has_seen_splash", false)
+                } catch (_: Exception) {
+                    false
+                }
+            )
+        }
+        LaunchedEffect(checked) {
+            if (checked && !hasSeenSplash) {
+                hasSeenSplash = true
+                try {
+                    appSettings.putBoolean("ghais_has_seen_splash", true)
+                } catch (_: Exception) {
+                }
+            }
+        }
         // Every launch effect below runs network / disk work on first
         // composition: an uncaught throw here kills the process with no
         // visible error (app "closes by itself"), so each body guards itself.
@@ -78,7 +98,7 @@ fun App() {
             if (signedInUserId == null || doneForUser) return@LaunchedEffect
             OnboardingStore.markDoneForCurrentUser()
         }
-        if (!checked) {
+        if (!hasSeenSplash && !checked) {
             SplashScreen.Content()
         } else {
             Navigator(MainScreen) { navigator ->
