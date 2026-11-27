@@ -295,61 +295,6 @@ object ProfileScreen : Tab {
                 }
 
                 // -----------------------------------------------------------------
-                // 1b. Achievements (hooks A11)
-                // -----------------------------------------------------------------
-                item {
-                    val stats by UserUsageRepository.stats.collectAsState()
-                    val khatmaPlans by KhatmaStore.plans.collectAsState()
-                    val totalMin = stats.totalSecondsListened / 60L
-                    if (HookFlags.achievementsEnabled) {
-                        val unlockedIds = remember(totalMin, stats.daysStreak, stats.uniqueRecitersCount, khatmaPlans) {
-                            try {
-                                unlockedAchievements(
-                                    AchievementStats(
-                                        hasListened = totalMin > 0,
-                                        daysStreak = stats.daysStreak,
-                                        uniqueReciters = stats.uniqueRecitersCount,
-                                        khatmaCompleted = khatmaPlans.count { khatmaIsComplete(it) },
-                                        totalMinutes = totalMin
-                                    )
-                                )
-                            } catch (_: Exception) {
-                                emptySet()
-                            }
-                        }
-                        LaunchedEffect(unlockedIds) {
-                            try {
-                                val settings = Settings()
-                                val seen = settings.getString("ghais_ach_seen", "")
-                                    .split(",").filter { it.isNotBlank() }.toSet()
-                                (unlockedIds - seen).forEach { id ->
-                                    HookAnalytics.track(
-                                        HookEvents.Event.ACHIEVEMENT_UNLOCKED,
-                                        mapOf(HookEvents.Prop.ACHIEVEMENT_ID to id),
-                                    )
-                                }
-                                if (unlockedIds != seen) {
-                                    settings.putString("ghais_ach_seen", unlockedIds.joinToString(","))
-                                }
-                            } catch (_: Exception) {
-                            }
-                        }
-                        AchievementsShelf(
-                            unlocked = unlockedIds,
-                            onShare = if (HookFlags.ceremoniesEnabled) { def ->
-                                if (ShareSheet.isAvailable()) {
-                                    ShareSheet.shareText(
-                                        def.title,
-                                        "I unlocked \"${def.title}\" on Ghaith. ${def.desc}"
-                                    )
-                                }
-                            } else null
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(18.dp))
-                }
-
-                // -----------------------------------------------------------------
                 // 2. Recitation schedules
                 // -----------------------------------------------------------------
                 item {
