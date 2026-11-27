@@ -134,7 +134,8 @@ fun ReciterReelCard(
     onPlayClick: () -> Unit = {},
     isFollowing: Boolean = false,
     onFollowClick: () -> Unit = {},
-    followerCount: Long? = null
+    followerCount: Long? = null,
+    modifier: Modifier = Modifier.width(180.dp),
 ) {
     val currentTrack by AudioEngine.currentTrack.collectAsState()
     val isPlaying by AudioEngine.isPlaying.collectAsState()
@@ -148,8 +149,7 @@ fun ReciterReelCard(
     val cardBorder = if (activelyPlaying) GhaisNoir.Lavender else GhaisNoir.BorderCard
 
     Box(
-        modifier = Modifier
-            .width(180.dp)
+        modifier = modifier
             .height(272.dp)
             .clip(GhaisShapes.cardNoir)
             .background(cardFill)

@@ -4,8 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -204,7 +207,8 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                         }
                     }
                 } else {
-                    LazyColumn(
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = 16.dp,
@@ -212,11 +216,12 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                             top = 8.dp,
                             bottom = 112.dp
                         ),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        item(key = "header_$nation") {
+                        item(key = "header_$nation", span = { GridItemSpan(2) }) {
                             NoirSectionHeader(
-                                label = "Reciters",
+                                label = "Reciters • ${filtered.size}",
                                 modifier = Modifier.padding(top = 4.dp)
                             )
                         }
@@ -224,189 +229,36 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                             items = filtered,
                             key = { it.catalogKey() }
                         ) { reciter ->
-                            val isCurrentReciter = currentTrack?.reciterSlug == reciter.slug
-                            val activelyPlaying = isCurrentReciter && isPlaying
-
-                            // NoirListRow recipe: soft card fill + ghost border +
-                            // bright TOP-ONLY specular, monochrome state via fill.
-                            var rowModifier = Modifier
-                                .fillMaxWidth()
-                                .clip(GhaisShapes.row)
-                                .background(
-                                    if (activelyPlaying) GhaisNoir.cardFillActive()
-                                    else GhaisNoir.cardFillSoft()
-                                )
-                                .border(
-                                    1.dp,
-                                    if (activelyPlaying) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
-                                    GhaisShapes.row
-                                )
-                                .topSpecular(inset = 22.dp)
-                            rowModifier = rowModifier.noirClickable {
-                                navigator.push(ReciterProfileScreen(reciter.slug))
-                            }
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = rowModifier.padding(12.dp)
-                            ) {
-                                // Natural-colour artwork well — engraved tile, dimmed scrim
-                                val photo = rememberCloudPhoto(reciter.slug) ?: photoForSlug(reciter.slug)
-                                if (photo != null) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(60.dp)
-                                            .clip(RoundedCornerShape(18.dp))
-                                            .background(GhaisNoir.wellFill())
-                                            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(18.dp)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        AsyncImage(
-                                            model = photo,
-                                            contentDescription = reciter.nameEn,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.matchParentSize()
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .matchParentSize()
-                                                .background(Color.Black.copy(alpha = 0f))
+                            val photo = rememberCloudPhoto(reciter.slug) ?: photoForSlug(reciter.slug)
+                            ReciterReelCard(
+                                reciter = reciter,
+                                photoUrl = photo,
+                                onClick = { navigator.push(ReciterProfileScreen(reciter.slug)) },
+                                onPlayClick = {
+                                    val surahs = QuranDataRepository.getSurahsForReciter(reciter)
+                                        .filter { reciter.isSurahAvailable(it.id) }
+                                    val tracks = surahs.map { surah ->
+                                        TrackItem(
+                                            reciterSlug = reciter.slug,
+                                            reciterName = reciter.nameEn,
+                                            surahId = surah.id,
+                                            surahNameEn = surah.nameEn,
+                                            surahNameAr = surah.nameAr,
+                                            ayahNo = 0,
+                                            audioUrl = reciter.getFullSurahUrl(surah.id),
+                                            textUthmani = "",
+                                            durationMs = surah.ayahsCount * 15_000L
                                         )
                                     }
-                                } else {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(60.dp)
-                                            .clip(RoundedCornerShape(18.dp))
-                                            .background(GhaisNoir.wellFill())
-                                            .border(1.dp, GhaisNoir.BorderCard, RoundedCornerShape(18.dp)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = reciter.nameEn.take(1),
-                                            color = GhaisNoir.TextPrimary,
-                                            fontSize = 24.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                    if (tracks.isNotEmpty()) {
+                                        AudioEngine.playQueue(tracks, startIndex = 0)
+                                        navigator.push(com.ghais.ui.screens.player.NowPlayingScreen())
                                     }
-                                }
-
-                                Spacer(modifier = Modifier.width(12.dp))
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = reciter.nameEn,
-                                        color = GhaisNoir.TextPrimary,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "${reciter.riwayah} • ${reciter.style}",
-                                        color = GhaisNoir.TextSecondary,
-                                        fontSize = 12.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = reciter.nameAr,
-                                        color = GhaisNoir.TextSecondary,
-                                        fontSize = 13.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                // Play / Pause — chrome disc when active, clay well otherwise
-                                if (activelyPlaying) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(42.dp)
-                                            .clip(CircleShape)
-                                            .background(GhaisNoir.chromeFill())
-                                            .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
-                                            .clickable { AudioEngine.pause() },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Pause,
-                                            contentDescription = "Pause",
-                                            tint = GhaisNoir.OnChrome,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    }
-                                } else {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(42.dp)
-                                            .clip(CircleShape)
-                                            .background(GhaisNoir.wellFill())
-                                            .border(1.dp, GhaisNoir.BorderCard, CircleShape)
-                                            .clickable {
-                                                if (isCurrentReciter) {
-                                                    AudioEngine.resume()
-                                                } else {
-                                                    val surahs = QuranDataRepository.getSurahsForReciter(reciter)
-                                                        .filter { reciter.isSurahAvailable(it.id) }
-                                                    val tracks = surahs.map { surah ->
-                                                        TrackItem(
-                                                            reciterSlug = reciter.slug,
-                                                            reciterName = reciter.nameEn,
-                                                            surahId = surah.id,
-                                                            surahNameEn = surah.nameEn,
-                                                            surahNameAr = surah.nameAr,
-                                                            ayahNo = 0,
-                                                            audioUrl = reciter.getFullSurahUrl(surah.id),
-                                                            textUthmani = "",
-                                                            durationMs = surah.ayahsCount * 15_000L
-                                                        )
-                                                    }
-                                                    if (tracks.isNotEmpty()) {
-                                                        AudioEngine.playQueue(tracks, startIndex = 0)
-                                                    }
-                                                }
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.PlayArrow,
-                                            contentDescription = "Play",
-                                            tint = GhaisNoir.TextPrimary,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    }
-                                }
-
-                                // Follow toggle — monochrome only, no emerald
-                                val isFollowing = reciter.slug in followedSlugs
-                                Box(
-                                    modifier = Modifier
-                                        .padding(start = 6.dp)
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (isFollowing) GhaisNoir.Fill4 else GhaisNoir.Fill1
-                                        )
-                                        .border(
-                                            1.dp,
-                                            if (isFollowing) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
-                                            CircleShape
-                                        )
-                                        .clickable { FollowStore.toggle(reciter.slug) },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = if (isFollowing) Icons.Filled.Check else Icons.Filled.PersonAdd,
-                                        contentDescription = if (isFollowing) "Following" else "Follow",
-                                        tint = if (isFollowing) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
+                                },
+                                isFollowing = reciter.slug in followedSlugs,
+                                onFollowClick = { FollowStore.toggle(reciter.slug) },
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
                 }
