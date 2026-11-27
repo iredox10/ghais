@@ -224,25 +224,6 @@ object HomeScreen : Tab {
                 }
 
                 // -------------------------------------------------------------
-                // Top Qaris this week — cloud chart wells
-                // -------------------------------------------------------------
-                item {
-                    HomeTopQarisShelf(
-                        onReciter = { slug -> rootNavigator?.push(ReciterProfileScreen(slug)) },
-                        onSeeAll = { slugs ->
-                            rootNavigator?.push(
-                                com.ghais.ui.screens.reciters.ShelfRecitersScreen(
-                                    title = "Top Qaris this week",
-                                    subtitle = "Most heard across Ghaith",
-                                    slugs = slugs,
-                                    showRankedMosaic = true
-                                )
-                            )
-                        }
-                    )
-                }
-
-                // -------------------------------------------------------------
                 // New from qaris you follow — recent editorial per follow set
                 // -------------------------------------------------------------
                 item {

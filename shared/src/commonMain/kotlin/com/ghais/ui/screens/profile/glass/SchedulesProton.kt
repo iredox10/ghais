@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AlarmOn
@@ -336,10 +337,12 @@ private fun SchedEditorSheet(
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val reciterName = remember(reciterSlug) {
-        runCatching { QuranDataRepository.getReciterBySlug(reciterSlug).nameEn }
-            .getOrNull()?.takeIf { it.isNotBlank() } ?: reciterSlug.ifBlank { "Choose reciter" }
+    val reciter = remember(reciterSlug, reciters) {
+        reciters.firstOrNull { it.slug == reciterSlug }
+            ?: runCatching { QuranDataRepository.getBrowseReciterBySlug(reciterSlug) }.getOrNull()
     }
+    val reciterName = reciter?.nameEn?.takeIf { it.isNotBlank() }
+        ?: reciterSlug.ifBlank { "Choose reciter" }
     val fromName = remember(fromSurah) {
         QuranDataRepository.getSurahById(fromSurah)?.nameEn ?: "Surah $fromSurah"
     }
@@ -353,9 +356,8 @@ private fun SchedEditorSheet(
     val rangeValid = useMinutes || fromSurah <= toSurah
     // Availability: the reciter must have audio for at least one surah of the
     // effective range, else the alarm fires and ScheduleTracks builds 0 tracks.
-    val availableIds = remember(reciterSlug) {
-        runCatching { QuranDataRepository.getReciterBySlug(reciterSlug).getAvailableSurahIds() }
-            .getOrNull()
+    val availableIds = remember(reciter) {
+        reciter?.getAvailableSurahIds()
     }
     val previewFrom = fromSurah.coerceIn(1, 114)
     val previewTo = if (useMinutes) 114 else toSurah.coerceIn(1, 114).coerceAtLeast(previewFrom)
@@ -372,25 +374,42 @@ private fun SchedEditorSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                // Scrollable: on short screens with many downloaded surahs
-                // listed (offline mode) or all stream fields visible, the
-                // Save/Cancel row used to fall off-screen with no way to
-                // reach it — the most confusing tile of the app.
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(
-                text = if (initial == null) "New schedule" else "Edit schedule",
-                color = GhaisNoir.TextPrimary,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (initial == null) "New schedule" else "Edit schedule",
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderGhost, CircleShape)
+                        .noirClickable(onDismiss),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "✕",
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
 
             // Clock time — calm field owned by ScheduleTimeField.kt (clock time + AM/PM).
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(text = "Time", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
                 ScheduleTimeField(
                     hour24 = hour,
                     minute = minute,
@@ -400,75 +419,168 @@ private fun SchedEditorSheet(
                     }
                 )
                 Text(
-                    text = "Rings at ${formatScheduleTime(hour, minute)}",
+                    text = "Rings daily at ${formatScheduleTime(hour, minute)}",
                     color = GhaisNoir.TextTertiary,
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(start = 4.dp)
                 )
             }
 
-            // Audio source: streamed reciter range, or the offline shelf.
-            // Offline plays downloads the alarm already has on disk — one
-            // picked qari's surahs, no network needed when it fires.
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Play from offline downloads",
-                        color = GhaisNoir.TextPrimary,
-                        fontSize = 13.sp,
-                        modifier = Modifier.weight(1f)
-                    )
-                    NoirSwitch(
-                        checked = useOffline,
-                        onCheckedChange = { useOffline = it }
-                    )
-                }
-                Text(
-                    text = if (useOffline) {
-                        val n = effectiveSelection.size
-                        when {
-                            // The chosen qari has nothing downloaded yet — the
-                            // pick list below stays hidden.
-                            offlineQariKeys.isEmpty() ->
-                                "No downloads for this qari — download a surah first"
-                            n == 0 -> "Uncheck: pick at least one download below"
-                            n == 1 -> "Plays your 1 picked surah"
-                            else -> "Plays your $n picked surahs in order"
+            // Card 1: Audio Source + Reciter + Surah Range / Offline Downloads
+            GlassCardContainer {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Play from offline downloads",
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = if (useOffline) {
+                                    val n = effectiveSelection.size
+                                    when {
+                                        offlineQariKeys.isEmpty() ->
+                                            "No downloads for this qari yet"
+                                        n == 0 -> "Pick at least one download below"
+                                        n == 1 -> "Plays 1 picked surah offline"
+                                        else -> "Plays $n picked surahs in order"
+                                    }
+                                } else "Stream a reciter's surah range",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 12.sp
+                            )
                         }
-                    } else "Stream a reciter's range as usual",
-                    color = GhaisNoir.TextTertiary,
-                    fontSize = 12.sp
-                )
+                        NoirSwitch(
+                            checked = useOffline,
+                            onCheckedChange = { useOffline = it }
+                        )
+                    }
+
+                    GlassDivider()
+
+                    if (useOffline) {
+                        val qariName = remember(offlineSlug) { offlineReciterName(offlineSlug) }
+                        Text(text = "Reciter", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
+                        ReciterSelectorRow(
+                            value = qariName,
+                            onClick = { showOfflineReciterSheet = true }
+                        )
+                    } else {
+                        Text(text = "Reciter", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
+                        ReciterSelectorRow(value = reciterName, onClick = { showReciterSheet = true })
+
+                        Text(text = "Surah range", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
+                        SurahSelectorRow(
+                            label = "From surah",
+                            value = fromName,
+                            onClick = { showFromSheet = true }
+                        )
+                        if (!useMinutes) {
+                            SurahSelectorRow(
+                                label = "To surah",
+                                value = toName,
+                                onClick = { showToSheet = true }
+                            )
+                        }
+                        if (!rangeValid) {
+                            Text(
+                                text = "“From” must come before “To” — pick a later ending surah.",
+                                color = GhaisNoir.Lavender,
+                                fontSize = 12.sp
+                            )
+                        }
+                        if (rangeValid && overlapMissing) {
+                            val recordedSpan = availableIds?.let { ids ->
+                                val lo = ids.minOrNull()
+                                val hi = ids.maxOrNull()
+                                if (lo != null && hi != null && ids.size < 114) {
+                                    " Recorded surahs: $lo–$hi."
+                                } else ""
+                            }.orEmpty()
+                            Text(
+                                text = "“$reciterName” has no audio for surahs $previewFrom–$previewTo.$recordedSpan",
+                                color = GhaisNoir.Lavender,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
             }
 
-            // Offline mode: pick ONE qari first — the same reciter-row UX as
-            // stream mode — then that qari's downloads are the pick list. The
-            // old all-qaris multi-group dump is gone.
-            if (useOffline) {
+            if (useOffline && offlineQariKeys.isNotEmpty()) {
                 val qariName = remember(offlineSlug) { offlineReciterName(offlineSlug) }
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(text = "Reciter", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
-                    ReciterSelectorRow(
-                        value = qariName,
-                        onClick = { showOfflineReciterSheet = true }
-                    )
-                }
-
-                // Only the chosen qari's downloads. Hidden entirely when the
-                // qari has nothing on disk — the sub-line under the switch
-                // already explains that state.
-                if (offlineQariKeys.isNotEmpty()) {
-                    val pickedInQari = offlineQariKeys.count { it in effectiveSelection }
-                    val allPicked = pickedInQari == offlineQariKeys.size
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(text = "Downloads to play", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            // Select-all header: name + x/y picked, tap picks
-                            // or clears the whole qari.
+                val pickedInQari = offlineQariKeys.count { it in effectiveSelection }
+                val allPicked = pickedInQari == offlineQariKeys.size
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "Downloads to play", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    GhaisNoir.Fill4,
+                                    com.ghais.ui.theme.GhaisShapes.cardNoir
+                                )
+                                .border(
+                                    1.dp,
+                                    GhaisNoir.BorderCard,
+                                    com.ghais.ui.theme.GhaisShapes.cardNoir
+                                )
+                                .noirClickable {
+                                    selectedKeys = if (allPicked) {
+                                        selectedKeys - offlineQariKeys.toSet()
+                                    } else {
+                                        selectedKeys + offlineQariKeys.toSet()
+                                    }
+                                }
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .background(
+                                        if (allPicked) GhaisNoir.Fill2 else GhaisNoir.Fill4,
+                                        CircleShape
+                                    )
+                                    .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (allPicked) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .background(GhaisNoir.TextPrimary, CircleShape)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                text = qariName,
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = "$pickedInQari/${offlineQariKeys.size}",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 12.sp
+                            )
+                        }
+                        offlineQariKeys.forEach { key ->
+                            val (title, _) = remember(key) { offlineKeyLabel(key) }
+                            val checked = key in effectiveSelection
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .padding(start = 14.dp)
                                     .background(
-                                        GhaisNoir.Fill4,
+                                        GhaisNoir.Fill2,
                                         com.ghais.ui.theme.GhaisShapes.cardNoir
                                     )
                                     .border(
@@ -477,10 +589,10 @@ private fun SchedEditorSheet(
                                         com.ghais.ui.theme.GhaisShapes.cardNoir
                                     )
                                     .noirClickable {
-                                        selectedKeys = if (allPicked) {
-                                            selectedKeys - offlineQariKeys.toSet()
+                                        selectedKeys = if (key in selectedKeys) {
+                                            selectedKeys - key
                                         } else {
-                                            selectedKeys + offlineQariKeys.toSet()
+                                            selectedKeys + key
                                         }
                                     }
                                     .padding(horizontal = 14.dp, vertical = 10.dp),
@@ -488,261 +600,129 @@ private fun SchedEditorSheet(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(22.dp)
+                                        .size(20.dp)
                                         .background(
-                                            if (allPicked) GhaisNoir.Fill2 else GhaisNoir.Fill4,
+                                            if (checked) GhaisNoir.Fill4 else GhaisNoir.Fill2,
                                             CircleShape
                                         )
                                         .border(1.dp, GhaisNoir.BorderCard, CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    if (allPicked) {
+                                    if (checked) {
                                         Box(
                                             modifier = Modifier
-                                                .size(10.dp)
+                                                .size(9.dp)
                                                 .background(GhaisNoir.TextPrimary, CircleShape)
                                         )
                                     }
                                 }
                                 Spacer(Modifier.width(12.dp))
                                 Text(
-                                    text = qariName,
-                                    color = GhaisNoir.TextPrimary,
+                                    text = title,
+                                    color = if (checked) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
                                     fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
+                                    fontWeight = FontWeight.Medium,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.weight(1f)
                                 )
-                                Text(
-                                    text = "$pickedInQari/${offlineQariKeys.size}",
-                                    color = GhaisNoir.TextTertiary,
-                                    fontSize = 12.sp
-                                )
-                            }
-                            // That qari's downloaded surahs.
-                            offlineQariKeys.forEach { key ->
-                                val (title, _) = remember(key) { offlineKeyLabel(key) }
-                                val checked = key in effectiveSelection
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(start = 14.dp)
-                                        .background(
-                                            GhaisNoir.Fill2,
-                                            com.ghais.ui.theme.GhaisShapes.cardNoir
-                                        )
-                                        .border(
-                                            1.dp,
-                                            GhaisNoir.BorderCard,
-                                            com.ghais.ui.theme.GhaisShapes.cardNoir
-                                        )
-                                        .noirClickable {
-                                            selectedKeys = if (key in selectedKeys) {
-                                                selectedKeys - key
-                                            } else {
-                                                selectedKeys + key
-                                            }
-                                        }
-                                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(20.dp)
-                                            .background(
-                                                if (checked) GhaisNoir.Fill4 else GhaisNoir.Fill2,
-                                                CircleShape
-                                            )
-                                            .border(1.dp, GhaisNoir.BorderCard, CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        if (checked) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(9.dp)
-                                                    .background(GhaisNoir.TextPrimary, CircleShape)
-                                            )
-                                        }
-                                    }
-                                    Spacer(Modifier.width(12.dp))
-                                    Text(
-                                        text = title,
-                                        color = if (checked) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
                             }
                         }
                     }
                 }
             }
 
-            if (!useOffline) {
-            // Reciter selector row → modal.
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(text = "Reciter", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
-                // Extracted so the offline mode renders the exact same row.
-                ReciterSelectorRow(value = reciterName, onClick = { showReciterSheet = true })
-            }
+            // Card 2: Playback & Duration
+            GlassCardContainer {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Limit duration",
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = if (useMinutes) "Stops after $minutes min" else "Plays entire selected range",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 12.sp
+                            )
+                        }
+                        NoirSwitch(
+                            checked = useMinutes,
+                            onCheckedChange = { useMinutes = it }
+                        )
+                    }
+                    if (useMinutes) {
+                        DurationMinutesStepper(
+                            value = minutes,
+                            onMinus = { minutes = (minutes - 5).coerceIn(5, 180) },
+                            onPlus = { minutes = (minutes + 5).coerceIn(5, 180) }
+                        )
+                    }
 
-            // From / to surah selector rows → modals.
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(text = "Range", color = GhaisNoir.TextSecondary, fontSize = 12.sp)
-                SurahSelectorRow(
-                    label = "From surah",
-                    value = fromName,
-                    onClick = { showFromSheet = true }
-                )
-                if (!useMinutes) {
-                    SurahSelectorRow(
-                        label = "To surah",
-                        value = toName,
-                        onClick = { showToSheet = true }
-                    )
+                    GlassDivider()
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Start playback automatically",
+                                color = GhaisNoir.TextPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = if (autoStart) "Alarm starts playback on its own"
+                                else "Off — sends a reminder notification only",
+                                color = GhaisNoir.TextTertiary,
+                                fontSize = 12.sp
+                            )
+                        }
+                        NoirSwitch(
+                            checked = autoStart,
+                            onCheckedChange = { autoStart = it }
+                        )
+                    }
                 }
-                if (!rangeValid) {
-                    Text(
-                        text = "“From” must come before “To” — pick a later ending surah.",
-                        color = GhaisNoir.TextSecondary,
-                        fontSize = 12.sp
-                    )
-                }
-                if (rangeValid && overlapMissing) {
-                    val recordedSpan = availableIds?.let { ids ->
-                        val lo = ids.minOrNull()
-                        val hi = ids.maxOrNull()
-                        if (lo != null && hi != null && ids.size < 114) {
-                            " He recorded surahs $lo–$hi."
-                        } else ""
-                    }.orEmpty()
-                    Text(
-                        text = "“$reciterName” has no audio for surahs $previewFrom–$previewTo." +
-                            recordedSpan,
-                        color = GhaisNoir.TextSecondary,
-                        fontSize = 12.sp
-                    )
-                }
             }
 
-            } // end if (!useOffline): reciter + range pickers are stream-only.
-
-            // Duration toggle + minutes (simple stepper scoped to duration only).
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Limit duration",
-                    color = GhaisNoir.TextPrimary,
-                    fontSize = 13.sp,
-                    modifier = Modifier.weight(1f)
-                )
-                NoirSwitch(
-                    checked = useMinutes,
-                    onCheckedChange = { useMinutes = it }
-                )
-            }
-            if (useMinutes) {
-                DurationMinutesStepper(
-                    value = minutes,
-                    onMinus = { minutes = (minutes - 5).coerceIn(5, 180) },
-                    onPlus = { minutes = (minutes + 5).coerceIn(5, 180) }
-                )
-            }
-
-            // Auto-start toggle — saved through the same Save path as duration/enabled.
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Start playback automatically",
-                        color = GhaisNoir.TextPrimary,
-                        fontSize = 13.sp,
-                        modifier = Modifier.weight(1f)
-                    )
-                    NoirSwitch(
-                        checked = autoStart,
-                        onCheckedChange = { autoStart = it }
-                    )
-                }
-                Text(
-                    text = if (autoStart) "Alarm starts playback on its own"
-                    else "Off — you only get a reminder notification",
-                    color = GhaisNoir.TextTertiary,
-                    fontSize = 12.sp
-                )
-            }
-
-            // Save / Cancel.
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        if (rangeValid) GhaisNoir.Fill4 else GhaisNoir.Fill2,
-                        CircleShape
-                    )
-                    .border(1.dp, GhaisNoir.BorderCard, CircleShape)
-                    .then(
-                        if (scheduleValid) {
-                            Modifier.noirClickable {
-                                val h = hour.coerceIn(0, 23)
-                                val m = minute.coerceIn(0, 59)
-                                val f = fromSurah.coerceIn(1, 114)
-                                val t = if (useMinutes) 114 else toSurah.coerceIn(1, 114).coerceAtLeast(f)
-                                onSave(
-                                    RecitationSchedule(
-                                        id = initial?.id
-                                            ?: ("sch-" + Clock.System.now().toEpochMilliseconds()),
-                                        hour = h,
-                                        minute = m,
-                                        // Offline schedules carry the OFFLINE
-                                        // qari's slug — `reciterSlug` is
-                                        // stream-only and stays untouched.
-                                        reciterSlug = if (useOffline) offlineSlug else reciterSlug,
-                                        fromSurah = f,
-                                        toSurah = t,
-                                        durationMin = if (useMinutes) minutes.coerceIn(5, 180) else null,
-                                        autoStart = autoStart,
-                                        enabled = initial?.enabled ?: true,
-                                        source = if (useOffline) {
-                                            RecitationSchedule.SOURCE_OFFLINE
-                                        } else {
-                                            RecitationSchedule.SOURCE_STREAM
-                                        },
-                                        offlineKeys = if (useOffline) {
-                                            // effectiveSelection is already
-                                            // scoped to offlineSlug: only keys
-                                            // of the picked qari survive a save
-                                            // — legacy cross-qari keys drop.
-                                            effectiveSelection.sorted()
-                                        } else {
-                                            initial?.offlineKeys ?: emptyList()
-                                        }
-                                    )
-                                )
+            // Primary Save CTA (properly reflects scheduleValid)
+            com.ghais.ui.components.noir.ChromePillButton(
+                text = if (initial == null) "Create schedule" else "Save changes",
+                enabled = scheduleValid,
+                onClick = {
+                    val h = hour.coerceIn(0, 23)
+                    val m = minute.coerceIn(0, 59)
+                    val f = fromSurah.coerceIn(1, 114)
+                    val t = if (useMinutes) 114 else toSurah.coerceIn(1, 114).coerceAtLeast(f)
+                    onSave(
+                        RecitationSchedule(
+                            id = initial?.id
+                                ?: ("sch-" + Clock.System.now().toEpochMilliseconds()),
+                            hour = h,
+                            minute = m,
+                            reciterSlug = if (useOffline) offlineSlug else reciterSlug,
+                            fromSurah = f,
+                            toSurah = t,
+                            durationMin = if (useMinutes) minutes.coerceIn(5, 180) else null,
+                            autoStart = autoStart,
+                            enabled = initial?.enabled ?: true,
+                            source = if (useOffline) {
+                                RecitationSchedule.SOURCE_OFFLINE
+                            } else {
+                                RecitationSchedule.SOURCE_STREAM
+                            },
+                            offlineKeys = if (useOffline) {
+                                effectiveSelection.sorted()
+                            } else {
+                                initial?.offlineKeys ?: emptyList()
                             }
-                        } else Modifier
+                        )
                     )
-                    .padding(vertical = 13.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Save",
-                    color = if (scheduleValid) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .noirClickable(onClick = onDismiss)
-                    .padding(vertical = 6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "Cancel", color = GhaisNoir.TextSecondary, fontSize = 13.sp)
-            }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 
@@ -751,6 +731,12 @@ private fun SchedEditorSheet(
         selectedSlug = reciterSlug,
         onSelect = { slug ->
             reciterSlug = slug
+            // Auto-snap surah range when the selected reciter doesn't cover the current range
+            val pickedIds = reciters.firstOrNull { it.slug == slug }?.getAvailableSurahIds()
+            if (!pickedIds.isNullOrEmpty() && (fromSurah..toSurah).none { it in pickedIds }) {
+                fromSurah = pickedIds.minOrNull() ?: 1
+                toSurah = pickedIds.take(5).lastOrNull() ?: pickedIds.maxOrNull() ?: 114
+            }
             showReciterSheet = false
         },
         onDismiss = { showReciterSheet = false }
