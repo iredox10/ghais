@@ -1,13 +1,28 @@
 package com.ghais.ui.screens.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Lightbulb
@@ -51,6 +66,8 @@ import com.ghais.ui.screens.profile.identity.AchievementStats
 import com.ghais.ui.screens.profile.identity.AchievementsShelf
 import com.ghais.ui.screens.profile.identity.unlockedAchievements
 import com.ghais.ui.components.noir.NoirGrainOverlay
+import com.ghais.ui.components.noir.NoirNavBar
+import com.ghais.ui.components.noir.NoirNavButton
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.noirAmbientGlow
 import com.ghais.ui.navigation.LocalRootNavigator
@@ -206,29 +223,75 @@ object ProfileScreen : Tab {
             AuroraBackdrop()
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = bottomDockPadding)
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = bottomDockPadding)
             ) {
                 // -----------------------------------------------------------------
-                // 0. Noir header — editorial greeting
+                // 0. Minimal Noir header with quick Broadcasts & Settings actions
                 // -----------------------------------------------------------------
                 item {
-                    NoirProfileHeader(
-                        userName = session?.name?.ifBlank { null } ?: userName
+                    NoirNavBar(
+                        title = "Profile",
+                        actions = {
+                            NoirNavButton(
+                                icon = Icons.Filled.Notifications,
+                                contentDescription = "Broadcasts",
+                                onClick = { rootNavigator?.push(BroadcastsScreen) }
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            NoirNavButton(
+                                icon = Icons.Filled.Tune,
+                                contentDescription = "Settings",
+                                onClick = { rootNavigator?.push(AppSettingsScreen) }
+                            )
+                        }
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
 
                 // -----------------------------------------------------------------
-                // 1. Identity pill
+                // 1. Identity pill + 3-stat Listening Bento Strip
                 // -----------------------------------------------------------------
                 item {
+                    val stats by UserUsageRepository.stats.collectAsState()
+                    val totalMin = stats.totalSecondsListened / 60L
+                    val timeLabel = if (totalMin >= 60L) {
+                        val h = totalMin / 60L
+                        val m = totalMin % 60L
+                        if (m == 0L) "${h}h" else "${h}h ${m}m"
+                    } else {
+                        "${totalMin}m"
+                    }
                     ProfileIdentityPill(
                         displayName = session?.name?.ifBlank { null } ?: userName,
                         email = session?.email,
                         isGuest = session == null,
                         onClick = if (session == null) openLogin else ({ showEditProfile = true })
                     )
-                    Spacer(modifier = Modifier.height(18.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ProfileStatTile(
+                            value = timeLabel,
+                            label = "Listened",
+                            accent = GhaisNoir.Lavender,
+                            modifier = Modifier.weight(1f)
+                        )
+                        ProfileStatTile(
+                            value = "${stats.daysStreak}d",
+                            label = "Streak",
+                            accent = GhaisNoir.TextPrimary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        ProfileStatTile(
+                            value = "${stats.uniqueRecitersCount}",
+                            label = "Qaris",
+                            accent = GhaisNoir.TextPrimary,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
                 // -----------------------------------------------------------------
@@ -412,5 +475,40 @@ object ProfileScreen : Tab {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ProfileStatTile(
+    value: String,
+    label: String,
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Column(
+        modifier = modifier
+            .clip(shape)
+            .background(GhaisNoir.insetFill())
+            .border(1.dp, GhaisNoir.BorderGhost, shape)
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            color = accent,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.ExtraBold,
+            maxLines = 1,
+            style = TextStyle(fontFeatureSettings = "tnum")
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = label,
+            color = GhaisNoir.TextTertiary,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1
+        )
     }
 }
