@@ -570,17 +570,18 @@ class NowPlayingScreen : Screen {
                         .background(GhaisNoir.NoirBlack.copy(alpha = 0.22f))
                 )
             }
-            // Bottom legibility grade — monochrome melt into the canvas.
+            // Bottom legibility grade — gentle when liquid water is active so
+            // the flowing gradient fills the whole screen without a dark band.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
+                    .height(if (hasAmbientVideo) 300.dp else 180.dp)
                     .align(Alignment.BottomCenter)
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                GhaisNoir.NoirBlack.copy(alpha = 0.80f)
+                                GhaisNoir.NoirBlack.copy(alpha = if (hasAmbientVideo) 0.80f else 0.34f)
                             )
                         )
                     )

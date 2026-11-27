@@ -13,45 +13,31 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import com.ghais.ui.theme.GhaisNoir
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-private data class WaterWaveLayer(
+private data class FluidSwell(
     val baseYFraction: Float,
     val amplitudeFraction: Float,
     val cycles: Float,
     val speedMultiplier: Float,
     val phaseOffset: Float,
     val topColor: Color,
-    val bottomColor: Color,
-    val crestColor: Color,
-    val crestAlpha: Float,
-)
-
-private data class CausticMote(
-    val xFraction: Float,
-    val yOffset: Float,
-    val radiusDp: Float,
-    val speed: Float,
-    val swayAmplitude: Float,
-    val alpha: Float,
-    val tint: Color,
+    val midColor: Color,
 )
 
 /**
- * Flowing liquid-water gradient backdrop shown in the Now Playing screen when
- * no ambient video/effect is active. Combines drifting deep oceanic/lavender
- * caustic light pools, layered translucent cubic-bezier water ribbons with
- * shimmering crests, and softly rising underwater light motes.
+ * Minimal, ultra-blurry, full-bleed liquid water gradient backdrop for the
+ * Now Playing screen when no ambient video is active. Uses large, softly
+ * diffused oceanic/indigo/lavender light pools and stroke-free translucent
+ * water swells spanning the entire viewport height.
  */
 @Composable
 fun LiquidWaterBackdrop(
@@ -63,7 +49,7 @@ fun LiquidWaterBackdrop(
         initialValue = 0f,
         targetValue = (2.0 * PI).toFloat(),
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 14000, easing = LinearEasing),
+            animation = tween(durationMillis = 18000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart,
         ),
         label = "waterPhase",
@@ -72,133 +58,102 @@ fun LiquidWaterBackdrop(
         initialValue = 0f,
         targetValue = (2.0 * PI).toFloat(),
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 23000, easing = LinearEasing),
+            animation = tween(durationMillis = 28000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart,
         ),
         label = "causticDrift",
     )
     val energy by animateFloatAsState(
-        targetValue = if (isPlaying) 1f else 0.72f,
-        animationSpec = tween(durationMillis = 900),
+        targetValue = if (isPlaying) 1f else 0.78f,
+        animationSpec = tween(durationMillis = 1000),
         label = "waterEnergy",
     )
 
-    val waves = remember {
+    val swells = remember {
         listOf(
-            WaterWaveLayer(
-                baseYFraction = 0.24f,
-                amplitudeFraction = 0.045f,
-                cycles = 1.4f,
+            FluidSwell(
+                baseYFraction = 0.28f,
+                amplitudeFraction = 0.065f,
+                cycles = 1.15f,
                 speedMultiplier = 1f,
                 phaseOffset = 0.0f,
-                topColor = Color(0xFF4F46E5).copy(alpha = 0.34f),
-                bottomColor = Color(0xFF06B6D4).copy(alpha = 0.04f),
-                crestColor = Color(0xFFC9BFF2),
-                crestAlpha = 0.38f,
+                topColor = Color(0xFF38BDF8).copy(alpha = 0.22f),
+                midColor = Color(0xFF4F46E5).copy(alpha = 0.12f),
             ),
-            WaterWaveLayer(
-                baseYFraction = 0.33f,
-                amplitudeFraction = 0.052f,
-                cycles = 1.8f,
+            FluidSwell(
+                baseYFraction = 0.54f,
+                amplitudeFraction = 0.070f,
+                cycles = 1.35f,
                 speedMultiplier = -1f,
-                phaseOffset = 1.4f,
-                topColor = Color(0xFF0EA5E9).copy(alpha = 0.30f),
-                bottomColor = Color(0xFF312E81).copy(alpha = 0.05f),
-                crestColor = Color(0xFF7DD3FC),
-                crestAlpha = 0.45f,
+                phaseOffset = 2.1f,
+                topColor = Color(0xFF818CF8).copy(alpha = 0.20f),
+                midColor = Color(0xFF06B6D4).copy(alpha = 0.12f),
             ),
-            WaterWaveLayer(
-                baseYFraction = 0.42f,
-                amplitudeFraction = 0.048f,
-                cycles = 2.1f,
+            FluidSwell(
+                baseYFraction = 0.78f,
+                amplitudeFraction = 0.055f,
+                cycles = 1.10f,
                 speedMultiplier = 1f,
-                phaseOffset = 2.9f,
-                topColor = Color(0xFF8B5CF6).copy(alpha = 0.28f),
-                bottomColor = Color(0xFF0D9488).copy(alpha = 0.03f),
-                crestColor = Color(0xFFE0E7FF),
-                crestAlpha = 0.42f,
-            ),
-            WaterWaveLayer(
-                baseYFraction = 0.51f,
-                amplitudeFraction = 0.042f,
-                cycles = 1.6f,
-                speedMultiplier = -1f,
-                phaseOffset = 4.2f,
-                topColor = Color(0xFF06B6D4).copy(alpha = 0.26f),
-                bottomColor = Color.Transparent,
-                crestColor = Color(0xFFA5F3FC),
-                crestAlpha = 0.50f,
-            ),
-            WaterWaveLayer(
-                baseYFraction = 0.60f,
-                amplitudeFraction = 0.034f,
-                cycles = 2.4f,
-                speedMultiplier = 1f,
-                phaseOffset = 5.1f,
-                topColor = Color(0xFFC9BFF2).copy(alpha = 0.20f),
-                bottomColor = Color.Transparent,
-                crestColor = Color(0xFFFFFFFF),
-                crestAlpha = 0.34f,
+                phaseOffset = 4.0f,
+                topColor = Color(0xFF2DD4BF).copy(alpha = 0.18f),
+                midColor = Color(0xFF6366F1).copy(alpha = 0.08f),
             ),
         )
     }
 
-    val motes = remember {
-        listOf(
-            CausticMote(0.16f, 0.12f, 22f, 1f, 0.03f, 0.22f, Color(0xFF38BDF8)),
-            CausticMote(0.38f, 0.45f, 16f, 1f, 0.04f, 0.18f, Color(0xFFC9BFF2)),
-            CausticMote(0.62f, 0.28f, 26f, 1f, 0.025f, 0.20f, Color(0xFF2DD4BF)),
-            CausticMote(0.82f, 0.64f, 18f, 1f, 0.035f, 0.16f, Color(0xFF818CF8)),
-            CausticMote(0.27f, 0.78f, 14f, 1f, 0.03f, 0.15f, Color(0xFFE0F2FE)),
-            CausticMote(0.74f, 0.15f, 20f, 1f, 0.04f, 0.19f, Color(0xFF7DD3FC)),
-        )
-    }
+    val swellPath = remember { Path() }
 
-    val wavePath = remember { Path() }
-    val crestPath = remember { Path() }
-
-    Canvas(modifier = modifier.fillMaxSize()) {
+    Canvas(
+        modifier = modifier
+            .fillMaxSize()
+            .blur(26.dp)
+    ) {
         val w = size.width
         val h = size.height
         if (w <= 0f || h <= 0f) return@Canvas
 
-        // 1. Deep nocturnal ocean base gradient
+        // 1. Full-screen deep abyssal oceanic gradient (no flat black bottom)
         drawRect(
             brush = Brush.verticalGradient(
-                0.0f to Color(0xFF090D1A),
-                0.45f to Color(0xFF0A1224),
-                0.78f to Color(0xFF060810),
-                1.0f to GhaisNoir.NoirBlack,
+                0.0f to Color(0xFF070B18),
+                0.38f to Color(0xFF0A1428),
+                0.72f to Color(0xFF091326),
+                1.0f to Color(0xFF060A16),
             )
         )
 
-        // 2. Drifting underwater caustic light pools
-        val poolCenters = listOf(
+        // 2. Large, dreamy, blurred underwater light pools spanning top to bottom
+        val pools = listOf(
             Triple(
-                Offset(w * (0.28f + 0.18f * cos(drift)), h * (0.20f + 0.09f * sin(drift * 1.0f))),
-                w * 0.72f,
-                Color(0xFF06B6D4).copy(alpha = 0.24f * energy),
+                Offset(w * (0.24f + 0.22f * cos(drift)), h * (0.18f + 0.10f * sin(drift))),
+                w * 0.95f,
+                Color(0xFF06B6D4).copy(alpha = 0.34f * energy),
             ),
             Triple(
-                Offset(w * (0.74f + 0.16f * sin(drift)), h * (0.26f + 0.11f * cos(drift))),
-                w * 0.68f,
-                Color(0xFF6366F1).copy(alpha = 0.28f * energy),
+                Offset(w * (0.78f + 0.18f * sin(drift)), h * (0.30f + 0.12f * cos(drift))),
+                w * 0.92f,
+                Color(0xFF6366F1).copy(alpha = 0.36f * energy),
             ),
             Triple(
-                Offset(w * (0.50f + 0.20f * sin(drift + 2.1f)), h * (0.38f + 0.08f * cos(drift + 1.2f))),
-                w * 0.65f,
-                Color(0xFFC9BFF2).copy(alpha = 0.18f * energy),
+                Offset(w * (0.46f + 0.24f * sin(drift + 1.9f)), h * (0.55f + 0.11f * cos(drift + 1.1f))),
+                w * 1.00f,
+                Color(0xFFC9BFF2).copy(alpha = 0.22f * energy),
             ),
             Triple(
-                Offset(w * (0.22f + 0.14f * cos(drift + 3.4f)), h * (0.46f + 0.07f * sin(drift + 2.5f))),
-                w * 0.55f,
-                Color(0xFF0D9488).copy(alpha = 0.22f * energy),
+                Offset(w * (0.22f + 0.20f * cos(drift + 3.2f)), h * (0.76f + 0.10f * sin(drift + 2.4f))),
+                w * 0.95f,
+                Color(0xFF0D9488).copy(alpha = 0.32f * energy),
+            ),
+            Triple(
+                Offset(w * (0.76f + 0.18f * cos(drift + 4.5f)), h * (0.88f + 0.08f * sin(drift + 1.7f))),
+                w * 0.90f,
+                Color(0xFF4F46E5).copy(alpha = 0.30f * energy),
             ),
         )
-        poolCenters.forEach { (center, radius, color) ->
+        pools.forEach { (center, radius, color) ->
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(color, Color.Transparent),
+                    colors = listOf(color, color.copy(alpha = color.alpha * 0.35f), Color.Transparent),
                     center = center,
                     radius = radius,
                 ),
@@ -207,95 +162,53 @@ fun LiquidWaterBackdrop(
             )
         }
 
-        // 3. Layered translucent flowing water ribbons + luminous crests
-        val steps = 28
+        // 3. Three ultra-soft, stroke-free translucent fluid water swells
+        val steps = 20
         val stepX = w / steps
-        val crestStrokePx = 1.6.dp.toPx()
 
-        waves.forEach { layer ->
-            wavePath.reset()
-            crestPath.reset()
+        swells.forEach { swell ->
+            swellPath.reset()
+            val baseY = h * swell.baseYFraction
+            val amp = h * swell.amplitudeFraction * energy
+            val omega = (2.0 * PI * swell.cycles) / w
+            val shift = phase * swell.speedMultiplier + swell.phaseOffset
 
-            val baseY = h * layer.baseYFraction
-            val amp = h * layer.amplitudeFraction * energy
-            val omega = (2.0 * PI * layer.cycles) / w
-            val shift = phase * layer.speedMultiplier + layer.phaseOffset
-
-            fun waveY(x: Float): Float {
+            fun swellY(x: Float): Float {
                 val primary = sin(x * omega + shift).toFloat()
-                val harmonic = 0.42f * cos(x * omega * 1.7f - shift * 0.8f).toFloat()
-                return baseY + amp * (primary + harmonic)
+                val secondary = 0.35f * cos(x * omega * 1.4f - shift * 0.7f).toFloat()
+                return baseY + amp * (primary + secondary)
             }
 
-            val startY = waveY(0f)
-            wavePath.moveTo(0f, startY)
-            crestPath.moveTo(0f, startY)
+            val startY = swellY(0f)
+            swellPath.moveTo(0f, startY)
 
             var prevX = 0f
             var prevY = startY
             for (i in 1..steps) {
                 val x = i * stepX
-                val y = waveY(x)
+                val y = swellY(x)
                 val midX = (prevX + x) * 0.5f
                 val midY = (prevY + y) * 0.5f
-                wavePath.quadraticTo(prevX, prevY, midX, midY)
-                crestPath.quadraticTo(prevX, prevY, midX, midY)
+                swellPath.quadraticTo(prevX, prevY, midX, midY)
                 prevX = x
                 prevY = y
             }
-            val endY = waveY(w)
-            wavePath.lineTo(w, endY)
-            crestPath.lineTo(w, endY)
-
-            wavePath.lineTo(w, h)
-            wavePath.lineTo(0f, h)
-            wavePath.close()
+            swellPath.lineTo(w, swellY(w))
+            swellPath.lineTo(w, h)
+            swellPath.lineTo(0f, h)
+            swellPath.close()
 
             drawPath(
-                path = wavePath,
+                path = swellPath,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        layer.topColor.copy(alpha = layer.topColor.alpha * energy),
-                        layer.bottomColor,
+                        swell.topColor.copy(alpha = swell.topColor.alpha * energy),
+                        swell.midColor.copy(alpha = swell.midColor.alpha * energy),
                         Color.Transparent,
                     ),
-                    startY = baseY - amp * 1.5f,
-                    endY = (baseY + h * 0.34f).coerceAtMost(h),
+                    startY = baseY - amp * 1.4f,
+                    endY = (baseY + h * 0.42f).coerceAtMost(h),
                 ),
-            )
-
-            drawPath(
-                path = crestPath,
-                brush = Brush.horizontalGradient(
-                    0.0f to Color.Transparent,
-                    0.18f to layer.crestColor.copy(alpha = layer.crestAlpha * energy),
-                    0.50f to Color.White.copy(alpha = layer.crestAlpha * 1.15f * energy),
-                    0.82f to layer.crestColor.copy(alpha = layer.crestAlpha * energy),
-                    1.0f to Color.Transparent,
-                ),
-                style = Stroke(width = crestStrokePx, cap = StrokeCap.Round),
-            )
-        }
-
-        // 4. Softly rising caustic light droplets
-        val twoPi = (2.0 * PI).toFloat()
-        motes.forEach { mote ->
-            val progress = ((drift / twoPi) * mote.speed + mote.yOffset) % 1f
-            val y = h * (0.64f - progress * 0.56f)
-            val x = w * (mote.xFraction + mote.swayAmplitude * sin(phase + mote.yOffset * twoPi))
-            val radius = mote.radiusDp.dp.toPx()
-            val fade = sin(progress * PI).toFloat().coerceIn(0f, 1f)
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        mote.tint.copy(alpha = mote.alpha * fade * energy),
-                        Color.Transparent,
-                    ),
-                    center = Offset(x, y),
-                    radius = radius,
-                ),
-                radius = radius,
-                center = Offset(x, y),
             )
         }
     }
