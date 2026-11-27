@@ -371,6 +371,16 @@ object AudioEngine {
                     }
                     // Auto-skip a broken ayah (404/timeout) so the surah plays fully.
                     val failed = _currentTrack.value
+                    if (failed != null) {
+                        com.ghais.analytics.HookAnalytics.track(
+                            com.ghais.analytics.HookEvents.Event.AUDIO_ERROR,
+                            mapOf(
+                                com.ghais.analytics.HookEvents.Prop.RECITER_SLUG to failed.reciterSlug,
+                                com.ghais.analytics.HookEvents.Prop.SURAH_ID to failed.surahId.toString(),
+                                com.ghais.analytics.HookEvents.Prop.ERROR to error.take(120),
+                            ),
+                        )
+                    }
                     if (failed != null && consecutiveErrors < maxAutoSkipErrors) {
                         consecutiveErrors++
                         if (_isAyahMode.value) {
@@ -1475,6 +1485,19 @@ object AudioEngine {
         } else {
             QuranDownloads.localUri(track.reciterSlug, track.surahId) ?: track.audioUrl
         }
+        val mode = when {
+            isAyahTrack -> "ayah"
+            playbackUri != track.audioUrl -> "offline"
+            else -> "stream"
+        }
+        com.ghais.analytics.HookAnalytics.track(
+            com.ghais.analytics.HookEvents.Event.PLAY_STARTED,
+            mapOf(
+                com.ghais.analytics.HookEvents.Prop.RECITER_SLUG to track.reciterSlug,
+                com.ghais.analytics.HookEvents.Prop.SURAH_ID to track.surahId.toString(),
+                com.ghais.analytics.HookEvents.Prop.MODE to mode,
+            ),
+        )
         // Atomic resume: start position rides along with prepare, so early
         // seeks can't be dropped while buffering. The retry net below stays
         // as a backstop for mid-play item replacements.

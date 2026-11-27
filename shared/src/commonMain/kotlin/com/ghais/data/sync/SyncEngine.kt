@@ -140,6 +140,7 @@ object SyncEngine {
     // attribute names they are written by live in `appwrite/collections.json`,
     // which no code hardcodes a copy of.
     private const val PLAY_EVENTS = "play_events"
+    private const val APP_EVENTS = "app_events"
 
     /**
      * `audioUrl` scheme the likes pull uses for a cloud like whose reciter slug
@@ -212,6 +213,9 @@ object SyncEngine {
 
     /** Wires catalog readers and starts the listening heartbeat once. */
     fun init() {
+        if (com.ghais.analytics.HookAnalytics.tracker === com.ghais.analytics.NoopTracker) {
+            com.ghais.analytics.HookAnalytics.tracker = com.ghais.analytics.BatchHookTracker
+        }
         // Wire the public reciter_stats reader into FollowStore so the UI can
         // display live follower counts (null = unknown = hidden).
         if (FollowStore.countFetcher == null) {
@@ -312,6 +316,9 @@ object SyncEngine {
             }
             runCollection(PLAY_EVENTS) {
                 uploadPlayEvents()
+            }
+            runCollection(APP_EVENTS) {
+                uploadAppEvents()
             }
             runCollection(SCHEDULES) {
                 val cloudHasData = pullSchedules(db, userId)
@@ -587,6 +594,39 @@ object SyncEngine {
         } catch (e: Exception) {
             Log.w(TAG, "play_events upload failed; unconfirmed events remain queued.", e)
         } finally { playEventsUploadLock.unlock() }
+    }
+
+    private val appEventsUploadLock = Mutex()
+
+    /** Upload queued HookAnalytics events to `app_events` and acknowledge each. */
+    suspend fun uploadAppEvents() {
+        if (!BackendConfig.isConfigured()) return
+        val userId = AuthRepository.session.value?.userId ?: return
+        if (!appEventsUploadLock.tryLock()) return
+        try {
+            val events = com.ghais.analytics.BatchHookTracker.pending(limit = 50)
+            if (events.isEmpty()) return
+            val db = databases()
+            for (ev in events) {
+                if (AuthRepository.session.value?.userId != userId) return
+                val data: Map<String, Any?> = buildMap {
+                    put("event", ev.event)
+                    put("user_id", userId)
+                    put("props", ev.props)
+                    put("ts_ms", ev.tsMs)
+                }
+                try {
+                    db.createDocument(DB_ID, APP_EVENTS, ev.eventId, data, expectedUserId = userId)
+                } catch (e: BackendException) {
+                    if (e.code != 409) throw e
+                }
+                com.ghais.analytics.BatchHookTracker.acknowledge(ev.eventId)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "app_events upload failed; events remain queued.", e)
+        } finally {
+            appEventsUploadLock.unlock()
+        }
     }
 
     /**

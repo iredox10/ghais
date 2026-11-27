@@ -663,6 +663,15 @@ class SearchScreen : Screen {
                     // pasted Arabic phrase) falls through to "No results for …"
                     // with the results sitting right underneath it in memory.
                     if (!showAyah && !showAyahHits && !showSurahs && !showReciters && !showDevotionals) {
+                        LaunchedEffect(query) {
+                            val clean = query.trim()
+                            if (clean.length >= 2) {
+                                com.ghais.analytics.HookAnalytics.track(
+                                    com.ghais.analytics.HookEvents.Event.SEARCH_ZERO_RESULTS,
+                                    mapOf(com.ghais.analytics.HookEvents.Prop.QUERY to clean.take(80)),
+                                )
+                            }
+                        }
                         SearchEmptyWell(
                             headline = "No results for \"$query\"",
                             hint = "Try a surah name, reciter, dua, or ayah ref like 2:255"

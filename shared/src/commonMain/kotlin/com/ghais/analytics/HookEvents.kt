@@ -28,6 +28,10 @@ object HookEvents {
         const val EXPLORE_INTENT_USED = "explore_intent_used"
         const val MOMENT_PLAYED = "moment_played"
         const val RECAP_VIEWED = "recap_viewed"
+        const val PLAY_STARTED = "play_started"
+        const val PLAY_COMPLETED = "play_completed"
+        const val AUDIO_ERROR = "audio_error"
+        const val SEARCH_ZERO_RESULTS = "search_zero_results"
     }
 
     /** Well-known property keys (keep values short strings). */
@@ -38,6 +42,9 @@ object HookEvents {
         const val QUEST_ID = "quest_id"
         const val ACHIEVEMENT_ID = "achievement_id"
         const val SOURCE = "source"
+        const val MODE = "mode"
+        const val QUERY = "query"
+        const val ERROR = "error"
     }
 }
 

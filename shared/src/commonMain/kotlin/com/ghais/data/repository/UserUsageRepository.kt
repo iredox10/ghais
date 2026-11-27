@@ -1277,6 +1277,13 @@ object UserUsageRepository {
                 playCountCounted = true
                 recordSurahPlay(surahId)
                 PlayEventLog.record(track.reciterSlug, surahId, positionMs, currentOwnerId.takeIf { it != "local" })
+                com.ghais.analytics.HookAnalytics.track(
+                    com.ghais.analytics.HookEvents.Event.PLAY_COMPLETED,
+                    mapOf(
+                        com.ghais.analytics.HookEvents.Prop.RECITER_SLUG to track.reciterSlug,
+                        com.ghais.analytics.HookEvents.Prop.SURAH_ID to surahId.toString(),
+                    ),
+                )
             }
         } catch (_: Exception) {
         }
