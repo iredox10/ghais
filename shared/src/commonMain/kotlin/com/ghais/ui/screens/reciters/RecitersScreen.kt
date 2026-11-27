@@ -282,7 +282,8 @@ class RecitersScreen : Tab {
             shelves.filter {
                 it.id != "your-voices" &&
                     it.id != "because-follow" &&
-                    it.id != "new-to-explore"
+                    it.id != "new-to-explore" &&
+                    it.id != "outside-usual"
             }
         }
         val newToExploreShelf = remember(shelfBySlug) {
@@ -410,24 +411,7 @@ class RecitersScreen : Tab {
                             }
                         }
 
-                        // Weekly ritual (P8): standalone section, fresh every
-                        // Monday. Self-hides when its picks are empty.
-                        SectionId.RITUAL -> if (PersonalFlags.weeklyRitual && ritual.isNotEmpty()) {
-                            item(key = "slot_weekly_ritual") {
-                                WeeklyRitualRow(
-                                    reciters = ritual,
-                                    weekSeed = ritualWeek,
-                                    photoFor = ::photoForSlug,
-                                    onOpenReciter = { slug ->
-                                        rootNavigator?.push(ReciterProfileScreen(slug))
-                                    },
-                                    onPlayReciter = ::playReciterQueue,
-                                    isFollowing = { it in followedSlugs },
-                                    onFollowClick = { FollowStore.toggle(it) }
-                                )
-                                Spacer(Modifier.height(20.dp))
-                            }
-                        }
+                        SectionId.RITUAL -> Unit
 
                         SectionId.VOICE_OF_DAY -> item(key = "noir_voice_of_day") {
                             val epochDay = shelfEpochDay
