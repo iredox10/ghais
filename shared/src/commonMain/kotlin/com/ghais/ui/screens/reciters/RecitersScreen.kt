@@ -66,6 +66,7 @@ import com.ghais.domain.model.TrackItem
 import com.ghais.flags.HookFlags
 import com.ghais.personal.ForYou
 import com.ghais.personal.PersonalFlags
+import com.ghais.personal.Shelf
 import com.ghais.personal.ShelfRow
 import com.ghais.personal.SignalStore
 import com.ghais.personal.buildShelves
@@ -277,11 +278,34 @@ class RecitersScreen : Tab {
                 )
             }
         }
-        val yourVoicesShelves = remember(shelves) {
-            shelves.filter { it.id == "your-voices" }
-        }
         val forYouShelves = remember(shelves) {
-            shelves.filter { it.id != "your-voices" }
+            shelves.filter {
+                it.id != "your-voices" &&
+                    it.id != "because-follow" &&
+                    it.id != "new-to-explore"
+            }
+        }
+        val newToExploreShelf = remember(shelfBySlug) {
+            val newSlugs = listOf(
+                "omar-diaa-al-din",
+                "abdul-rahman-musaad",
+                "ibrahim-idris",
+                "abdullah-aba-zaria",
+                "mohamed-refaat",
+                "muhammad-taha-al-junaid",
+                "muzammil-hasballah",
+                "hassan-saleh",
+            ).filter { it in shelfBySlug }
+            if (newSlugs.isNotEmpty()) {
+                Shelf(
+                    id = "new-to-explore",
+                    title = "New to explore",
+                    subtitle = "Newly added voices to the app",
+                    slugs = newSlugs,
+                )
+            } else {
+                null
+            }
         }
         // FOR_YOU renders only on real confidence (>3 signals or completed
         // taste quiz) — history alone isn't enough. orderSections still
@@ -365,24 +389,7 @@ class RecitersScreen : Tab {
                             Spacer(Modifier.height(16.dp))
                         }
 
-                        SectionId.YOUR_VOICES -> if (PersonalFlags.personalShelves) {
-                            yourVoicesShelves.forEach { shelf ->
-                                item(key = "noir_shelf_${shelf.id}") {
-                                    ShelfRow(
-                                        shelf = shelf,
-                                        reciterBySlug = shelfBySlug,
-                                        photoFor = ::photoForSlug,
-                                        followedSlugs = followedSlugs,
-                                        onReciter = { slug ->
-                                            rootNavigator?.push(ReciterProfileScreen(slug))
-                                        },
-                                        onPlayReciter = ::playReciterQueue,
-                                        onToggleFollow = { slug -> FollowStore.toggle(slug) }
-                                    )
-                                    Spacer(Modifier.height(20.dp))
-                                }
-                            }
-                        }
+                        SectionId.YOUR_VOICES -> Unit
 
                         SectionId.FOR_YOU -> if (PersonalFlags.personalShelves && forYouConfident) {
                             forYouShelves.forEach { shelf ->
@@ -521,6 +528,24 @@ class RecitersScreen : Tab {
                                 // miswired to open the deck sheet, which is gone.
                                 onOpenPlayer = { rootNavigator?.push(NowPlayingScreen()) }
                             )
+                        }.also {
+                            if (newToExploreShelf != null) {
+                                item(key = "noir_shelf_${newToExploreShelf.id}") {
+                                    Spacer(Modifier.height(20.dp))
+                                    ShelfRow(
+                                        shelf = newToExploreShelf,
+                                        reciterBySlug = shelfBySlug,
+                                        photoFor = ::photoForSlug,
+                                        followedSlugs = followedSlugs,
+                                        onReciter = { slug ->
+                                            rootNavigator?.push(ReciterProfileScreen(slug))
+                                        },
+                                        onPlayReciter = ::playReciterQueue,
+                                        onToggleFollow = { slug -> FollowStore.toggle(slug) }
+                                    )
+                                    Spacer(Modifier.height(20.dp))
+                                }
+                            }
                         }
 
                         SectionId.NATIONS -> if (groups.isEmpty()) {

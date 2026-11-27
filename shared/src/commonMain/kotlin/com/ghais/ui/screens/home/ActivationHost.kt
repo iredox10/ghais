@@ -97,7 +97,9 @@ fun ActivationHost(
     val taste by TasteStore.taste.collectAsState()
     val history by UserUsageRepository.history.collectAsState()
     val followed by FollowStore.followedSlugs.collectAsState()
-    val session by AuthRepository.session.collectAsState()
+    val liveSession by AuthRepository.session.collectAsState()
+    val cachedSession by AuthRepository.cachedSession.collectAsState()
+    val session = liveSession ?: cachedSession
     val goal by OnboardingStore.goal.collectAsState()
     val minutes by OnboardingStore.dailyGoalMinutes.collectAsState()
     val currentTrack by AudioEngine.currentTrack.collectAsState()

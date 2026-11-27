@@ -165,8 +165,10 @@ object ProfileScreen : Tab {
             )
         }
 
-        // Auth session (null = guest)
-        val session by AuthRepository.session.collectAsState()
+        // Auth session (fall back to persisted cachedSession when offline; null = guest)
+        val liveSession by AuthRepository.session.collectAsState()
+        val cachedSession by AuthRepository.cachedSession.collectAsState()
+        val session = liveSession ?: cachedSession
 
         // Broadcasts inbox unread badge (public cache; refresh happens on inbox open).
         val broadcasts by BroadcastRepository.broadcasts.collectAsState()
