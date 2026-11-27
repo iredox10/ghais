@@ -142,46 +142,6 @@ data class RegionRecitersScreen(val nation: String) : Screen {
                     }
                 }
 
-                // Engraved search pill (carved-in recessed surface)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clip(GhaisShapes.pill)
-                        .background(GhaisNoir.insetFill())
-                        .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.pill)
-                        .padding(horizontal = 14.dp, vertical = 11.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = "Search",
-                        tint = GhaisNoir.TextTertiary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    BasicTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        singleLine = true,
-                        textStyle = TextStyle(
-                            color = GhaisNoir.TextPrimary,
-                            fontSize = 14.sp
-                        ),
-                        decorationBox = { inner ->
-                            if (searchQuery.isEmpty()) {
-                                Text(
-                                    text = "Search $nation reciters...",
-                                    color = GhaisNoir.TextDisabled,
-                                    fontSize = 14.sp
-                                )
-                            }
-                            inner()
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
                 if (filtered.isEmpty()) {
                     Box(
                         modifier = Modifier
