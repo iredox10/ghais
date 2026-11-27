@@ -80,6 +80,7 @@ object ChartsRepository {
          * empty so old caches and old server payloads stay compatible.
          */
         val topQaris7d: List<String> = emptyList(),
+        val topQariCounts7d: Map<String, Long> = emptyMap(),
         val topQaris30d: List<String> = emptyList(),
         val trending: List<String> = emptyList(),
         val generatedAt: Long = 0L,
@@ -254,6 +255,7 @@ object ChartsRepository {
         obj["\$id"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() } ?: return null
         ChartsSnapshot(
             topQaris7d = slugList(obj, "topQaris7d", "top_qaris_7d"),
+            topQariCounts7d = countMap(obj, "topQariCounts7d", "top_qari_counts_7d"),
             topQaris30d = slugList(obj, "topQaris30d", "top_qaris_30d"),
             topQarisYesterday = slugList(obj, "topQarisYesterday", "top_qaris_yesterday"),
             trending = slugList(obj, "trending"),
@@ -273,6 +275,20 @@ object ChartsRepository {
         }.orEmpty()
     } catch (_: Exception) {
         emptyList()
+    }
+
+    private fun countMap(obj: JsonObject, vararg keys: String): Map<String, Long> = try {
+        val key = keys.firstOrNull { obj.containsKey(it) } ?: return emptyMap()
+        val mapObj = obj[key]?.jsonObject ?: return emptyMap()
+        buildMap {
+            mapObj.forEach { (slug, value) ->
+                val count = (value as? JsonPrimitive)?.longOrNull ?: return@forEach
+                val clean = slug.trim()
+                if (clean.isNotEmpty() && count >= 0L) put(clean, count)
+            }
+        }
+    } catch (_: Exception) {
+        emptyMap()
     }
 
     private fun parseGeneratedAt(obj: JsonObject): Long {

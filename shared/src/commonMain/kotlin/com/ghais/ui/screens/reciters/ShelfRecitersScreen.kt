@@ -36,8 +36,10 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.ghais.data.repository.ChartsRepository
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.UserUsageRepository
 import com.ghais.data.repository.rememberBrowseReciters
 import com.ghais.domain.model.Reciter
 import com.ghais.domain.model.TrackItem
@@ -63,6 +65,7 @@ data class ShelfRecitersScreen(
     val subtitle: String,
     val slugs: List<String>,
     val showRankedMosaic: Boolean = false,
+    val playCounts: Map<String, Long> = emptyMap(),
 ) : Screen {
     @Composable
     override fun Content() {
@@ -70,6 +73,16 @@ data class ShelfRecitersScreen(
         var searchQuery by remember { mutableStateOf("") }
         var searchExpanded by remember { mutableStateOf(false) }
         val followedSlugs by FollowStore.followedSlugs.collectAsState()
+        val chartsSnapshot by ChartsRepository.snapshot.collectAsState()
+        val usageHistory by UserUsageRepository.history.collectAsState()
+        val resolvedCounts = remember(playCounts, chartsSnapshot, usageHistory) {
+            val localCounts = usageHistory.groupingBy { it.reciterSlug }.eachCount()
+            buildMap {
+                localCounts.forEach { (slug, n) -> put(slug, n.toLong()) }
+                chartsSnapshot?.topQariCounts7d?.forEach { (slug, n) -> put(slug, n) }
+                playCounts.forEach { (slug, n) -> put(slug, n) }
+            }
+        }
 
         val browseReciters = rememberBrowseReciters()
         val reciters = remember(slugs, browseReciters) {
@@ -150,6 +163,7 @@ data class ShelfRecitersScreen(
                                         RankedMosaicTile(
                                             reciter = second,
                                             rank = 2,
+                                            playCount = resolvedCounts[second.slug],
                                             circleSize = 86.dp,
                                             modifier = Modifier.weight(1f),
                                             onClick = { navigator.push(ReciterProfileScreen(second.slug)) }
@@ -159,6 +173,7 @@ data class ShelfRecitersScreen(
                                         RankedMosaicTile(
                                             reciter = first,
                                             rank = 1,
+                                            playCount = resolvedCounts[first.slug],
                                             circleSize = 108.dp,
                                             modifier = Modifier
                                                 .weight(1.1f)
@@ -170,6 +185,7 @@ data class ShelfRecitersScreen(
                                         RankedMosaicTile(
                                             reciter = third,
                                             rank = 3,
+                                            playCount = resolvedCounts[third.slug],
                                             circleSize = 86.dp,
                                             modifier = Modifier.weight(1f),
                                             onClick = { navigator.push(ReciterProfileScreen(third.slug)) }
@@ -182,6 +198,7 @@ data class ShelfRecitersScreen(
                             RankedMosaicTile(
                                 reciter = reciter,
                                 rank = rankOffset + idx,
+                                playCount = resolvedCounts[reciter.slug],
                                 circleSize = 84.dp,
                                 onClick = { navigator.push(ReciterProfileScreen(reciter.slug)) }
                             )
@@ -244,6 +261,7 @@ data class ShelfRecitersScreen(
 private fun RankedMosaicTile(
     reciter: Reciter,
     rank: Int,
+    playCount: Long?,
     circleSize: Dp,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -292,5 +310,38 @@ private fun RankedMosaicTile(
             overflow = TextOverflow.Ellipsis,
             lineHeight = 16.sp
         )
+        if (playCount != null && playCount > 0L) {
+            Spacer(Modifier.height(2.dp))
+            val unit = if (playCount == 1L) "play" else "plays"
+            Text(
+                text = "${formatCompactPlayCount(playCount)} $unit",
+                color = GhaisNoir.TextTertiary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum")
+            )
+        }
     }
+}
+
+/**
+ * Industry-standard compact count formatting (Spotify / YouTube style):
+ * - < 1,000 -> raw integer (e.g. "842")
+ * - 1,000..999,999 -> uppercase K, max 1 decimal (e.g. "1.2K", "12K")
+ * - 1,000,000..999,999,999 -> uppercase M, max 1 decimal (e.g. "1.4M")
+ * - 1B+ -> uppercase B, max 1 decimal (e.g. "1.2B")
+ */
+internal fun formatCompactPlayCount(count: Long): String {
+    if (count < 1_000L) return count.toString()
+    val (divisor, suffix) = when {
+        count >= 1_000_000_000L -> 1_000_000_000L to "B"
+        count >= 1_000_000L -> 1_000_000L to "M"
+        else -> 1_000L to "K"
+    }
+    val tenths = (count * 10L) / divisor
+    val whole = tenths / 10L
+    val frac = tenths % 10L
+    return if (frac == 0L || whole >= 100L) "${whole}$suffix" else "${whole}.${frac}$suffix"
 }
