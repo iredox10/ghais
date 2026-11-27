@@ -52,7 +52,10 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.ghais.data.repository.FavoritesStore
 import com.ghais.data.repository.FollowStore
 import com.ghais.data.repository.QuranDataRepository
+import com.ghais.data.repository.StatsRange as RepoStatsRange
 import com.ghais.data.repository.UserUsageRepository
+import com.ghais.data.repository.barsForRange
+import com.ghais.data.repository.formatDuration
 import com.ghais.data.repository.resolveFollowedQari
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.NoirCard
@@ -82,16 +85,7 @@ object StatsScreen : Screen {
         val downloaded by QuranDownloads.downloadedKeys.collectAsState()
 
         val totalHoursText = remember(stats.totalSecondsListened) {
-            val total = stats.totalSecondsListened
-            when {
-                total <= 0L -> "0s"
-                total < 60L -> "${total}s"
-                total < 3600L -> "${total / 60L}m"
-                else -> {
-                    val hours = total / 3600.0
-                    "${((hours * 10).toInt() / 10.0)}h"
-                }
-            }
+            formatDuration(stats.totalSecondsListened)
         }
 
         val qariPlayCounts = remember(history) {
@@ -139,24 +133,51 @@ object StatsScreen : Screen {
         val combinedDailySeconds = remember(dailyMap, remoteDailyMap) {
             combinedStatsDays(dailyMap, remoteDailyMap)
         }
-        val todayMinutes = (combinedDailySeconds[todayEpochDay] ?: 0L) / 60f
+        val todaySeconds = combinedDailySeconds[todayEpochDay] ?: 0L
+        val todayMinutes = todaySeconds / 60f
         val ringProgress = (todayMinutes / goalMin.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
-        val rangeMinutes = remember(range, combinedDailySeconds, todayEpochDay) {
+        val rangeSecondsList = remember(range, combinedDailySeconds, todayEpochDay) {
             List(range.days) { i ->
-                (combinedDailySeconds[todayEpochDay - (range.days - 1 - i)] ?: 0L) / 60f
+                combinedDailySeconds[todayEpochDay - (range.days - 1 - i)] ?: 0L
             }
         }
+        val rangeMinutes = remember(rangeSecondsList) {
+            rangeSecondsList.map { it / 60f }
+        }
 
-        val rangeTotalMin = rangeMinutes.sum()
+        val rangeTotalSeconds = remember(rangeSecondsList) { rangeSecondsList.sum() }
+        val rangeTotalMin = rangeTotalSeconds / 60f
         val rangeAvgMin = if (range.days > 0) rangeTotalMin / range.days else 0f
-        val rangeActiveDays = rangeMinutes.count { it > 0f }
-        val bestIndex = rangeMinutes.indices.maxByOrNull { rangeMinutes[it] }
+        val rangeActiveDays = rangeSecondsList.count { it > 0L }
+        val bestIndex = remember(rangeMinutes) {
+            val max = rangeMinutes.maxOrNull() ?: 0f
+            if (max > 0f) rangeMinutes.indexOfFirst { it == max } else null
+        }
         val bestMin = bestIndex?.let { rangeMinutes[it] } ?: 0f
         val bestDayLabel = bestIndex?.let {
             weekdayShort(todayEpochDay - (range.days - 1 - it))
         } ?: "—"
-        val shownBars = remember(rangeMinutes) { rangeMinutes.takeLast(30) }
-        val barsTruncated = rangeMinutes.size > shownBars.size
+
+        val chartBars = remember(range, combinedDailySeconds, todayEpochDay) {
+            val repoRange = when (range) {
+                StatsRange.Today -> RepoStatsRange.TODAY
+                StatsRange.Week -> RepoStatsRange.WEEK
+                StatsRange.Month -> RepoStatsRange.DAYS_30
+                StatsRange.Quarter -> RepoStatsRange.MONTHS_3
+                StatsRange.Year -> RepoStatsRange.YEAR
+            }
+            barsForRange(repoRange, combinedDailySeconds, todayEpochDay)
+        }
+        val shownBars = remember(chartBars) { chartBars.map { it.second / 60f } }
+        val shownLabels = remember(range, chartBars) {
+            when (range) {
+                StatsRange.Today -> listOf("Today")
+                StatsRange.Week -> chartBars.map { it.first }
+                StatsRange.Month -> emptyList()
+                StatsRange.Quarter, StatsRange.Year -> emptyList()
+            }
+        }
+        val barsTruncated = false
         val dailyBreakdownUnavailable = combinedDailySeconds.isEmpty() && stats.totalSecondsListened > 0L
         // Quiet multi-device note: remote minutes inside the current window.
         val remoteMinutesInRange = remember(range, remoteDailyMap, todayEpochDay) {
@@ -321,7 +342,8 @@ object StatsScreen : Screen {
                                         fontWeight = FontWeight.ExtraBold
                                     )
                                     Text(
-                                        text = "${todayMinutes.toInt()}/${goalMin}m",
+                                        text = if (todaySeconds in 1L..59L) "${todaySeconds}s/${goalMin}m"
+                                        else "${todayMinutes.toInt()}/${goalMin}m",
                                         color = Color.White.copy(alpha = 0.72f),
                                         fontSize = 11.sp
                                     )
@@ -388,13 +410,13 @@ object StatsScreen : Screen {
                             }
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = formatCompactMinutes(rangeTotalMin),
+                                text = formatDuration(rangeTotalSeconds),
                                 color = GhaisNoir.TextPrimary,
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
                             Text(
-                                text = if (rangeTotalMin > 0f) "listened" else "listened • start listening",
+                                text = if (rangeTotalSeconds > 0L) "listened" else "listened • start listening",
                                 color = GhaisNoir.TextTertiary,
                                 fontSize = 12.sp
                             )
@@ -417,17 +439,16 @@ object StatsScreen : Screen {
                                 }
                             }
                             Spacer(modifier = Modifier.height(14.dp))
-                            var selectedBar by remember(range) {
-                                mutableStateOf((bestIndex?.minus(rangeMinutes.size - shownBars.size) ?: shownBars.lastIndex).coerceIn(0, shownBars.lastIndex.coerceAtLeast(0)))
+                            val bestBarIdx = remember(shownBars) {
+                                val max = shownBars.maxOrNull() ?: 0f
+                                if (max > 0f) shownBars.indexOfFirst { it == max } else shownBars.lastIndex.coerceAtLeast(0)
                             }
-                            val weekLabels = remember(range, todayEpochDay) {
-                                if (range == StatsRange.Week) {
-                                    List(7) { i -> weekdayShort(todayEpochDay - (6 - i)) }
-                                } else emptyList()
+                            var selectedBar by remember(range, bestBarIdx) {
+                                mutableStateOf(bestBarIdx.coerceIn(0, shownBars.lastIndex.coerceAtLeast(0)))
                             }
                             InsightBars(
                                 values = shownBars,
-                                labels = weekLabels,
+                                labels = shownLabels,
                                 goalMin = if (range == StatsRange.Today || range == StatsRange.Week) {
                                     goalMin.toFloat()
                                 } else null,
@@ -437,8 +458,10 @@ object StatsScreen : Screen {
                             Spacer(modifier = Modifier.height(10.dp))
                             // Selected-bar readout: the chart's one takeaway.
                             val selIdx = if (shownBars.isEmpty()) 0 else selectedBar.coerceIn(shownBars.indices)
-                            val selLabel = weekLabels.getOrNull(selIdx)
+                            val selLabel = shownLabels.getOrNull(selIdx)
+                                ?: chartBars.getOrNull(selIdx)?.first
                                 ?: if (range == StatsRange.Today) "Today (UTC)" else "${shownBars.lastIndex - selIdx} days ago (UTC)"
+                            val selSeconds = chartBars.getOrNull(selIdx)?.second ?: 0L
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
@@ -448,7 +471,7 @@ object StatsScreen : Screen {
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "$selLabel • ${shownBars.getOrNull(selIdx)?.toInt() ?: 0}m",
+                                    text = "$selLabel • ${formatDuration(selSeconds)}",
                                     color = GhaisNoir.TextSecondary,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold

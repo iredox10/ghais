@@ -1174,6 +1174,10 @@ object UserUsageRepository {
             secondsToday = deltaSeconds
             settings.putLong(k(KEY_LAST_DAY), today)
             settings.putInt(k(KEY_STREAK), streak)
+        } else if (streak <= 0) {
+            // If streak was 0 despite listening today (e.g. restored/adopted state), bump to 1.
+            streak = 1
+            settings.putInt(k(KEY_STREAK), streak)
         }
 
         settings.putLong(k(KEY_SECONDS_TODAY), secondsToday)
