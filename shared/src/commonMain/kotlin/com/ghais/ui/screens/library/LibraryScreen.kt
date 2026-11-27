@@ -90,9 +90,11 @@ import com.ghais.ui.screens.library.ResurrectionRail
 import com.ghais.ui.screens.library.curatorLevel
 import com.ghais.ui.screens.library.findUnplayed
 import com.ghais.ui.components.noir.IconWell
+import com.ghais.ui.components.noir.NoirHeaderSearch
+import com.ghais.ui.components.noir.NoirNavBar
+import com.ghais.ui.components.noir.NoirNavButton
 import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
-import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.noirClickable
 import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
@@ -138,7 +140,10 @@ object LibraryScreen : Tab {
     override fun Content() {
         val rootNavigator = LocalRootNavigator.current ?: LocalNavigator.current?.parent ?: LocalNavigator.current
         var query by remember { mutableStateOf("") }
+        var searchExpanded by remember { mutableStateOf(false) }
         var selectedFilter by remember { mutableStateOf("All") }
+        val currentTrack by AudioEngine.currentTrack.collectAsState()
+        val bottomDockPadding = if (currentTrack != null) 200.dp else 112.dp
 
         // User playlists (owned by another agent — code against the
         // UserPlaylists contract only) + offline index for the Downloads tile.
@@ -190,25 +195,41 @@ object LibraryScreen : Tab {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 112.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = bottomDockPadding),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // ---------------------------------------------------------
-                // Editorial header + engraved search + chrome filter pills
+                // Minimal Noir Header (title + expandable search + create)
+                // + chrome filter reel
                 // ---------------------------------------------------------
                 item(span = { GridItemSpan(2) }) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        NoirLibraryHeader(
-                            totalCount = MoodPlaylists.size,
-                            visibleCount = filteredPlaylists.size
+                        NoirNavBar(
+                            title = "Collections",
+                            actions = {
+                                NoirHeaderSearch(
+                                    expanded = searchExpanded,
+                                    onExpandedChange = { expanded ->
+                                        searchExpanded = expanded
+                                        if (!expanded) query = ""
+                                    },
+                                    query = query,
+                                    onQueryChange = { query = it },
+                                    placeholder = "Search collections…"
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                NoirNavButton(
+                                    icon = Icons.Filled.Add,
+                                    contentDescription = "New playlist",
+                                    onClick = {
+                                        createName = ""
+                                        showCreateDialog = true
+                                    }
+                                )
+                            }
                         )
-                        Spacer(Modifier.height(16.dp))
-                        NoirLibrarySearch(
-                            query = query,
-                            onQueryChange = { query = it }
-                        )
-                        Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(10.dp))
                         NoirLibraryReel(
                             filters = Filters,
                             selected = selectedFilter,
@@ -238,12 +259,30 @@ object LibraryScreen : Tab {
                         NoirLibraryEmpty()
                     }
                 } else {
-                    // Downloads entry point: always visible (device-level, outside
-                    // search/filter like the editorial shelf).
+                    // Quick-access 2x2 Bento: Downloads, Routines, Khatma, Mushaf
                     item(span = { GridItemSpan(2) }) {
+                        NoirSectionHeader(label = "Library & Tools")
+                    }
+                    item {
                         NoirDownloadsTile(
                             downloadedCount = downloadedKeys.size,
                             onClick = { rootNavigator?.push(DownloadsScreen()) }
+                        )
+                    }
+                    item {
+                        NoirRoutinesTile(
+                            onClick = { rootNavigator?.push(MyRoutinesScreen) }
+                        )
+                    }
+                    item {
+                        NoirKhatmaTile(
+                            planCount = khatmaPlans.size,
+                            onClick = { rootNavigator?.push(KhatmaScreen) }
+                        )
+                    }
+                    item {
+                        NoirMushafTile(
+                            onClick = { rootNavigator?.push(MushafScreen) }
                         )
                     }
 
@@ -270,30 +309,32 @@ object LibraryScreen : Tab {
                                 { "${it.surahNameEn} • ${it.reciterName}" }
                             )
                         }
-                        if (HookFlags.resurrectionEnabled) {
-                            ResurrectionRail(
-                                unplayedIds = unplayed,
-                                onPlay = { id ->
-                                    val track = savedTracks.firstOrNull {
-                                        UserPlaylists.trackKeyOf(it) == id
-                                    }
-                                    if (track != null) {
-                                        AudioEngine.playQueue(listOf(track), startIndex = 0)
-                                        rootNavigator?.push(NowPlayingScreen())
-                                        HookAnalytics.track(
-                                            HookEvents.Event.RESURRECTION_PLAYED,
-                                            mapOf(HookEvents.Prop.SOURCE to "resurrection"),
-                                        )
-                                    }
-                                },
-                                resolveLabel = { labelById[it] ?: it }
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            if (HookFlags.resurrectionEnabled) {
+                                ResurrectionRail(
+                                    unplayedIds = unplayed,
+                                    onPlay = { id ->
+                                        val track = savedTracks.firstOrNull {
+                                            UserPlaylists.trackKeyOf(it) == id
+                                        }
+                                        if (track != null) {
+                                            AudioEngine.playQueue(listOf(track), startIndex = 0)
+                                            rootNavigator?.push(NowPlayingScreen())
+                                            HookAnalytics.track(
+                                                HookEvents.Event.RESURRECTION_PLAYED,
+                                                mapOf(HookEvents.Prop.SOURCE to "resurrection"),
+                                            )
+                                        }
+                                    },
+                                    resolveLabel = { labelById[it] ?: it }
+                                )
+                            }
+                            CuratorBadge(
+                                level = curatorLevel(userPlaylists.size, savedTracks.size),
+                                playlistsCreated = userPlaylists.size,
+                                tracksSaved = savedTracks.size
                             )
                         }
-                        CuratorBadge(
-                            level = curatorLevel(userPlaylists.size, savedTracks.size),
-                            playlistsCreated = userPlaylists.size,
-                            tracksSaved = savedTracks.size
-                        )
                     }
 
                     // User playlists: visible under "All" + name search only.
@@ -308,20 +349,23 @@ object LibraryScreen : Tab {
                                 }
                             )
                         }
-                        item {
-                            NoirCreatePlaylistTile(
-                                onClick = {
-                                    createName = ""
-                                    showCreateDialog = true
-                                }
-                            )
-                        }
-                        items(filteredUserPlaylists, key = { it.id }) { playlist ->
-                            NoirUserPlaylistTile(
-                                name = playlist.name,
-                                trackCount = playlist.tracks.size,
-                                onClick = { rootNavigator?.push(PlaylistDetailsScreen(playlist.id)) }
-                            )
+                        if (filteredUserPlaylists.isEmpty()) {
+                            item(span = { GridItemSpan(2) }) {
+                                NoirCreatePlaylistTile(
+                                    onClick = {
+                                        createName = ""
+                                        showCreateDialog = true
+                                    }
+                                )
+                            }
+                        } else {
+                            items(filteredUserPlaylists, key = { it.id }) { playlist ->
+                                NoirUserPlaylistTile(
+                                    name = playlist.name,
+                                    trackCount = playlist.tracks.size,
+                                    onClick = { rootNavigator?.push(PlaylistDetailsScreen(playlist.id)) }
+                                )
+                            }
                         }
                     }
 
@@ -329,28 +373,6 @@ object LibraryScreen : Tab {
                         NoirSectionHeader(label = "Collections • ${filteredPlaylists.size}")
                     }
                     if (filteredPlaylists.isNotEmpty()) {
-                        item {
-                            NoirRoutinesTile(
-                                onClick = { rootNavigator?.push(MyRoutinesScreen) }
-                            )
-                        }
-                        // Khatma entry point: bento pair with Routines (both are
-                        // devotion tools). Same package as KhatmaScreen, same
-                        // rootNavigator push pattern as every tile here.
-                        item {
-                            NoirKhatmaTile(
-                                planCount = khatmaPlans.size,
-                                onClick = { rootNavigator?.push(KhatmaScreen) }
-                            )
-                        }
-                        // Mushaf entry point: completes the devotion-tools bento
-                        // (Routines / Khatma / Mushaf). MushafScreen was an
-                        // unreachable Tab — reachable here with no dock change.
-                        item {
-                            NoirMushafTile(
-                                onClick = { rootNavigator?.push(MushafScreen) }
-                            )
-                        }
                         items(filteredPlaylists, key = { it.id }) { playlist ->
                             NoirLibraryTile(
                                 playlist = playlist,
