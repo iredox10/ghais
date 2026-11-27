@@ -233,7 +233,7 @@ object HomeScreen : Tab {
                             rootNavigator?.push(
                                 com.ghais.ui.screens.reciters.ShelfRecitersScreen(
                                     title = "Top Qaris this week",
-                                    subtitle = "Most heard across Ghais",
+                                    subtitle = "Most heard across Ghaith",
                                     slugs = slugs,
                                     showRankedMosaic = true
                                 )

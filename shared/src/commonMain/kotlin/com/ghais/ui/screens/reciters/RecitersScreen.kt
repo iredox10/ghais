@@ -215,6 +215,7 @@ class RecitersScreen : Tab {
             usageHistory.map { it.reciterSlug }.toSet()
         }
         val shelfEpochDay = currentEpochDay()
+        LaunchedEffect(Unit) { ChartsRepository.refresh() }
         val shelfBySlug = remember(browseReciters) {
             browseReciters.associateBy { it.slug }
         }
@@ -464,7 +465,6 @@ class RecitersScreen : Tab {
                             val globalEntries = remember(chartsSnapshot, browseReciters) {
                                 try {
                                     chartsSnapshot?.topQaris7d
-                                        ?.take(5)
                                         ?.mapNotNull { slug ->
                                             val reciter = try {
                                                 QuranDataRepository.getBrowseReciterBySlug(slug)
@@ -524,7 +524,7 @@ class RecitersScreen : Tab {
                                     rootNavigator?.push(
                                         ShelfRecitersScreen(
                                             title = "Weekly most heard",
-                                            subtitle = "Most heard across Ghais",
+                                            subtitle = "Most heard across Ghaith",
                                             slugs = shownEntries.map { it.slug },
                                             showRankedMosaic = true
                                         )

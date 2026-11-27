@@ -270,7 +270,7 @@ data class ReciterProfileScreen(val reciterSlug: String) : Screen {
                         onShare = {
                             ShareSheet.shareText(
                                 "Listen to ${reciter.nameEn}",
-                                "Listen to ${reciter.nameEn} (${meta.riwayah}) on Quranify — ${surahs.size} surahs."
+                                "Listen to ${reciter.nameEn} (${meta.riwayah}) on Ghaith — ${surahs.size} surahs."
                             )
                         },
                         // Expansion is screen-owned: the bar only mirrors it.

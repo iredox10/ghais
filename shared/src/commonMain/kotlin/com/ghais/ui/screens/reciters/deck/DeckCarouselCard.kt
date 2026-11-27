@@ -160,7 +160,7 @@ fun DeckCarouselCard(
                     onClick = {
                         ShareSheet.shareText(
                             reciter.nameEn,
-                            "Listen to ${reciter.nameEn} on Quranify"
+                            "Listen to ${reciter.nameEn} on Ghaith"
                         )
                     }
                 )
