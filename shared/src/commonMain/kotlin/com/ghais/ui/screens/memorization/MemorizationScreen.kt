@@ -170,7 +170,7 @@ object MemorizationScreen : Tab {
                     bottom = bottomDockPadding
                 ),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 item(key = "hifz_nav", span = { GridItemSpan(2) }) {
                     NoirNavBar(
@@ -206,14 +206,17 @@ object MemorizationScreen : Tab {
                                     Text(
                                         text = "Today's Hifz",
                                         color = GhaisNoir.TextPrimary,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.ExtraBold
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold
                                     )
                                     Spacer(Modifier.height(2.dp))
                                     Text(
-                                        text = "Ayah-by-ayah memorization & spaced review",
+                                        text = "$masteredCount mastered • $todayReviewed/$dailyGoal today" +
+                                            if (weakAyahs.isNotEmpty()) " • ${weakAyahs.size} due" else "",
                                         color = GhaisNoir.TextTertiary,
-                                        fontSize = 12.sp
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                                 val firstWeak = weakAyahs.firstOrNull()
@@ -232,48 +235,13 @@ object MemorizationScreen : Tab {
                                 }
                             }
 
-                            Spacer(Modifier.height(14.dp))
-
-                            // 3-stat minimal bento strip
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                HifzStatTile(
-                                    value = masteredCount.toString(),
-                                    label = "Mastered",
-                                    accent = GhaisNoir.Lavender,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                HifzStatTile(
-                                    value = "$todayReviewed/$dailyGoal",
-                                    label = "Today",
-                                    accent = GhaisNoir.TextPrimary,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                HifzStatTile(
-                                    value = weakAyahs.size.toString(),
-                                    label = "Due review",
-                                    accent = if (weakAyahs.isNotEmpty()) GhaisNoir.Lavender else GhaisNoir.TextSecondary,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(8.dp))
                             NoirSegmentedProgress(
                                 progress = goalRatio,
-                                trackHeight = 4.dp
+                                trackHeight = 3.dp
                             )
 
-                            dailyQuests.firstOrNull()?.let { primaryQuest ->
-                                Spacer(Modifier.height(12.dp))
-                                QuestRow(
-                                    quest = primaryQuest,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(8.dp))
                             HifzSrsTierRow(
                                 sessions = srsSessions,
                                 onSelectPlan = { plan ->
@@ -304,7 +272,7 @@ object MemorizationScreen : Tab {
                                     HifzListeningPlannerScreen(startInCreator = activePlan == null)
                                 )
                             }
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                            .padding(horizontal = 12.dp, vertical = 9.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -314,7 +282,7 @@ object MemorizationScreen : Tab {
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(32.dp)
                                     .clip(CircleShape)
                                     .background(GhaisNoir.wellFill())
                                     .border(1.dp, GhaisNoir.BorderCard, CircleShape),
@@ -324,15 +292,15 @@ object MemorizationScreen : Tab {
                                     imageVector = Icons.Filled.Headphones,
                                     contentDescription = "Listening Planner",
                                     tint = GhaisNoir.Lavender,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
-                            Spacer(Modifier.width(12.dp))
+                            Spacer(Modifier.width(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "Listening Planner",
                                     color = GhaisNoir.TextPrimary,
-                                    fontSize = 14.sp,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -347,7 +315,7 @@ object MemorizationScreen : Tab {
                                 Text(
                                     text = subtitle,
                                     color = GhaisNoir.TextTertiary,
-                                    fontSize = 12.sp,
+                                    fontSize = 11.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -536,11 +504,11 @@ private fun MemorizationGridCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top row: style badge + offline download status
+            // Top row: style badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.Start
             ) {
                 Box(
                     modifier = Modifier
@@ -556,61 +524,6 @@ private fun MemorizationGridCard(
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1
                     )
-                }
-
-                when {
-                    isDownloaded -> {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(GhaisNoir.chromeFill())
-                                .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Check,
-                                contentDescription = "Downloaded",
-                                tint = GhaisNoir.OnChrome,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
-                    }
-                    downloadProgress != null -> {
-                        Box(
-                            modifier = Modifier.size(28.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Download,
-                                contentDescription = "Downloading",
-                                tint = GhaisNoir.Lavender,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
-                    }
-                    else -> {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(GhaisNoir.Fill2)
-                                .border(
-                                    1.dp,
-                                    if (isDownloadFailed) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
-                                    CircleShape
-                                )
-                                .noirClickable(onDownloadClick),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Download,
-                                contentDescription = "Download Al-Fatihah",
-                                tint = if (isDownloadFailed) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
-                    }
                 }
             }
 
@@ -664,52 +577,6 @@ private fun MemorizationGridCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-
-            Spacer(Modifier.height(12.dp))
-
-            // Full-width Ayah Mode play pill
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(GhaisShapes.pill)
-                    .then(
-                        if (isPlaying) Modifier.background(GhaisNoir.chromeFill())
-                        else Modifier.background(GhaisNoir.Fill2)
-                    )
-                    .border(
-                        1.dp,
-                        if (isPlaying) Color.White.copy(alpha = 0.4f) else GhaisNoir.BorderCard,
-                        GhaisShapes.pill
-                    )
-                    .noirClickable(onPlayClick)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = if (isPlaying) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = if (isPlaying) "Playing" else "Ayah Mode",
-                    color = if (isPlaying) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1
-                )
-            }
-
-            val p = downloadProgress
-            if (!isDownloaded && p != null && p in 0f..1f) {
-                Spacer(modifier = Modifier.height(8.dp))
-                NoirSegmentedProgress(
-                    progress = p,
-                    trackHeight = 3.dp
-                )
-            }
         }
     }
 }
@@ -741,35 +608,25 @@ private fun HifzSrsTierRow(
                         if (hasTargets) Modifier.noirClickable { onSelectPlan(plan) }
                         else Modifier
                     )
-                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = plan.title,
-                            color = if (hasTargets) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1
-                        )
-                        Text(
-                            text = plan.targets.size.toString(),
-                            color = if (hasTargets) GhaisNoir.Lavender else GhaisNoir.TextTertiary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(Modifier.height(2.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Text(
-                        text = plan.subtitle,
-                        color = GhaisNoir.TextTertiary,
+                        text = plan.title,
+                        color = if (hasTargets) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
                         fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = plan.targets.size.toString(),
+                        color = if (hasTargets) GhaisNoir.Lavender else GhaisNoir.TextTertiary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
