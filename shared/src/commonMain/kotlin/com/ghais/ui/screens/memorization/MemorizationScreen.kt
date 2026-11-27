@@ -14,17 +14,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,35 +38,36 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.ghais.data.repository.HifzListeningPlannerStore
+import com.ghais.data.repository.HifzMasteryStore
 import com.ghais.data.repository.QuranAyahRepository
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.EveryAyahReciter
 import com.ghais.data.seed.EveryAyahReciters
-import com.ghais.data.repository.HifzListeningPlannerStore
-import com.ghais.data.repository.HifzMasteryStore
 import com.ghais.hifz.HifzSessionPlan
 import com.ghais.hifz.buildSrsSessions
 import com.ghais.hifz.quests.QuestRow
 import com.ghais.hifz.quests.questsFor
-import kotlin.time.Clock
 import com.ghais.player.AudioEngine
 import com.ghais.player.DownloadKeys
 import com.ghais.player.QuranDownloads
 import com.ghais.ui.components.noir.GhostPillButton
 import com.ghais.ui.components.noir.NoirCard
+import com.ghais.ui.components.noir.NoirHeaderSearch
 import com.ghais.ui.components.noir.NoirNavBar
 import com.ghais.ui.components.noir.NoirScreenRoot
+import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.NoirSegmentedProgress
 import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.reciters.NoirReciterAvatar
@@ -73,6 +75,7 @@ import com.ghais.ui.screens.reciters.photoForSlug
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 import com.ghais.ui.theme.GhaisTypography
+import kotlin.time.Clock
 
 object MemorizationScreen : Tab {
 
@@ -93,6 +96,7 @@ object MemorizationScreen : Tab {
             ?: LocalNavigator.current
 
         var searchQuery by remember { mutableStateOf("") }
+        var searchExpanded by remember { mutableStateOf(false) }
 
         val reciters = remember(searchQuery) {
             val ordered = EveryAyahReciters.ALL.sortedBy { reciter ->
@@ -156,163 +160,179 @@ object MemorizationScreen : Tab {
         }
 
         NoirScreenRoot {
-            LazyColumn(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    start = 20.dp,
-                    end = 20.dp,
+                    start = 16.dp,
+                    end = 16.dp,
                     top = 12.dp,
                     bottom = bottomDockPadding
-                )
+                ),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                item {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        NoirNavBar(
-                            title = "Hifz",
-                            actions = {
-                                Text(
-                                    text = "${reciters.size} reciters",
-                                    color = GhaisNoir.TextTertiary,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Spacer(Modifier.width(4.dp))
-                            }
-                        )
+                item(key = "hifz_nav", span = { GridItemSpan(2) }) {
+                    NoirNavBar(
+                        title = "Hifz",
+                        actions = {
+                            NoirHeaderSearch(
+                                expanded = searchExpanded,
+                                onExpandedChange = { expanded ->
+                                    searchExpanded = expanded
+                                    if (!expanded) searchQuery = ""
+                                },
+                                query = searchQuery,
+                                onQueryChange = { searchQuery = it },
+                                placeholder = "Search Hifz reciters…"
+                            )
+                        }
+                    )
+                }
 
-                        Spacer(Modifier.height(14.dp))
+                item(key = "hifz_hero", span = { GridItemSpan(2) }) {
+                    val teacherSlug = reciters.firstOrNull()?.slug ?: "husary"
+                    val goalRatio = (todayReviewed.toFloat() / dailyGoal.coerceAtLeast(1).toFloat())
+                        .coerceIn(0f, 1f)
 
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                                .clip(GhaisShapes.pill)
-                                .background(GhaisNoir.insetFill())
-                                .border(1.dp, GhaisNoir.InsetBorder, GhaisShapes.pill)
-                                .padding(horizontal = 16.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
+                    NoirCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Today's Hifz",
+                                        color = GhaisNoir.TextPrimary,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = "Ayah-by-ayah memorization & spaced review",
+                                        color = GhaisNoir.TextTertiary,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                val firstWeak = weakAyahs.firstOrNull()
+                                if (firstWeak != null) {
+                                    GhostPillButton(
+                                        text = "Review due",
+                                        onClick = {
+                                            AudioEngine.playSurahInAyahMode(
+                                                surahId = firstWeak.first,
+                                                reciterSlug = teacherSlug,
+                                                startAyahNo = firstWeak.second
+                                            )
+                                            rootNavigator?.push(NowPlayingScreen())
+                                        }
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.height(14.dp))
+
+                            // 3-stat minimal bento strip
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                HifzStatTile(
+                                    value = masteredCount.toString(),
+                                    label = "Mastered",
+                                    accent = GhaisNoir.Lavender,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                HifzStatTile(
+                                    value = "$todayReviewed/$dailyGoal",
+                                    label = "Today",
+                                    accent = GhaisNoir.TextPrimary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                HifzStatTile(
+                                    value = weakAyahs.size.toString(),
+                                    label = "Due review",
+                                    accent = if (weakAyahs.isNotEmpty()) GhaisNoir.Lavender else GhaisNoir.TextSecondary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+
+                            Spacer(Modifier.height(10.dp))
+                            NoirSegmentedProgress(
+                                progress = goalRatio,
+                                trackHeight = 4.dp
+                            )
+
+                            dailyQuests.firstOrNull()?.let { primaryQuest ->
+                                Spacer(Modifier.height(12.dp))
+                                QuestRow(
+                                    quest = primaryQuest,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+
+                            Spacer(Modifier.height(10.dp))
+                            HifzSrsTierRow(
+                                sessions = srsSessions,
+                                onSelectPlan = { plan ->
+                                    val firstTarget = plan.targets.firstOrNull() ?: return@HifzSrsTierRow
+                                    AudioEngine.playSurahInAyahMode(
+                                        surahId = firstTarget.first,
+                                        reciterSlug = teacherSlug,
+                                        startAyahNo = firstTarget.second
+                                    )
+                                    rootNavigator?.push(NowPlayingScreen())
+                                }
+                            )
+                        }
+                    }
+                }
+
+                item(key = "hifz_planner", span = { GridItemSpan(2) }) {
+                    val activePlan = listeningPlans.firstOrNull { it.enabled } ?: listeningPlans.firstOrNull()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(GhaisShapes.row)
+                            .background(GhaisNoir.cardFillSoft())
+                            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.row)
+                            .topSpecular(inset = 18.dp)
+                            .noirClickable {
+                                rootNavigator?.push(
+                                    HifzListeningPlannerScreen(startInCreator = activePlan == null)
+                                )
+                            }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(GhaisNoir.wellFill())
+                                    .border(1.dp, GhaisNoir.BorderCard, CircleShape),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Filled.Search,
-                                    contentDescription = "Search",
-                                    tint = GhaisNoir.TextTertiary,
+                                    imageVector = Icons.Filled.Headphones,
+                                    contentDescription = "Listening Planner",
+                                    tint = GhaisNoir.Lavender,
                                     modifier = Modifier.size(18.dp)
                                 )
-                                Spacer(Modifier.width(10.dp))
-                                BasicTextField(
-                                    value = searchQuery,
-                                    onValueChange = { searchQuery = it },
-                                    modifier = Modifier.weight(1f),
-                                    singleLine = true,
-                                    textStyle = TextStyle(
-                                        color = GhaisNoir.TextPrimary,
-                                        fontSize = 14.sp
-                                    ),
-                                    cursorBrush = SolidColor(Color.White),
-                                    decorationBox = { innerTextField ->
-                                        if (searchQuery.isEmpty()) {
-                                            Text(
-                                                text = "Search reciters...",
-                                                color = GhaisNoir.TextTertiary,
-                                                fontSize = 13.sp
-                                            )
-                                        }
-                                        innerTextField()
-                                    }
-                                )
                             }
-                        }
-
-                        Spacer(Modifier.height(12.dp))
-
-                        NoirCard(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Today's Hifz",
-                                            color = GhaisNoir.TextPrimary,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Spacer(Modifier.height(2.dp))
-                                        Text(
-                                            text = "$masteredCount mastered • $todayReviewed/$dailyGoal reviewed today",
-                                            color = GhaisNoir.TextTertiary,
-                                            fontSize = 12.sp
-                                        )
-                                    }
-                                    val firstWeak = weakAyahs.firstOrNull()
-                                    if (firstWeak != null) {
-                                        val teacherSlug = reciters.firstOrNull()?.slug ?: "husary"
-                                        GhostPillButton(
-                                            text = "Review due",
-                                            onClick = {
-                                                AudioEngine.playSurahInAyahMode(
-                                                    surahId = firstWeak.first,
-                                                    reciterSlug = teacherSlug,
-                                                    startAyahNo = firstWeak.second
-                                                )
-                                                rootNavigator?.push(NowPlayingScreen())
-                                            }
-                                        )
-                                    }
-                                }
-                                dailyQuests.firstOrNull()?.let { primaryQuest ->
-                                    Spacer(Modifier.height(10.dp))
-                                    QuestRow(
-                                        quest = primaryQuest,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                                Spacer(Modifier.height(10.dp))
-                                val teacherSlug = reciters.firstOrNull()?.slug ?: "husary"
-                                HifzSrsTierRow(
-                                    sessions = srsSessions,
-                                    onSelectPlan = { plan ->
-                                        val firstTarget = plan.targets.firstOrNull() ?: return@HifzSrsTierRow
-                                        AudioEngine.playSurahInAyahMode(
-                                            surahId = firstTarget.first,
-                                            reciterSlug = teacherSlug,
-                                            startAyahNo = firstTarget.second
-                                        )
-                                        rootNavigator?.push(NowPlayingScreen())
-                                    }
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.height(12.dp))
-
-                        val activePlan = listeningPlans.firstOrNull { it.enabled } ?: listeningPlans.firstOrNull()
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(GhaisShapes.row)
-                                .background(GhaisNoir.Fill1)
-                                .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.row)
-                                .noirClickable {
-                                    rootNavigator?.push(
-                                        HifzListeningPlannerScreen(startInCreator = activePlan == null)
-                                    )
-                                }
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
+                            Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "Listening Planner",
                                     color = GhaisNoir.TextPrimary,
-                                    fontSize = 13.sp,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -322,56 +342,63 @@ object MemorizationScreen : Tab {
                                     val dayNo = activePlan.currentDayNumber(epochDay)
                                     "$done/${activePlan.sessionsPerDay} today • Day $dayNo/${activePlan.durationDays}"
                                 } else {
-                                    "Create a daily listening plan"
+                                    "Schedule daily listening & repetition"
                                 }
                                 Text(
                                     text = subtitle,
                                     color = GhaisNoir.TextTertiary,
-                                    fontSize = 11.sp,
+                                    fontSize = 12.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
-                            Spacer(Modifier.width(8.dp))
-                            if (activePlan != null) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(GhaisNoir.Fill3)
-                                        .border(1.dp, GhaisNoir.BorderCard, CircleShape)
-                                        .noirClickable {
-                                            val tracks = HifzListeningPlannerStore.buildSessionTracks(activePlan)
-                                            if (tracks.isNotEmpty()) {
-                                                AudioEngine.playListeningPlan(activePlan.id, tracks)
-                                                rootNavigator?.push(NowPlayingScreen())
-                                            }
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.PlayArrow,
-                                        contentDescription = "Listen",
-                                        tint = GhaisNoir.TextPrimary,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            } else {
-                                Text(
-                                    text = "+ Create",
-                                    color = GhaisNoir.TextPrimary,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        if (activePlan != null) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(GhaisNoir.chromeFill())
+                                    .border(1.dp, GhaisNoir.SpecularTop, CircleShape)
+                                    .noirClickable {
+                                        val tracks = HifzListeningPlannerStore.buildSessionTracks(activePlan)
+                                        if (tracks.isNotEmpty()) {
+                                            AudioEngine.playListeningPlan(activePlan.id, tracks)
+                                            rootNavigator?.push(NowPlayingScreen())
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.PlayArrow,
+                                    contentDescription = "Listen",
+                                    tint = GhaisNoir.OnChrome,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
+                        } else {
+                            GhostPillButton(
+                                text = "+ Create",
+                                onClick = {
+                                    rootNavigator?.push(
+                                        HifzListeningPlannerScreen(startInCreator = true)
+                                    )
+                                }
+                            )
                         }
-
-                        Spacer(Modifier.height(10.dp))
                     }
                 }
 
+                item(key = "hifz_reciters_header", span = { GridItemSpan(2) }) {
+                    NoirSectionHeader(
+                        label = "Reciters • ${reciters.size}",
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+
                 if (reciters.isEmpty()) {
-                    item {
+                    item(key = "hifz_empty", span = { GridItemSpan(2) }) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -393,9 +420,6 @@ object MemorizationScreen : Tab {
                         val isCurrentReciter = currentTrack?.reciterSlug == reciter.slug && isAyahMode
                         val isPlayingThisReciter = isCurrentReciter && isEnginePlaying
 
-                        // Starter-pack bundle: Al-Fatihah surah file + every ayah
-                        // clip + verse text, so the bundle plays and reads fully
-                        // offline in the player.
                         val bundleKeys = remember(reciter.slug) {
                             val count = QuranDataRepository.getSurahById(1)?.ayahsCount ?: 7
                             DownloadKeys.bundleKeys(reciter.slug, 1, count)
@@ -410,16 +434,14 @@ object MemorizationScreen : Tab {
                             doneCount.toFloat() / bundleKeys.size.toFloat()
                         val starterAudioUrl = reciter.toReciter().getFullSurahUrl(1)
 
-                        MemorizationReciterCard(
+                        MemorizationGridCard(
                             reciter = reciter,
                             isPlaying = isPlayingThisReciter,
                             isDownloaded = isDownloaded,
                             downloadProgress = reciterProgress,
                             isDownloadFailed = isFailed,
                             onDownloadClick = {
-                                // Finished bundles stay finished; partial/failed
-                                // bundles resume (engine skips done/in-flight keys).
-                                if (isDownloaded) return@MemorizationReciterCard
+                                if (isDownloaded) return@MemorizationGridCard
                                 val full = reciter.toReciter()
                                 val count = QuranDataRepository.getSurahById(1)?.ayahsCount ?: 7
                                 val ayahUrls = (1..count).associateWith { ayahNo ->
@@ -442,8 +464,6 @@ object MemorizationScreen : Tab {
                             },
                             onCardClick = { rootNavigator?.push(MemorizationReciterScreen(reciter.slug)) }
                         )
-
-                        Spacer(Modifier.height(10.dp))
                     }
                 }
             }
@@ -452,7 +472,41 @@ object MemorizationScreen : Tab {
 }
 
 @Composable
-private fun MemorizationReciterCard(
+private fun HifzStatTile(
+    value: String,
+    label: String,
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Column(
+        modifier = modifier
+            .clip(shape)
+            .background(GhaisNoir.insetFill())
+            .border(1.dp, GhaisNoir.BorderGhost, shape)
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            color = accent,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.ExtraBold,
+            maxLines = 1
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = label,
+            color = GhaisNoir.TextTertiary,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun MemorizationGridCard(
     reciter: EveryAyahReciter,
     isPlaying: Boolean,
     isDownloaded: Boolean = false,
@@ -462,70 +516,53 @@ private fun MemorizationReciterCard(
     onPlayClick: () -> Unit,
     onCardClick: () -> Unit
 ) {
-    val isDownloading = downloadProgress != null
-    NoirCard(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onCardClick
+    val isTeacher = reciter.style.lowercase().let {
+        it.contains("teacher") || it.contains("mu'allim") || it.contains("muallim")
+    }
+    val cardFill = if (isPlaying) GhaisNoir.cardFillActive() else GhaisNoir.cardFill()
+    val cardBorder = if (isPlaying) GhaisNoir.Lavender else GhaisNoir.BorderCard
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(GhaisShapes.cardNoir)
+            .background(cardFill)
+            .border(1.dp, cardBorder, GhaisShapes.cardNoir)
+            .topSpecular()
+            .noirClickable(onCardClick)
+            .padding(14.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Top row: style badge + offline download status
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                NoirReciterAvatar(
-                    photoUrl = photoForSlug(reciter.slug),
-                    nameEn = reciter.nameEn,
-                    size = 52.dp,
-                    shape = RoundedCornerShape(16.dp),
-                    ring = isPlaying,
-                    slug = reciter.slug,
-                    grayscale = false,
-                    scrimAlpha = 0f
-                )
-
-                Spacer(Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .background(if (isTeacher) GhaisNoir.Fill3 else GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
                     Text(
-                        text = reciter.nameEn,
-                        color = if (isPlaying) Color.White else GhaisNoir.TextPrimary,
-                        fontSize = 15.sp,
+                        text = if (isTeacher) "Teacher" else reciter.style,
+                        color = if (isTeacher) GhaisNoir.Lavender else GhaisNoir.TextSecondary,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Spacer(Modifier.height(2.dp))
-
-                    Text(
-                        text = reciter.nameAr,
-                        style = GhaisTypography.arabicBody,
-                        fontFamily = GhaisTypography.quranFont,
-                        fontSize = 14.sp,
-                        lineHeight = 25.sp,
-                        letterSpacing = 0.sp,
-                        color = GhaisNoir.TextSecondary
-                    )
-
-                    Spacer(Modifier.height(2.dp))
-
-                    Text(
-                        text = "${reciter.style} • ${reciter.tempo}",
-                        color = GhaisNoir.TextTertiary,
-                        fontSize = 11.sp,
-                        letterSpacing = 0.2.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        maxLines = 1
                     )
                 }
-
-                Spacer(Modifier.width(8.dp))
 
                 when {
                     isDownloaded -> {
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(28.dp)
                                 .clip(CircleShape)
                                 .background(GhaisNoir.chromeFill())
                                 .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape),
@@ -533,85 +570,136 @@ private fun MemorizationReciterCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Check,
-                                contentDescription = "Downloaded for offline",
+                                contentDescription = "Downloaded",
                                 tint = GhaisNoir.OnChrome,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(14.dp)
                             )
                         }
                     }
-                    isDownloading -> {
+                    downloadProgress != null -> {
                         Box(
-                            modifier = Modifier.size(32.dp),
+                            modifier = Modifier.size(28.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Download,
                                 contentDescription = "Downloading",
-                                tint = GhaisNoir.TextTertiary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                    isDownloadFailed -> {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(GhaisNoir.wellFill())
-                                .border(1.dp, GhaisNoir.SpecularTop, CircleShape)
-                                .noirClickable { onDownloadClick() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Download,
-                                contentDescription = "Download failed — tap to retry",
-                                tint = GhaisNoir.TextPrimary,
-                                modifier = Modifier.size(16.dp)
+                                tint = GhaisNoir.Lavender,
+                                modifier = Modifier.size(14.dp)
                             )
                         }
                     }
                     else -> {
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(28.dp)
                                 .clip(CircleShape)
                                 .background(GhaisNoir.Fill2)
-                                .border(1.dp, GhaisNoir.BorderCard, CircleShape)
-                                .noirClickable { onDownloadClick() },
+                                .border(
+                                    1.dp,
+                                    if (isDownloadFailed) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
+                                    CircleShape
+                                )
+                                .noirClickable(onDownloadClick),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Download,
-                                contentDescription = "Download Al-Fatihah for offline",
-                                tint = GhaisNoir.TextTertiary,
-                                modifier = Modifier.size(16.dp)
+                                contentDescription = "Download Al-Fatihah",
+                                tint = if (isDownloadFailed) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
+                                modifier = Modifier.size(14.dp)
                             )
                         }
                     }
                 }
+            }
 
-                Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.height(10.dp))
 
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(if (isPlaying) Color.White else GhaisNoir.Fill2)
-                        .border(
-                            1.dp,
-                            if (isPlaying) Color.White else GhaisNoir.BorderCard,
-                            CircleShape
-                        )
-                        .noirClickable { onPlayClick() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause ${reciter.nameEn}" else "Play ${reciter.nameEn} in Ayah Mode",
-                        tint = if (isPlaying) Color.Black else GhaisNoir.TextPrimary,
-                        modifier = Modifier.size(20.dp)
+            NoirReciterAvatar(
+                photoUrl = photoForSlug(reciter.slug),
+                nameEn = reciter.nameEn,
+                size = 76.dp,
+                shape = CircleShape,
+                ring = isPlaying,
+                slug = reciter.slug,
+                grayscale = false,
+                scrimAlpha = 0f
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            Text(
+                text = reciter.nameEn,
+                color = if (isPlaying) Color.White else GhaisNoir.TextPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(Modifier.height(2.dp))
+
+            Text(
+                text = reciter.nameAr,
+                style = GhaisTypography.arabicBody,
+                fontFamily = GhaisTypography.quranFont,
+                fontSize = 13.sp,
+                lineHeight = 22.sp,
+                letterSpacing = 0.sp,
+                color = GhaisNoir.TextSecondary,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(Modifier.height(2.dp))
+
+            Text(
+                text = "${reciter.tempo} • ${reciter.country}".trim(' ', '•'),
+                color = GhaisNoir.TextTertiary,
+                fontSize = 11.sp,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // Full-width Ayah Mode play pill
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(GhaisShapes.pill)
+                    .then(
+                        if (isPlaying) Modifier.background(GhaisNoir.chromeFill())
+                        else Modifier.background(GhaisNoir.Fill2)
                     )
-                }
+                    .border(
+                        1.dp,
+                        if (isPlaying) Color.White.copy(alpha = 0.4f) else GhaisNoir.BorderCard,
+                        GhaisShapes.pill
+                    )
+                    .noirClickable(onPlayClick)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = if (isPlaying) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = if (isPlaying) "Playing" else "Ayah Mode",
+                    color = if (isPlaying) GhaisNoir.OnChrome else GhaisNoir.TextPrimary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
+                )
             }
 
             val p = downloadProgress
