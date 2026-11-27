@@ -525,7 +525,8 @@ class RecitersScreen : Tab {
                                         ShelfRecitersScreen(
                                             title = "Weekly most heard",
                                             subtitle = "Most heard across Ghais",
-                                            slugs = shownEntries.map { it.slug }
+                                            slugs = shownEntries.map { it.slug },
+                                            showRankedMosaic = true
                                         )
                                     )
                                 }

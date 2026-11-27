@@ -234,7 +234,8 @@ object HomeScreen : Tab {
                                 com.ghais.ui.screens.reciters.ShelfRecitersScreen(
                                     title = "Top Qaris this week",
                                     subtitle = "Most heard across Ghais",
-                                    slugs = slugs
+                                    slugs = slugs,
+                                    showRankedMosaic = true
                                 )
                             )
                         }
