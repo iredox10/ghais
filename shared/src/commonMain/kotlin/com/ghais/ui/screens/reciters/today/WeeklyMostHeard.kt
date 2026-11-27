@@ -55,6 +55,7 @@ fun WeeklyMostHeardSection(
     onOpenProfile: (String) -> Unit,
     onPlay: (String) -> Unit,
     onOpenPlayer: () -> Unit,
+    onSeeAll: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     if (entries.isEmpty()) {
@@ -80,6 +81,8 @@ fun WeeklyMostHeardSection(
         NoirSectionHeader(
             label = if (dateLabel.isBlank()) "Weekly most heard"
             else "Weekly most heard • last 7 days",
+            actionLabel = if (onSeeAll != null) "See all" else null,
+            onAction = onSeeAll,
             large = true,
         )
         // Top-three podium (leaderboard-ref): 2nd • 1st • 3rd, winner

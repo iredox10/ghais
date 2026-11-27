@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.domain.model.Reciter
+import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.screens.reciters.ReciterReelCard
 import com.ghais.ui.theme.GhaisNoir
 
@@ -43,6 +44,7 @@ fun ShelfRow(
     onPlayReciter: (Reciter) -> Unit = {},
     onToggleFollow: (String) -> Unit = {},
     followerCountFor: (String) -> Long? = { null },
+    onSeeAll: (() -> Unit)? = null,
 ) {
     val cards = remember(shelf, reciterBySlug) {
         shelf.slugs.mapNotNull { reciterBySlug[it] }
@@ -50,13 +52,11 @@ fun ShelfRow(
     if (cards.isEmpty()) return
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = shelf.title,
-            color = GhaisNoir.TextPrimary,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.ExtraBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+        NoirSectionHeader(
+            label = shelf.title,
+            actionLabel = if (onSeeAll != null) "See all" else null,
+            onAction = onSeeAll,
+            large = true,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(

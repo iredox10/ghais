@@ -404,7 +404,16 @@ class RecitersScreen : Tab {
                                             rootNavigator?.push(ReciterProfileScreen(slug))
                                         },
                                         onPlayReciter = ::playReciterQueue,
-                                        onToggleFollow = { slug -> FollowStore.toggle(slug) }
+                                        onToggleFollow = { slug -> FollowStore.toggle(slug) },
+                                        onSeeAll = {
+                                            rootNavigator?.push(
+                                                ShelfRecitersScreen(
+                                                    title = shelf.title,
+                                                    subtitle = shelf.subtitle,
+                                                    slugs = shelf.slugs
+                                                )
+                                            )
+                                        }
                                     )
                                     Spacer(Modifier.height(20.dp))
                                 }
@@ -510,7 +519,16 @@ class RecitersScreen : Tab {
                                 // "Play now" starts the queue, this pushes the
                                 // since-playing player screen. It used to be
                                 // miswired to open the deck sheet, which is gone.
-                                onOpenPlayer = { rootNavigator?.push(NowPlayingScreen()) }
+                                onOpenPlayer = { rootNavigator?.push(NowPlayingScreen()) },
+                                onSeeAll = {
+                                    rootNavigator?.push(
+                                        ShelfRecitersScreen(
+                                            title = "Weekly most heard",
+                                            subtitle = "Most heard across Ghais",
+                                            slugs = shownEntries.map { it.slug }
+                                        )
+                                    )
+                                }
                             )
                         }.also {
                             if (newToExploreShelf != null) {
@@ -525,7 +543,16 @@ class RecitersScreen : Tab {
                                             rootNavigator?.push(ReciterProfileScreen(slug))
                                         },
                                         onPlayReciter = ::playReciterQueue,
-                                        onToggleFollow = { slug -> FollowStore.toggle(slug) }
+                                        onToggleFollow = { slug -> FollowStore.toggle(slug) },
+                                        onSeeAll = {
+                                            rootNavigator?.push(
+                                                ShelfRecitersScreen(
+                                                    title = newToExploreShelf.title,
+                                                    subtitle = newToExploreShelf.subtitle,
+                                                    slugs = newToExploreShelf.slugs
+                                                )
+                                            )
+                                        }
                                     )
                                     Spacer(Modifier.height(20.dp))
                                 }

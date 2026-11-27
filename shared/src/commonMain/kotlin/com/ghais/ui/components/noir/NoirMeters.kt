@@ -63,7 +63,7 @@ fun NoirSectionHeader(
     modifier: Modifier = Modifier,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
-    large: Boolean = false,
+    large: Boolean = true,
 ) {
     Row(
         modifier = modifier
@@ -75,8 +75,8 @@ fun NoirSectionHeader(
         Text(
             text = label,
             color = GhaisNoir.TextPrimary,
-            fontSize = if (large) 22.sp else 16.sp,
-            fontWeight = if (large) FontWeight.ExtraBold else FontWeight.Bold,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.ExtraBold,
             maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false)

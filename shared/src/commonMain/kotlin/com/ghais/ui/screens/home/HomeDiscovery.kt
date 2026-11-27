@@ -287,7 +287,10 @@ fun HomeDailyMixShelf(onOpenPlayer: () -> Unit) {
  * slug resolves (offline, empty charts).
  */
 @Composable
-fun HomeTopQarisShelf(onReciter: (String) -> Unit) {
+fun HomeTopQarisShelf(
+    onReciter: (String) -> Unit,
+    onSeeAll: ((List<String>) -> Unit)? = null,
+) {
     LaunchedEffect(Unit) { ChartsRepository.refresh() }
     val snapshot by ChartsRepository.snapshot.collectAsState()
     val cloudCatalog by ReciterCloudCache.cloudReciters.collectAsState()
@@ -302,7 +305,10 @@ fun HomeTopQarisShelf(onReciter: (String) -> Unit) {
     }
     if (reciters.isEmpty()) return
 
-    HomeSectionHeader(title = "Top Qaris this week", onSeeAll = null)
+    HomeSectionHeader(
+        title = "Top Qaris this week",
+        onSeeAll = onSeeAll?.let { cb -> { cb(reciters.map { it.slug }) } }
+    )
     LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         itemsIndexed(reciters, key = { _, it -> it.slug }) { index, reciter ->
             val photo = rememberCloudPhoto(reciter.slug)
