@@ -553,6 +553,16 @@ class NowPlayingScreen : Screen {
             // Ambient video is the hero — only a light veil + bottom grade
             // for legibility, so the video stays the focus of the player.
             AmbientVideoView(selectedType = selectedAmbientType, modifier = Modifier.fillMaxSize())
+            AnimatedVisibility(
+                visible = !hasAmbientVideo,
+                enter = fadeIn(tween(450)),
+                exit = fadeOut(tween(450)),
+            ) {
+                com.ghais.ui.screens.player.components.LiquidWaterBackdrop(
+                    isPlaying = isPlaying,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
             if (hasAmbientVideo) {
                 Box(
                     modifier = Modifier
