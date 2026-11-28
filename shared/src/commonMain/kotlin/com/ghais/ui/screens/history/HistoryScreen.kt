@@ -61,6 +61,7 @@ private data class HistorySurahGroup(
     val qualifiedPlays: Int?,
     val positionMs: Long,
     val durationMs: Long,
+    val ayahNo: Int = 0,
 )
 
 private fun relativeTime(timestampMs: Long): String {
@@ -103,6 +104,28 @@ object HistoryScreen : Screen {
 
         fun replaySurah(group: HistorySurahGroup) {
             val reciter = QuranDataRepository.getReciterBySlug(group.reciterSlug)
+            if (group.ayahNo > 0) {
+                val currentTrack = AudioEngine.currentTrack.value
+                val isCurrentAyah = currentTrack != null &&
+                    currentTrack.surahId == group.surahId &&
+                    currentTrack.reciterSlug == reciter.slug &&
+                    currentTrack.ayahNo == group.ayahNo &&
+                    AudioEngine.isAyahMode.value
+                if (isCurrentAyah && AudioEngine.isPlaying.value) {
+                    navigator.push(NowPlayingScreen())
+                } else if (isCurrentAyah) {
+                    AudioEngine.resume()
+                    navigator.push(NowPlayingScreen())
+                } else {
+                    AudioEngine.playSurahInAyahMode(
+                        surahId = group.surahId,
+                        reciterSlug = reciter.slug,
+                        startAyahNo = group.ayahNo
+                    )
+                    navigator.push(NowPlayingScreen())
+                }
+                return
+            }
             // Never queue a surah this reciter never recorded (known-404 URL):
             // restrict the queue to available surahs only.
             val surahs = QuranDataRepository.getSurahs().filter { reciter.isSurahAvailable(it.id) }
@@ -166,7 +189,8 @@ object HistoryScreen : Screen {
                     // collapse into one entry instead of duplicates.
                     val canonical = resolveFollowedQari(it.reciterSlug)?.reciter?.slug
                         ?: it.reciterSlug.trim().lowercase().replace("_", "-")
-                    "${it.surahId}|$canonical"
+                    val modeTag = if (it.ayahNo > 0) "hifz" else "full"
+                    "${it.surahId}|$canonical|$modeTag"
                 }
                 .mapNotNull { (key, perSurah) ->
                     if (perSurah.isEmpty()) return@mapNotNull null
@@ -195,6 +219,7 @@ object HistoryScreen : Screen {
                             ?.takeIf { it > 0 },
                         positionMs = latest.positionMs,
                         durationMs = latest.durationMs,
+                        ayahNo = latest.ayahNo,
                     )
                 }
                 .sortedByDescending { it.lastPlayedMs }
@@ -212,36 +237,16 @@ object HistoryScreen : Screen {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 12.dp)
+                    .padding(top = 8.dp)
             ) {
-                NoirNavBar(
+                com.ghais.ui.components.noir.NoirEditorialHeader(
+                    eyebrow = "Recent Activity",
                     title = "History",
                     onBack = { navigator.pop() },
                     backIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                    titleAlignLeft = true,
+                    badgeText = "${groups.size}",
+                    horizontalPadding = 20.dp,
                     actions = {
-                        // Unfiltered 30-day group total, so typing in the
-                        // search field never shrinks it.
-                        Box(
-                            modifier = Modifier
-                                .clip(GhaisShapes.pill)
-                                .background(GhaisNoir.Fill2)
-                                .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
-                                .padding(horizontal = 10.dp, vertical = 5.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "${groups.size}",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = GhaisNoir.TextSecondary
-                            )
-                        }
-                        // Search — header well replacing the engraved inset
-                        // field that used to sit under the bar. Collapse
-                        // clears the query (ReciterProfileScreen rule); the
-                        // count chip above never reacts to the query.
                         NoirHeaderSearch(
                             expanded = searchExpanded,
                             onExpandedChange = { expanded ->
@@ -254,6 +259,11 @@ object HistoryScreen : Screen {
                         )
                     }
                 )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 20.dp)
+                ) {
 
                 Spacer(modifier = Modifier.height(14.dp))
 
@@ -319,6 +329,7 @@ object HistoryScreen : Screen {
                     }
                 }
             }
+            }
         }
     }
 }
@@ -363,14 +374,37 @@ private fun HistoryNoirRow(
         Spacer(modifier = Modifier.width(8.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = group.title,
-                color = GhaisNoir.TextPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = group.title,
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                if (group.ayahNo > 0) {
+                    Box(
+                        modifier = Modifier
+                            .clip(GhaisShapes.pill)
+                            .background(GhaisNoir.Lavender.copy(alpha = 0.14f))
+                            .border(1.dp, GhaisNoir.Lavender.copy(alpha = 0.30f), GhaisShapes.pill)
+                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "Memorize · ${group.ayahNo}",
+                            color = GhaisNoir.Lavender,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(2.dp))
             // No count -> no claim: the subtitle is just the reciter. The
             // scope qualifier for a present count lives in the caption

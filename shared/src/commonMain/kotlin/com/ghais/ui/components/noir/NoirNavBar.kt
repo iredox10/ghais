@@ -2,12 +2,15 @@ package com.ghais.ui.components.noir
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -20,9 +23,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ghais.ui.theme.GhaisNoir
+import com.ghais.ui.theme.GhaisShapes
 
 /**
  * Standard navigation bar (iOS-stock pattern, Noir dressed): optional
@@ -142,5 +147,102 @@ fun NoirNavButton(
             tint = GhaisNoir.TextPrimary,
             modifier = Modifier.size(19.dp)
         )
+    }
+}
+
+/**
+ * Compact Carbon Glass status pill for editorial headers (counts, offline progress, storage).
+ */
+@Composable
+fun NoirHeaderPillBadge(
+    text: String,
+    modifier: Modifier = Modifier,
+    leadingIcon: ImageVector? = null,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        modifier = modifier
+            .background(GhaisNoir.cardFillSoft(), GhaisShapes.pill)
+            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+            .padding(horizontal = 11.dp, vertical = 6.dp)
+    ) {
+        if (leadingIcon != null) {
+            Icon(
+                imageVector = leadingIcon,
+                contentDescription = null,
+                tint = GhaisNoir.Lavender,
+                modifier = Modifier.size(13.dp)
+            )
+        }
+        Text(
+            text = text,
+            color = GhaisNoir.Lavender,
+            fontSize = 11.5.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
+        )
+    }
+}
+
+/**
+ * Reusable app-wide editorial header bar:
+ * [NoirNavButton] + two-line Lavender eyebrow / bold title + optional badge & trailing actions.
+ */
+@Composable
+fun NoirEditorialHeader(
+    eyebrow: String,
+    title: String,
+    modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
+    backIcon: ImageVector? = null,
+    backDescription: String = "Back",
+    badgeText: String? = null,
+    badgeIcon: ImageVector? = null,
+    horizontalPadding: Dp = 16.dp,
+    actions: (@Composable RowScope.() -> Unit)? = null,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .padding(horizontal = horizontalPadding),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (onBack != null && backIcon != null) {
+            NoirNavButton(
+                icon = backIcon,
+                contentDescription = backDescription,
+                onClick = onBack
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = eyebrow.uppercase(),
+                color = GhaisNoir.Lavender,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.4.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = title,
+                color = GhaisNoir.TextPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (badgeText != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            NoirHeaderPillBadge(text = badgeText, leadingIcon = badgeIcon)
+        }
+        if (actions != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            actions()
+        }
     }
 }

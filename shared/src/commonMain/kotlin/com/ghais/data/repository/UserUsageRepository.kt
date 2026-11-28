@@ -33,7 +33,8 @@ data class PersistedHistoryItem(
     val reciterSlug: String,
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
-    val lastPlayedTimestampMs: Long = 0L
+    val lastPlayedTimestampMs: Long = 0L,
+    val ayahNo: Int = 0
 )
 
 /**
@@ -1034,16 +1035,18 @@ object UserUsageRepository {
         val devotional = track.isDevotional()
         val title = track.surahNameEn.ifEmpty { if (devotional) "Devotional" else "Surah ${track.surahId}" }
         val reciter = track.reciterName.ifEmpty { if (devotional) "Devotional" else "Mishary" }
+        val ayahSuffix = if (track.ayahNo > 0) "Ayah ${track.ayahNo} • " else ""
         return JumpBackInItem(
             title = title,
-            subtitle = "$reciter • ${formatRemainingTime(positionMs, durationMs)}",
+            subtitle = "$ayahSuffix$reciter • ${formatRemainingTime(positionMs, durationMs)}",
             progress = progressFraction(positionMs, durationMs),
             coverUrl = if (devotional) "" else getCoverForSurah(track.surahId),
             surahId = track.surahId,
             reciterSlug = track.reciterSlug,
             positionMs = positionMs,
             durationMs = durationMs,
-            lastPlayedTimestampMs = playedAtMs
+            lastPlayedTimestampMs = playedAtMs,
+            ayahNo = track.ayahNo
         )
     }
 
@@ -1502,7 +1505,8 @@ object UserUsageRepository {
             reciterSlug = reciterSlug,
             positionMs = positionMs,
             durationMs = durationMs,
-            lastPlayedTimestampMs = lastPlayedTimestampMs
+            lastPlayedTimestampMs = lastPlayedTimestampMs,
+            ayahNo = ayahNo
         )
     }
 
@@ -1519,7 +1523,8 @@ object UserUsageRepository {
             // Preserve real play timestamps (e.g. cloud-restored entries, and
             // the per-session stamps [recordProgress] writes); only stamp "now"
             // for an entry that somehow carries no timestamp at all.
-            lastPlayedTimestampMs = lastPlayedTimestampMs.takeIf { it > 0L } ?: currentTimeMs()
+            lastPlayedTimestampMs = lastPlayedTimestampMs.takeIf { it > 0L } ?: currentTimeMs(),
+            ayahNo = ayahNo
         )
     }
 }

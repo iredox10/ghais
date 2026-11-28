@@ -6,6 +6,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
@@ -68,12 +69,28 @@ object ScheduleStartNotifier {
                 val epochDay = HifzListeningPlannerStore.currentEpochDay()
                 val done = hifzPlan.sessionsDoneOn(epochDay)
                 val remaining = (hifzPlan.sessionsPerDay - done).coerceAtLeast(1)
-                val dayNo = hifzPlan.currentDayNumber(epochDay)
+                val estMin = hifzPlan.estimatedMinutesPerSession()
+                val streak = hifzPlan.streakDays(epochDay)
+                val isEscalation = HifzListeningPlannerStore.isEscalationScheduleId(schedule.id)
                 val planLabel = hifzPlan.displayTitle { id ->
                     QuranDataRepository.getSurahById(id)?.nameEn ?: "Surah $id"
                 }
-                "Hifz Listening Plan Reminder" to
-                    "$planLabel — $remaining of ${hifzPlan.sessionsPerDay} sessions left today (Day $dayNo/${hifzPlan.durationDays})"
+                if (isEscalation) {
+                    val escTitle = if (streak > 0) {
+                        "🔥 Don't lose your ${streak}d streak!"
+                    } else {
+                        "⏰ Last call for today's plan"
+                    }
+                    escTitle to "Only ~${estMin}m left for $planLabel ($remaining/${hifzPlan.sessionsPerDay} left before midnight)"
+                } else {
+                    val primaryTitle = "🎧 Time for $planLabel (~${estMin}m)"
+                    val primaryText = if (streak > 0) {
+                        "$remaining/${hifzPlan.sessionsPerDay} left today • 🔥 ${streak}d streak"
+                    } else {
+                        "$remaining of ${hifzPlan.sessionsPerDay} sessions left today"
+                    }
+                    primaryTitle to primaryText
+                }
             } else if (copy != null) {
                 copy.title to "${copy.body} ($time)"
             } else {
@@ -85,6 +102,17 @@ object ScheduleStartNotifier {
                 .setSmallIcon(R.drawable.ghaith_mark)
                 .setAutoCancel(true)
             launchIntent(context, schedule.id.hashCode())?.let { builder.setContentIntent(it) }
+            if (hifzPlan != null) {
+                val estMin = hifzPlan.estimatedMinutesPerSession()
+                listenNowIntent(context, schedule.id)?.let { playIntent ->
+                    val action = Notification.Action.Builder(
+                        null,
+                        "▶ Listen Now (~${estMin}m)",
+                        playIntent,
+                    ).build()
+                    builder.addAction(action)
+                }
+            }
             notify(
                 context,
                 REMINDER_ID_BASE + Math.floorMod(schedule.id.hashCode(), ID_SPAN),
@@ -143,6 +171,29 @@ object ScheduleStartNotifier {
             manager.createNotificationChannel(channel)
         } catch (e: Exception) {
             Log.w(TAG, "ensureChannel failed", e)
+        }
+    }
+
+    /**
+     * Foreground-service PendingIntent that starts playback immediately when
+     * the user taps "▶ Listen Now" on a listening-plan reminder.
+     */
+    private fun listenNowIntent(context: Context, scheduleId: String): PendingIntent? {
+        return try {
+            val intent = Intent(context, QuranPlaybackService::class.java)
+                .setAction(QuranPlaybackService.ACTION_PLAY_SCHEDULE)
+                .putExtra(QuranPlaybackService.EXTRA_SCHEDULE_ID, scheduleId)
+                .putExtra(QuranPlaybackService.EXTRA_FORCE_PLAY, true)
+            val requestCode = scheduleId.hashCode() xor 0x4C495354
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                PendingIntent.getForegroundService(context, requestCode, intent, flags)
+            } else {
+                PendingIntent.getService(context, requestCode, intent, flags)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "listenNow PendingIntent failed", e)
+            null
         }
     }
 

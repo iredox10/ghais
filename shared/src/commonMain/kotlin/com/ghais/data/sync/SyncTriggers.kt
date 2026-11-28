@@ -271,6 +271,16 @@ object SyncTriggers {
                 }
         }
 
+        // Startup guest telemetry: even if a user opens the app without signing
+        // in or playing audio, upload device telemetry and queued app events.
+        scope.launch {
+            ownerBinding.filter { it != null }.first()
+            delay(2_000L)
+            if (AuthRepository.session.value == null && NetworkMonitor.isOnline.value) {
+                SyncEngine.syncGuestDataIfEligible()
+            }
+        }
+
         // Offline→online catch-up: when connectivity returns, retry the
         // session first (an offline-open user has session null but a cached
         // owner), then run one pass. The wasOnline guard keeps this to
@@ -283,6 +293,8 @@ object SyncTriggers {
                         AuthRepository.refreshSession()
                         if (AuthRepository.session.value != null) {
                             SyncEngine.syncNow()
+                        } else {
+                            SyncEngine.syncGuestDataIfEligible()
                         }
                     }
                     wasOnline = online
@@ -444,10 +456,13 @@ object SyncTriggers {
         return UserUsageRepository.adoptPreAuthUsage(preAuth)
     }
 
-    /** The one push gate for every trigger: a session, a network, one pass. */
+    /** The one push gate for every trigger: a network, then user or guest pass. */
     private suspend fun pushIfEligible() {
-        if (AuthRepository.session.value != null && NetworkMonitor.isOnline.value) {
+        if (!NetworkMonitor.isOnline.value) return
+        if (AuthRepository.session.value != null) {
             SyncEngine.syncNow()
+        } else {
+            SyncEngine.syncGuestDataIfEligible()
         }
     }
 

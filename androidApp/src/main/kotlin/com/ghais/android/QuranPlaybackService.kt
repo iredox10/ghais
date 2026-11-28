@@ -67,11 +67,14 @@ class QuranPlaybackService : MediaSessionService() {
         const val ACTION_SEEK_FORWARD = "com.ghais.android.action.SEEK_FORWARD"
         const val ACTION_SEEK_BACK = "com.ghais.android.action.SEEK_BACK"
         const val ACTION_PLAY_SCHEDULE = "com.ghais.android.action.PLAY_SCHEDULE"
+        const val ACTION_QUIT = "com.ghais.android.action.QUIT"
         const val EXTRA_SCHEDULE_ID = "schedule_id"
+        const val EXTRA_FORCE_PLAY = "force_play"
 
         /** Custom session commands rendered as notification custom-layout buttons. */
         const val CUSTOM_FAVORITE_TOGGLE = "FAVORITE_TOGGLE"
         const val CUSTOM_REPEAT_CYCLE = "REPEAT_CYCLE"
+        const val CUSTOM_QUIT = "QUIT_PLAYBACK"
 
         private const val SEEK_STEP_MS = 10_000L
 
@@ -269,8 +272,29 @@ class QuranPlaybackService : MediaSessionService() {
     // Media3 retains the paused notification and its foreground grace period.
     // Forcing startInForegroundRequired=false here drops call protection early.
 
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        // Keep the playback service in the foreground as long as a track is
+        // loaded (even while paused or when the screen locks / task is swiped)
+        // so Android / OEM battery managers never kill audio until the user
+        // explicitly quits.
+        val keepForeground = startInForegroundRequired ||
+            (try { AudioEngine.currentTrack.value } catch (_: Exception) { null } != null)
+        try {
+            super.onUpdateNotification(session, keepForeground)
+        } catch (_: Exception) { }
+    }
+
     override fun onTaskRemoved(rootIntent: Intent?) {
-        // Keep audio alive when swiped away; stop via notification or in-app.
+        // Keep audio alive when swiped away from recents; only stop if no
+        // track is active and playback is stopped.
+        val hasTrack = try { AudioEngine.currentTrack.value != null } catch (_: Exception) { false }
+        val isPlaying = try { player?.isPlaying == true || player?.playWhenReady == true } catch (_: Exception) { false }
+        if (hasTrack || isPlaying) {
+            try { startForegroundWithPlaceholder() } catch (_: Exception) { }
+            try { refreshNotification() } catch (_: Exception) { }
+            return
+        }
+        try { super.onTaskRemoved(rootIntent) } catch (_: Exception) { }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -334,7 +358,12 @@ class QuranPlaybackService : MediaSessionService() {
                     )
                 ACTION_PLAY_SCHEDULE -> {
                     val sid = intent.getStringExtra(EXTRA_SCHEDULE_ID)
-                    if (sid != null) com.ghais.android.SchedulePlayback.run(this@QuranPlaybackService, sid)
+                    val forcePlay = intent.getBooleanExtra(EXTRA_FORCE_PLAY, false)
+                    if (sid != null) com.ghais.android.SchedulePlayback.run(this@QuranPlaybackService, sid, forcePlay)
+                }
+                ACTION_QUIT -> {
+                    quitPlaybackAndStopService()
+                    return START_NOT_STICKY
                 }
             }
         } catch (_: Exception) { }
@@ -385,6 +414,7 @@ class QuranPlaybackService : MediaSessionService() {
                 MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
                     .add(SessionCommand(CUSTOM_FAVORITE_TOGGLE, Bundle.EMPTY))
                     .add(SessionCommand(CUSTOM_REPEAT_CYCLE, Bundle.EMPTY))
+                    .add(SessionCommand(CUSTOM_QUIT, Bundle.EMPTY))
                     .build()
             } catch (_: Exception) {
                 MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS
@@ -444,6 +474,10 @@ class QuranPlaybackService : MediaSessionService() {
                         AudioEngine.setRepeatMode(nextShadeRepeatMode(current, AudioEngine.isAyahMode.value))
                         try { refreshShadeButtons() } catch (_: Exception) { }
                         try { refreshNotification() } catch (_: Exception) { }
+                        Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                    }
+                    CUSTOM_QUIT -> {
+                        quitPlaybackAndStopService()
                         Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                     }
                     else -> Futures.immediateFuture(SessionResult(SessionResult.RESULT_INFO_SKIPPED))
@@ -658,7 +692,23 @@ class QuranPlaybackService : MediaSessionService() {
                     .build(),
             )
         } catch (_: Exception) { }
+        try {
+            buttons.add(
+                CommandButton.Builder()
+                    .setSessionCommand(SessionCommand(CUSTOM_QUIT, Bundle.EMPTY))
+                    .setDisplayName("Quit")
+                    .setIconResId(android.R.drawable.ic_menu_close_clear_cancel)
+                    .setEnabled(true)
+                    .build(),
+            )
+        } catch (_: Exception) { }
         return buttons
+    }
+
+    private fun quitPlaybackAndStopService() {
+        try { AudioEngine.stop() } catch (_: Exception) { }
+        try { stopForeground(STOP_FOREGROUND_REMOVE) } catch (_: Exception) { }
+        try { stopSelf() } catch (_: Exception) { }
     }
 
     private fun resolveArtworkUri(reciterSlug: String?, ambientUri: Uri? = null): Uri {

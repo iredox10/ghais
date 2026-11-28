@@ -141,6 +141,25 @@ internal fun hifzPauseCountdownSeconds(pauseBetweenMs: Long): Int =
  * @return (newRemaining, replay): newRemaining is remaining - 1 when
  * replaying, 0 otherwise; replay is true iff the ayah must replay.
  */
+internal fun computeWaqfWindowMs(
+    durationMs: Long,
+    phraseWeights: List<Int>,
+    phraseIndex: Int,
+): Pair<Long, Long> {
+    if (durationMs <= 0L || phraseWeights.isEmpty()) return 0L to 0L
+    val totalWeight = phraseWeights.sum().coerceAtLeast(1)
+    val idx = phraseIndex.coerceIn(0, phraseWeights.lastIndex)
+    val prefixWeight = phraseWeights.take(idx).sumOf { it.coerceAtLeast(1) }
+    val currentWeight = phraseWeights[idx].coerceAtLeast(1)
+    val startMs = (durationMs * prefixWeight) / totalWeight
+    val endMs = if (idx == phraseWeights.lastIndex) {
+        durationMs
+    } else {
+        (durationMs * (prefixWeight + currentWeight)) / totalWeight
+    }
+    return startMs to endMs
+}
+
 internal fun consumeAyahRepeat(remaining: Int): Pair<Int, Boolean> =
     if (remaining > 0) Pair(remaining - 1, true) else Pair(0, false)
 
@@ -217,6 +236,26 @@ object AudioEngine {
     private val _recitationGapCountdown = MutableStateFlow(0)
     val recitationGapCountdown: StateFlow<Int> = _recitationGapCountdown.asStateFlow()
 
+    data class WaqfLoopState(
+        val phraseWeights: List<Int>,
+        val repeatPerWaqf: Int,
+        val activePhraseIndex: Int = 0,
+        val currentRep: Int = 1,
+    )
+
+    private val _waqfRepeatTarget = MutableStateFlow(1)
+    val waqfRepeatTarget: StateFlow<Int> = _waqfRepeatTarget.asStateFlow()
+
+    private val _waqfLoopState = MutableStateFlow<WaqfLoopState?>(null)
+    val waqfLoopState: StateFlow<WaqfLoopState?> = _waqfLoopState.asStateFlow()
+
+    /**
+     * Suppresses re-triggering the waqf boundary while an async seekTo(startMs)
+     * is in flight so a single repeat cannot cascade across multiple ticks.
+     */
+    private var waqfSeekPendingTargetMs: Long = -1L
+    private var waqfSeekCooldownTicks: Int = 0
+
     private val _hifzRange = MutableStateFlow<HifzRange?>(null)
     val hifzRange: StateFlow<HifzRange?> = _hifzRange.asStateFlow()
 
@@ -291,13 +330,14 @@ object AudioEngine {
                 }
                 val activeRange = _hifzRange.value
                 val track = _currentTrack.value
+                val effectiveMode = activeRange
+                    ?.takeIf { track != null && it.surahId == track.surahId }
+                    ?.loopMode ?: _hifzLoopMode.value
                 if (_isPlaying.value &&
                     _isAyahMode.value &&
                     !firstWordCutoffTriggered &&
-                    activeRange != null &&
-                    activeRange.loopMode == HifzLoopMode.FIRST_WORD_PROMPT &&
+                    effectiveMode == HifzLoopMode.FIRST_WORD_PROMPT &&
                     track != null &&
-                    track.surahId == activeRange.surahId &&
                     duration > 0L
                 ) {
                     val cutoffMs = firstWordPromptCutoffMs(duration)
@@ -305,6 +345,39 @@ object AudioEngine {
                         firstWordCutoffTriggered = true
                         PlayerBridge.pause()
                         handleAyahTrackEnd()
+                    }
+                }
+                val wLoop = _waqfLoopState.value
+                if (_isPlaying.value &&
+                    _isAyahMode.value &&
+                    wLoop != null &&
+                    duration > 0L &&
+                    wLoop.phraseWeights.size > 1
+                ) {
+                    val (startMs, endMs) = computeWaqfWindowMs(duration, wLoop.phraseWeights, wLoop.activePhraseIndex)
+                    val idx = wLoop.activePhraseIndex.coerceIn(0, wLoop.phraseWeights.lastIndex)
+                    val triggerMs = if (idx == wLoop.phraseWeights.lastIndex) {
+                        (endMs - 380L).coerceAtLeast(startMs + 250L)
+                    } else {
+                        endMs
+                    }
+                    if (waqfSeekCooldownTicks > 0) {
+                        waqfSeekCooldownTicks--
+                        if (waqfSeekPendingTargetMs >= 0L && safePos < triggerMs - 200L) {
+                            waqfSeekCooldownTicks = 0
+                            waqfSeekPendingTargetMs = -1L
+                        }
+                    } else if (safePos >= triggerMs && endMs > startMs + 200L) {
+                        if (wLoop.currentRep < wLoop.repeatPerWaqf) {
+                            _waqfLoopState.value = wLoop.copy(currentRep = wLoop.currentRep + 1)
+                            waqfSeekPendingTargetMs = startMs
+                            waqfSeekCooldownTicks = 4
+                            seekToInternal(startMs)
+                        } else if (idx + 1 < wLoop.phraseWeights.size) {
+                            _waqfLoopState.value = wLoop.copy(activePhraseIndex = idx + 1, currentRep = 1)
+                        } else {
+                            _waqfLoopState.value = wLoop.copy(activePhraseIndex = 0, currentRep = 1)
+                        }
                     }
                 }
                 } catch (_: Exception) {
@@ -453,9 +526,17 @@ object AudioEngine {
     private var consecutiveErrors: Int = 0
     private val maxAutoSkipErrors: Int = 10
     private var activeListeningPlanId: String? = null
+    private var activeListeningPlanNaturalTracks: Int = 0
+    private var activeListeningPlanRequiredTracks: Int = 0
+
+    private fun clearActiveListeningPlan() {
+        activeListeningPlanId = null
+        activeListeningPlanNaturalTracks = 0
+        activeListeningPlanRequiredTracks = 0
+    }
 
     fun playTrack(track: TrackItem, startPositionMs: Long = 0L) {
-        activeListeningPlanId = null
+        clearActiveListeningPlan()
         clearAyahRepeat()
         val isAyah = track.ayahNo > 0 && !track.isFullSurah
         _isAyahMode.value = isAyah
@@ -475,7 +556,7 @@ object AudioEngine {
     }
 
     fun playQueue(tracks: List<TrackItem>, startIndex: Int = 0, startPositionMs: Long = 0L) {
-        activeListeningPlanId = null
+        clearActiveListeningPlan()
         if (tracks.isEmpty()) {
             clear()
             return
@@ -697,6 +778,15 @@ object AudioEngine {
     }
 
     private fun executeWithRecitationGap(lastAyahDurationMs: Long, action: () -> Unit) {
+        if (_isAyahMode.value && _hifzPauseMultiplier.value > 0f && lastAyahDurationMs > 0L) {
+            executeWithHifzPause(
+                pauseBetweenMs = 0L,
+                lastAyahDurationMs = lastAyahDurationMs,
+                pauseMultiplier = _hifzPauseMultiplier.value,
+                action = action,
+            )
+            return
+        }
         cancelGap()
 
         val gapSetting = _recitationGapSeconds.value
@@ -863,10 +953,35 @@ object AudioEngine {
     fun setHifzLoopMode(mode: HifzLoopMode) {
         _hifzLoopMode.value = mode
         PlaybackPrefs.setHifzLoopMode(mode)
+        firstWordCutoffTriggered = false
+        if (mode != HifzLoopMode.BRIDGE) needsBridgeSeek = false
         _hifzRange.update { range ->
             range?.also { resetAccumulationState(it.startAyah) }?.copy(loopMode = mode)
         }
         _currentAyahRepetition.value = 1
+        // Apply mode transitions immediately to the active ayah in Ayah mode
+        if (_isAyahMode.value && _currentTrack.value != null) {
+            val dur = effectiveDuration().coerceAtLeast(0L)
+            when (mode) {
+                HifzLoopMode.BRIDGE -> {
+                    if (dur > 0L) {
+                        val target = bridgeStartPositionMs(dur)
+                        if (target > 0L) {
+                            needsBridgeSeek = false
+                            seekToInternal(target)
+                        }
+                    } else {
+                        needsBridgeSeek = true
+                    }
+                }
+                HifzLoopMode.FIRST_WORD_PROMPT -> {
+                    if (dur > 0L && _currentPositionMs.value >= firstWordPromptCutoffMs(dur)) {
+                        seekToInternal(0L)
+                    }
+                }
+                else -> Unit
+            }
+        }
     }
 
     fun setHifzPauseMultiplier(multiplier: Float) {
@@ -904,6 +1019,78 @@ object AudioEngine {
         resetAccumulationState(1)
         needsBridgeSeek = false
         firstWordCutoffTriggered = false
+    }
+
+    /**
+     * Sets the per-Waqf repeat count (1 = off, 2..20 = repeat each waqf phrase
+     * N times before advancing to the next waqf phrase across every ayah).
+     */
+    fun setWaqfRepeatCount(repeatCount: Int) {
+        val target = repeatCount.coerceIn(1, 20)
+        _waqfRepeatTarget.value = target
+        if (target <= 1) {
+            clearWaqfLoop()
+            return
+        }
+        val track = _currentTrack.value
+        if (track != null && _isAyahMode.value && track.ayahNo > 0) {
+            armWaqfLoopForAyah(track.surahId, track.ayahNo, track.textUthmani, target)
+        }
+    }
+
+    private fun armWaqfLoopForAyah(
+        surahId: Int,
+        ayahNo: Int,
+        fallbackText: String,
+        repeatTarget: Int = _waqfRepeatTarget.value,
+    ) {
+        if (repeatTarget <= 1) {
+            clearWaqfLoop()
+            return
+        }
+        val resolvedText = fallbackText.takeIf { it.isNotBlank() }
+            ?: QuranAyahRepository.getAyahImmediate(surahId, ayahNo)
+                .takeIf { !it.isPlaceholder }
+                ?.textUthmani
+                .orEmpty()
+        val phrases = com.ghais.hifz.splitAyahByWaqf(resolvedText)
+        if (phrases.size > 1) {
+            setWaqfLoop(phrases.map { it.length.coerceAtLeast(1) }, repeatTarget)
+        } else {
+            clearWaqfLoop()
+        }
+    }
+
+    fun setWaqfLoop(phraseWeights: List<Int>, repeatPerWaqf: Int) {
+        waqfSeekCooldownTicks = 0
+        waqfSeekPendingTargetMs = -1L
+        if (phraseWeights.size <= 1 || repeatPerWaqf <= 1) {
+            _waqfLoopState.value = null
+            return
+        }
+        _waqfLoopState.value = WaqfLoopState(
+            phraseWeights = phraseWeights,
+            repeatPerWaqf = repeatPerWaqf.coerceIn(2, 20),
+            activePhraseIndex = 0,
+            currentRep = 1,
+        )
+    }
+
+    fun jumpToWaqfPhrase(phraseIndex: Int) {
+        val wLoop = _waqfLoopState.value ?: return
+        val idx = phraseIndex.coerceIn(0, wLoop.phraseWeights.lastIndex)
+        val duration = effectiveDuration().coerceAtLeast(0L)
+        val (startMs, _) = computeWaqfWindowMs(duration, wLoop.phraseWeights, idx)
+        waqfSeekPendingTargetMs = startMs
+        waqfSeekCooldownTicks = 4
+        _waqfLoopState.value = wLoop.copy(activePhraseIndex = idx, currentRep = 1)
+        if (duration > 0L) seekToInternal(startMs)
+    }
+
+    fun clearWaqfLoop() {
+        waqfSeekCooldownTicks = 0
+        waqfSeekPendingTargetMs = -1L
+        _waqfLoopState.value = null
     }
 
     fun resetAyahRepetition() {
@@ -993,10 +1180,10 @@ object AudioEngine {
 
         val ayahTrack = buildAyahTrack(surahId, validAyahNo, reciter.slug, reciter.nameEn)
         firstWordCutoffTriggered = false
+        armWaqfLoopForAyah(surahId, validAyahNo, ayahTrack.textUthmani)
         val activeRange = _hifzRange.value
-        val isBridgeActive = activeRange != null &&
-            activeRange.surahId == surahId &&
-            activeRange.loopMode == HifzLoopMode.BRIDGE
+        val effectiveMode = activeRange?.takeIf { it.surahId == surahId }?.loopMode ?: _hifzLoopMode.value
+        val isBridgeActive = effectiveMode == HifzLoopMode.BRIDGE
         val effectiveStartMs = if (startPositionMs > 0L) {
             needsBridgeSeek = false
             startPositionMs
@@ -1520,6 +1707,7 @@ object AudioEngine {
     }
 
     private fun stopPlayback() {
+        clearActiveListeningPlan()
         cancelGap()
         clearAyahRepeat()
         _currentAyahRepetition.value = 1
@@ -1571,6 +1759,34 @@ object AudioEngine {
         val totalAyahs = getAyahCountForSurah(surahId)
         val reciterSlug = current.reciterSlug
         val lastDurationMs = effectiveDuration()
+
+        // If a Waqf repeat loop still has repetitions left (e.g. final phrase
+        // ended on STATE_ENDED before the 250ms poll fired), replay from the
+        // phrase start instead of advancing to the next ayah.
+        val wLoop = _waqfLoopState.value
+        if (wLoop != null && wLoop.phraseWeights.size > 1 && lastDurationMs > 0L) {
+            val idx = wLoop.activePhraseIndex.coerceIn(0, wLoop.phraseWeights.lastIndex)
+            if (wLoop.currentRep < wLoop.repeatPerWaqf) {
+                val (startMs, _) = computeWaqfWindowMs(lastDurationMs, wLoop.phraseWeights, idx)
+                _waqfLoopState.value = wLoop.copy(currentRep = wLoop.currentRep + 1)
+                waqfSeekPendingTargetMs = startMs
+                waqfSeekCooldownTicks = 4
+                seekToInternal(startMs)
+                PlayerBridge.resume()
+                return
+            } else if (idx + 1 < wLoop.phraseWeights.size) {
+                val nextIdx = idx + 1
+                val (startMs, _) = computeWaqfWindowMs(lastDurationMs, wLoop.phraseWeights, nextIdx)
+                _waqfLoopState.value = wLoop.copy(activePhraseIndex = nextIdx, currentRep = 1)
+                waqfSeekPendingTargetMs = startMs
+                waqfSeekCooldownTicks = 4
+                seekToInternal(startMs)
+                PlayerBridge.resume()
+                return
+            } else {
+                _waqfLoopState.value = wLoop.copy(activePhraseIndex = 0, currentRep = 1)
+            }
+        }
 
         // 0. N-times ayah repeat counter (UI-driven one-shot repeats).
         // Consumes first, independent of RepeatMode and hifzRange: while
@@ -1630,6 +1846,7 @@ object AudioEngine {
                     }
                     is AccumulationStep.CompleteRange -> {
                         executeWithHifzPause(range.pauseBetweenMs, lastDurationMs, range.pauseMultiplier) {
+                            clearHifzRange()
                             SleepTimer.onQueueEnded()
                             stopPlayback()
                         }
@@ -1663,6 +1880,7 @@ object AudioEngine {
                 }
                 is HifzTransition.CompleteRange -> {
                     executeWithHifzPause(range.pauseBetweenMs, lastDurationMs, range.pauseMultiplier) {
+                        clearHifzRange()
                         SleepTimer.onQueueEnded()
                         stopPlayback()
                     }
@@ -1743,12 +1961,19 @@ object AudioEngine {
     private fun handleSurahTrackEnd() {
         SleepTimer.onSurahEnded()
         if (!_isPlaying.value) return
+        if (activeListeningPlanId != null) {
+            activeListeningPlanNaturalTracks++
+        }
         // Autoplay off: stop at queue end even if repeat QUEUE would wrap.
         // Manual next/previous (forceAdvance) bypasses this gate.
         if (!PlaybackPrefs.autoplayNext.value && isQueueEndForAutoplay()) {
             activeListeningPlanId?.let { planId ->
-                activeListeningPlanId = null
-                HifzListeningPlannerStore.recordSessionCompleted(planId)
+                val natural = activeListeningPlanNaturalTracks
+                val required = activeListeningPlanRequiredTracks
+                clearActiveListeningPlan()
+                if (natural >= required) {
+                    HifzListeningPlannerStore.recordSessionCompleted(planId)
+                }
             }
             SleepTimer.onQueueEnded()
             stopPlayback()
@@ -1760,8 +1985,12 @@ object AudioEngine {
             startPlayback(nextTrack)
         } else {
             activeListeningPlanId?.let { planId ->
-                activeListeningPlanId = null
-                HifzListeningPlannerStore.recordSessionCompleted(planId)
+                val natural = activeListeningPlanNaturalTracks
+                val required = activeListeningPlanRequiredTracks
+                clearActiveListeningPlan()
+                if (natural >= required) {
+                    HifzListeningPlannerStore.recordSessionCompleted(planId)
+                }
             }
             SleepTimer.onSurahEnded()
             SleepTimer.onQueueEnded()
@@ -1771,12 +2000,15 @@ object AudioEngine {
 
     /**
      * Starts a Hifz listening planner session. Progress is recorded ONLY when
-     * the queued surahs/repeats naturally finish in [handleSurahTrackEnd].
+     * the queued surahs/repeats naturally finish in [handleSurahTrackEnd] and
+     * at least half of the session's tracks were naturally completed.
      */
     fun playListeningPlan(planId: String, tracks: List<TrackItem>) {
         if (tracks.isEmpty()) return
         playQueue(tracks, startIndex = 0)
         activeListeningPlanId = planId
+        activeListeningPlanNaturalTracks = 0
+        activeListeningPlanRequiredTracks = ((tracks.size + 1) / 2).coerceAtLeast(1)
     }
 
     private fun effectiveDuration(): Long {

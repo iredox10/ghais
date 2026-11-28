@@ -650,8 +650,10 @@ actual object PlayerBridge {
         // Explicit pause wins over any pending focus resume — including the
         // delayed call-latch check that might still be scheduled.
         interruption.cancel()
-        try { cancelCallLatchCheck() } catch (_: Exception) { }
-        try { exoPlayer?.pause() } catch (_: Exception) { }
+        runOnMainThread {
+            try { cancelCallLatchCheck() } catch (_: Exception) { }
+            try { exoPlayer?.pause() } catch (_: Exception) { }
+        }
     }
 
     /**
@@ -682,11 +684,17 @@ actual object PlayerBridge {
         if (!retryingAfterServiceStart) {
             try { onPlayRequested?.invoke() } catch (_: Exception) { }
         }
-        try { exoPlayer?.let {
-            if (it.playbackState == androidx.media3.common.Player.STATE_IDLE) it.prepare()
-            playWhenFocused(it)
-        } } catch (e: Exception) {
-            _errorMessage.value = e.message
+        runOnMainThread {
+            try { exoPlayer?.let {
+                if (it.playbackState == androidx.media3.common.Player.STATE_IDLE ||
+                    it.playbackState == androidx.media3.common.Player.STATE_ENDED
+                ) {
+                    it.prepare()
+                }
+                playWhenFocused(it)
+            } } catch (e: Exception) {
+                _errorMessage.value = e.message
+            }
         }
     }
 
@@ -713,30 +721,54 @@ actual object PlayerBridge {
     actual fun stop() {
         interruption.cancel()
         ducked = false
-        try { cancelCallLatchCheck() } catch (_: Exception) { }
-        try { abandonFocus() } catch (_: Exception) { }
-        try {
-            exoPlayer?.stop()
-            exoPlayer?.clearMediaItems()
-        } catch (_: Exception) { }
+        runOnMainThread {
+            try { cancelCallLatchCheck() } catch (_: Exception) { }
+            try { abandonFocus() } catch (_: Exception) { }
+            try {
+                exoPlayer?.stop()
+                exoPlayer?.clearMediaItems()
+            } catch (_: Exception) { }
+        }
         _positionMs.value = 0L
         _durationMs.value = 0L
         _errorMessage.value = null
         _isBuffering.value = false
     }
 
+    private inline fun runOnMainThread(crossinline block: () -> Unit) {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            block()
+        } else {
+            focusLatchHandler.post { block() }
+        }
+    }
+
     actual fun seekTo(positionMs: Long) {
-        try { exoPlayer?.seekTo(positionMs.coerceAtLeast(0L)) } catch (_: Exception) { }
+        val target = positionMs.coerceAtLeast(0L)
+        _positionMs.value = target
+        runOnMainThread {
+            try {
+                val p = exoPlayer ?: return@runOnMainThread
+                p.seekTo(target)
+                // Re-arm playWhenReady if seeking at or just past STATE_ENDED
+                if (p.playbackState == androidx.media3.common.Player.STATE_ENDED) {
+                    p.prepare()
+                    p.playWhenReady = true
+                }
+            } catch (_: Exception) { }
+        }
     }
 
     actual fun setSpeed(speed: Float) {
         playbackSpeed = speed.coerceIn(0.25f, 3.0f)
-        try { exoPlayer?.setPlaybackSpeed(playbackSpeed) } catch (_: Exception) { }
+        runOnMainThread {
+            try { exoPlayer?.setPlaybackSpeed(playbackSpeed) } catch (_: Exception) { }
+        }
     }
 
     actual fun setVolume(volume: Float) {
         baseVolume = volume.coerceIn(0f, 1f)
-        applyVolume()
+        runOnMainThread { applyVolume() }
     }
 
     actual fun setOnTrackEndListener(listener: (() -> Unit)?) {

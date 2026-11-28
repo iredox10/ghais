@@ -125,7 +125,8 @@ object HomeScreen : Tab {
                             val heroReciter = QuranDataRepository.getReciterBySlug(latest.reciterSlug)
                             isPlaying &&
                                 playingTrack?.surahId == latest.surahId &&
-                                playingTrack?.reciterSlug == heroReciter.slug
+                                playingTrack?.reciterSlug == heroReciter.slug &&
+                                (latest.ayahNo <= 0 || playingTrack?.ayahNo == latest.ayahNo)
                         }
                         HomePlumHero(
                             eyebrow = "Jump back in",
@@ -184,7 +185,14 @@ object HomeScreen : Tab {
                     )
                     HomePlaylistsRow(
                         onFavourites = { rootNavigator?.push(FavoritesScreen) },
-                        onFocusWork = { rootNavigator?.push(PlaylistDetailsScreen("focus-work")) },
+                        onPlanner = {
+                            val hasPlan = com.ghais.data.repository.HifzListeningPlannerStore.plans.value.isNotEmpty()
+                            rootNavigator?.push(
+                                com.ghais.ui.screens.memorization.HifzListeningPlannerScreen(
+                                    startInCreator = !hasPlan
+                                )
+                            )
+                        },
                         onNightSleep = { rootNavigator?.push(PlaylistDetailsScreen("sleep-mode")) },
                         onDownloads = { rootNavigator?.push(DownloadsScreen()) }
                     )
@@ -299,6 +307,31 @@ private fun resumeHistoryEntry(
         return
     }
     val reciter = QuranDataRepository.getReciterBySlug(entry.reciterSlug)
+    // Memorize (Ayah) mode: resume straight into the Ayah-by-Ayah player at the saved ayah.
+    if (entry.ayahNo > 0) {
+        val currentTrack = AudioEngine.currentTrack.value
+        val isCurrentAyah = currentTrack != null &&
+            currentTrack.surahId == entry.surahId &&
+            currentTrack.reciterSlug == reciter.slug &&
+            currentTrack.ayahNo == entry.ayahNo &&
+            AudioEngine.isAyahMode.value
+        when {
+            isCurrentAyah && AudioEngine.isPlaying.value -> openPlayer()
+            isCurrentAyah -> {
+                AudioEngine.resume()
+                openPlayer()
+            }
+            else -> {
+                AudioEngine.playSurahInAyahMode(
+                    surahId = entry.surahId,
+                    reciterSlug = reciter.slug,
+                    startAyahNo = entry.ayahNo
+                )
+                openPlayer()
+            }
+        }
+        return
+    }
     // Never queue a surah this reciter never recorded (known-404 URL):
     // restrict the queue to available surahs only.
     val surahs = QuranDataRepository.getSurahs().filter { reciter.isSurahAvailable(it.id) }

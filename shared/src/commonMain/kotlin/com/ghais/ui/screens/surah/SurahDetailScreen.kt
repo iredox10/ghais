@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -68,7 +69,7 @@ import com.ghais.ui.theme.GhaisTypography
  * Arabic/uthmani text stays at 100% white on dark wells — never dimmed.
  * Signatures, playback/queue/favorite logic and navigation are untouched.
  */
-data class SurahDetailScreen(val surahId: Int) : Screen {
+data class SurahDetailScreen(val surahId: Int, val initialAyah: Int = 0) : Screen {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
@@ -203,7 +204,18 @@ data class SurahDetailScreen(val surahId: Int) : Screen {
                     )
                 }
             ) { paddingValues ->
+                val listState = rememberLazyListState()
+                val hasBasmalah = QuranAyahRepository.hasBasmalahHeader(surah.id)
+                val headerCount = 1 + if (hasBasmalah) 1 else 0
+                LaunchedEffect(surahId, initialAyah, ayahs.size) {
+                    if (initialAyah > 0 && ayahs.isNotEmpty()) {
+                        val ayahIndex = ayahs.indexOfFirst { it.ayahNo == initialAyah }
+                            .takeIf { it >= 0 } ?: (initialAyah - 1).coerceIn(0, ayahs.lastIndex)
+                        listState.scrollToItem(headerCount + ayahIndex)
+                    }
+                }
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),

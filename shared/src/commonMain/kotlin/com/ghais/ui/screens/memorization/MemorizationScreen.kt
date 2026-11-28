@@ -147,7 +147,6 @@ object MemorizationScreen : Tab {
         val downloaded by QuranDownloads.downloadedKeys.collectAsState()
         val dlProgress by QuranDownloads.progress.collectAsState()
         val failedKeys by QuranDownloads.failedKeys.collectAsState()
-        val listeningPlans by HifzListeningPlannerStore.plans.collectAsState()
         val bottomDockPadding = if (currentTrack != null) 200.dp else 112.dp
 
         fun playReciterAyahMode(reciter: EveryAyahReciter, surahId: Int = 1) {
@@ -252,106 +251,6 @@ object MemorizationScreen : Tab {
                                         startAyahNo = firstTarget.second
                                     )
                                     rootNavigator?.push(NowPlayingScreen())
-                                }
-                            )
-                        }
-                    }
-                }
-
-                item(key = "hifz_planner", span = { GridItemSpan(2) }) {
-                    val activePlan = listeningPlans.firstOrNull { it.enabled } ?: listeningPlans.firstOrNull()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(GhaisShapes.row)
-                            .background(GhaisNoir.cardFillSoft())
-                            .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.row)
-                            .topSpecular(inset = 18.dp)
-                            .noirClickable {
-                                rootNavigator?.push(
-                                    HifzListeningPlannerScreen(startInCreator = activePlan == null)
-                                )
-                            }
-                            .padding(horizontal = 12.dp, vertical = 9.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(GhaisNoir.wellFill())
-                                    .border(1.dp, GhaisNoir.BorderCard, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Headphones,
-                                    contentDescription = "Listening Planner",
-                                    tint = GhaisNoir.Lavender,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            Spacer(Modifier.width(10.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Listening Planner",
-                                    color = GhaisNoir.TextPrimary,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                val subtitle = if (activePlan != null) {
-                                    val done = activePlan.sessionsDoneOn(epochDay)
-                                    val dayNo = activePlan.currentDayNumber(epochDay)
-                                    "$done/${activePlan.sessionsPerDay} today • Day $dayNo/${activePlan.durationDays}"
-                                } else {
-                                    "Schedule daily listening & repetition"
-                                }
-                                Text(
-                                    text = subtitle,
-                                    color = GhaisNoir.TextTertiary,
-                                    fontSize = 11.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        if (activePlan != null) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(GhaisNoir.chromeFill())
-                                    .border(1.dp, GhaisNoir.SpecularTop, CircleShape)
-                                    .noirClickable {
-                                        val tracks = HifzListeningPlannerStore.buildSessionTracks(activePlan)
-                                        if (tracks.isNotEmpty()) {
-                                            AudioEngine.playListeningPlan(activePlan.id, tracks)
-                                            rootNavigator?.push(NowPlayingScreen())
-                                        }
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.PlayArrow,
-                                    contentDescription = "Listen",
-                                    tint = GhaisNoir.OnChrome,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        } else {
-                            GhostPillButton(
-                                text = "+ Create",
-                                onClick = {
-                                    rootNavigator?.push(
-                                        HifzListeningPlannerScreen(startInCreator = true)
-                                    )
                                 }
                             )
                         }

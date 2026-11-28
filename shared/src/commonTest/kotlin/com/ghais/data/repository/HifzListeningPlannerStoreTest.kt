@@ -52,6 +52,133 @@ class HifzListeningPlannerStoreTest {
     }
 
     @Test
+    fun `streakDays and bestStreakDays compute consecutive completed days`() {
+        val plan = HifzListeningPlan(
+            id = "plan-streak",
+            surahIds = listOf(1),
+            sessionsPerDay = 2,
+            completedSessionsByDay = mapOf(
+                100L to 2,
+                101L to 3,
+                102L to 2,
+                // gap on 103
+                104L to 2,
+                105L to 1, // incomplete on 105
+            ),
+        )
+
+        // Completed on 102 -> streak ending at 102 is 3
+        assertEquals(3, plan.streakDays(102L))
+        // Incomplete on 103, but 102 is completed -> grace streak is still 3
+        assertEquals(3, plan.streakDays(103L))
+        // Incomplete on 105, yesterday 104 is completed -> streak is 1
+        assertEquals(1, plan.streakDays(105L))
+        // Gap of 2 days (106, 105 incomplete) -> streak is 0
+        assertEquals(0, plan.streakDays(106L))
+        // Best streak across history is 3 (days 100..102)
+        assertEquals(3, plan.bestStreakDays())
+    }
+
+    @Test
+    fun `estimatedMinutesPerSession estimates from surah ayahs and repeats`() {
+        val plan = HifzListeningPlan(
+            id = "plan-est",
+            surahIds = listOf(2), // Al-Baqarah: 286 ayahs * 7s * 1 = 2002s -> 33 min
+            timesPerSession = 1,
+        )
+        assertEquals(33, plan.estimatedMinutesPerSession())
+
+        val tinyPlan = HifzListeningPlan(
+            id = "plan-est-tiny",
+            surahIds = listOf(108), // Al-Kawthar: 3 ayahs * 7s * 1 = 21s -> coerced to 1 min
+            timesPerSession = 1,
+        )
+        assertEquals(1, tinyPlan.estimatedMinutesPerSession())
+    }
+
+    @Test
+    fun `escalateReminder creates and cleans up escalation schedule`() {
+        HifzListeningPlannerStore.setOwner("planner-test-esc")
+        val plan = HifzListeningPlannerStore.savePlan(
+            HifzListeningPlan(
+                id = "plan-esc",
+                title = "Al-Kahf",
+                reciterSlugs = listOf("husary"),
+                surahIds = listOf(18),
+                reminderEnabled = true,
+                reminderHour = 19,
+                reminderMinute = 15,
+                autoPlayOnSchedule = true,
+                escalateReminder = true,
+            )
+        )
+        val primaryId = HifzListeningPlannerStore.scheduleIdFor(plan.id)
+        val escId = HifzListeningPlannerStore.escalationScheduleIdFor(plan.id)
+
+        val primary = SchedulesStore.get(primaryId)
+        val esc = SchedulesStore.get(escId)
+        assertEquals(true, primary?.autoStart)
+        assertEquals(19, primary?.hour)
+        assertEquals(15, primary?.minute)
+        assertEquals(false, esc?.autoStart)
+        assertEquals(21, esc?.hour)
+        assertEquals(15, esc?.minute)
+        assertTrue(HifzListeningPlannerStore.isEscalationScheduleId(escId))
+        assertEquals(plan.id, HifzListeningPlannerStore.planIdFromScheduleId(escId))
+        assertEquals(plan.id, HifzListeningPlannerStore.planIdFromScheduleId(primaryId))
+
+        // Disabling escalateReminder removes the escalation schedule
+        HifzListeningPlannerStore.savePlan(plan.copy(escalateReminder = false))
+        assertEquals(null, SchedulesStore.get(escId))
+
+        // Re-enable and then deletePlan removes both
+        HifzListeningPlannerStore.savePlan(plan.copy(escalateReminder = true))
+        assertTrue(SchedulesStore.get(escId) != null)
+        HifzListeningPlannerStore.deletePlan(plan.id)
+        assertEquals(null, SchedulesStore.get(primaryId))
+        assertEquals(null, SchedulesStore.get(escId))
+        HifzListeningPlannerStore.setOwner("local")
+    }
+
+    @Test
+    fun `recordSessionCompleted emits PlanCompletionEvent and dismiss clears it`() {
+        HifzListeningPlannerStore.setOwner("planner-test-event")
+        HifzListeningPlannerStore.dismissCompletionEvent()
+        val startDay = 20_100L
+        val plan = HifzListeningPlannerStore.savePlan(
+            HifzListeningPlan(
+                id = "plan-evt",
+                title = "Yasin",
+                reciterSlugs = listOf("husary"),
+                surahIds = listOf(36),
+                sessionsPerDay = 2,
+                startEpochDay = startDay,
+            )
+        )
+
+        HifzListeningPlannerStore.recordSessionCompleted(plan.id, startDay)
+        val firstEvent = HifzListeningPlannerStore.lastCompletionEvent.value
+        assertEquals(plan.id, firstEvent?.planId)
+        assertEquals("Yasin", firstEvent?.planTitle)
+        assertEquals(1, firstEvent?.sessionsDoneToday)
+        assertEquals(2, firstEvent?.sessionsPerDay)
+        assertEquals(false, firstEvent?.dayCompleted)
+        assertEquals(0, firstEvent?.streak)
+
+        HifzListeningPlannerStore.recordSessionCompleted(plan.id, startDay)
+        val secondEvent = HifzListeningPlannerStore.lastCompletionEvent.value
+        assertEquals(2, secondEvent?.sessionsDoneToday)
+        assertEquals(true, secondEvent?.dayCompleted)
+        assertEquals(1, secondEvent?.streak)
+
+        HifzListeningPlannerStore.dismissCompletionEvent()
+        assertEquals(null, HifzListeningPlannerStore.lastCompletionEvent.value)
+
+        HifzListeningPlannerStore.deletePlan(plan.id)
+        HifzListeningPlannerStore.setOwner("local")
+    }
+
+    @Test
     fun `buildSessionTracks repeats each surah timesPerSession across selected reciters`() {
         val plan = HifzListeningPlan(
             id = "plan-b",

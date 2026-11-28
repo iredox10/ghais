@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.GraphicEq
@@ -41,6 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -139,6 +141,8 @@ fun NowPlayingLyricsCard(
     val isGapActive by AudioEngine.isRecitationGapActive.collectAsState()
     val gapCountdown by AudioEngine.recitationGapCountdown.collectAsState()
     val hifzRange by AudioEngine.hifzRange.collectAsState()
+    val waqfLoopState by AudioEngine.waqfLoopState.collectAsState()
+    val waqfRepeatCount by AudioEngine.waqfRepeatTarget.collectAsState()
     val loadingSurahs by QuranAyahRepository.loadingSurahs.collectAsState()
 
     // Blind self-test preference: in-memory only (remember), shared across
@@ -147,31 +151,35 @@ fun NowPlayingLyricsCard(
     var blindOn by remember { mutableStateOf(blindInitial) }
     val masteryMap by HifzMasteryStore.masteryMap.collectAsState()
 
+    // Persisted Quran text size in the player (22.sp..42.sp, default 27.sp).
+    val playerSettings = remember { com.russhwolf.settings.Settings() }
+    var arabicFontSp by remember {
+        mutableStateOf(playerSettings.getInt("ghais_player_quran_font_sp", 27).coerceIn(22, 42))
+    }
+    val translationFontSp = remember(arabicFontSp) {
+        (14f + (arabicFontSp - 27) * 0.28f).coerceIn(12.5f, 19f)
+    }
+
     val displayAyahNo = currentTrack?.ayahNo?.takeIf { it > 0 }
         ?: currentAyahVerse?.ayahNo
         ?: 1
 
     val surahId = currentTrack?.surahId ?: currentAyahVerse?.surahId ?: 1
 
-    // Scroll offset is per-verse state, not card state. Unkeyed, the ScrollState
-    // outlives the ayah and a long verse scrolled to its end leaves the next,
-    // short one showing a blank viewport — the stale offset is only clamped back
-    // when the new content is still taller than the box.
-    //
-    // `key(...)` around the call, not a key inside `remember(...)`: the block
-    // passed to `remember` is a plain calculation, not a composable lambda, so a
-    // `rememberScrollState()` inside it has no composable context to run in and
-    // fails to compile (COMPOSABLE_INVOCATION). `key` re-composes that call site
-    // per verse, which is exactly the reset we want: once per (surah, ayah) and
-    // never on ordinary recomposition, so the user keeps their place while
-    // isPlaying flips, the gap countdown ticks, or the sync dot re-tints.
-
     val surahName = currentTrack?.surahNameEn?.takeIf { it.isNotBlank() }
         ?: currentAyahVerse?.surahId?.let { "Surah $it" }
         ?: ""
 
-    val isCurrentVerseUnavailable = currentAyahVerse?.isPlaceholder != false ||
-        !QuranAyahRepository.isAyahAvailable(surahId, displayAyahNo)
+    val isCurrentVerseUnavailable = currentAyahVerse == null ||
+        currentAyahVerse.isPlaceholder ||
+        currentAyahVerse.textUthmani.isBlank()
+
+    LaunchedEffect(surahId, isCurrentVerseUnavailable) {
+        if (isCurrentVerseUnavailable && surahId !in loadingSurahs) {
+            QuranAyahRepository.getAyahsForSurah(surahId)
+        }
+    }
+
     val activeArabic = if (isCurrentVerseUnavailable) {
         ""
     } else {
@@ -183,52 +191,14 @@ fun NowPlayingLyricsCard(
         currentAyahVerse?.translation?.takeIf { it.isNotBlank() }
     }
 
-    // MINIMAL Ayah mode: transparent surface, no card fills/borders/sheens.
-    // Spacing + hairline dividers only. Verse stays prominent.
+    // MINIMAL Quran-first Ayah mode: transparent surface, centered sacred typography,
+    // single clean header & quiet study footer.
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = 20.dp)
     ) {
-            if (hifzRange != null) {
-                val range = hifzRange!!
-                val loopStr = if (range.targetLoops == -1) "${range.currentLoop}/∞"
-                else "${range.currentLoop}/${range.targetLoops}"
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "RANGE ${range.startAyah}–${range.endAyah} • LOOP $loopStr",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp,
-                        color = GhaisNoir.TextTertiary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(22.dp)
-                            .clip(CircleShape)
-                            .noirClickable { AudioEngine.clearHifzRange() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Exit Range Loop",
-                            tint = GhaisNoir.TextTertiary,
-                            modifier = Modifier.size(12.dp)
-                        )
-                    }
-                }
-            }
-
-            // Header: single slim row — X ghost well + AYAH n + sync dot + surah. No pills.
+            // Single clean header: (X) + Surah · Ayah n + live dot  |  [Range pill] + [Hide/Peek]
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -258,47 +228,76 @@ fun NowPlayingLyricsCard(
                         }
                     }
 
-                    Text(
-                        text = "AYAH $displayAyahNo",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp,
-                        color = GhaisNoir.TextPrimary
-                    )
-
-                    // Sync state as a quiet dot only (no pill)
                     Box(
                         modifier = Modifier
-                            .size(5.dp)
+                            .size(6.dp)
                             .clip(CircleShape)
-                            .background(if (isPlaying) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary)
+                            .background(if (isPlaying) GhaisNoir.Lavender else GhaisNoir.TextTertiary)
                     )
 
-                    if (surahName.isNotBlank()) {
-                        Text(
-                            text = surahName,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = GhaisNoir.TextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    val refText = if (surahName.isNotBlank()) "$surahName · $displayAyahNo" else "Ayah $displayAyahNo"
+                    Text(
+                        text = refText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GhaisNoir.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
-                if (!isCurrentVerseUnavailable) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    BlindedRecallPill(
-                        blindOn = blindOn,
-                        onToggle = { blindOn = !blindOn }
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    if (hifzRange != null) {
+                        val range = hifzRange!!
+                        val loopStr = if (range.targetLoops == -1) "${range.currentLoop}/∞"
+                        else "${range.currentLoop}/${range.targetLoops}"
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier
+                                .clip(GhaisShapes.pill)
+                                .background(GhaisNoir.Lavender.copy(alpha = 0.14f))
+                                .border(1.dp, GhaisNoir.Lavender.copy(alpha = 0.30f), GhaisShapes.pill)
+                                .noirClickable { AudioEngine.clearHifzRange() }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "${range.startAyah}–${range.endAyah} · $loopStr",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = GhaisNoir.Lavender,
+                                maxLines = 1
+                            )
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Exit Range Loop",
+                                tint = GhaisNoir.Lavender,
+                                modifier = Modifier.size(11.dp)
+                            )
+                        }
+                    }
+
+                    if (!isCurrentVerseUnavailable) {
+                        BlindedRecallPill(
+                            blindOn = blindOn,
+                            onToggle = { blindOn = !blindOn }
+                        )
+                    }
                 }
             }
 
             if (isGapActive) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.Lavender.copy(alpha = 0.12f))
+                        .border(1.dp, GhaisNoir.Lavender.copy(alpha = 0.28f), GhaisShapes.pill)
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -306,7 +305,7 @@ fun NowPlayingLyricsCard(
                         text = "Recite aloud • ${gapCountdown}s",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = GhaisNoir.TextSecondary,
+                        color = GhaisNoir.Lavender,
                         modifier = Modifier.weight(1f, fill = false),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -314,62 +313,30 @@ fun NowPlayingLyricsCard(
                     Text(
                         text = "Skip",
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = GhaisNoir.TextTertiary,
+                        fontWeight = FontWeight.Bold,
+                        color = GhaisNoir.TextPrimary,
                         modifier = Modifier.noirClickable { AudioEngine.skipRecitationGap() }
                     )
                 }
             }
 
-            // Divider sandwich — 6dp gutters, not 12dp. This is the only
-            // unconditional chrome standing between the header and the verse, so
-            // every dp here is a dp the verse does not get. The header row and
-            // the banners already carry their own internal spacing, so a 12dp
-            // gutter was paying for the same separation twice; 6dp is still 6x
-            // the 1dp hairline and reads as a clean section break while handing
-            // ~12dp back to the verse (about a third of a 35sp line).
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)
                     .background(GhaisNoir.BorderGhost)
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Active verse — transparent, prominent. No inset, no indicator bar.
-            // Arabic Uthmani in quranScript (25.sp, RTL) + enclosed rosette, 2.0x line height.
-            // Basmalah header renders as a centered line above ayah 1 (except surahs 1 & 9).
-            //
-            // PARENT CONTRACT (NowPlayingScreen): the caller hands this card a full
-            // weight(1f, fill = true) slot directly under a near-fixed top gap
-            // (28dp + 0.10 elasticity). Two consequences this box must honour:
-            //
-            //  1. This column is weight(1f, fill = true) — it takes the whole
-            //     allocation instead of min(content, allocation), so the viewport
-            //     is deterministic (it stopped changing height every time the ayah
-            //     changed length, which is what made the card visibly jump
-            //     mid-playback) and always as tall as the parent allows rather
-            //     than as short as the text happens to need. Anything taller
-            //     still scrolls, so no line is stranded out of reach.
-            //  2. Content is TOP-aligned inside that slot and the card ends above
-            //     the transport chrome, so leftover height collects at the bottom
-            //     of the card: a short ayah reads as a compact block in the
-            //     upper-middle of the screen, and a long one (2:282) grows
-            //     downward and scrolls — it can never overlap or hide behind the
-            //     controls, which are the card's next sibling in the parent Column.
-            //
-            // key() so each verse starts at the top (see the note above); the scroll
-            // state itself is created inside, where a composable context exists.
             key(surahId, displayAyahNo) {
-            // Per-block reveal: scoped inside key() so each new ayah starts
-            // concealed again while the blindOn preference above survives.
             var arabicRevealed by remember { mutableStateOf(false) }
             var translationRevealed by remember { mutableStateOf(false) }
             var selectedPhraseIndex by remember { mutableStateOf<Int?>(null) }
             val waqfPhrases = remember(activeArabic) { splitAyahByWaqf(activeArabic) }
             val mutashabihat = remember(surahId, displayAyahNo) { mutashabihatFor(surahId, displayAyahNo) }
             Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f, fill = true)
@@ -378,12 +345,17 @@ fun NowPlayingLyricsCard(
                     val showBasmalahHeader =
                         displayAyahNo == 1 && QuranAyahRepository.hasBasmalahHeader(surahId)
                     if (isCurrentVerseUnavailable) {
+                        Spacer(modifier = Modifier.height(24.dp))
                         Text(
-                            text = if (surahId in loadingSurahs) "Loading ayah…" else "Ayah unavailable offline",
+                            text = if (surahId in loadingSurahs) "Loading ayah…" else "Ayah unavailable offline · Tap to retry",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Normal,
                             color = GhaisNoir.TextTertiary,
-                            lineHeight = 21.sp
+                            textAlign = TextAlign.Center,
+                            lineHeight = 21.sp,
+                            modifier = Modifier.noirClickable {
+                                QuranAyahRepository.prefetchSurah(surahId)
+                            }
                         )
                     } else {
                         if (mutashabihat.isNotEmpty()) {
@@ -397,18 +369,51 @@ fun NowPlayingLyricsCard(
                             val extraSuffix = if (mutashabihat.size > 1) " (+${mutashabihat.size - 1})" else ""
                             SimilarVerseBadge(
                                 text = "Similar verse · $refLabel$extraSuffix",
-                                modifier = Modifier.padding(bottom = 8.dp)
+                                modifier = Modifier.padding(bottom = 10.dp)
                             )
                         }
 
+                        val waqfPhrases = remember(activeArabic) { splitAyahByWaqf(activeArabic) }
+                        LaunchedEffect(surahId, displayAyahNo, waqfPhrases, waqfRepeatCount) {
+                            if (waqfRepeatCount > 1 && waqfPhrases.size > 1) {
+                                val weights = waqfPhrases.map { it.length.coerceAtLeast(1) }
+                                val existing = AudioEngine.waqfLoopState.value
+                                if (existing == null ||
+                                    existing.phraseWeights != weights ||
+                                    existing.repeatPerWaqf != waqfRepeatCount
+                                ) {
+                                    AudioEngine.setWaqfLoop(
+                                        phraseWeights = weights,
+                                        repeatPerWaqf = waqfRepeatCount,
+                                    )
+                                }
+                            } else {
+                                AudioEngine.clearWaqfLoop()
+                            }
+                        }
                         if (waqfPhrases.size > 1 && !(blindOn && !arabicRevealed)) {
                             WaqfPhraseChipsRow(
                                 phraseCount = waqfPhrases.size,
                                 selectedIndex = selectedPhraseIndex,
+                                playingPhraseIndex = waqfLoopState?.activePhraseIndex,
+                                currentRep = waqfLoopState?.currentRep ?: 1,
+                                repeatPerWaqf = waqfRepeatCount,
                                 onSelectPhrase = { idx ->
                                     selectedPhraseIndex = if (selectedPhraseIndex == idx) null else idx
+                                    if (waqfRepeatCount > 1) {
+                                        AudioEngine.jumpToWaqfPhrase(idx)
+                                    }
                                 },
-                                modifier = Modifier.padding(bottom = 8.dp)
+                                onCycleWaqfRepeat = {
+                                    val next = when (waqfRepeatCount) {
+                                        1 -> 2
+                                        2 -> 3
+                                        3 -> 5
+                                        else -> 1
+                                    }
+                                    AudioEngine.setWaqfRepeatCount(next)
+                                },
+                                modifier = Modifier.padding(bottom = 10.dp)
                             )
                         }
 
@@ -418,36 +423,33 @@ fun NowPlayingLyricsCard(
                             ?: activeArabic
                         val showAyahMark = selectedPhraseIndex == null || selectedPhraseIndex == waqfPhrases.lastIndex
 
-                        // Arabic block runs RTL (basmalah header + verse Row); translation stays LTR.
+                        // Centered Sacred Quran Block (Bismillah + Verse)
                         if (showBasmalahHeader || activeArabic.isNotBlank()) {
                             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                Column(modifier = Modifier.fillMaxWidth()) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
                                     if (showBasmalahHeader) {
                                         Text(
                                             text = QuranAyahRepository.BASMALAH,
                                             style = GhaisTypography.quranScript,
                                             fontSize = 21.sp,
                                             fontWeight = FontWeight.Normal,
-                                            color = GhaisNoir.TextSecondary,
+                                            color = GhaisNoir.Lavender.copy(alpha = 0.88f),
                                             textAlign = TextAlign.Center,
-                                            lineHeight = 42.sp,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(bottom = 8.dp)
+                                            lineHeight = 40.sp,
+                                            modifier = Modifier.fillMaxWidth()
                                         )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .width(42.dp)
+                                                .height(1.dp)
+                                                .background(GhaisNoir.Lavender.copy(alpha = 0.30f))
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
                                     }
-                                    // Arabic verse — QCF Hafs Uthmani text (100% white, RTL)
-                                    // with the enclosed end-of-ayah rosette glued to the
-                                    // last word (inline content). Normal weight:
-                                    // synthetic bold perturbs mark shaping on dense stacks.
-                                    // 25.sp stays and is not raised. With lineHeight pinned
-                                    // to a multiple of fontSize, scaling the font up costs
-                                    // visible words twice over: a bigger word covers more
-                                    // area, so fewer fit per line, while each line also eats
-                                    // a larger slice of the fixed-height viewport. Visible-word
-                                    // count therefore falls as fontSize rises, and that is the
-                                    // one thing this change cannot give back. Reclaimed height
-                                    // is spent on density, not scale — mushaf look intact.
                                     if (activeArabic.isNotBlank()) {
                                         if (blindOn && !arabicRevealed) {
                                             ConcealedVerseBlock(
@@ -455,226 +457,226 @@ fun NowPlayingLyricsCard(
                                                 onReveal = { arabicRevealed = true }
                                             )
                                         } else {
-                                        Text(
-                                            text = buildAnnotatedString {
-                                                append(displayedArabic)
-                                                if (showAyahMark) {
-                                                    appendAyahMark(displayAyahNo)
-                                                }
-                                            },
-                                            style = GhaisTypography.quranScript,
-                                            fontSize = 25.sp,
-                                            fontWeight = FontWeight.Normal,
-                                            color = GhaisNoir.TextPrimary,
-                                            // Start, not End: inside the Rtl provider
-                                            // above, End resolves to the LEFT edge.
-                                            textAlign = TextAlign.Start,
-                                            // QURAN_LINE_HEIGHT_RATIO (2.0x), not a
-                                            // hand-picked number. QCF Hafs' own designed
-                                            // line box is 1.758 em (hhea ascender 2400 /
-                                            // descender -1200 at upem 2048) — that headroom
-                                            // is what the calligrapher reserved for stacked
-                                            // tashkeel, so anything under it collides the
-                                            // marks of one line with the glyphs of the next.
-                                            // This surface was briefly tightened to 1.4x
-                                            // to buy lines; it looked denser and rendered
-                                            // the marks wrong, which is a far worse trade
-                                            // than scrolling a long ayah. The height comes
-                                            // from the parent's allocation and from the
-                                            // chrome toggle instead — see NowPlayingScreen.
-                                            lineHeight = (25 * GhaisTypography.QURAN_LINE_HEIGHT_RATIO).sp,
-                                            inlineContent = ayahMarkContent(ringSize = 19.sp, digitSize = 9.sp),
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
+                                            Text(
+                                                text = buildAnnotatedString {
+                                                    append(displayedArabic)
+                                                    if (showAyahMark) {
+                                                        appendAyahMark(displayAyahNo)
+                                                    }
+                                                },
+                                                style = GhaisTypography.quranScript,
+                                                fontSize = arabicFontSp.sp,
+                                                fontWeight = FontWeight.Normal,
+                                                color = GhaisNoir.TextPrimary,
+                                                textAlign = TextAlign.Center,
+                                                lineHeight = (arabicFontSp * GhaisTypography.QURAN_LINE_HEIGHT_RATIO).sp,
+                                                inlineContent = ayahMarkContent(
+                                                    ringSize = (arabicFontSp * 0.74f).sp,
+                                                    digitSize = (arabicFontSp * 0.35f).sp
+                                                ),
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
                                         }
                                     }
                                 }
                             }
                         }
 
-                        // English translation — secondary
+                        // Centered Translation
                         if (!translationText.isNullOrBlank()) {
-                            // 11dp, not 6dp. The Arabic block runs on the QCF line
-                            // box (2.0x) whose tashkeel headroom already reads as
-                            // trailing space, so a 6dp gutter visually collapsed to
-                            // almost nothing and the translation sat under the last
-                            // line of the ayah like a footnote — the two scripts read
-                            // as one dense grey mass. 11dp restores a clear section
-                            // break (still less than a third of one 50sp Arabic line)
-                            // so the translation can be scanned as its own block,
-                            // which is the last thing the user has to reach on a long
-                            // ayah. Fonts, sizes and colors are untouched.
-                            Spacer(modifier = Modifier.height(11.dp))
+                            Spacer(modifier = Modifier.height(14.dp))
                             if (blindOn && !translationRevealed) {
                                 ConcealedVerseBlock(
-                                    label = "Translation concealed — tap to reveal",
+                                    label = "Meaning concealed — tap to reveal",
                                     onReveal = { translationRevealed = true }
                                 )
                             } else {
                                 Text(
                                     text = translationText,
-                                    fontSize = 14.sp,
+                                    fontSize = translationFontSp.sp,
                                     fontWeight = FontWeight.Normal,
                                     color = GhaisNoir.TextSecondary,
-                                    lineHeight = 21.sp
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = (translationFontSp * 1.55f).sp,
+                                    modifier = Modifier.padding(horizontal = 6.dp)
                                 )
                             }
                         }
 
-                    // Blind self-test footer: Reveal-all (only while something
-                    // is still hidden) + Got it / Missed self-grade writing
-                    // straight to HifzMasteryStore for the verse this card
-                    // already resolved (surahId / displayAyahNo) — no new props.
-                    val arabicStillHidden = blindOn && activeArabic.isNotBlank() && !arabicRevealed
-                    val translationStillHidden = blindOn && !translationText.isNullOrBlank() && !translationRevealed
-                    if (blindOn && (arabicStillHidden || translationStillHidden)) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = "Reveal all",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = GhaisNoir.TextSecondary,
-                            modifier = Modifier.noirClickable {
-                                arabicRevealed = true
-                                translationRevealed = true
-                            }
-                        )
-                    }
-                    if (blindOn && !isCurrentVerseUnavailable) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        val currentStatus = masteryMap[surahId to displayAyahNo]
-                            ?: MasteryStatus.NEW
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            SelfGradeButton(
-                                text = "Got it",
-                                active = currentStatus == MasteryStatus.MASTERED,
-                                onGrade = {
-                                    HifzMasteryStore.setStatus(
-                                        surahId,
-                                        displayAyahNo,
-                                        MasteryStatus.MASTERED
-                                    )
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                            SelfGradeButton(
-                                text = "Missed",
-                                active = currentStatus == MasteryStatus.REVIEW_NEEDED,
-                                onGrade = {
-                                    HifzMasteryStore.setStatus(
-                                        surahId,
-                                        displayAyahNo,
-                                        MasteryStatus.REVIEW_NEEDED
-                                    )
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                    }
-
-                    // Translation switcher — the only way to change the edition
-                    // from inside the player, so it lives with the verse.
-                    //
-                    // Placement is deliberately AFTER the if/else above rather
-                    // than inside the translation branch: a blank translation is
-                    // exactly the case where the reader most needs to switch
-                    // (offline, a non-default edition that has not loaded, an
-                    // ayah the edition does not cover). Gating it on
-                    // `!translationText.isNullOrBlank()` would have made the
-                    // control disappear precisely when it is the only remedy.
-                    //
-                    // It rides inside the scrolling column so it scrolls with the
-                    // ayah instead of floating over the chrome, and it is
-                    // LTR (the RTL provider above is scoped to the Arabic block)
-                    // because the label is a romanised translation name.
-                    val openTranslationPicker = onOpenTranslationPicker
-                    // Blind toggle rides beside the translation pill: same row,
-                    // so the conceal control is found where the reading controls
-                    // live. Rendered whenever the verse is available even when
-                    // the picker is hidden (null), so blind mode never depends
-                    // on which overload hosted the card.
-                    val showBlindToggle = !isCurrentVerseUnavailable
-                    if (openTranslationPicker != null || showBlindToggle) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                        if (openTranslationPicker != null) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .weight(1f, fill = false)
-                                .widthIn(max = 280.dp)
-                                .clip(GhaisShapes.pill)
-                                .background(GhaisNoir.Fill2)
-                                .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
-                                .noirClickable { openTranslationPicker() }
-                                .padding(horizontal = 9.dp, vertical = 5.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Translate,
-                                contentDescription = null,
-                                tint = GhaisNoir.TextTertiary,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Spacer(modifier = Modifier.width(5.dp))
+                        // Blind self-test footer
+                        val arabicStillHidden = blindOn && activeArabic.isNotBlank() && !arabicRevealed
+                        val translationStillHidden = blindOn && !translationText.isNullOrBlank() && !translationRevealed
+                        if (blindOn && (arabicStillHidden || translationStillHidden)) {
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = translationLabel.ifBlank { "Translation" },
+                                text = "Reveal all",
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = GhaisNoir.TextSecondary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Default.ExpandMore,
-                                contentDescription = "Change translation",
-                                tint = GhaisNoir.TextTertiary,
-                                modifier = Modifier.size(14.dp)
+                                fontWeight = FontWeight.SemiBold,
+                                color = GhaisNoir.Lavender,
+                                modifier = Modifier.noirClickable {
+                                    arabicRevealed = true
+                                    translationRevealed = true
+                                }
                             )
                         }
-                        }
-                        if (showBlindToggle) {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(CircleShape)
-                                    .background(GhaisNoir.wellFill())
-                                    .border(
-                                        1.dp,
-                                        if (blindOn) GhaisNoir.SpecularTop else GhaisNoir.BorderCard,
-                                        CircleShape
-                                    )
-                                    .noirClickable { blindOn = !blindOn },
-                                contentAlignment = Alignment.Center
+                        if (blindOn && !isCurrentVerseUnavailable) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            val currentStatus = masteryMap[surahId to displayAyahNo]
+                                ?: MasteryStatus.NEW
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(
-                                    imageVector = if (blindOn) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (blindOn) "Show verse (blind mode on)" else "Hide verse for self-test",
-                                    tint = if (blindOn) GhaisNoir.TextPrimary else GhaisNoir.TextTertiary,
-                                    modifier = Modifier.size(14.dp)
+                                SelfGradeButton(
+                                    text = "Got it",
+                                    active = currentStatus == MasteryStatus.MASTERED,
+                                    onGrade = {
+                                        HifzMasteryStore.setStatus(
+                                            surahId,
+                                            displayAyahNo,
+                                            MasteryStatus.MASTERED
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                SelfGradeButton(
+                                    text = "Missed",
+                                    active = currentStatus == MasteryStatus.REVIEW_NEEDED,
+                                    onGrade = {
+                                        HifzMasteryStore.setStatus(
+                                            surahId,
+                                            displayAyahNo,
+                                            MasteryStatus.REVIEW_NEEDED
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
                         }
+                    }
+
+                    // Minimal centered study footer: borderless whisper-quiet links
+                    val openTranslationPicker = onOpenTranslationPicker
+                    val openTafseer = onOpenTafseer
+                    val showTafseer = openTafseer != null && !isCurrentVerseUnavailable
+                    if (openTranslationPicker != null || showTafseer) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (openTranslationPicker != null) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .weight(1f, fill = false)
+                                        .widthIn(max = 200.dp)
+                                        .clip(GhaisShapes.pill)
+                                        .noirClickable { openTranslationPicker() }
+                                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = translationLabel.ifBlank { "Translation" },
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = GhaisNoir.TextTertiary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    )
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.ExpandMore,
+                                        contentDescription = "Change translation",
+                                        tint = GhaisNoir.TextTertiary,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                            }
+                            if (openTranslationPicker != null && showTafseer) {
+                                Text(
+                                    text = "·",
+                                    fontSize = 11.sp,
+                                    color = GhaisNoir.TextDisabled
+                                )
+                            }
+                            if (showTafseer) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .clip(GhaisShapes.pill)
+                                        .noirClickable { openTafseer!!.invoke() }
+                                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AutoStories,
+                                        contentDescription = null,
+                                        tint = GhaisNoir.TextTertiary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Tafseer",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = GhaisNoir.TextTertiary,
+                                        maxLines = 1
+                                    )
+                                }
+                                Text(
+                                    text = "·",
+                                    fontSize = 11.sp,
+                                    color = GhaisNoir.TextDisabled
+                                )
+                            } else if (openTranslationPicker != null) {
+                                Text(
+                                    text = "·",
+                                    fontSize = 11.sp,
+                                    color = GhaisNoir.TextDisabled
+                                )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "A−",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (arabicFontSp > 22) GhaisNoir.TextTertiary else GhaisNoir.TextDisabled,
+                                    modifier = Modifier
+                                        .clip(GhaisShapes.pill)
+                                        .then(
+                                            if (arabicFontSp > 22) Modifier.noirClickable {
+                                                val next = (arabicFontSp - 3).coerceAtLeast(22)
+                                                arabicFontSp = next
+                                                playerSettings.putInt("ghais_player_quran_font_sp", next)
+                                            } else Modifier
+                                        )
+                                        .padding(horizontal = 4.dp, vertical = 4.dp)
+                                )
+                                Text(
+                                    text = "A+",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (arabicFontSp < 42) GhaisNoir.TextSecondary else GhaisNoir.TextDisabled,
+                                    modifier = Modifier
+                                        .clip(GhaisShapes.pill)
+                                        .then(
+                                            if (arabicFontSp < 42) Modifier.noirClickable {
+                                                val next = (arabicFontSp + 3).coerceAtMost(42)
+                                                arabicFontSp = next
+                                                playerSettings.putInt("ghais_player_quran_font_sp", next)
+                                            } else Modifier
+                                        )
+                                        .padding(horizontal = 4.dp, vertical = 4.dp)
+                                )
+                            }
                         }
                     }
             }
             }
-
-            // NEXT preview removed — [upcomingAyahVerse]/[onNextAyah] kept in signature
-            // for caller compatibility (NowPlayingScreen) but intentionally not rendered.
-            // Record & Compare removed — intentionally not rendered.
-            // Tools row (loop/tafseer/learning/download) removed for minimal —
-            // [onNextAyah]/[onPreviousAyah]/[onToggleAyahMode]/[onOpenTafseer]
-            // kept in signature but intentionally not rendered here.
     }
 }
 
@@ -752,7 +754,11 @@ private fun SimilarVerseBadge(
 private fun WaqfPhraseChipsRow(
     phraseCount: Int,
     selectedIndex: Int?,
+    playingPhraseIndex: Int?,
+    currentRep: Int,
+    repeatPerWaqf: Int,
     onSelectPhrase: (Int) -> Unit,
+    onCycleWaqfRepeat: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -771,14 +777,20 @@ private fun WaqfPhraseChipsRow(
         )
         for (idx in 0 until phraseCount) {
             val active = selectedIndex == idx
+            val isRepeatingThis = repeatPerWaqf > 1 && playingPhraseIndex == idx
             Box(
                 modifier = Modifier
                     .clip(GhaisShapes.pill)
-                    .background(if (active) GhaisNoir.Fill4 else GhaisNoir.Fill2)
-                    .border(
-                        1.dp,
-                        if (active) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
-                        GhaisShapes.pill
+                    .then(
+                        when {
+                            isRepeatingThis -> Modifier.background(GhaisNoir.lavenderFill())
+                            active -> Modifier
+                                .background(GhaisNoir.Fill4)
+                                .border(1.dp, GhaisNoir.SpecularTop, GhaisShapes.pill)
+                            else -> Modifier
+                                .background(GhaisNoir.Fill2)
+                                .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
+                        }
                     )
                     .noirClickable { onSelectPhrase(idx) }
                     .padding(horizontal = 8.dp, vertical = 3.dp),
@@ -787,10 +799,43 @@ private fun WaqfPhraseChipsRow(
                 Text(
                     text = "${idx + 1}",
                     fontSize = 11.sp,
-                    fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
-                    color = if (active) GhaisNoir.TextPrimary else GhaisNoir.TextSecondary
+                    fontWeight = if (active || isRepeatingThis) FontWeight.Bold else FontWeight.Medium,
+                    color = when {
+                        isRepeatingThis -> GhaisNoir.LavenderInk
+                        active -> GhaisNoir.TextPrimary
+                        else -> GhaisNoir.TextSecondary
+                    }
                 )
             }
+        }
+        // Repeat-each-Waqf pill: cycles 1× (off) -> 2× -> 3× -> 5× -> 1×
+        val repActive = repeatPerWaqf > 1
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier
+                .clip(GhaisShapes.pill)
+                .background(if (repActive) GhaisNoir.Lavender.copy(alpha = 0.16f) else GhaisNoir.Fill1)
+                .border(
+                    1.dp,
+                    if (repActive) GhaisNoir.Lavender.copy(alpha = 0.40f) else GhaisNoir.BorderGhost,
+                    GhaisShapes.pill
+                )
+                .noirClickable { onCycleWaqfRepeat() }
+                .padding(horizontal = 8.dp, vertical = 3.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.RepeatOne,
+                contentDescription = "Repeat each waqf",
+                tint = if (repActive) GhaisNoir.Lavender else GhaisNoir.TextTertiary,
+                modifier = Modifier.size(12.dp)
+            )
+            Text(
+                text = if (repActive) "$currentRep/$repeatPerWaqf×" else "1×",
+                fontSize = 10.5.sp,
+                fontWeight = if (repActive) FontWeight.Bold else FontWeight.Medium,
+                color = if (repActive) GhaisNoir.Lavender else GhaisNoir.TextTertiary
+            )
         }
     }
 }

@@ -47,7 +47,7 @@ object SchedulePlayback {
      *   service start lambda so it stays valid after the caller is gone.
      * @param scheduleId schedule id carried by the alarm intent.
      */
-    fun run(context: Context, scheduleId: String) {
+    fun run(context: Context, scheduleId: String, forcePlay: Boolean = false) {
         val appContext = try {
             context.applicationContext
         } catch (e: Exception) {
@@ -85,6 +85,29 @@ object SchedulePlayback {
 
             if (!found.enabled) {
                 fail(appContext, found, "Schedule $scheduleId disabled; not starting.")
+                return
+            }
+            val hifzPlan = try {
+                HifzListeningPlannerStore.planIdFromScheduleId(found.id)
+                    ?.let { HifzListeningPlannerStore.getPlan(it) }
+            } catch (_: Exception) {
+                null
+            }
+            if (hifzPlan != null && (forcePlay || found.autoStart)) {
+                val tracks = HifzListeningPlannerStore.buildSessionTracks(hifzPlan)
+                if (tracks.isEmpty()) {
+                    fail(appContext, found, "No playable tracks for listening plan ${hifzPlan.id}.")
+                    return
+                }
+                PlayerBridge.init(appContext)
+                if (PlayerBridge.onPlayRequested == null) {
+                    PlayerBridge.onPlayRequested = {
+                        QuranPlaybackService.start(appContext)
+                    }
+                    Log.i(TAG, "onPlayRequested wired to QuranPlaybackService.start")
+                }
+                AudioEngine.playListeningPlan(hifzPlan.id, tracks)
+                Log.i(TAG, "started listening plan ${hifzPlan.id} via $scheduleId with ${tracks.size} tracks")
                 return
             }
             if (!found.autoStart) {

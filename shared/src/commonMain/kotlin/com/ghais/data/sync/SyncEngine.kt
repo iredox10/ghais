@@ -505,10 +505,34 @@ object SyncEngine {
                         }
                     }
                     wasPlaying = playing
+                } else if (userId == null &&
+                    BackendConfig.isConfigured() &&
+                    onlineNow &&
+                    _status.value != SyncStatus.SYNCING
+                ) {
+                    val playing = AudioEngine.isPlaying.value
+                    val fingerprint = listeningStateFingerprint()
+                    val moved = fingerprint != lastPushed
+                    if ((moved && (playing || wasPlaying)) || reconnectFlush) {
+                        if (syncGuestDataIfEligible()) {
+                            reconnectFlush = false
+                            val after = listeningStateFingerprint()
+                            lastPushed = after
+                            quickRetries = if (after != fingerprint &&
+                                quickRetries < LISTENING_MAX_QUICK_RETRIES
+                            ) {
+                                quickRetries + 1
+                            } else {
+                                0
+                            }
+                            if (quickRetries > 0) nextDelayMs = LISTENING_PUSH_RETRY_MS
+                        }
+                    }
+                    wasPlaying = playing
                 } else {
-                    // Signed out / offline / busy: forget the fingerprint so a
-                    // returning session re-pushes instead of assuming the cloud
-                    // already holds this state.
+                    // Offline / busy: forget the fingerprint so a returning
+                    // session re-pushes instead of assuming the cloud already
+                    // holds this state.
                     lastPushed = null
                     wasPlaying = false
                 }
@@ -564,27 +588,37 @@ object SyncEngine {
     suspend fun uploadPlayEvents() {
         if (!BackendConfig.isConfigured()) return
         val userId = AuthRepository.session.value?.userId ?: return
+        uploadPlayEventsFor(databases(), logOwnerId = userId, remoteUserId = userId) {
+            AuthRepository.session.value?.userId == userId
+        }
+    }
+
+    private suspend fun uploadPlayEventsFor(
+        db: Databases,
+        logOwnerId: String,
+        remoteUserId: String,
+        isStillActive: () -> Boolean,
+    ) {
         if (!playEventsUploadLock.tryLock()) return
         try {
-            val events = PlayEventLog.pendingFor(userId)
-            val db = databases()
+            val events = PlayEventLog.pendingFor(logOwnerId)
             for (event in events) {
-                if (AuthRepository.session.value?.userId != userId) return
+                if (!isStillActive()) return
                 val data: Map<String, Any?> = buildMap {
                     put("reciterSlug", event.reciterSlug)
                     put("surahId", event.surahId)
                     put("ms", event.ms)
-                    put("ownerId", userId)
+                    put("ownerId", remoteUserId)
                     put("playedAtMs", event.playedAtMs)
                 }
                 try {
-                    db.createDocument(DB_ID, PLAY_EVENTS, event.eventId, data, expectedUserId = userId)
+                    db.createDocument(DB_ID, PLAY_EVENTS, event.eventId, data, expectedUserId = remoteUserId)
                 } catch (e: BackendException) {
                     if (e.code != 409) throw e
                     // A previous create may have succeeded before its response
                     // was lost. Verify that the existing row is ours before ack.
-                    val existing = db.getDocument(DB_ID, PLAY_EVENTS, event.eventId, expectedUserId = userId).data
-                    if (existing["ownerId"] != userId || existing["reciterSlug"] != event.reciterSlug ||
+                    val existing = db.getDocument(DB_ID, PLAY_EVENTS, event.eventId, expectedUserId = remoteUserId).data
+                    if (existing["ownerId"] != remoteUserId || existing["reciterSlug"] != event.reciterSlug ||
                         (existing["surahId"] as? Number)?.toInt() != event.surahId ||
                         (existing["ms"] as? Number)?.toLong() != event.ms ||
                         (existing["playedAtMs"] as? Number)?.toLong() != event.playedAtMs) throw e
@@ -602,21 +636,33 @@ object SyncEngine {
     suspend fun uploadAppEvents() {
         if (!BackendConfig.isConfigured()) return
         val userId = AuthRepository.session.value?.userId ?: return
+        uploadAppEventsFor(databases(), remoteUserId = userId) {
+            AuthRepository.session.value?.userId == userId
+        }
+    }
+
+    private suspend fun uploadAppEventsFor(
+        db: Databases,
+        remoteUserId: String,
+        isStillActive: () -> Boolean,
+    ) {
         if (!appEventsUploadLock.tryLock()) return
         try {
             val events = com.ghais.analytics.BatchHookTracker.pending(limit = 50)
             if (events.isEmpty()) return
-            val db = databases()
             for (ev in events) {
-                if (AuthRepository.session.value?.userId != userId) return
+                if (!isStillActive()) return
                 val data: Map<String, Any?> = buildMap {
                     put("event", ev.event)
-                    put("user_id", userId)
+                    put("user_id", remoteUserId)
+                    put("device_id", UserUsageRepository.deviceId())
+                    put("platform", BackendPlatform.name)
+                    put("app_version", BackendPlatform.appVersion())
                     put("props", ev.props)
                     put("ts_ms", ev.tsMs)
                 }
                 try {
-                    db.createDocument(DB_ID, APP_EVENTS, ev.eventId, data, expectedUserId = userId)
+                    db.createDocument(DB_ID, APP_EVENTS, ev.eventId, data, expectedUserId = remoteUserId)
                 } catch (e: BackendException) {
                     if (e.code != 409) throw e
                 }
@@ -626,6 +672,73 @@ object SyncEngine {
             Log.w(TAG, "app_events upload failed; events remain queued.", e)
         } finally {
             appEventsUploadLock.unlock()
+        }
+    }
+
+    private val guestSyncLock = Mutex()
+
+    /**
+     * Uploads usage, stats, history, play/app events, and device telemetry for
+     * non-logged-in (guest) users using a silent device-scoped session so the
+     * admin dashboard receives full analytics even before sign-up.
+     *
+     * Push-only: never overwrites local pre-auth stores or owner bindings.
+     */
+    suspend fun syncGuestDataIfEligible(): Boolean {
+        if (!BackendConfig.isConfigured()) return false
+        if (AuthRepository.session.value != null) return false
+        if (!NetworkMonitor.isOnline.value) return false
+        if (!guestSyncLock.tryLock()) return false
+        return try {
+            withContext(Dispatchers.Default) {
+                var guest = com.ghais.data.auth.GuestTelemetrySession.ensureSession() ?: return@withContext false
+                var guestDb = Databases(accessTokenOverride = guest.accessToken)
+                val guestId = guest.userId
+                val stillGuest = { AuthRepository.session.value == null }
+
+                suspend fun runGuestCollection(name: String, block: suspend (Databases) -> Unit): Boolean {
+                    return try {
+                        block(guestDb)
+                        true
+                    } catch (e: BackendException) {
+                        if (e.code == 401) {
+                            val refreshed = com.ghais.data.auth.GuestTelemetrySession.ensureSession(forceRefresh = true)
+                            if (refreshed != null) {
+                                guest = refreshed
+                                guestDb = Databases(accessTokenOverride = refreshed.accessToken)
+                                try {
+                                    block(guestDb)
+                                    return true
+                                } catch (_: Exception) { }
+                            }
+                        }
+                        if (!isNotFound(e)) Log.w(TAG, "guest $name push failed", e)
+                        false
+                    } catch (e: Exception) {
+                        if (!isNotFound(e)) Log.w(TAG, "guest $name push failed", e)
+                        false
+                    }
+                }
+
+                var ok = true
+                ok = runGuestCollection(STATS) { pushStats(it, guestId, cloudHasData = true) } && ok
+                ok = runGuestCollection(HISTORY) { pushHistory(it, guestId, cloudHasData = true) } && ok
+                runGuestCollection(PLAY_EVENTS) {
+                    uploadPlayEventsFor(it, logOwnerId = "local", remoteUserId = guestId, isStillActive = stillGuest)
+                }
+                runGuestCollection(APP_EVENTS) {
+                    uploadAppEventsFor(it, remoteUserId = guestId, isStillActive = stillGuest)
+                }
+                runGuestCollection(SEARCH_HISTORY) { pushSearchHistory(it, guestId, cloudHasData = true) }
+                runGuestCollection(KHATMA) { pushKhatma(it, guestId, cloudHasData = true) }
+                runGuestCollection(TELEMETRY) { pushTelemetryIfDue(it, guestId) }
+                ok
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "guest telemetry sync failed", e)
+            false
+        } finally {
+            guestSyncLock.unlock()
         }
     }
 

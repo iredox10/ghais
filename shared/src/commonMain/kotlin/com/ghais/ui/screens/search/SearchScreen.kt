@@ -686,8 +686,15 @@ class SearchScreen : Screen {
                                 item(key = "ayah-${ayahRef.surahId}-${ayahRef.ayahNo}") {
                                     AyahQuickPlayCard(
                                         ayahRef = ayahRef,
-                                        onClick = { navigator.push(SurahDetailScreen(ayahRef.surahId)) },
-                                        onPlay = { playWithCurrentReciter(ayahRef.surahId) }
+                                        onClick = {
+                                            navigator.push(
+                                                SurahDetailScreen(
+                                                    surahId = ayahRef.surahId,
+                                                    initialAyah = ayahRef.ayahNo
+                                                )
+                                            )
+                                        },
+                                        onPlay = { playAyahHit(ayahRef.surahId, ayahRef.ayahNo) }
                                     )
                                 }
                             }
@@ -729,7 +736,14 @@ class SearchScreen : Screen {
                                 ) { hit ->
                                     AyahTextHitRow(
                                         hit = hit,
-                                        onOpen = { navigator.push(SurahDetailScreen(hit.surahId)) },
+                                        onOpen = {
+                                            navigator.push(
+                                                SurahDetailScreen(
+                                                    surahId = hit.surahId,
+                                                    initialAyah = hit.ayahNo
+                                                )
+                                            )
+                                        },
                                         onPlay = { playAyahHit(hit.surahId, hit.ayahNo) }
                                     )
                                 }
@@ -911,8 +925,7 @@ private fun SearchFilterChipsRow(
                 Box(
                     modifier = Modifier
                         .clip(GhaisShapes.pill)
-                        .background(GhaisNoir.chromeFill())
-                        .border(1.dp, Color.White.copy(alpha = 0.35f), GhaisShapes.pill)
+                        .background(GhaisNoir.lavenderFill())
                         .noirClickable { onFilterSelected(filter) }
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     contentAlignment = Alignment.Center
@@ -920,8 +933,8 @@ private fun SearchFilterChipsRow(
                     Text(
                         text = filter,
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = GhaisNoir.OnChrome
+                        fontWeight = FontWeight.Bold,
+                        color = GhaisNoir.LavenderInk
                     )
                 }
             } else {
@@ -1695,43 +1708,85 @@ fun AyahQuickPlayCard(
     onClick: () -> Unit = {},
     onPlay: () -> Unit = {}
 ) {
-    NoirCard(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick
+    val surah = remember(ayahRef.surahId) {
+        QuranData.SURAHS.find { it.id == ayahRef.surahId }
+    }
+    val cacheGen by QuranAyahRepository.cacheGen.collectAsState()
+    val verse = remember(ayahRef.surahId, ayahRef.ayahNo, cacheGen) {
+        QuranAyahRepository.getAyahImmediate(ayahRef.surahId, ayahRef.ayahNo)
+    }
+    val shape = GhaisShapes.card
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(GhaisNoir.plumFill())
+            .background(GhaisNoir.sheen())
+            .border(1.dp, GhaisNoir.SpecularTop.copy(alpha = 0.28f), shape)
+            .noirClickable(onClick)
+            .padding(18.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val surah = QuranData.SURAHS.find { it.id == ayahRef.surahId }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Ayah reference found",
-                    color = GhaisNoir.TextTertiary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "${surah?.nameEn} • Ayah ${ayahRef.ayahNo}",
-                    color = GhaisNoir.TextPrimary,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    "Surah ${ayahRef.surahId} • Ayah ${ayahRef.ayahNo}",
-                    color = GhaisNoir.TextSecondary,
-                    fontSize = 12.sp
-                )
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "AYAH REFERENCE • ${ayahRef.surahId}:${ayahRef.ayahNo}",
+                        color = GhaisNoir.Lavender,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "${surah?.nameEn ?: "Surah ${ayahRef.surahId}"} • Ayah ${ayahRef.ayahNo}",
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "Tap to open in Surah • Play to memorize",
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 11.5.sp
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(GhaisNoir.lavenderFill())
+                        .noirClickable(onPlay),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Play Ayah ${ayahRef.surahId}:${ayahRef.ayahNo}",
+                        tint = GhaisNoir.LavenderInk,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
-            Spacer(modifier = Modifier.width(12.dp))
-            ChromeFab(
-                icon = Icons.Default.PlayArrow,
-                onClick = onPlay,
-                size = 48.dp,
-                contentDescription = "Play Ayah"
-            )
+            if (!verse.isPlaceholder && verse.textUthmani.isNotBlank()) {
+                Spacer(Modifier.height(12.dp))
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    Text(
+                        text = verse.textUthmani,
+                        fontFamily = GhaisTypography.quranFont,
+                        fontSize = 18.sp,
+                        lineHeight = 34.sp,
+                        color = GhaisNoir.TextPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
         }
     }
 }

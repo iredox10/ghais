@@ -1,19 +1,20 @@
 package com.ghais.ui.screens.memorization
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,14 +25,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
@@ -48,10 +47,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,6 +62,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import com.ghais.data.repository.HifzListeningPlan
 import com.ghais.data.repository.HifzListeningPlannerStore
+import com.ghais.data.repository.HifzListeningPlannerStore.PlanCompletionEvent
 import com.ghais.data.repository.QuranDataRepository
 import com.ghais.data.seed.EveryAyahReciters
 import com.ghais.player.AudioEngine
@@ -71,10 +75,12 @@ import com.ghais.ui.components.noir.NoirScreenRoot
 import com.ghais.ui.components.noir.NoirSectionHeader
 import com.ghais.ui.components.noir.NoirSegmentedProgress
 import com.ghais.ui.components.noir.noirClickable
+import com.ghais.ui.components.noir.topSpecular
 import com.ghais.ui.navigation.LocalRootNavigator
 import com.ghais.ui.screens.player.NowPlayingScreen
 import com.ghais.ui.screens.reciters.NoirReciterAvatar
 import com.ghais.ui.screens.reciters.photoForSlug
+import com.ghais.ui.theme.GhaisColors
 import com.ghais.ui.theme.GhaisNoir
 import com.ghais.ui.theme.GhaisShapes
 
@@ -87,6 +93,7 @@ class HifzListeningPlannerScreen(
         val navigator = LocalNavigator.current
         val rootNavigator = LocalRootNavigator.current ?: navigator?.parent ?: navigator
         val plans by HifzListeningPlannerStore.plans.collectAsState()
+        val completionEvent by HifzListeningPlannerStore.lastCompletionEvent.collectAsState()
         val epochDay = remember { HifzListeningPlannerStore.currentEpochDay() }
         val currentTrack by AudioEngine.currentTrack.collectAsState()
         val bottomDockPadding = if (currentTrack != null) 200.dp else 112.dp
@@ -113,93 +120,308 @@ class HifzListeningPlannerScreen(
         }
 
         NoirScreenRoot {
-            Column(modifier = Modifier.fillMaxSize()) {
-                NoirNavBar(
-                    title = if (editingPlan != null) "Create Plan" else "Listening Planner",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    onBack = {
-                        if (editingPlan != null && plans.isNotEmpty()) {
-                            editingPlan = null
-                        } else {
-                            navigator?.pop()
-                        }
-                    },
-                    backIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                    actions = {
-                        if (editingPlan == null) {
-                            NoirNavButton(
-                                icon = Icons.Filled.Add,
-                                contentDescription = "Create new listening plan",
-                                onClick = {
-                                    editingPlan = HifzListeningPlan(
-                                        id = HifzListeningPlannerStore.newId(),
-                                        reciterSlugs = emptyList(),
-                                        surahIds = emptyList(),
-                                        timesPerSession = 3,
-                                        sessionsPerDay = 2,
-                                        durationDays = 7,
-                                        startEpochDay = epochDay,
-                                        reminderEnabled = true,
-                                        reminderHour = 20,
-                                        reminderMinute = 0,
-                                    )
-                                }
-                            )
-                        }
-                    }
-                )
-
-                val draft = editingPlan
-                if (draft != null) {
-                    PlanEditorBody(
-                        initialPlan = draft,
-                        bottomPadding = bottomDockPadding,
-                        onSave = { saved ->
-                            HifzListeningPlannerStore.savePlan(saved)
-                            editingPlan = null
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    NoirNavBar(
+                        title = if (editingPlan != null) "Create Plan" else "Listening Planner",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        onBack = {
+                            if (editingPlan != null && plans.isNotEmpty()) {
+                                editingPlan = null
+                            } else {
+                                navigator?.pop()
+                            }
                         },
-                        onCancel = if (plans.isNotEmpty()) {
-                            { editingPlan = null }
-                        } else null
-                    )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 20.dp,
-                            end = 20.dp,
-                            top = 12.dp,
-                            bottom = bottomDockPadding
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        item(key = "planner_overview") {
-                            val completedToday = plans.count { it.isDayCompleted(epochDay) }
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                NoirSectionHeader(
-                                    label = if (plans.size == 1) "Active Plan" else "Active Plans • ${plans.size}",
-                                    actionLabel = "$completedToday/${plans.size} done today",
-                                    onAction = null
+                        backIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                        actions = {
+                            if (editingPlan == null) {
+                                NoirNavButton(
+                                    icon = Icons.Filled.Add,
+                                    contentDescription = "Create new listening plan",
+                                    onClick = {
+                                        editingPlan = HifzListeningPlan(
+                                            id = HifzListeningPlannerStore.newId(),
+                                            reciterSlugs = emptyList(),
+                                            surahIds = emptyList(),
+                                            timesPerSession = 3,
+                                            sessionsPerDay = 2,
+                                            durationDays = 7,
+                                            startEpochDay = epochDay,
+                                            reminderEnabled = true,
+                                            reminderHour = 20,
+                                            reminderMinute = 0,
+                                        )
+                                    }
                                 )
                             }
                         }
-                        items(plans, key = { it.id }) { plan ->
-                            ListeningPlanCard(
-                                plan = plan,
-                                epochDay = epochDay,
-                                onListen = {
-                                    val tracks = HifzListeningPlannerStore.buildSessionTracks(plan)
-                                    if (tracks.isNotEmpty()) {
-                                        AudioEngine.playListeningPlan(plan.id, tracks)
-                                        rootNavigator?.push(NowPlayingScreen())
-                                    }
-                                },
-                                onEdit = { editingPlan = plan },
-                                onDelete = { HifzListeningPlannerStore.deletePlan(plan.id) },
+                    )
+
+                    val draft = editingPlan
+                    if (draft != null) {
+                        PlanEditorBody(
+                            initialPlan = draft,
+                            bottomPadding = bottomDockPadding,
+                            onSave = { saved ->
+                                HifzListeningPlannerStore.savePlan(saved)
+                                editingPlan = null
+                            },
+                            onCancel = if (plans.isNotEmpty()) {
+                                { editingPlan = null }
+                            } else null
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 20.dp,
+                                end = 20.dp,
+                                top = 12.dp,
+                                bottom = bottomDockPadding
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            if (plans.isNotEmpty()) {
+                                item(key = "planner_hero_streak") {
+                                    PlannerHeroStreakCard(
+                                        plans = plans,
+                                        epochDay = epochDay
+                                    )
+                                }
+                            }
+                            item(key = "planner_overview") {
+                                val completedToday = plans.count { it.isDayCompleted(epochDay) }
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    NoirSectionHeader(
+                                        label = if (plans.size == 1) "Active Plan" else "Active Plans • ${plans.size}",
+                                        actionLabel = "$completedToday/${plans.size} done today",
+                                        onAction = null
+                                    )
+                                }
+                            }
+                            items(plans, key = { it.id }) { plan ->
+                                ListeningPlanCard(
+                                    plan = plan,
+                                    epochDay = epochDay,
+                                    onListen = {
+                                        val tracks = HifzListeningPlannerStore.buildSessionTracks(plan)
+                                        if (tracks.isNotEmpty()) {
+                                            AudioEngine.playListeningPlan(plan.id, tracks)
+                                            rootNavigator?.push(NowPlayingScreen())
+                                        }
+                                    },
+                                    onEdit = { editingPlan = plan },
+                                    onDelete = { HifzListeningPlannerStore.deletePlan(plan.id) },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                val event = completionEvent
+                if (event != null) {
+                    PlanCompletionCelebrationOverlay(
+                        event = event,
+                        onDismiss = { HifzListeningPlannerStore.dismissCompletionEvent() }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlannerHeroStreakCard(
+    plans: List<HifzListeningPlan>,
+    epochDay: Long,
+) {
+    val currentStreak = remember(plans, epochDay) {
+        plans.maxOfOrNull { it.streakDays(epochDay) } ?: 0
+    }
+    val bestStreak = remember(plans) {
+        plans.maxOfOrNull { it.bestStreakDays() } ?: 0
+    }
+    val totalDoneToday = remember(plans, epochDay) {
+        plans.sumOf { it.sessionsDoneOn(epochDay) }
+    }
+    val totalGoalToday = remember(plans) {
+        plans.sumOf { it.sessionsPerDay.coerceAtLeast(1) }.coerceAtLeast(1)
+    }
+    val progress = (totalDoneToday.toFloat() / totalGoalToday.toFloat()).coerceIn(0f, 1f)
+    val allDoneToday = progress >= 1f
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(durationMillis = 600),
+        label = "hero_ring_progress"
+    )
+    val last7Days = remember(epochDay) {
+        (6L downTo 0L).map { offset -> epochDay - offset }
+    }
+
+    val accentBorder = if (allDoneToday) {
+        GhaisColors.MintGlow.copy(alpha = 0.45f)
+    } else {
+        GhaisNoir.Lavender.copy(alpha = 0.35f)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(GhaisShapes.cardLarge)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        GhaisNoir.PlumTop.copy(alpha = 0.36f),
+                        GhaisNoir.CardTintBottom
+                    )
+                )
+            )
+            .border(1.dp, accentBorder, GhaisShapes.cardLarge)
+            .topSpecular(inset = 28.dp)
+            .padding(18.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (allDoneToday) "TODAY'S GOAL COMPLETE" else "DAILY HABIT",
+                        color = if (allDoneToday) GhaisColors.MintGlow else GhaisNoir.Lavender,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = if (currentStreak > 0) "🔥 $currentStreak Day Streak" else "Start Your Streak",
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "Best streak: $bestStreak ${if (bestStreak == 1) "day" else "days"}",
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+
+                Box(
+                    modifier = Modifier.size(64.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val ringColor = if (allDoneToday) GhaisColors.MintGlow else GhaisNoir.Lavender
+                    Canvas(modifier = Modifier.size(64.dp)) {
+                        val strokePx = 5.dp.toPx()
+                        if (allDoneToday) {
+                            drawCircle(
+                                color = GhaisColors.MintGlow.copy(alpha = 0.14f),
+                                radius = size.minDimension / 2f
                             )
                         }
+                        drawArc(
+                            color = GhaisNoir.Fill3,
+                            startAngle = 0f,
+                            sweepAngle = 360f,
+                            useCenter = false,
+                            style = Stroke(width = strokePx)
+                        )
+                        if (animatedProgress > 0f) {
+                            drawArc(
+                                color = ringColor,
+                                startAngle = -90f,
+                                sweepAngle = 360f * animatedProgress,
+                                useCenter = false,
+                                style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                            )
+                        }
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "$totalDoneToday/$totalGoalToday",
+                            color = GhaisNoir.TextPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            text = "today",
+                            color = GhaisNoir.TextTertiary,
+                            fontSize = 9.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // 7-Day Habit Chain
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                last7Days.forEach { day ->
+                    val completed = plans.any { it.isDayCompleted(day) }
+                    val isToday = day == epochDay
+                    val hasPartial = !completed && plans.any { it.sessionsDoneOn(day) > 0 }
+                    val dayLabel = if (isToday) "Today" else "-${epochDay - day}d"
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    when {
+                                        completed -> GhaisColors.MintGlow.copy(alpha = 0.22f)
+                                        isToday -> GhaisNoir.Lavender.copy(alpha = 0.16f)
+                                        else -> GhaisNoir.Fill2
+                                    }
+                                )
+                                .border(
+                                    width = if (isToday || completed) 1.5.dp else 1.dp,
+                                    color = when {
+                                        completed -> GhaisColors.MintGlow
+                                        isToday -> GhaisNoir.Lavender
+                                        else -> GhaisNoir.BorderGhost
+                                    },
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            when {
+                                completed -> Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = "Completed",
+                                    tint = GhaisColors.MintGlow,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                hasPartial || isToday -> Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(GhaisNoir.Lavender)
+                                )
+                            }
+                        }
+                        Text(
+                            text = dayLabel,
+                            color = when {
+                                completed -> GhaisColors.MintGlow
+                                isToday -> GhaisNoir.Lavender
+                                else -> GhaisNoir.TextTertiary
+                            },
+                            fontSize = 10.sp,
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Medium
+                        )
                     }
                 }
             }
@@ -220,7 +442,9 @@ private fun ListeningPlanCard(
     val goalToday = plan.sessionsPerDay.coerceAtLeast(1)
     val dayCompleted = plan.isDayCompleted(epochDay)
     val dayNumber = plan.currentDayNumber(epochDay)
-    val progress = (doneToday.toFloat() / goalToday.toFloat()).coerceIn(0f, 1f)
+    val progress = plan.dailyProgressFraction(epochDay).coerceIn(0f, 1f)
+    val streak = plan.streakDays(epochDay)
+    val estMinutes = plan.estimatedMinutesPerSession()
 
     val reciterList = remember(plan.reciterSlugs) {
         plan.reciterSlugs.mapNotNull { slug ->
@@ -249,9 +473,23 @@ private fun ListeningPlanCard(
         }
     }
 
-    NoirCard(modifier = Modifier.fillMaxWidth()) {
+    val cardGlowBorder = if (dayCompleted) {
+        GhaisColors.MintGlow.copy(alpha = 0.45f)
+    } else {
+        GhaisNoir.Lavender.copy(alpha = 0.35f)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(GhaisShapes.cardNoir)
+            .background(GhaisNoir.cardFill())
+            .border(1.dp, cardGlowBorder, GhaisShapes.cardNoir)
+            .topSpecular()
+            .padding(20.dp)
+    ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Header: title + day/qari subtitle + compact edit/delete actions
+            // Header: title + status badges + compact edit/delete actions
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -260,7 +498,7 @@ private fun ListeningPlanCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
                             text = cardTitle,
@@ -275,12 +513,28 @@ private fun ListeningPlanCard(
                             Box(
                                 modifier = Modifier
                                     .clip(GhaisShapes.pill)
-                                    .background(GhaisNoir.Fill3)
-                                    .border(1.dp, GhaisNoir.SpecularTop, GhaisShapes.pill)
+                                    .background(GhaisColors.MintGlow.copy(alpha = 0.16f))
+                                    .border(1.dp, GhaisColors.MintGlow.copy(alpha = 0.45f), GhaisShapes.pill)
                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                             ) {
                                 Text(
-                                    text = "Done",
+                                    text = "✓ Goal Hit",
+                                    color = GhaisColors.MintGlow,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        if (streak > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(GhaisShapes.pill)
+                                    .background(GhaisNoir.Lavender.copy(alpha = 0.14f))
+                                    .border(1.dp, GhaisNoir.Lavender.copy(alpha = 0.30f), GhaisShapes.pill)
+                                    .padding(horizontal = 7.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "🔥 ${streak}d",
                                     color = GhaisNoir.Lavender,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold
@@ -290,10 +544,17 @@ private fun ListeningPlanCard(
                     }
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        text = "Day $dayNumber/${plan.durationDays} • ${reciterList.take(2).joinToString(", ")}" +
+                        text = "Day $dayNumber of ${plan.durationDays} • ~${estMinutes} min/session",
+                        color = GhaisNoir.TextSecondary,
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = reciterList.take(2).joinToString(", ") +
                             if (reciterList.size > 2) " +${reciterList.size - 2}" else "",
                         color = GhaisNoir.TextTertiary,
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -368,15 +629,15 @@ private fun ListeningPlanCard(
                 )
             }
 
-            // Progress + compact Listen action
+            // Progress + prominent Listen Now CTA
             Spacer(Modifier.height(12.dp))
             NoirSegmentedProgress(
                 progress = progress,
-                trackHeight = 4.dp,
-                lavender = true,
+                trackHeight = 5.dp,
+                lavender = !dayCompleted,
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -390,24 +651,26 @@ private fun ListeningPlanCard(
                 Row(
                     modifier = Modifier
                         .clip(GhaisShapes.pill)
-                        .background(GhaisNoir.chromeFill())
-                        .border(1.dp, Color.White.copy(alpha = 0.35f), GhaisShapes.pill)
+                        .background(
+                            if (dayCompleted) GhaisNoir.chromeFill() else GhaisNoir.lavenderFill()
+                        )
+                        .border(1.dp, Color.White.copy(alpha = 0.40f), GhaisShapes.pill)
                         .noirClickable(onListen)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
                         contentDescription = null,
-                        tint = GhaisNoir.OnChrome,
+                        tint = if (dayCompleted) GhaisNoir.OnChrome else GhaisNoir.LavenderInk,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = if (dayCompleted) "Listen Again" else "Listen",
-                        color = GhaisNoir.OnChrome,
+                        text = if (dayCompleted) "Listen Again (~${estMinutes}m)" else "Listen Now (~${estMinutes}m)",
+                        color = if (dayCompleted) GhaisNoir.OnChrome else GhaisNoir.LavenderInk,
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -447,25 +710,6 @@ private fun PlanStatTile(
     }
 }
 
-@Composable
-private fun PlanMetaChip(text: String) {
-    Box(
-        modifier = Modifier
-            .clip(GhaisShapes.pill)
-            .background(GhaisNoir.Fill2)
-            .border(1.dp, GhaisNoir.BorderGhost, GhaisShapes.pill)
-            .padding(horizontal = 9.dp, vertical = 4.dp)
-    ) {
-        Text(
-            text = text,
-            color = GhaisNoir.TextSecondary,
-            fontSize = 11.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PlanEditorBody(
@@ -483,6 +727,8 @@ private fun PlanEditorBody(
     var reminderEnabled by remember(initialPlan.id) { mutableStateOf(initialPlan.reminderEnabled) }
     var reminderHour by remember(initialPlan.id) { mutableStateOf(initialPlan.reminderHour) }
     var reminderMinute by remember(initialPlan.id) { mutableStateOf(initialPlan.reminderMinute) }
+    var autoPlayOnSchedule by remember(initialPlan.id) { mutableStateOf(initialPlan.autoPlayOnSchedule) }
+    var escalateReminder by remember(initialPlan.id) { mutableStateOf(initialPlan.escalateReminder) }
 
     var qariQuery by remember { mutableStateOf("") }
     var surahQuery by remember { mutableStateOf("") }
@@ -508,6 +754,14 @@ private fun PlanEditorBody(
                 it.nameAr.contains(q) ||
                 it.id.toString() == q
         }
+    }
+
+    val previewEstMin = remember(selectedSurahs, timesPerSession) {
+        HifzListeningPlan(
+            id = "preview",
+            surahIds = selectedSurahs,
+            timesPerSession = timesPerSession,
+        ).estimatedMinutesPerSession()
     }
 
     val canSave = selectedReciters.isNotEmpty() && selectedSurahs.isNotEmpty()
@@ -585,7 +839,7 @@ private fun PlanEditorBody(
                                 color = if (isSelected) Color.White else GhaisNoir.TextPrimary,
                                 fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                textAlign = TextAlign.Center,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                                 lineHeight = 14.sp
@@ -712,7 +966,7 @@ private fun PlanEditorBody(
             }
         }
 
-        // 4. Schedule & Reminder
+        // 4. Schedule, Habit Anchors & Automation
         item(key = "editor_schedule") {
             Column(modifier = Modifier.fillMaxWidth()) {
                 NoirSectionHeader(label = "Schedule")
@@ -721,6 +975,26 @@ private fun PlanEditorBody(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        // Live Commitment Summary badge
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(GhaisShapes.pill)
+                                .background(GhaisNoir.Lavender.copy(alpha = 0.14f))
+                                .border(1.dp, GhaisNoir.Lavender.copy(alpha = 0.30f), GhaisShapes.pill)
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "~$previewEstMin min/session • ${sessionsPerDay}x/day • $durationDays days",
+                                color = GhaisNoir.Lavender,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
                         StepperRow(
                             label = "Repeat",
                             subtitle = "Times per session",
@@ -745,36 +1019,45 @@ private fun PlanEditorBody(
                             onDecrement = { if (durationDays > 1) durationDays-- },
                             onIncrement = { if (durationDays < 365) durationDays++ }
                         )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Daily reminder",
-                                    color = GhaisNoir.TextPrimary,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = "Alert if today's goal isn't done",
-                                    color = GhaisNoir.TextTertiary,
-                                    fontSize = 11.sp
-                                )
-                            }
-                            Switch(
-                                checked = reminderEnabled,
-                                onCheckedChange = { reminderEnabled = it },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.Black,
-                                    checkedTrackColor = Color.White,
-                                    uncheckedThumbColor = GhaisNoir.TextSecondary,
-                                    uncheckedTrackColor = GhaisNoir.Fill2
-                                )
-                            )
-                        }
+
+                        EditorToggleRow(
+                            title = "Daily reminder",
+                            subtitle = "Alert if today's goal isn't done",
+                            checked = reminderEnabled,
+                            onCheckedChange = { reminderEnabled = it }
+                        )
+
                         if (reminderEnabled) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = "1-Tap Habit Anchors",
+                                    color = GhaisNoir.TextTertiary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                val anchors = listOf(
+                                    Triple("After Fajr 05:30", 5, 30),
+                                    Triple("Morning 08:30", 8, 30),
+                                    Triple("After Asr 16:00", 16, 0),
+                                    Triple("Before Sleep 22:00", 22, 0),
+                                )
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    items(anchors, key = { it.first }) { (label, h, m) ->
+                                        val selected = reminderHour == h && reminderMinute == m
+                                        PresetChip(
+                                            label = label,
+                                            selected = selected,
+                                            onClick = {
+                                                reminderHour = h
+                                                reminderMinute = m
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -798,6 +1081,20 @@ private fun PlanEditorBody(
                                     modifier = Modifier.weight(1f)
                                 )
                             }
+
+                            EditorToggleRow(
+                                title = "Auto-start playback",
+                                subtitle = "Start recitation automatically at reminder time",
+                                checked = autoPlayOnSchedule,
+                                onCheckedChange = { autoPlayOnSchedule = it }
+                            )
+
+                            EditorToggleRow(
+                                title = "Last-call escalation",
+                                subtitle = "Send a second nudge before midnight if skipped",
+                                checked = escalateReminder,
+                                onCheckedChange = { escalateReminder = it }
+                            )
                         }
                     }
                 }
@@ -831,10 +1128,154 @@ private fun PlanEditorBody(
                                 reminderEnabled = reminderEnabled,
                                 reminderHour = reminderHour,
                                 reminderMinute = reminderMinute,
+                                autoPlayOnSchedule = autoPlayOnSchedule,
+                                escalateReminder = escalateReminder,
                             )
                         )
                     },
                     modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditorToggleRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = GhaisNoir.TextPrimary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = subtitle,
+                color = GhaisNoir.TextTertiary,
+                fontSize = 11.sp
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.Black,
+                checkedTrackColor = Color.White,
+                uncheckedThumbColor = GhaisNoir.TextSecondary,
+                uncheckedTrackColor = GhaisNoir.Fill2
+            )
+        )
+    }
+}
+
+@Composable
+private fun PlanCompletionCelebrationOverlay(
+    event: PlanCompletionEvent,
+    onDismiss: () -> Unit,
+) {
+    val accent = if (event.dayCompleted) GhaisColors.MintGlow else GhaisNoir.Lavender
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(GhaisNoir.Scrim)
+            .noirClickable(onDismiss)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(GhaisShapes.cardLarge)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            GhaisNoir.PlumTop.copy(alpha = 0.55f),
+                            GhaisNoir.CardTintBottom
+                        )
+                    )
+                )
+                .border(1.5.dp, accent.copy(alpha = 0.60f), GhaisShapes.cardLarge)
+                .topSpecular(inset = 28.dp)
+                .noirClickable {}
+                .padding(24.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(68.dp)
+                        .clip(CircleShape)
+                        .background(accent.copy(alpha = 0.20f))
+                        .border(2.dp, accent, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (event.dayCompleted) Icons.Filled.LocalFireDepartment else Icons.Filled.Check,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(34.dp)
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    text = if (event.dayCompleted) "Day Goal Crushed! 🔥" else "Session Complete!",
+                    color = GhaisNoir.TextPrimary,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+                Text(
+                    text = event.planTitle,
+                    color = accent,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(Modifier.height(10.dp))
+
+                Box(
+                    modifier = Modifier
+                        .clip(GhaisShapes.pill)
+                        .background(GhaisNoir.Fill2)
+                        .border(1.dp, GhaisNoir.BorderCard, GhaisShapes.pill)
+                        .padding(horizontal = 14.dp, vertical = 7.dp)
+                ) {
+                    Text(
+                        text = "${event.sessionsDoneToday} / ${event.sessionsPerDay} today • ${event.streak} day streak",
+                        color = GhaisNoir.TextPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                ChromePillButton(
+                    text = "Alhamdulillah / Continue",
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -895,56 +1336,6 @@ private fun NoirSearchField(
                         .noirClickable { onValueChange("") }
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun SelectableRow(
-    title: String,
-    subtitle: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(GhaisShapes.row)
-            .background(if (selected) GhaisNoir.Fill4 else GhaisNoir.Fill1)
-            .border(
-                1.dp,
-                if (selected) GhaisNoir.SpecularTop else GhaisNoir.BorderGhost,
-                GhaisShapes.row
-            )
-            .noirClickable(onClick)
-            .padding(horizontal = 12.dp, vertical = 9.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                color = GhaisNoir.TextPrimary,
-                fontSize = 13.sp,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = subtitle,
-                color = GhaisNoir.TextTertiary,
-                fontSize = 11.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        if (selected) {
-            Icon(
-                imageVector = Icons.Filled.Check,
-                contentDescription = "Selected",
-                tint = GhaisNoir.TextPrimary,
-                modifier = Modifier.size(16.dp)
-            )
         }
     }
 }

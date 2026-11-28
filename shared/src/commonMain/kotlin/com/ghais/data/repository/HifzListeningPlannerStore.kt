@@ -36,12 +36,56 @@ data class HifzListeningPlan(
     val reminderMinute: Int = 0,
     val completedSessionsByDay: Map<Long, Int> = emptyMap(),
     val enabled: Boolean = true,
+    val autoPlayOnSchedule: Boolean = false,
+    val escalateReminder: Boolean = true,
 ) {
     fun sessionsDoneOn(epochDay: Long): Int =
         completedSessionsByDay[epochDay] ?: 0
 
     fun isDayCompleted(epochDay: Long): Boolean =
         sessionsDoneOn(epochDay) >= sessionsPerDay.coerceAtLeast(1)
+
+    fun dailyProgressFraction(epochDay: Long): Float =
+        (sessionsDoneOn(epochDay).toFloat() / sessionsPerDay.coerceAtLeast(1)).coerceIn(0f, 1f)
+
+    fun streakDays(epochDay: Long): Int {
+        var day = when {
+            isDayCompleted(epochDay) -> epochDay
+            isDayCompleted(epochDay - 1L) -> epochDay - 1L
+            else -> return 0
+        }
+        var streak = 0
+        while (isDayCompleted(day)) {
+            streak++
+            day--
+        }
+        return streak
+    }
+
+    fun bestStreakDays(): Int {
+        val completedDays = completedSessionsByDay.keys
+            .filter { isDayCompleted(it) }
+            .sorted()
+        if (completedDays.isEmpty()) return 0
+        var best = 1
+        var current = 1
+        for (i in 1 until completedDays.size) {
+            if (completedDays[i] == completedDays[i - 1] + 1L) {
+                current++
+                if (current > best) best = current
+            } else {
+                current = 1
+            }
+        }
+        return best
+    }
+
+    fun estimatedMinutesPerSession(): Int {
+        val totalSeconds = surahIds.sumOf { id ->
+            (QuranDataRepository.getSurahById(id)?.ayahsCount ?: 7) * 7 * timesPerSession.coerceAtLeast(1)
+        }
+        return (totalSeconds / 60).coerceAtLeast(1)
+    }
 
     fun isWithinDuration(epochDay: Long): Boolean {
         val elapsed = epochDay - startEpochDay
@@ -79,7 +123,18 @@ data class HifzListeningPlan(
  */
 object HifzListeningPlannerStore {
     const val SCHEDULE_ID_PREFIX = "hifz-plan-"
+    const val ESCALATION_SCHEDULE_ID_PREFIX = "hifz-plan-esc-"
     private const val KEY_PLANS = "ghais_hifz_listening_plans"
+
+    data class PlanCompletionEvent(
+        val planId: String,
+        val planTitle: String,
+        val sessionsDoneToday: Int,
+        val sessionsPerDay: Int,
+        val dayCompleted: Boolean,
+        val streak: Int,
+        val timestampMs: Long,
+    )
 
     private var ownerId: String = "local"
     private val settings: Settings by lazy { Settings() }
@@ -88,8 +143,15 @@ object HifzListeningPlannerStore {
     private val _plans = MutableStateFlow<List<HifzListeningPlan>>(emptyList())
     val plans: StateFlow<List<HifzListeningPlan>> = _plans.asStateFlow()
 
+    private val _lastCompletionEvent = MutableStateFlow<PlanCompletionEvent?>(null)
+    val lastCompletionEvent: StateFlow<PlanCompletionEvent?> = _lastCompletionEvent.asStateFlow()
+
     init {
         load()
+    }
+
+    fun dismissCompletionEvent() {
+        _lastCompletionEvent.value = null
     }
 
     private fun key(base: String): String =
@@ -100,10 +162,18 @@ object HifzListeningPlannerStore {
 
     fun scheduleIdFor(planId: String): String = "$SCHEDULE_ID_PREFIX$planId"
 
-    fun planIdFromScheduleId(scheduleId: String): String? =
-        scheduleId.takeIf { it.startsWith(SCHEDULE_ID_PREFIX) }
-            ?.removePrefix(SCHEDULE_ID_PREFIX)
-            ?.takeIf { it.isNotBlank() }
+    fun escalationScheduleIdFor(planId: String): String = "$ESCALATION_SCHEDULE_ID_PREFIX$planId"
+
+    fun isEscalationScheduleId(scheduleId: String): Boolean =
+        scheduleId.startsWith(ESCALATION_SCHEDULE_ID_PREFIX)
+
+    fun planIdFromScheduleId(scheduleId: String): String? = when {
+        scheduleId.startsWith(ESCALATION_SCHEDULE_ID_PREFIX) ->
+            scheduleId.removePrefix(ESCALATION_SCHEDULE_ID_PREFIX)
+        scheduleId.startsWith(SCHEDULE_ID_PREFIX) ->
+            scheduleId.removePrefix(SCHEDULE_ID_PREFIX)
+        else -> null
+    }?.takeIf { it.isNotBlank() }
 
     fun setOwner(ownerId: String) {
         if (ownerId == this.ownerId) return
@@ -132,6 +202,7 @@ object HifzListeningPlannerStore {
         }
         try {
             SchedulesStore.remove(scheduleIdFor(planId))
+            SchedulesStore.remove(escalationScheduleIdFor(planId))
         } catch (_: Exception) {
         }
     }
@@ -152,6 +223,18 @@ object HifzListeningPlannerStore {
         val updatedPlan = existing.copy(completedSessionsByDay = nextMap)
         val updated = _plans.value.map { if (it.id == planId) updatedPlan else it }
         persist(updated)
+        val planTitle = updatedPlan.displayTitle { id ->
+            QuranDataRepository.getSurahById(id)?.nameEn ?: "Surah $id"
+        }
+        _lastCompletionEvent.value = PlanCompletionEvent(
+            planId = planId,
+            planTitle = planTitle,
+            sessionsDoneToday = updatedPlan.sessionsDoneOn(epochDay),
+            sessionsPerDay = updatedPlan.sessionsPerDay,
+            dayCompleted = updatedPlan.isDayCompleted(epochDay),
+            streak = updatedPlan.streakDays(epochDay),
+            timestampMs = Clock.System.now().toEpochMilliseconds(),
+        )
     }
 
     fun setDaySessions(
@@ -230,24 +313,51 @@ object HifzListeningPlannerStore {
 
     private fun syncScheduleAlarm(plan: HifzListeningPlan) {
         val scheduleId = scheduleIdFor(plan.id)
+        val escScheduleId = escalationScheduleIdFor(plan.id)
         try {
             if (!plan.enabled || !plan.reminderEnabled) {
                 SchedulesStore.remove(scheduleId)
+                SchedulesStore.remove(escScheduleId)
                 return
             }
+            val reciterSlug = plan.reciterSlugs.firstOrNull() ?: "mishary"
+            val fromSurah = plan.surahIds.firstOrNull() ?: 1
+            val toSurah = plan.surahIds.lastOrNull() ?: 1
             SchedulesStore.add(
                 RecitationSchedule(
                     id = scheduleId,
                     hour = plan.reminderHour,
                     minute = plan.reminderMinute,
-                    reciterSlug = plan.reciterSlugs.firstOrNull() ?: "mishary",
-                    fromSurah = plan.surahIds.firstOrNull() ?: 1,
-                    toSurah = plan.surahIds.lastOrNull() ?: 1,
+                    reciterSlug = reciterSlug,
+                    fromSurah = fromSurah,
+                    toSurah = toSurah,
                     durationMin = null,
-                    autoStart = false,
+                    autoStart = plan.autoPlayOnSchedule,
                     enabled = true,
                 )
             )
+            if (plan.escalateReminder) {
+                val (escHour, escMinute) = if (plan.reminderHour + 2 <= 22) {
+                    (plan.reminderHour + 2) to plan.reminderMinute
+                } else {
+                    22 to 45
+                }
+                SchedulesStore.add(
+                    RecitationSchedule(
+                        id = escScheduleId,
+                        hour = escHour,
+                        minute = escMinute,
+                        reciterSlug = reciterSlug,
+                        fromSurah = fromSurah,
+                        toSurah = toSurah,
+                        durationMin = null,
+                        autoStart = false,
+                        enabled = true,
+                    )
+                )
+            } else {
+                SchedulesStore.remove(escScheduleId)
+            }
         } catch (_: Exception) {
         }
     }

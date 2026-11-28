@@ -654,44 +654,16 @@ class NowPlayingScreen : Screen {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                val isLongAyah = (currentVerse?.textUthmani?.length ?: 0) > 140 ||
+                    (currentVerse?.translation?.length ?: 0) > 180
 
-                // Top slack above the verse.
-                //
-                // Surah/podcast mode is untouched: one weight(1f) gap, byte-for-byte
-                // the behaviour it always had, so the ambient video keeps the roomy
-                // middle. Ayah mode always takes the anchored branch below —
-                // ambience on or off. It used to fall back to the roomy gap when a
-                // video was playing, which slid the whole verse down the screen
-                // the moment someone turned rain/fire/waves on: the same ayah sat
-                // in two different places depending on a setting that has nothing
-                // to do with reading it. A reader switching ambience mid-session is
-                // usually switching because they are still memorizing, and having
-                // the text jump is the opposite of helpful. The video is a
-                // background layer behind a scrim, so it keeps its room below the
-                // verse; only the empty air above it is gone.
-                //
-                // Ayah mode is the branch that changed from the old
-                // weight(0.10f)-vs-1f split: the verse is the hero there, and the
-                // brief is UPPER-MIDDLE — high enough to own the screen, low enough
-                // that a long ayah still has room to grow before it reaches the
-                // controls. That old split made the gap a fixed *fraction of
-                // whatever was left over*, coupling it to the chrome: the ~380dp of
-                // controls that auto-fade after 10s idle vanished, the leftover grew,
-                // and the gap grew with it — dragging the whole verse down every
-                // time the player idled out. A fixed 28dp head plus a small 0.10
-                // elasticity decouples them.
-                // At 800dp tall (2400px) the text top lands ≈131dp (≈16% of the
-                // screen) with the controls up and ≈165dp (≈21%) once they have
-                // faded — a pre-transport-always-on figure; the transport row
-                // below the card now stays mounted in art mode, so today's
-                // drift is a shade smaller. A ~5% drift instead of a ~70dp
-                // jump. The height the fade hands back (minus that transport
-                // row) is not wasted on air — it flows into the card
-                // (fill = true below), so a long ayah still gains the freed
-                // viewport instead of the verse sliding away from where the
-                // eye was.
-                if (isAyahMode) {
+                Spacer(modifier = Modifier.height(if (isAyahMode && isLongAyah) 6.dp else 14.dp))
+
+                // Top slack above the verse: centered/upper-middle for short ayahs,
+                // compact top anchor for long ayahs so the full verse fits cleanly.
+                if (isAyahMode && isLongAyah) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                } else if (isAyahMode) {
                     Spacer(modifier = Modifier.height(28.dp))
                     Spacer(modifier = Modifier.weight(0.10f))
                 } else {
@@ -905,13 +877,13 @@ class NowPlayingScreen : Screen {
                         icon = Icons.Filled.FastRewind,
                         contentDescription = if (isAyahMode) "Previous Ayah" else "Previous",
                         enabled = canSkipPrevious,
-                        onClick = { poke(); AudioEngine.previous() },
+                        onClick = { if (controlsVisible) poke(); AudioEngine.previous() },
                         iconSize = 26.dp
                     )
                     Spacer(modifier = Modifier.width(20.dp))
                     ChromeFab(
                         icon = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        onClick = { poke(); AudioEngine.togglePlayPause() },
+                        onClick = { if (controlsVisible) poke(); AudioEngine.togglePlayPause() },
                         size = 68.dp,
                         contentDescription = if (isPlaying) "Pause" else "Play"
                     )
@@ -920,7 +892,7 @@ class NowPlayingScreen : Screen {
                         icon = Icons.Filled.FastForward,
                         contentDescription = if (isAyahMode) "Next Ayah" else "Next",
                         enabled = canSkipNext,
-                        onClick = { poke(); AudioEngine.next() },
+                        onClick = { if (controlsVisible) poke(); AudioEngine.next() },
                         iconSize = 26.dp
                     )
                 }

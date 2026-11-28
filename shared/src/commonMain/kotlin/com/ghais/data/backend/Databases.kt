@@ -24,7 +24,7 @@ object Query {
     fun select(fields: List<String>) = make("select", values = fields.map { JsonPrimitive(it) })
 }
 
-class Databases {
+class Databases(private val accessTokenOverride: String? = null) {
     private fun path(databaseId: String, collectionId: String, documentId: String? = null): String =
         "/databases/${databaseId.encodeURLPathPart()}/collections/${collectionId.encodeURLPathPart()}/documents" +
             (documentId?.let { "/${it.encodeURLPathPart()}" } ?: "")
@@ -32,19 +32,19 @@ class Databases {
     private fun document(obj: JsonObject) = Document(obj.getValue("\$id").jsonPrimitive.content,
         obj.filterKeys { !it.startsWith('$') }.mapNotNull { (key, value) -> decode(value)?.let { key to it } }.toMap(), obj["\$createdAt"]?.jsonPrimitive?.content.orEmpty())
     suspend fun listDocuments(databaseId: String, collectionId: String, queries: List<String> = emptyList()): DocumentList {
-        val obj = Json.parseToJsonElement(BackendHttp.request(HttpMethod.Get, path(databaseId, collectionId), queries = queries)).jsonObject
+        val obj = Json.parseToJsonElement(BackendHttp.request(HttpMethod.Get, path(databaseId, collectionId), queries = queries, overrideToken = accessTokenOverride)).jsonObject
         return DocumentList(obj.getValue("documents").jsonArray.map { document(it.jsonObject) })
     }
     suspend fun getDocument(databaseId: String, collectionId: String, documentId: String, expectedUserId: String? = null) =
-        document(BackendHttp.request(HttpMethod.Get, path(databaseId, collectionId, documentId), expectedUserId = expectedUserId))
+        document(BackendHttp.request(HttpMethod.Get, path(databaseId, collectionId, documentId), expectedUserId = expectedUserId, overrideToken = accessTokenOverride))
     suspend fun createDocument(databaseId: String, collectionId: String, documentId: String, data: Map<String, Any?>, expectedUserId: String? = null) =
         document(BackendHttp.request(HttpMethod.Post, path(databaseId, collectionId), buildJsonObject {
             put("documentId", documentId); put("data", encode(data))
-        }, expectedUserId = expectedUserId))
+        }, expectedUserId = expectedUserId, overrideToken = accessTokenOverride))
     suspend fun updateDocument(databaseId: String, collectionId: String, documentId: String, data: Map<String, Any?>) =
-        document(BackendHttp.request(HttpMethod.Patch, path(databaseId, collectionId, documentId), buildJsonObject { put("data", encode(data)) }))
+        document(BackendHttp.request(HttpMethod.Patch, path(databaseId, collectionId, documentId), buildJsonObject { put("data", encode(data)) }, overrideToken = accessTokenOverride))
     suspend fun deleteDocument(databaseId: String, collectionId: String, documentId: String) {
-        BackendHttp.request(HttpMethod.Delete, path(databaseId, collectionId, documentId))
+        BackendHttp.request(HttpMethod.Delete, path(databaseId, collectionId, documentId), overrideToken = accessTokenOverride)
     }
 }
 
